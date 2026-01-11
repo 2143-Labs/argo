@@ -1,0 +1,25 @@
+# install Agones using helm:
+# helm repo add agones https://agones.dev/chart/stable
+# helm install --namespace agones-system --create-namespace agones/agones
+
+---
+apiVersion: v1
+kind: Application
+metadata:
+  name: agones
+  namesapace: argocd
+spec:
+  project: default
+  source:
+    chart: agones
+    repoURL: https://agones.dev/chart/stable
+    #targetRevision: 1.16.
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: agones-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
