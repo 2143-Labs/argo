@@ -7,7 +7,7 @@ apiVersion: v1
 kind: Application
 metadata:
   name: agones
-  namesapace: argocd
+  namespace: argocd
 spec:
   project: default
   source:
