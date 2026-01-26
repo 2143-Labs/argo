@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rots
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - rots.2143.me
+      secretName: rots-2143-me-tls
+  rules:
+    - host: rots.2143.me
+      http:
+        paths:
+          - path: /bevy
+            pathType: Prefix
+            backend:
+              service:
+                name: bevy
+                port:
+                  number: 80
