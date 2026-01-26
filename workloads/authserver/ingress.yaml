@@ -1,17 +1,26 @@
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-prefix
+  # No namespace defined
+spec:
+  stripPrefixRegex:
+    regex:
+    - ^/[^/]+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: authserver
+  name: authserver-stripped
   namespace: default
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.priority: "10"
+    traefik.ingress.kubernetes.io/router.middlewares: default-strip-prefix@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
-    - hosts:
-        - auth.prod.rots.2143.me
-      secretName: auth-prod-rots-2143-me-tls
     - hosts:
         - prod.rots.2143.me
       secretName: prod-rots-2143-me-tls
@@ -39,6 +48,23 @@ spec:
                 name: authserver
                 port:
                   number: 80
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: authserver-nostripped
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.priority: "10"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - auth.prod.rots.2143.me
+      secretName: auth-prod-rots-2143-me-tls
+  rules:
     - host: auth.prod.rots.2143.me
       http:
         paths:
