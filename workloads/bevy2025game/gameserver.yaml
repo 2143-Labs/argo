@@ -36,7 +36,7 @@ spec:
   # Health checking for the running game server
   health:
     # Disable health checking. defaults to false, but can be set to true
-    disabled: false
+    disabled: true
     # Number of seconds after the container has started before health check is initiated. Defaults to 5 seconds
     initialDelaySeconds: 5
     # If the `Health()` function doesn't get called at least once every period (seconds), then
