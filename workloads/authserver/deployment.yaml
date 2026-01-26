@@ -17,6 +17,10 @@ spec:
       containers:
         - name: authserver
           image: ghcr.io/2143-labs/rots-authserver:server-latest
+          command:
+            - sh
+            - -c
+            - "rots-authserver"
           ports:
             - containerPort: 8000
               name: http
