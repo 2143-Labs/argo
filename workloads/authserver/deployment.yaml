@@ -20,10 +20,36 @@ spec:
           command:
             - sh
             - -c
-            - "rots-authserver"
+            - "rots-authserver server"
+          env:
+            - name: DATBASE_URL
+              # value: "postgresql://db-prod.rots.2143.me:5999/coordinator_prod"
+              valueFrom:
+                secretKeyRef:
+                  name: authserver-secrets
+                  key: DATABASE_URL
+            - name: PORT
+              value: "8000"
+            - name: DISCORD_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: authserver-secrets
+                  key: DISCORD_CLIENT_ID
+            - name: DISCORD_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: authserver-secrets
+                  key: DISCORD_CLIENT_SECRET
+            - name: DISCORD_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: authserver-secrets
+                  key: DISCORD_REDIRECT_URI
+
           ports:
             - containerPort: &port 8000
               name: http
+
           resources:
             requests:
               cpu: 10m
