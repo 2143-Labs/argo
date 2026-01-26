@@ -9,9 +9,6 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - auth.prod.rots.2143.me
-      secretName: auth-prod-rots-2143-me-tls
-    - hosts:
         - prod.rots.2143.me
       secretName: prod-rots-2143-me-tls
     - hosts:
