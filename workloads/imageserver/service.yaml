@@ -1,15 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: imageserver
-  labels:
-    app: imageserver
+  name: john2143-com
 spec:
   type: ClusterIP
-  selector:
-    app: imageserver
   ports:
-    - port: 80
-      targetPort: 8080
-      protocol: TCP
-      name: http
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: john2143-com
+

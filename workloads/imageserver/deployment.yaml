@@ -1,32 +1,82 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: imageserver
-  labels:
-    app: imageserver
+  name: john2143-com
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: imageserver
+      app: john2143-com
   template:
     metadata:
       labels:
-        app: imageserver
+        app: john2143-com
+        servicegroup: "mine"
     spec:
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: files-pvc
+      - name: upload-fish
+        configMap:
+          name: upload-fish
+          defaultMode: 0777
+          items:
+            - key: upload.fish
+              path: upload.fish
+            - key: prune.fish
+              path: prune.fish
+            - key: shared.fish
+              path: shared.fish
+
+      #securityContext:
+        #runAsUser: 1000
+        #runAsGroup: 1000
+        #fsGroup: 1000
+
       containers:
-        - name: imageserver
-          image: hashicorp/http-echo:latest
-          args:
-            - "-text=Hello from ImageServer!"
-            - "-listen=:8080"
-          ports:
-            - containerPort: 8080
-              name: http
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
+      - name: john2143-com
+        image: ghcr.io/john2143/john2143.com:109
+
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: &port 3000
+        volumeMounts:
+        - mountPath: /app/juushFiles
+          name: data-volume
+        env:
+        - name: DB
+          value: mongodb://admin:pass@mongo
+        - name: PORT
+          value: "3000"
+        - name: IP
+          value: "0.0.0.0"
+        - name: NODE_ENV
+          value: production
+        - name: IS_HOME
+          value: true
+
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "10m"
+          limits:
+            memory: "200Mi"
+            cpu: "100m"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: *port
+          initialDelaySeconds: 1
+          periodSeconds: 1
+          failureThreshold: 25
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: *port
+          initialDelaySeconds: 1
+          periodSeconds: 5
+          failureThreshold: 3
+
