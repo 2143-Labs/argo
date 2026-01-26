@@ -17,7 +17,7 @@ spec:
       volumes:
       - name: mongodata
         emptyDir:
-          sizeLimit: 50Mi
+          sizeLimit: 500Mi
 
       containers:
       - name: mongo
@@ -37,7 +37,7 @@ spec:
 
         resources:
           requests:
-            memory: "330Mi"
+            memory: "50Mi"
             cpu: "50m"
 ---
 apiVersion: v1
