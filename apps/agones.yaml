@@ -16,9 +16,11 @@ spec:
       values: |
         agones:
           allocator:
-            install: true
+            install: false
           ping:
-            install: true
+            install: false
+          controller:
+            hostPort: 0
   destination:
     server: https://kubernetes.default.svc
     namespace: agones-system

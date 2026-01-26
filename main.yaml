@@ -26,7 +26,6 @@ metadata:
     argocd.argoproj.io/secret-type: repository
 stringData:
   url: https://github.com/2143-Labs/argo.git
-  project: default
 
 ---
 # App of Apps - manages all other applications
