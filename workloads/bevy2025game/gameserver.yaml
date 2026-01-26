@@ -98,6 +98,7 @@ spec:
       - name: bevy-gameserver
         image: ghcr.io/2143-labs/bevy2025:gameserver-latest
         imagePullPolicy: Always
+      
       # nodeSelector is a label that can be used to tell Kubernetes which host
       # OS to use. For Windows game servers uncomment the nodeSelector
       # definition below.
@@ -105,3 +106,9 @@ spec:
       # nodeSelector:
       #   kubernetes.io/os: windows
 
+        #liveness probe: http 25555
+        livenessProbe:
+          tcpSocket:
+            port: 25555
+          initialDelaySeconds: 15
+          periodSeconds: 20
