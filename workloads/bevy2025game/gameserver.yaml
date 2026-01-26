@@ -104,10 +104,3 @@ spec:
       # Details: https://kubernetes.io/docs/setup/production-environment/windows/user-guide-windows-containers/#ensuring-os-specific-workloads-land-on-the-appropriate-container-host
       # nodeSelector:
       #   kubernetes.io/os: windows
-
-        #liveness probe: http 25555
-        livenessProbe:
-          tcpSocket:
-            port: 25555
-          initialDelaySeconds: 15
-          periodSeconds: 20
