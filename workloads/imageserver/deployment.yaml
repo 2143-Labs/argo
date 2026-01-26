@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imageserver
+  labels:
+    app: imageserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imageserver
+  template:
+    metadata:
+      labels:
+        app: imageserver
+    spec:
+      containers:
+        - name: imageserver
+          image: hashicorp/http-echo:latest
+          args:
+            - "-text=Hello from ImageServer!"
+            - "-listen=:8080"
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
