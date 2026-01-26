@@ -9,10 +9,23 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - rots.2143.me
-      secretName: rots-2143-me-tls
+        - auth.prod.rots.2143.me
+      secretName: auth-prod-rots-2143-me-tls
+    - hosts:
+        - auth.rots.2143.me
+      secretName: auth-rots-2143-me-tls
   rules:
-    - host: rots.2143.me
+    - host: auth.rots.2143.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: authserver
+                port:
+                  number: 80
+    - host: auth.prod.rots.2143.me
       http:
         paths:
           - path: /
