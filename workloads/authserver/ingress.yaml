@@ -15,7 +15,7 @@ spec:
     - host: rots.2143.me
       http:
         paths:
-          - path: /auth
+          - path: /
             pathType: Prefix
             backend:
               service:
