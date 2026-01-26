@@ -22,7 +22,7 @@ spec:
             - -c
             - "rots-authserver"
           ports:
-            - containerPort: 8000
+            - containerPort: &port 8000
               name: http
           resources:
             requests:
