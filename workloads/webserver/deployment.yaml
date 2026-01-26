@@ -32,15 +32,15 @@ spec:
 
           livenessProbe:
             httpGet:
-              path: /health
+              path: /
               port: *port
             initialDelaySeconds: 1
-            periodSeconds: 1
+            periodSeconds: 5
             failureThreshold: 25
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: /
               port: *port
             initialDelaySeconds: 1
             periodSeconds: 5
