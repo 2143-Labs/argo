@@ -15,10 +15,10 @@ spec:
     - host: rots.2143.me
       http:
         paths:
-          - path: /bevy
+          - path: /auth
             pathType: Prefix
             backend:
               service:
-                name: bevy
+                name: authserver
                 port:
                   number: 80

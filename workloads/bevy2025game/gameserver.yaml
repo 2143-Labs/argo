@@ -24,7 +24,7 @@ spec:
     # The name of the container to open the port on. Defaults to the game server container if omitted or empty.
     container: bevy-gameserver
     # the port that is being opened on the game server process
-    containerPort: 25565
+    containerPort: 25555
     # the port exposed on the host, only required when `portPolicy` is "Static". Overwritten when portPolicy is "Dynamic".
     #hostPort: 7777
     # protocol being used. Defaults to UDP. TCP and TCPUDP are other options

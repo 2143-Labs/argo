@@ -1,27 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bevy
+  name: authserver
   labels:
-    app: bevy
+    app: authserver
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: bevy
+      app: authserver
   template:
     metadata:
       labels:
-        app: bevy
+        app: authserver
     spec:
       containers:
-        - name: bevy
-          image: hashicorp/http-echo:latest
-          args:
-            - "-text=Hello from Bevy!"
-            - "-listen=:8080"
+        - name: authserver
+          image: ghcr.io/2143-labs/rots-authserver:server-latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8000
               name: http
           resources:
             requests:

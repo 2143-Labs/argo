@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bevy
+  name: authserver
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/2143-Labs/argo.git
     targetRevision: HEAD
-    path: workloads/bevy
+    path: workloads/authserver
   destination:
     server: https://kubernetes.default.svc
     namespace: default
