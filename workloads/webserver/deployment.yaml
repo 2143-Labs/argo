@@ -1,0 +1,47 @@
+# docker pull ghcr.io/2143-labs/bevy2025:webserver-wasm-latest
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver
+  labels:
+    app: webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webserver
+  template:
+    metadata:
+      labels:
+        app: webserver
+    spec:
+      containers:
+        - name: webserver
+          image: ghcr.io/2143-labs/bevy2025:webserver-wasm-latest
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
