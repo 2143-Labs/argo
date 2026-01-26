@@ -15,8 +15,10 @@ spec:
     spec:
       volumes:
       - name: data-volume
-        persistentVolumeClaim:
-          claimName: files-pvc
+        #persistentVolumeClaim:
+          #claimName: files-pvc
+        emptyDir:
+          sizeLimit: 500Mi
       - name: upload-fish
         configMap:
           name: upload-fish
@@ -79,4 +81,3 @@ spec:
           initialDelaySeconds: 1
           periodSeconds: 5
           failureThreshold: 3
-
