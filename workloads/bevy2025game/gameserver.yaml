@@ -46,20 +46,20 @@ spec:
     # Defaults to 3. Minimum value is 1
     failureThreshold: 3
   # Parameters for game server sidecar
-  sdkServer:
+  #sdkServer:
     # sdkServer log level parameter has three options:
     #  - "Info" (default) The SDK server will output all messages except for debug messages
     #  - "Debug" The SDK server will output all messages including debug messages
     #  - "Error" The SDK server will only output error messages
     #  - "Trace" The SDK server will output all messages, including detailed tracing information
-    logLevel: Info
+    #logLevel: Info
     # grpcPort and httpPort control what ports the sdkserver listens on.
     # Starting with Agones 1.2 the default grpcPort is 9357 and the default
     # httpPort is 9358. In earlier releases, the defaults were 59357 and 59358
     # respectively but as these were in the ephemeral port range they could
     # conflict with other TCP connections.
     #grpcPort: 9357
-    httpPort: 25565
+    #httpPort: 25565
   # [Stage:Alpha]
   # [FeatureFlag:PlayerTracking]
   # Players provides the configuration for player tracking features.
