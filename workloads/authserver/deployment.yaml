@@ -22,7 +22,7 @@ spec:
             - -c
             - "rots-authserver server"
           env:
-            - name: DATBASE_URL
+            - name: DATABASE_URL
               # value: "postgresql://db-prod.rots.2143.me:5999/coordinator_prod"
               valueFrom:
                 secretKeyRef:
