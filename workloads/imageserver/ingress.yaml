@@ -3,10 +3,29 @@ kind: Ingress
 metadata:
   name: john2143-com
   namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - john2143.com
+      secretName: john2143-com-tls
+    - hosts:
+        - rots.2143.me
+      secretName: rots-2143-me-tls
   rules:
     - host: john2143.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: john2143-com
+                port:
+                  number: 80
+    - host: rots.2143.me
       http:
         paths:
           - path: /
