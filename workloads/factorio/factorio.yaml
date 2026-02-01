@@ -69,11 +69,14 @@ metadata:
   name: factorio-http
 spec:
   ports:
-  type: NodePort
+  #type: NodePort
+  type: ClusterIP
   ports:
   - port: 80
     targetPort: 80
-    nodePort: 31180
+    #nodePort: 31180
+    protocol: TCP
+    name: http
 
   selector:
     app: factorio
@@ -104,7 +107,6 @@ spec:
     requests:
       storage: 20G
   storageClassName: local-path
-
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -141,4 +143,29 @@ spec:
     requests:
       storage: 5G
   storageClassName: local-path
-
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: factorio-web-ingress
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.priority: "1"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - factorio.2143.me
+      secretName: factorio-2143-me-tls
+  rules:
+    - host: factorio.2143.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: factorio-http
+                port:
+                  number: 80
