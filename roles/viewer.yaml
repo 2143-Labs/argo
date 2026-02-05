@@ -1,0 +1,123 @@
+# Viewer service account with read-only cluster access.
+# Cannot view secrets. Cannot modify any resources.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: viewer
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewer
+rules:
+  # Core API group - all resources except secrets (read-only)
+  - apiGroups: [""]
+    resources: 
+      - bindings
+      - componentstatuses
+      - configmaps
+      - endpoints
+      - events
+      - limitranges
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - pods/log
+      - pods/status
+      - podtemplates
+      - replicationcontrollers
+      - resourcequotas
+      - serviceaccounts
+      - services
+    verbs: ["get", "list", "watch"]
+  
+  # Standard Kubernetes API groups (read-only)
+  - apiGroups: ["apps"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["node.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # Gateway API (read-only)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # Traefik (read-only)
+  - apiGroups: ["traefik.io", "hub.traefik.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # ArgoCD (read-only)
+  - apiGroups: ["argoproj.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # Agones (read-only)
+  - apiGroups: ["agones.dev", "autoscaling.agones.dev", "multicluster.agones.dev"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # cert-manager (read-only)
+  - apiGroups: ["cert-manager.io", "acme.cert-manager.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # K3s / Helm (cattle.io) (read-only)
+  - apiGroups: ["k3s.cattle.io", "helm.cattle.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: viewer-binding
+subjects:
+  - kind: ServiceAccount
+    name: viewer
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: viewer
+  apiGroup: rbac.authorization.k8s.io
