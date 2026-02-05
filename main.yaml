@@ -49,3 +49,25 @@ spec:
     automated:
       prune: true
       selfHeal: true
+---
+# RBAC and roles
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: roles
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: roles
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
