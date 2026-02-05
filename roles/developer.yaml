@@ -1,0 +1,129 @@
+# Developer service account with full cluster access except secrets.
+# Cannot view, create, update, or delete secrets.
+# RBAC permissions are view-only to prevent privilege escalation.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: developer
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: developer
+rules:
+  # Core API group - all resources except secrets
+  - apiGroups: [""]
+    resources: 
+      - bindings
+      - componentstatuses
+      - configmaps
+      - endpoints
+      - events
+      - limitranges
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - pods/attach
+      - pods/exec
+      - pods/log
+      - pods/portforward
+      - pods/status
+      - podtemplates
+      - replicationcontrollers
+      - resourcequotas
+      - serviceaccounts
+      - services
+    verbs: ["*"]
+  
+  # Standard Kubernetes API groups
+  - apiGroups: ["apps"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["batch"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["autoscaling"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["policy"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["node.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # RBAC (view only for safety)
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  
+  # Gateway API
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # Traefik
+  - apiGroups: ["traefik.io", "hub.traefik.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # ArgoCD
+  - apiGroups: ["argoproj.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # Agones
+  - apiGroups: ["agones.dev", "autoscaling.agones.dev", "multicluster.agones.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # cert-manager
+  - apiGroups: ["cert-manager.io", "acme.cert-manager.io"]
+    resources: ["*"]
+    verbs: ["*"]
+  
+  # K3s / Helm (cattle.io)
+  - apiGroups: ["k3s.cattle.io", "helm.cattle.io"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: developer-binding
+subjects:
+  - kind: ServiceAccount
+    name: developer
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
