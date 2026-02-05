@@ -1,25 +1,25 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: argocd-server
-  namespace: argocd
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "10"
-spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - argo.home.2143.me
-      secretName: argo-home-2143-me-tls
-  rules:
-    - host: argo.home.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: argocd-server
-                port:
-                  number: 80
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata:
+  #name: argocd-server
+  #namespace: argocd
+  #annotations:
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #traefik.ingress.kubernetes.io/router.priority: "10"
+#spec:
+  #ingressClassName: traefik
+  #tls:
+    #- hosts:
+        #- argo.home.2143.me
+      #secretName: argo-home-2143-me-tls
+  #rules:
+    #- host: argo.home.2143.me
+      #http:
+        #paths:
+          #- path: /
+            #pathType: Prefix
+            #backend:
+              #service:
+                #name: argocd-server
+                #port:
+                  #number: 80
