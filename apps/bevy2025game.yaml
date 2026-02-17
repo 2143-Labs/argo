@@ -1,20 +1,20 @@
-#apiVersion: argoproj.io/v1alpha1
-#kind: Application
-#metadata:
-  #name: bevy2025game
-  #namespace: argocd
-  #finalizers:
-    #- resources-finalizer.argocd.argoproj.io
-#spec:
-  #project: default
-  #source:
-    #repoURL: https://github.com/2143-Labs/argo.git
-    #targetRevision: HEAD
-    #path: workloads/bevy2025game
-  #destination:
-    #server: https://kubernetes.default.svc
-    #namespace: default
-  #syncPolicy:
-    #automated:
-      #prune: true
-      #selfHeal: true
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bevy2025game
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/bevy2025game
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
