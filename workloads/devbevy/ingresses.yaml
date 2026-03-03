@@ -23,7 +23,7 @@ spec:
               service:
                 name: authserver-dev-externalip
                 port:
-                  number: 80
+                  number: 12143
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -49,4 +49,4 @@ spec:
               service:
                 name: webserver-dev-externalip
                 port:
-                  number: 80
+                  number: 8080

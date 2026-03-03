@@ -5,29 +5,9 @@ metadata:
   labels:
     app: webserver-dev-externalip
 spec:
-  type: ClusterIP
-  selector:
-    app: webserver-dev
-  clusterIP: None
-  ports:
-    - port: 80
-      targetPort: 8080
-      protocol: TCP
-      name: http-authserver
+  type: ExternalName
+  externalName: 192.168.1.32
 ---
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: webserver-dev-externalip
-subsets:
-- addresses:
-  - ip: 192.168.1.32
-  ports:
-  - name: webserver-dev
-    port: 8080
-    protocol: TCP
----
-
 apiVersion: v1
 kind: Service
 metadata:
