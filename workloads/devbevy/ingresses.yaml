@@ -21,7 +21,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: authserver-dev
+                name: authserver-dev-externalip
                 port:
                   number: 80
 ---
@@ -47,6 +47,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: webserver-dev
+                name: webserver-dev-externalip
                 port:
                   number: 80
