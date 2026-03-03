@@ -1,0 +1,52 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: authserver-nostripped-dev
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.priority: "10"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - auth.dev.rots.2143.me
+      secretName: auth-dev-rots-2143-me-tls
+  rules:
+    - host: auth.dev.rots.2143.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: authserver-dev
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webserver-nostripped-dev
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.priority: "10"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - dev.rots.2143.me
+      secretName: dev-rots-2143-me-tls
+  rules:
+    - host: dev.rots.2143.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webserver-dev
+                port:
+                  number: 80
