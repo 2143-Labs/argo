@@ -1,33 +1,59 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: authserver-dev
+  name: webserver-dev-externalip
   labels:
-    app: authserver-dev
+    app: webserver-dev-externalip
 spec:
-  type: ExternalName
+  type: ClusterIP
+  selector:
+    app: webserver-dev
+  clusterIP: None
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http-authserver
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: webserver-dev-externalip
+subsets:
+- addresses:
+  - ip: 192.168.1.32
+  ports:
+  - name: webserver-dev
+    port: 8080
+    protocol: TCP
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: authserver-dev-externalip
+  labels:
+    app: authserver-dev-externalip
+spec:
+  type: ClusterIP
   selector:
     app: authserver-dev
+  clusterIP: None
   ports:
     - port: 80
       targetPort: 12143
       protocol: TCP
       name: http-authserver
-  externalName: 192.168.1.32
 ---
 apiVersion: v1
-kind: Service
+kind: Endpoints
 metadata:
-  name: webserver-dev
-  labels:
-    app: webserver-dev
-spec:
-  type: ExternalName
-  selector:
-    app: webserver-dev
+  name: authserver-dev-externalip
+subsets:
+- addresses:
+  - ip: 192.168.1.32
   ports:
-    - port: 80
-      targetPort: 8080
-      protocol: TCP
-      name: http-webserver
-  externalName: 192.168.1.32
+  - name: authserver-dev
+    port: 12143
+    protocol: TCP
+
