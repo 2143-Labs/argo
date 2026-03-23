@@ -16,6 +16,10 @@ spec:
       labels:
         app: teamspeak
     spec:
+      volumes:
+      - name: ts-all
+        persistentVolumeClaim:
+          claimName: teamspeak-all
       containers:
         - name: teamspeak
           image: docker.io/teamspeak:latest
@@ -35,3 +39,6 @@ spec:
             limits:
               cpu: 500m
               memory: 500Mi
+          volumeMounts:
+          - mountPath: /var/ts3server/
+            name: ts-all
