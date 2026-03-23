@@ -71,3 +71,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+# add gatewayclass of traefik
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: traefik
+spec:
+  controllerName: traefik.io/gateway-controller
+

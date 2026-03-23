@@ -1,0 +1,34 @@
+
+# docker pull ghcr.io/2143-labs/bevy2025:teamspeak-wasm-latest
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teamspeak
+  labels:
+    app: teamspeak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teamspeak
+  template:
+    metadata:
+      labels:
+        app: teamspeak
+    spec:
+      containers:
+        - name: teamspeak
+          image: docker.io/teamspeak:latest
+          ports:
+            - containerPort: 9987
+              protocol: UDP
+              name: voice
+            - containerPort: 30033
+              name: file-transfer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 300Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
