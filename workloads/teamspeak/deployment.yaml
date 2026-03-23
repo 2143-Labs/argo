@@ -19,6 +19,9 @@ spec:
       containers:
         - name: teamspeak
           image: docker.io/teamspeak:latest
+          env:
+          - name: TS3SERVER_LICENSE
+            value: accept
           ports:
             - containerPort: 9987
               protocol: UDP
