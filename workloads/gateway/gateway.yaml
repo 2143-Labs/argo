@@ -34,7 +34,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: prod-rots-2143-me-tls
+            name: rots-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -46,7 +46,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: auth-prod-rots-2143-me-tls
+            name: rots-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -58,7 +58,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: dev-rots-2143-me-tls
+            name: rots-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -70,7 +70,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: auth-dev-rots-2143-me-tls
+            name: rots-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
