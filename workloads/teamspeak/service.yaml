@@ -17,3 +17,33 @@ spec:
       targetPort: 30033
       protocol: TCP
       name: file-transfer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ts-voice
+spec:
+  type: NodePort
+  ports:
+  - port: 9987
+    targetPort: 9987
+    nodePort: 30087
+    protocol: UDP
+
+  selector:
+    app: teamspeak
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ts-files
+spec:
+  type: NodePort
+  ports:
+  - port: 30033
+    targetPort: 30033
+    nodePort: 30034
+    protocol: TCP
+
+  selector:
+    app: teamspeak
