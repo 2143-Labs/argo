@@ -10,13 +10,13 @@ spec:
   listeners:
     - name: acme-http
       protocol: HTTP
-      port: 80
+      port: 8000
       allowedRoutes:
         namespaces:
           from: Same
     - name: rots-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: rots.2143.me
       tls:
         mode: Terminate
@@ -28,7 +28,7 @@ spec:
           from: Same
     - name: prod-rots-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: prod.rots.2143.me
       tls:
         mode: Terminate
@@ -40,7 +40,7 @@ spec:
           from: Same
     - name: auth-prod-rots-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: auth.prod.rots.2143.me
       tls:
         mode: Terminate
@@ -52,7 +52,7 @@ spec:
           from: Same
     - name: dev-rots-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: dev.rots.2143.me
       tls:
         mode: Terminate
@@ -64,7 +64,7 @@ spec:
           from: Same
     - name: auth-dev-rots-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: auth.dev.rots.2143.me
       tls:
         mode: Terminate
@@ -76,7 +76,7 @@ spec:
           from: Same
     - name: john2143-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: john2143.com
       tls:
         mode: Terminate
@@ -88,7 +88,7 @@ spec:
           from: Same
     - name: factorio-https
       protocol: HTTPS
-      port: 443
+      port: 8443
       hostname: factorio.2143.me
       tls:
         mode: Terminate
