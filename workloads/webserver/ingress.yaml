@@ -1,38 +1,22 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: webserver
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "5"
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - prod.rots.2143.me
-      secretName: prod-rots-2143-me-tls
-    - hosts:
-        - rots.2143.me
-      secretName: rots-2143-me-tls
+  parentRefs:
+    - name: shared-gateway
+      sectionName: rots-https
+    - name: shared-gateway
+      sectionName: prod-rots-https
+  hostnames:
+    - rots.2143.me
+    - prod.rots.2143.me
   rules:
-    - host: rots.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: webserver
-                port:
-                  number: 80
-    - host: prod.rots.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: webserver
-                port:
-                  number: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: webserver
+          port: 80

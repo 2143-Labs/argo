@@ -1,0 +1,83 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: traefik
+spec:
+  controllerName: traefik.io/gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared-gateway
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: rots-https
+      protocol: HTTPS
+      port: 443
+      hostname: rots.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: rots-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: prod-rots-https
+      protocol: HTTPS
+      port: 443
+      hostname: prod.rots.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: prod-rots-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: auth-prod-rots-https
+      protocol: HTTPS
+      port: 443
+      hostname: auth.prod.rots.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: auth-prod-rots-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: john2143-https
+      protocol: HTTPS
+      port: 443
+      hostname: john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: factorio-https
+      protocol: HTTPS
+      port: 443
+      hostname: factorio.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: factorio-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: factorio-udp
+      protocol: UDP
+      port: 34197
+      allowedRoutes:
+        namespaces:
+          from: Same

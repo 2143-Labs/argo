@@ -1,76 +1,48 @@
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: strip-prefix
-  # No namespace defined
-spec:
-  stripPrefixRegex:
-    regex:
-    - ^/[^/]+
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: authserver-stripped
+  name: authserver-prefixed
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "10"
-    traefik.ingress.kubernetes.io/router.middlewares: default-strip-prefix@kubernetescrd
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - prod.rots.2143.me
-      secretName: prod-rots-2143-me-tls
-    - hosts:
-        - rots.2143.me
-      secretName: rots-2143-me-tls
+  parentRefs:
+    - name: shared-gateway
+      sectionName: rots-https
+    - name: shared-gateway
+      sectionName: prod-rots-https
+  hostnames:
+    - rots.2143.me
+    - prod.rots.2143.me
   rules:
-    - host: rots.2143.me
-      http:
-        paths:
-          - path: /auth/
-            pathType: Prefix
-            backend:
-              service:
-                name: authserver
-                port:
-                  number: 80
-    - host: prod.rots.2143.me
-      http:
-        paths:
-          - path: /auth/
-            pathType: Prefix
-            backend:
-              service:
-                name: authserver
-                port:
-                  number: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /auth
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: authserver
+          port: 80
 ---
-
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: authserver-nostripped
+  name: authserver-direct
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - auth.prod.rots.2143.me
-      secretName: auth-prod-rots-2143-me-tls
+  parentRefs:
+    - name: shared-gateway
+      sectionName: auth-prod-rots-https
+  hostnames:
+    - auth.prod.rots.2143.me
   rules:
-    - host: auth.prod.rots.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: authserver
-                port:
-                  number: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authserver
+          port: 80
