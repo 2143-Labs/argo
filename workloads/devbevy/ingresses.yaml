@@ -1,52 +1,40 @@
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: authserver-nostripped-dev
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - auth.dev.rots.2143.me
-      secretName: auth-dev-rots-2143-me-tls
+  parentRefs:
+    - name: shared-gateway
+      sectionName: auth-dev-rots-https
+  hostnames:
+    - auth.dev.rots.2143.me
   rules:
-    - host: auth.dev.rots.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: authserver-dev-externalip
-                port:
-                  number: 12143
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authserver-dev-externalip
+          port: 80
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: webserver-nostripped-dev
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - dev.rots.2143.me
-      secretName: dev-rots-2143-me-tls
+  parentRefs:
+    - name: shared-gateway
+      sectionName: dev-rots-https
+  hostnames:
+    - dev.rots.2143.me
   rules:
-    - host: dev.rots.2143.me
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: webserver-dev-externalip
-                port:
-                  number: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: webserver-dev-externalip
+          port: 8080

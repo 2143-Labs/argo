@@ -1,23 +1,28 @@
 ---
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
 metadata:
-  name: traefik
+  name: teamspeak-udp
   namespace: default
 spec:
-  gatewayClassName: traefik
-
-  # Only Routes from the same namespace are allowed.
-  listeners:
-    - name: udp
-      protocol: UDP
-      port: 9987
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: fileserver
-      protocol: TCP
-      port: 30033
-      allowedRoutes:
-        namespaces:
-          from: Same
+  parentRefs:
+    - name: shared-gateway
+      sectionName: teamspeak-udp
+  rules:
+    - backendRefs:
+        - name: teamspeak
+          port: 9987
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: teamspeak-fileserver
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: teamspeak-tcp
+  rules:
+    - backendRefs:
+        - name: teamspeak
+          port: 30033

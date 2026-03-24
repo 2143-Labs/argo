@@ -1,11 +1,4 @@
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: traefik
-spec:
-  controllerName: traefik.io/gateway-controller
----
-apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: shared-gateway
@@ -15,6 +8,12 @@ metadata:
 spec:
   gatewayClassName: traefik
   listeners:
+    - name: acme-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: rots-https
       protocol: HTTPS
       port: 443
@@ -51,6 +50,30 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: dev-rots-https
+      protocol: HTTPS
+      port: 443
+      hostname: dev.rots.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: dev-rots-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: auth-dev-rots-https
+      protocol: HTTPS
+      port: 443
+      hostname: auth.dev.rots.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: auth-dev-rots-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: john2143-https
       protocol: HTTPS
       port: 443
@@ -78,6 +101,18 @@ spec:
     - name: factorio-udp
       protocol: UDP
       port: 34197
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: teamspeak-udp
+      protocol: UDP
+      port: 9987
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: teamspeak-tcp
+      protocol: TCP
+      port: 30033
       allowedRoutes:
         namespaces:
           from: Same
