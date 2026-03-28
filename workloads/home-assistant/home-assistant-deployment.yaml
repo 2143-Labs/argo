@@ -33,11 +33,11 @@ spec:
               mountPath: /dev/ttyUSB0
           resources:
             requests:
-              cpu: 100m
-              memory: 512Mi
-            limits:
-              cpu: 1000m
+              cpu: 500m
               memory: 2Gi
+            limits:
+              cpu: 1500m
+              memory: 4Gi
       volumes:
         - name: config
           persistentVolumeClaim:
