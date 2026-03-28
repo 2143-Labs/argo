@@ -25,6 +25,8 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+            - name: ttyusb0
+              mountPath: /dev/ttyUSB0
           resources:
             requests:
               cpu: 100m
@@ -36,3 +38,7 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: home-assistant-config
+        - name: ttyusb0
+          hostPath:
+            path: /dev/ttyUSB0
+            type: CharDevice
