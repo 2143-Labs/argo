@@ -14,8 +14,11 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
     resourceNames: ["tailscale"]
-    verbs: ["get", "create", "update", "patch"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["get", "create", "patch"]
