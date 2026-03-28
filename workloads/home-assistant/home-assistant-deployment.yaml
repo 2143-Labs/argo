@@ -19,6 +19,10 @@ spec:
       containers:
         - name: home-assistant
           image: ghcr.io/home-assistant/home-assistant:stable
+          securityContext:
+            # Required so the container can access host char devices like /dev/ttyUSB0.
+            privileged: true
+            runAsUser: 0
           ports:
             - containerPort: 8123
               name: http
