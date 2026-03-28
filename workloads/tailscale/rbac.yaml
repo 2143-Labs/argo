@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tailscale
+  namespace: default
   labels:
     app: tailscale
 ---
@@ -9,6 +10,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: tailscale-secret-state
+  namespace: default
   labels:
     app: tailscale
 rules:
@@ -30,11 +32,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: tailscale-secret-state
+  namespace: default
   labels:
     app: tailscale
 subjects:
   - kind: ServiceAccount
     name: tailscale
+    namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
