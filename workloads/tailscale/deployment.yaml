@@ -41,6 +41,14 @@ spec:
               value: /var/lib/tailscale
             - name: TS_EXTRA_ARGS
               value: --advertise-exit-node --accept-dns=false
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           securityContext:
             privileged: true
             capabilities:
