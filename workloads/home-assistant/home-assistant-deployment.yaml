@@ -48,7 +48,7 @@ spec:
           hostPath:
             path: /dev/ttyUSB0
             type: CharDevice
-        - name: ttyusb
+        - name: ttyusb1
           hostPath:
             path: /dev/ttyUSB1
             type: CharDevice
