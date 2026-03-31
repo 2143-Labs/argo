@@ -16,6 +16,8 @@ spec:
       labels:
         app: matter-server
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: matter-server
           image: ghcr.io/home-assistant-libs/python-matter-server:stable
