@@ -33,8 +33,6 @@ metadata:
     app: authserver-dev-externalip
 spec:
   type: ClusterIP
-  selector:
-    app: authserver-dev
   clusterIP: None
   ports:
     - port: 80

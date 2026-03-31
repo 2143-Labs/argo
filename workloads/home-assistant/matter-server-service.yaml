@@ -6,6 +6,10 @@ metadata:
     app: matter-server
 spec:
   type: ClusterIP
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies:
+    - IPv4
+    - IPv6
   selector:
     app: matter-server
   ports:
@@ -22,6 +26,10 @@ metadata:
     app: matter-server
 spec:
   type: NodePort
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies:
+    - IPv4
+    - IPv6
   selector:
     app: matter-server
   ports:
