@@ -1,33 +1,33 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: agones
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    chart: agones
-    repoURL: https://agones.dev/chart/stable
-    targetRevision: "*"
-    helm:
-      releaseName: agones
-      values: |
-        agones:
-          allocator:
-            install: false
-          ping:
-            install: false
-          controller:
-            hostPort: 0
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: agones-system
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
+#apiVersion: argoproj.io/v1alpha1
+#kind: Application
+#metadata:
+  #name: agones
+  #namespace: argocd
+  #finalizers:
+    #- resources-finalizer.argocd.argoproj.io
+#spec:
+  #project: default
+  #source:
+    #chart: agones
+    #repoURL: https://agones.dev/chart/stable
+    #targetRevision: "*"
+    #helm:
+      #releaseName: agones
+      #values: |
+        #agones:
+          #allocator:
+            #install: false
+          #ping:
+            #install: false
+          #controller:
+            #hostPort: 0
+  #destination:
+    #server: https://kubernetes.default.svc
+    #namespace: agones-system
+  #syncPolicy:
+    #automated:
+      #prune: true
+      #selfHeal: true
+    #syncOptions:
+      #- CreateNamespace=true
+      #- ServerSideApply=true
