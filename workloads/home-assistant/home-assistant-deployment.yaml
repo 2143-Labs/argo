@@ -31,8 +31,8 @@ spec:
               mountPath: /config
             - name: ttyusb0
               mountPath: /dev/ttyUSB0
-            - name: ttyusb1
-              mountPath: /dev/ttyUSB1
+            #- name: ttyusb1
+              #mountPath: /dev/ttyUSB1
           resources:
             requests:
               cpu: 500m
@@ -48,7 +48,7 @@ spec:
           hostPath:
             path: /dev/ttyUSB0
             type: CharDevice
-        - name: ttyusb1
-          hostPath:
-            path: /dev/ttyUSB1
-            type: CharDevice
+        #- name: ttyusb1
+          #hostPath:
+            #path: /dev/ttyUSB1
+            #type: CharDevice
