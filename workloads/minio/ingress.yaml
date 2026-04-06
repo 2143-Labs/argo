@@ -26,7 +26,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: fs-ui-john2143-https
+      sectionName: fsui-john2143-https
   hostnames:
     - fsui.john2143.com
   rules:
