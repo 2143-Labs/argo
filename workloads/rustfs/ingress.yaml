@@ -1,0 +1,39 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustfs-files
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: files-john2143-https
+  hostnames:
+    - files.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: rustfs
+          port: 9000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustfs-files-ui
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: files-ui-john2143-https
+  hostnames:
+    - files-ui.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: rustfs
+          port: 9001

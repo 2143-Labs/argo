@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  labels:
+    app: rustfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: closet
+      securityContext:
+        fsGroup: 10001
+      volumes:
+        - name: data
+          hostPath:
+            path: /mnt/rustfs
+            type: Directory
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+          envFrom:
+            - secretRef:
+                name: rustfs-credentials
+          env:
+            - name: RUSTFS_ADDRESS
+              value: "0.0.0.0:9000"
+            - name: RUSTFS_CONSOLE_ADDRESS
+              value: "0.0.0.0:9001"
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "true"
+            - name: RUSTFS_SERVER_DOMAINS
+              value: "files.john2143.com"
+            - name: RUSTFS_CORS_ALLOWED_ORIGINS
+              value: "https://files-ui.john2143.com"
+            - name: RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS
+              value: "https://files-ui.john2143.com"
+          ports:
+            - containerPort: 9000
+              name: api
+            - containerPort: 9001
+              name: console
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /data
