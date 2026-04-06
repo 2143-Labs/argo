@@ -51,8 +51,8 @@ spec:
               cpu: 100m
               memory: 512Mi
             limits:
-              cpu: "2"
-              memory: 4Gi
+              cpu: 250m
+              memory: 1Gi
           readinessProbe:
             httpGet:
               path: /minio/health/ready

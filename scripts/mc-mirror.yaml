@@ -1,0 +1,41 @@
+# workloads/mc-mirror-job/job.yaml
+# Should be allowed on taint "seated=true:NoSchedule" (main node)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mc-mirror-minio-to-rustfs
+spec:
+  backoffLimit: 500
+  ttlSecondsAfterFinished: 3600
+  parallelism: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      tolerations:
+        - key: "seated"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+        - key: "wifi"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+      containers:
+        - name: mc
+          image: minio/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo rustfs $RUSTFS_ROOT_USER $RUSTFS_ROOT_PASSWORD
+              mc alias set dst http://rustfs:9000  "$RUSTFS_ROOT_USER"  "$RUSTFS_ROOT_PASSWORD"
+              echo rustfs set
+              echo minio $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+              mc alias set src http://minio:9000   "$MINIO_ROOT_USER"   "$MINIO_ROOT_PASSWORD"
+              echo minio set
+              mc mirror --preserve --watch=false src/ dst/
+          envFrom:
+            - secretRef:
+                name: minio-credentials   # provides MINIO_ROOT_USER / MINIO_ROOT_PASSWORD
+            - secretRef:
+                name: rustfs-credentials  # provides RUSTFS_ROOT_USER / RUSTFS_ROOT_PASSWORD
