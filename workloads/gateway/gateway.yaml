@@ -134,21 +134,22 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: factorio-udp
-      protocol: UDP
-      port: 34197
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: teamspeak-udp
-      protocol: UDP
-      port: 9987
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: teamspeak-tcp
-      protocol: TCP
-      port: 30033
-      allowedRoutes:
-        namespaces:
-          from: Same
+    # These are defined as nodeports instead
+    #- name: factorio-udp
+      #protocol: UDP
+      #port: 34197
+      #allowedRoutes:
+        #namespaces:
+          #from: Same
+    #- name: teamspeak-udp
+      #protocol: UDP
+      #port: 9987
+      #allowedRoutes:
+        #namespaces:
+          #from: Same
+    #- name: teamspeak-tcp
+      #protocol: TCP
+      #port: 30033
+      #allowedRoutes:
+        #namespaces:
+          #from: Same
