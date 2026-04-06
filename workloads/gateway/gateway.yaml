@@ -122,6 +122,30 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: files-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: files.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: files-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: files-ui-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: files-ui.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: files-ui-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: factorio-https
       protocol: HTTPS
       port: 8443
