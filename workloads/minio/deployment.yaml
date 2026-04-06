@@ -38,6 +38,9 @@ spec:
           env:
             - name: MINIO_SERVER_URL
               value: "https://fs.john2143.com"
+            # the console url:
+            - name: MINIO_CONSOLE_URL
+              value: "https://fsui.john2143.com"
           ports:
             - containerPort: 9000
               name: api
