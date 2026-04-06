@@ -17,3 +17,23 @@ spec:
       backendRefs:
         - name: minio
           port: 9000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: minio-fs
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: fs-ui-john2143-https
+  hostnames:
+    - fsui.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: minio
+          port: 9001

@@ -110,6 +110,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: fsui-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: fsui.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: fsui-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: factorio-https
       protocol: HTTPS
       port: 8443
