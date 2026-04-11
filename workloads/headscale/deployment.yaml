@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale
+  labels:
+    app: headscale
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: headscale
+  template:
+    metadata:
+      labels:
+        app: headscale
+    spec:
+      containers:
+        - name: headscale
+          image: docker.io/headscale/headscale:0.27.1
+          command:
+            - headscale
+            - serve
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 3478
+              protocol: UDP
+              name: stun
+          readinessProbe:
+            exec:
+              command:
+                - headscale
+                - health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - headscale
+                - health
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          securityContext:
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: headscale-config
+              mountPath: /etc/headscale
+              readOnly: true
+            - name: headscale-data
+              mountPath: /var/lib/headscale
+            - name: run
+              mountPath: /var/run/headscale
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: headscale-config
+          configMap:
+            name: headscale-config
+        - name: headscale-data
+          persistentVolumeClaim:
+            claimName: headscale-data
+        - name: run
+          emptyDir:
+            medium: Memory
