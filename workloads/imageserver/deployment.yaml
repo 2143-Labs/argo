@@ -22,7 +22,7 @@ spec:
       - name: upload-fish
         configMap:
           name: upload-fish
-          defaultMode: 0777
+          defaultMode: 0555
           items:
             - key: upload.fish
               path: upload.fish
@@ -31,16 +31,14 @@ spec:
             - key: shared.fish
               path: shared.fish
 
-      #securityContext:
-        #runAsUser: 1000
-        #runAsGroup: 1000
-        #fsGroup: 1000
-
       containers:
       - name: john2143-com
         image: ghcr.io/john2143/john2143.com:109
-
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         ports:
         - containerPort: &port 3000
         volumeMounts:

@@ -13,20 +13,3 @@ spec:
       targetPort: 8123
       protocol: TCP
       name: http
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: home-assistant-nodeport
-  labels:
-    app: home-assistant
-spec:
-  type: NodePort
-  selector:
-    app: home-assistant
-  ports:
-    - port: 80
-      nodePort: 30067
-      targetPort: 8123
-      protocol: TCP
-      name: http

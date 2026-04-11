@@ -18,6 +18,12 @@ spec:
       containers:
         - name: webserver
           image: ghcr.io/2143-labs/bevy2025:webserver-wasm-latest
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: &port 8000
               name: http
