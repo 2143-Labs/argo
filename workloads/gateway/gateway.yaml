@@ -74,6 +74,21 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: auth-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: auth.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: auth-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
     - name: john2143-https
       protocol: HTTPS
       port: 8443
