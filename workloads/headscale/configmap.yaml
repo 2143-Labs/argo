@@ -82,3 +82,14 @@ data:
 
     taildrop:
       enabled: true
+
+    oidc:
+      issuer: https://auth.john2143.com/application/o/headscale/
+      client_id: headscale
+      client_secret: env-override
+      pkce:
+        enabled: true
+      scope:
+        - openid
+        - profile
+        - email

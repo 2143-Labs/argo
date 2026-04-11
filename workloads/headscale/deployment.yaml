@@ -19,6 +19,9 @@ spec:
       containers:
         - name: headscale
           image: docker.io/headscale/headscale:0.27.1
+          envFrom:
+            - secretRef:
+                name: headscale-oidc
           command:
             - headscale
             - serve
