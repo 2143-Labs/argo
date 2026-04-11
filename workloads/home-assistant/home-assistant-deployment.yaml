@@ -19,7 +19,8 @@ spec:
       containers:
         - name: home-assistant
           image: ghcr.io/home-assistant/home-assistant:stable
-          #securityContext:
+          securityContext:
+            privileged: true
             #runAsUser: 0
             #allowPrivilegeEscalation: false
           ports:
