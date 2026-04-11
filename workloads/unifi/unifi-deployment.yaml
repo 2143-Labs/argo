@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unifi
+  labels:
+    app: unifi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: unifi
+  template:
+    metadata:
+      labels:
+        app: unifi
+    spec:
+      containers:
+        - name: unifi
+          image: docker.io/jacobalberty/unifi:latest
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: DB_URI
+              value: mongodb://unifi:unifi@unifi-mongodb:27017/unifi
+            - name: STATDB_URI
+              value: mongodb://unifi:unifi@unifi-mongodb:27017/unifi_stat
+            - name: DB_NAME
+              value: unifi
+          ports:
+            - containerPort: 8443
+              name: web-ui
+            - containerPort: 8080
+              name: inform
+            - containerPort: 3478
+              protocol: UDP
+              name: stun
+            - containerPort: 10001
+              protocol: UDP
+              name: discovery
+            - containerPort: 6789
+              name: speed-test
+            - containerPort: 1900
+              protocol: UDP
+              name: l2-discovery
+          volumeMounts:
+            - name: data
+              mountPath: /unifi
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: unifi-config
