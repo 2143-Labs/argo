@@ -60,7 +60,7 @@ data:
 
     dns:
       magic_dns: true
-      base_domain: hs.net
+      base_domain: ts.2143.me
       override_local_dns: true
       nameservers:
         global:

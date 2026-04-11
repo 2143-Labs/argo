@@ -7,8 +7,11 @@ spec:
   parentRefs:
     - name: shared-gateway
       sectionName: net-john2143-https
+    - name: shared-gateway
+      sectionName: net-2143-https
   hostnames:
     - net.john2143.com
+    - net.2143.me
   rules:
     - matches:
         - path:

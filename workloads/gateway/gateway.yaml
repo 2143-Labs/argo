@@ -158,6 +158,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: net-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: net.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: net-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: factorio-https
       protocol: HTTPS
       port: 8443
