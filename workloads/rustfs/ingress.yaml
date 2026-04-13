@@ -26,9 +26,9 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: files-ui-john2143-https
+      sectionName: files-ui-ts-2143-https
   hostnames:
-    - files-ui.john2143.com
+    - files-ui.ts.2143.me
   rules:
     - matches:
         - path:

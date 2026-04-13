@@ -116,18 +116,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: home-john2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: home.john2143.com
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            name: home-john2143-com-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
     - name: home-ts-2143-https
       protocol: HTTPS
       port: 8443
@@ -176,15 +164,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: files-ui-john2143-https
+    - name: files-ui-ts-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: files-ui.john2143.com
+      hostname: files-ui.ts.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: files-ui-john2143-com-tls
+            name: files-ui-ts-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same

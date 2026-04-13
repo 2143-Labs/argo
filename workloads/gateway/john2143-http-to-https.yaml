@@ -14,9 +14,7 @@ spec:
   hostnames:
     - john2143.com
     - auth.john2143.com
-    - home.john2143.com
     - files.john2143.com
-    - files-ui.john2143.com
   rules:
     - matches:
         - path:
