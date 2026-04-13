@@ -8,6 +8,9 @@ spec:
     - name: shared-gateway
       namespace: default
       sectionName: auth-john2143-https
+    - name: shared-gateway
+      namespace: default
+      sectionName: auth-ts-2143-https
   hostnames:
     - auth.john2143.com
     - auth.ts.2143.me
