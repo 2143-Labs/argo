@@ -19,6 +19,15 @@ spec:
                 name: shared-gateway
                 namespace: default
                 sectionName: acme-http
+      - dns01:
+          digitalocean:
+            tokenSecretRef:
+              name: digitalocean-dns
+              key: access-token
+        selector:
+          dnsZones:
+            - "2143.me"
+            - "john2143.com"
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
