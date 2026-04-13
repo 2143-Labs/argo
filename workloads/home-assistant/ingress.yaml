@@ -9,6 +9,7 @@ spec:
       sectionName: home-john2143-https
   hostnames:
     - home.john2143.com
+    - home.ts.2143.me
   rules:
     - matches:
         - path:

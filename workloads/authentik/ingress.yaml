@@ -10,6 +10,7 @@ spec:
       sectionName: auth-john2143-https
   hostnames:
     - auth.john2143.com
+    - auth.ts.2143.me
   rules:
     - matches:
         - path:

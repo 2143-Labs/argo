@@ -70,7 +70,19 @@ data:
           - 2606:4700:4700::1001
       split: {}
       search_domains: []
-      extra_records: []
+      extra_records:
+        - name: "auth.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "auth.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
+        - name: "home.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "home.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
 
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
