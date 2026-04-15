@@ -89,6 +89,12 @@ data:
         - name: "files-ui.ts.2143.me"
           type: "AAAA"
           value: "fd7a:115c:a1e0::2"
+        - name: "pihole.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "pihole.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
 
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
