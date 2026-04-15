@@ -128,6 +128,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: pihole-ts-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: pihole.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: pihole-ts-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: fs-john2143-https
       protocol: HTTPS
       port: 8443

@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: pihole
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: pihole-ts-2143-https
+  hostnames:
+    - pihole.ts.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: pihole
+          port: 80
