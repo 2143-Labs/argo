@@ -5,6 +5,25 @@ metadata:
   labels:
     app: headscale
 data:
+  derp.json: |
+    {
+      "Regions": {
+        "900": {
+          "RegionID": 900,
+          "RegionCode": "us-east-1",
+          "RegionName": "derp.2143.me",
+          "Nodes": [
+            {
+              "Name": "derp2143",
+              "RegionID": 900,
+              "HostName": "derp.2143.me",
+              "STUNPort": 3478,
+              "DERPPort": 443
+            }
+          ]
+        }
+      }
+    }
   config.yaml: |
     server_url: https://net.john2143.com
     listen_addr: 0.0.0.0:8080
@@ -30,10 +49,10 @@ data:
         stun_listen_addr: "0.0.0.0:3478"
         private_key_path: /var/lib/headscale/derp_server_private.key
         automatically_add_embedded_derp_region: true
-      urls:
-        - https://controlplane.tailscale.com/derpmap/default
-      paths: []
-      auto_update_enabled: true
+      urls: []
+      paths:
+        - /etc/headscale/derp.json
+      auto_update_enabled: false
       update_frequency: 3h
 
     disable_check_updates: true

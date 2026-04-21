@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-proxy
+  labels:
+    app: immich-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-proxy
+  template:
+    metadata:
+      labels:
+        app: immich-proxy
+    spec:
+      # nas.ts.2143.me is Tailscale MagicDNS; pods cannot resolve it directly.
+      # The node is on the tailnet, so routing to 100.64.0.14 works from pods,
+      # but we still need to pin the name -> IP for the proxy's outbound call.
+      hostAliases:
+        - ip: "100.64.0.14"
+          hostnames:
+            - "nas.ts.2143.me"
+      containers:
+        - name: immich-proxy
+          image: ghcr.io/alangrainger/immich-public-proxy:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 3000
+              name: http
+          env:
+            - name: IMMICH_URL
+              value: http://nas.ts.2143.me:2283
+            - name: PUBLIC_BASE_URL
+              value: https://images.2143.me
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /share/healthcheck
+              port: *port
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /share/healthcheck
+              port: *port
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
