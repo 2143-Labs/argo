@@ -21,12 +21,18 @@ spec:
         - ip: "100.64.0.14"
           hostnames:
             - "nas.ts.2143.me"
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
       containers:
         - name: immich-proxy
-          image: ghcr.io/alangrainger/immich-public-proxy:latest
+          image: ghcr.io/alangrainger/immich-public-proxy:1.15.5
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
+            runAsUser: 1000
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
@@ -39,6 +45,9 @@ spec:
               value: http://nas.ts.2143.me:2283
             - name: PUBLIC_BASE_URL
               value: https://images.2143.me
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 10m
