@@ -18,12 +18,7 @@ spec:
           envFrom:
             - secretRef:
                 name: authentik-secrets
-        authentik:
-          postgresql:
-            host: ""
-            password: ""
-          redis:
-            host: ""
+        authentik: {}
         server:
           replicas: 1
           ingress:
