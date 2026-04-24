@@ -36,13 +36,12 @@ kind: Service
 metadata:
   name: unifi-inform
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: unifi
   ports:
     - port: 8080
       targetPort: 8080
-      nodePort: 30080
       protocol: TCP
       name: inform
 ---
@@ -52,12 +51,11 @@ kind: Service
 metadata:
   name: unifi-discovery
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: unifi
   ports:
     - port: 10001
       targetPort: 10001
-      nodePort: 30001
       protocol: UDP
       name: discovery
