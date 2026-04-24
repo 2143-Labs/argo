@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: tailscale-state
+  name: headscale-data
   labels:
-    app: tailscale
+    app: headscale
 spec:
   accessModes:
     - ReadWriteOnce

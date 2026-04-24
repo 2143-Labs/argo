@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: headscale-config
+  labels:
+    app: headscale
+data:
+  derp.json: |
+    {
+      "Regions": {
+        "900": {
+          "RegionID": 900,
+          "RegionCode": "us-east-1",
+          "RegionName": "derp.2143.me",
+          "Nodes": [
+            {
+              "Name": "derp2143",
+              "RegionID": 900,
+              "HostName": "derp.2143.me",
+              "STUNPort": 3478,
+              "DERPPort": 443
+            }
+          ]
+        }
+      }
+    }
+  config.yaml: |
+    server_url: https://net.john2143.com
+    listen_addr: 0.0.0.0:8080
+    metrics_listen_addr: 0.0.0.0:9090
+    grpc_listen_addr: 0.0.0.0:50443
+    grpc_allow_insecure: false
+
+    noise:
+      private_key_path: /var/lib/headscale/noise_private.key
+
+    prefixes:
+      v4: 100.64.0.0/10
+      v6: fd7a:115c:a1e0::/48
+      allocation: sequential
+
+    derp:
+      server:
+        enabled: true
+        region_id: 999
+        region_code: "headscale"
+        region_name: "Headscale Embedded DERP"
+        verify_clients: true
+        stun_listen_addr: "0.0.0.0:3478"
+        private_key_path: /var/lib/headscale/derp_server_private.key
+        automatically_add_embedded_derp_region: true
+      urls: []
+      paths:
+        - /etc/headscale/derp.json
+      auto_update_enabled: false
+      update_frequency: 3h
+
+    disable_check_updates: true
+
+    node:
+      expiry: 0
+      ephemeral:
+        inactivity_timeout: 30m
+
+    database:
+      type: sqlite
+      sqlite:
+        path: /var/lib/headscale/db.sqlite
+        write_ahead_log: true
+        wal_autocheckpoint: 1000
+
+    log:
+      level: info
+      format: text
+
+    policy:
+      mode: file
+      path: ""
+
+    dns:
+      magic_dns: true
+      base_domain: ts.2143.me
+      override_local_dns: true
+      nameservers:
+        global:
+          - 1.1.1.1
+          - 1.0.0.1
+          - 2606:4700:4700::1111
+          - 2606:4700:4700::1001
+      split: {}
+      search_domains: []
+      extra_records:
+        - name: "auth.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "auth.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
+        - name: "home.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "home.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
+        - name: "files-ui.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "files-ui.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
+        - name: "pihole.ts.2143.me"
+          type: "A"
+          value: "100.64.0.2"
+        - name: "pihole.ts.2143.me"
+          type: "AAAA"
+          value: "fd7a:115c:a1e0::2"
+
+    unix_socket: /var/run/headscale/headscale.sock
+    unix_socket_permission: "0770"
+
+    logtail:
+      enabled: false
+
+    randomize_client_port: false
+
+    taildrop:
+      enabled: true
+
+#    oidc:
+#      issuer: https://auth.john2143.com/application/o/headscale/
+#      client_id: headscale
+#      client_secret: env-override
+#      pkce:
+#        enabled: true
+#      scope:
+#        - openid
+#        - profile
+#        - email
+#

@@ -24,7 +24,11 @@ spec:
           claimName: teamspeak-all
       containers:
         - name: teamspeak
-          image: docker.io/teamspeak:latest
+          image: docker.io/teamspeak:3.13.7
+          #securityContext:
+            #allowPrivilegeEscalation: false
+            #capabilities:
+              #drop: ["ALL"]
           env:
           - name: TS3SERVER_LICENSE
             value: accept

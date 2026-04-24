@@ -74,6 +74,36 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: auth-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: auth.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: auth-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
+    - name: auth-ts-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: auth.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: auth-ts-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
     - name: john2143-https
       protocol: HTTPS
       port: 8443
@@ -86,15 +116,27 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: home-john2143-https
+    - name: home-ts-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: home.john2143.com
+      hostname: home.ts.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: home-john2143-com-tls
+            name: home-ts-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: pihole-ts-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: pihole.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: pihole-ts-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -134,15 +176,39 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: files-ui-john2143-https
+    - name: files-ui-ts-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: files-ui.john2143.com
+      hostname: files-ui.ts.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: files-ui-john2143-com-tls
+            name: files-ui-ts-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: net-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: net.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: net-john2143-com-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: net-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: net.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: net-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -155,6 +221,18 @@ spec:
         certificateRefs:
           - kind: Secret
             name: factorio-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: images-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: images.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: images-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Same

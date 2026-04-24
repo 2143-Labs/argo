@@ -27,8 +27,7 @@ spec:
             type: Directory
       containers:
         - name: rustfs
-          image: rustfs/rustfs:latest
-          imagePullPolicy: IfNotPresent
+          image: rustfs/rustfs:1.0.0-alpha.90
           securityContext:
             runAsUser: 10001
             runAsGroup: 10001

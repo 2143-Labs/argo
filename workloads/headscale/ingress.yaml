@@ -1,19 +1,22 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: home-assistant
+  name: headscale
   namespace: default
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: home-ts-2143-https
+      sectionName: net-john2143-https
+    - name: shared-gateway
+      sectionName: net-2143-https
   hostnames:
-    - home.ts.2143.me
+    - net.john2143.com
+    - net.2143.me
   rules:
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: home-assistant
-          port: 80
+        - name: headscale
+          port: 8080

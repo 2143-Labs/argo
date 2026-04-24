@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pihole
+  labels:
+    app: pihole
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pihole
+  template:
+    metadata:
+      labels:
+        app: pihole
+    spec:
+      containers:
+        - name: pihole
+          image: docker.io/pihole/pihole:2025.08.0
+          env:
+            - name: TZ
+              value: America/Chicago
+            - name: DNSMASQ_LISTENING
+              value: all
+            - name: FTLCONF_webserver_api_password
+              value: ""
+          ports:
+            - containerPort: 53
+              protocol: UDP
+              name: dns-udp
+            - containerPort: 53
+              protocol: TCP
+              name: dns-tcp
+            - containerPort: 80
+              protocol: TCP
+              name: http
+          volumeMounts:
+            - name: pihole-config
+              mountPath: /etc/pihole
+            - name: dnsmasq-config
+              mountPath: /etc/dnsmasq.d
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: pihole-config
+          persistentVolumeClaim:
+            claimName: pihole-config
+        - name: dnsmasq-config
+          persistentVolumeClaim:
+            claimName: pihole-dnsmasq
