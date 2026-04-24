@@ -46,22 +46,6 @@ spec:
       protocol: TCP
       name: inform
 ---
-# STUN - required for AP connectivity
-apiVersion: v1
-kind: Service
-metadata:
-  name: unifi-stun
-spec:
-  type: NodePort
-  selector:
-    app: unifi
-  ports:
-    - port: 3478
-      targetPort: 3478
-      nodePort: 30478
-      protocol: UDP
-      name: stun
----
 # Device discovery
 apiVersion: v1
 kind: Service
