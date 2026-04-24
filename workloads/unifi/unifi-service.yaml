@@ -4,6 +4,9 @@ metadata:
   name: unifi
   labels:
     app: unifi
+  annotations:
+    traefik.io/service.serversscheme: https
+    traefik.io/service.serverstransport: default-unifi-transport@kubernetescrd
 spec:
   type: ClusterIP
   selector:
