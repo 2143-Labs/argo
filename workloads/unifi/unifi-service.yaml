@@ -4,9 +4,6 @@ metadata:
   name: unifi
   labels:
     app: unifi
-  annotations:
-    traefik.io/service.serversscheme: https
-    traefik.io/service.serverstransport: default-unifi-transport@kubernetescrd
 spec:
   type: ClusterIP
   selector:
@@ -47,6 +44,22 @@ spec:
       targetPort: 8080
       protocol: TCP
       name: inform
+---
+# Web UI
+apiVersion: v1
+kind: Service
+metadata:
+  name: unifi-web
+spec:
+  type: NodePort
+  selector:
+    app: unifi
+  ports:
+    - port: 8443
+      targetPort: 8443
+      nodePort: 30443
+      protocol: TCP
+      name: web-ui
 ---
 # Device discovery
 apiVersion: v1
