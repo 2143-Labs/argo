@@ -30,11 +30,14 @@
             yq-go
             jq
             git
+
+            # S3-compatible object storage CLI (RustFS / MinIO)
+            minio-client
           ];
 
           shellHook = ''
             echo "Argo CD dev shell ready"
-            echo "Tools: argocd, kubectl, helm, kustomize, sops, age-keygen, yq, jq"
+            echo "Tools: argocd, kubectl, helm, kustomize, sops, age-keygen, yq, jq, mc"
           '';
         };
       });
