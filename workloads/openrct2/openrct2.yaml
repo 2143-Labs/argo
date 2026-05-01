@@ -1,0 +1,76 @@
+# A deployment for an OpenRCT2 multiplayer (headless) server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openrct2
+  labels:
+    app: openrct2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: openrct2
+  template:
+    metadata:
+      labels:
+        app: openrct2
+    spec:
+      securityContext:
+        fsGroup: 1000
+      volumes:
+        - name: openrct2-data
+          persistentVolumeClaim:
+            claimName: openrct2-data
+      containers:
+        - name: openrct2
+          image: openrct2/openrct2-cli:0.5.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - host
+            - /home/openrct2/.config/OpenRCT2/save/server.park
+            - --port
+            - "11753"
+            - --password
+            - "2143"
+            - --user-data-path
+            - /home/openrct2/.config/OpenRCT2
+          ports:
+            - containerPort: 11753
+              protocol: TCP
+              name: game
+          volumeMounts:
+            - mountPath: /home/openrct2/.config/OpenRCT2
+              name: openrct2-data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openrct2-game
+spec:
+  type: NodePort
+  ports:
+    - port: 11753
+      targetPort: 11753
+      nodePort: 31753
+      protocol: TCP
+
+  selector:
+    app: openrct2
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openrct2-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2G
+  storageClassName: local-path
