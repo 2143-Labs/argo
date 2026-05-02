@@ -18,6 +18,15 @@ spec:
       labels:
         app: teamspeak
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - closet
       volumes:
       - name: ts-all
         persistentVolumeClaim:
