@@ -10,6 +10,7 @@ spec:
     - https://github.com/2143-Labs/argo.git
     - https://github.com/kubernetes-sigs/gateway-api.git
     - https://charts.jetstack.io
+    - https://charts.longhorn.io
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -23,6 +24,14 @@ spec:
     - group: cert-manager.io
       kind: ClusterIssuer
     - group: gateway.networking.k8s.io
+      kind: '*'
+    - group: storage.k8s.io
+      kind: CSIDriver
+    - group: storage.k8s.io
+      kind: StorageClass
+    - group: snapshot.storage.k8s.io
+      kind: VolumeSnapshotClass
+    - group: longhorn.io
       kind: '*'
 
 ---
