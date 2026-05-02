@@ -14,6 +14,16 @@ spec:
     helm:
       releaseName: longhorn
       values: |
+        # The pre-upgrade-checker is a helm pre-upgrade hook Job. Argo
+        # applies hooks in a PreSync wave BEFORE the chart's ServiceAccount
+        # exists, so the Job fails to create with "serviceaccount
+        # longhorn-service-account not found". Upstream's values.yaml
+        # comment literally tells GitOps users to disable it. We keep
+        # upgradeVersionCheck enabled — that runs in the manager Pod after
+        # the SA exists, so it's not affected by the same race.
+        preUpgradeChecker:
+          jobEnabled: false
+          upgradeVersionCheck: true
         defaultSettings:
           # Only nodes labeled `node.longhorn.io/create-default-disk=true`
           # get a default disk. We label closet + arch (wired NVMe-bearing
