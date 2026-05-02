@@ -6,7 +6,7 @@ metadata:
   labels:
     app: openrct2
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -74,3 +74,15 @@ spec:
     requests:
       storage: 2G
   storageClassName: local-path
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openrct2-data-lh
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2G
+  storageClassName: longhorn
