@@ -1,83 +1,83 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: longhorn
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    chart: longhorn
-    repoURL: https://charts.longhorn.io
-    targetRevision: 1.11.1
-    helm:
-      releaseName: longhorn
-      values: |
-        # The pre-upgrade-checker is a helm pre-upgrade hook Job. Argo
-        # applies hooks in a PreSync wave BEFORE the chart's ServiceAccount
-        # exists, so the Job fails to create with "serviceaccount
-        # longhorn-service-account not found". Upstream's values.yaml
-        # comment literally tells GitOps users to disable it. We keep
-        # upgradeVersionCheck enabled — that runs in the manager Pod after
-        # the SA exists, so it's not affected by the same race.
-        preUpgradeChecker:
-          jobEnabled: false
-          upgradeVersionCheck: true
-        defaultSettings:
-          # Only nodes labeled `node.longhorn.io/create-default-disk=true`
-          # get a default disk. We label closet + arch (wired NVMe-bearing
-          # nodes); office is deliberately left unlabeled because it's on
-          # Wi-Fi and would drag every Tier C fsync to Wi-Fi latency.
-          createDefaultDiskLabeledNodes: true
-          # Default disk path on labeled nodes. Both closet and arch have
-          # /mnt/longhorn pre-prepared (see arch-hardware-configuration.nix
-          # for arch's mount; closet uses the existing /mnt/sda1).
-          defaultDataPath: /mnt/longhorn
-          defaultReplicaCount: 2
-          # Wait this many seconds before triggering a replica rebuild on a
-          # different node when one goes away. Long enough to cover routine
-          # node reboots without churning rebuild traffic.
-          replicaReplenishmentWaitInterval: 1800
-          # Backup target — NFS to the NAS. If unreachable, only new backup
-          # uploads are affected; live volumes are untouched.
-          backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
-          backupTargetCredentialSecret: ""
-          # Allow Longhorn pods to schedule on tainted nodes (specifically
-          # arch's seated=true:NoSchedule). Without this, no replica nor
-          # CSI plugin would land on arch.
-          taintToleration: "seated=true:NoSchedule"
-        longhornManager:
-          tolerations:
-            - key: seated
-              operator: Equal
-              value: "true"
-              effect: NoSchedule
-        longhornDriver:
-          tolerations:
-            - key: seated
-              operator: Equal
-              value: "true"
-              effect: NoSchedule
-        longhornUI:
-          tolerations:
-            - key: seated
-              operator: Equal
-              value: "true"
-              effect: NoSchedule
-        persistence:
-          # We ship our own StorageClass in workloads/storage/.
-          defaultClass: false
-          defaultClassReplicaCount: 2
-        ingress:
-          enabled: false
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: longhorn-system
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
+#apiVersion: argoproj.io/v1alpha1
+#kind: Application
+#metadata:
+  #name: longhorn
+  #namespace: argocd
+  #finalizers:
+    #- resources-finalizer.argocd.argoproj.io
+#spec:
+  #project: default
+  #source:
+    #chart: longhorn
+    #repoURL: https://charts.longhorn.io
+    #targetRevision: 1.11.1
+    #helm:
+      #releaseName: longhorn
+      #values: |
+        ## The pre-upgrade-checker is a helm pre-upgrade hook Job. Argo
+        ## applies hooks in a PreSync wave BEFORE the chart's ServiceAccount
+        ## exists, so the Job fails to create with "serviceaccount
+        ## longhorn-service-account not found". Upstream's values.yaml
+        ## comment literally tells GitOps users to disable it. We keep
+        ## upgradeVersionCheck enabled — that runs in the manager Pod after
+        ## the SA exists, so it's not affected by the same race.
+        #preUpgradeChecker:
+          #jobEnabled: false
+          #upgradeVersionCheck: true
+        #defaultSettings:
+          ## Only nodes labeled `node.longhorn.io/create-default-disk=true`
+          ## get a default disk. We label closet + arch (wired NVMe-bearing
+          ## nodes); office is deliberately left unlabeled because it's on
+          ## Wi-Fi and would drag every Tier C fsync to Wi-Fi latency.
+          #createDefaultDiskLabeledNodes: true
+          ## Default disk path on labeled nodes. Both closet and arch have
+          ## /mnt/longhorn pre-prepared (see arch-hardware-configuration.nix
+          ## for arch's mount; closet uses the existing /mnt/sda1).
+          #defaultDataPath: /mnt/longhorn
+          #defaultReplicaCount: 2
+          ## Wait this many seconds before triggering a replica rebuild on a
+          ## different node when one goes away. Long enough to cover routine
+          ## node reboots without churning rebuild traffic.
+          #replicaReplenishmentWaitInterval: 1800
+          ## Backup target — NFS to the NAS. If unreachable, only new backup
+          ## uploads are affected; live volumes are untouched.
+          #backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
+          #backupTargetCredentialSecret: ""
+          ## Allow Longhorn pods to schedule on tainted nodes (specifically
+          ## arch's seated=true:NoSchedule). Without this, no replica nor
+          ## CSI plugin would land on arch.
+          #taintToleration: "seated=true:NoSchedule"
+        #longhornManager:
+          #tolerations:
+            #- key: seated
+              #operator: Equal
+              #value: "true"
+              #effect: NoSchedule
+        #longhornDriver:
+          #tolerations:
+            #- key: seated
+              #operator: Equal
+              #value: "true"
+              #effect: NoSchedule
+        #longhornUI:
+          #tolerations:
+            #- key: seated
+              #operator: Equal
+              #value: "true"
+              #effect: NoSchedule
+        #persistence:
+          ## We ship our own StorageClass in workloads/storage/.
+          #defaultClass: false
+          #defaultClassReplicaCount: 2
+        #ingress:
+          #enabled: false
+  #destination:
+    #server: https://kubernetes.default.svc
+    #namespace: longhorn-system
+  #syncPolicy:
+    #automated:
+      #prune: true
+      #selfHeal: true
+    #syncOptions:
+      #- CreateNamespace=true
+      #- ServerSideApply=true
