@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: longhorn-ts-2143-https
+  hostnames:
+    - longhorn.ts.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: longhorn-frontend
+          port: 80
