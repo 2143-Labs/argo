@@ -7,7 +7,7 @@ metadata:
   labels:
     app: teamspeak
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -21,7 +21,7 @@ spec:
       volumes:
       - name: ts-all
         persistentVolumeClaim:
-          claimName: teamspeak-all
+          claimName: teamspeak-all-lh
       containers:
         - name: teamspeak
           image: docker.io/teamspeak:3.13.7
