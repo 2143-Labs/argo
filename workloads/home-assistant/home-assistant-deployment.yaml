@@ -5,7 +5,7 @@ metadata:
   labels:
     app: home-assistant
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -43,7 +43,7 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: home-assistant-config
+            claimName: home-assistant-config-lh
         - name: ttyusb0
           hostPath:
             path: /dev/ttyUSB0

@@ -5,7 +5,7 @@ metadata:
   labels:
     app: pihole
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -51,7 +51,7 @@ spec:
       volumes:
         - name: pihole-config
           persistentVolumeClaim:
-            claimName: pihole-config
+            claimName: pihole-config-lh
         - name: dnsmasq-config
           persistentVolumeClaim:
-            claimName: pihole-dnsmasq
+            claimName: pihole-dnsmasq-lh

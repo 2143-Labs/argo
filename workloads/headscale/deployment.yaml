@@ -5,7 +5,7 @@ metadata:
   labels:
     app: headscale
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -70,7 +70,7 @@ spec:
             name: headscale-config
         - name: headscale-data
           persistentVolumeClaim:
-            claimName: headscale-data
+            claimName: headscale-data-lh
         - name: run
           emptyDir:
             medium: Memory
