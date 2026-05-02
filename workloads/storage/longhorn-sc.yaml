@@ -3,7 +3,7 @@ kind: StorageClass
 metadata:
   name: longhorn
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 provisioner: driver.longhorn.io
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
