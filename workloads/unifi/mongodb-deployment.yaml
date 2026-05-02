@@ -5,7 +5,7 @@ metadata:
   labels:
     app: unifi-mongodb
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -37,7 +37,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: unifi-mongodb-data
+            claimName: unifi-mongodb-data-lh
         - name: init-script
           configMap:
             name: unifi-mongo-init
