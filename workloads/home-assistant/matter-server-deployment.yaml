@@ -5,7 +5,7 @@ metadata:
   labels:
     app: matter-server
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -37,4 +37,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: matter-server-data
+            claimName: matter-server-data-lh

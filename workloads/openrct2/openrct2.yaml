@@ -6,7 +6,7 @@ metadata:
   labels:
     app: openrct2
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -22,7 +22,7 @@ spec:
       volumes:
         - name: openrct2-data
           persistentVolumeClaim:
-            claimName: openrct2-data
+            claimName: openrct2-data-lh
       containers:
         - name: openrct2
           image: openrct2/openrct2-cli:0.5.0
