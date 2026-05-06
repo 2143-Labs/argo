@@ -42,11 +42,11 @@ spec:
             - name: TYPE
               value: CURSEFORGE
             - name: CFG_SERVER_PACK_URL
-              value: "https://i.devolved.us/IeHj.zip"
+              value: "https://i.devolved.us/Wpsj.zip"
             - name: MEMORY
-              value: "16384M"
+              value: "6G"
             - name: INIT_MEMORY
-              value: "8192M"
+              value: "2G"
             - name: OVERRIDE_SERVER_PROPERTIES
               value: "true"
           ports:
@@ -59,9 +59,9 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 8Gi
+              memory: 6Gi
             limits:
-              memory: 16Gi
+              memory: 8Gi
           startupProbe:
             tcpSocket:
               port: game
