@@ -1,4 +1,4 @@
-# A deployment for an Enigmatic Skies modpack server (auto-installed from CurseForge)
+# A deployment for an Enigmatic Skies modpack server (pre-installed via hostPath on nas)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,9 +40,7 @@ spec:
             - name: EULA
               value: "TRUE"
             - name: TYPE
-              value: CURSEFORGE
-            - name: CFG_SERVER_PACK_URL
-              value: "https://i.devolved.us/Wpsj.zip"
+              value: NEOFORGE
             - name: MEMORY
               value: "6G"
             - name: INIT_MEMORY
