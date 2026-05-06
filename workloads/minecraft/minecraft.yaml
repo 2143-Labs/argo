@@ -43,6 +43,8 @@ spec:
               value: NEOFORGE
             - name: CF_PAGE_URL
               value: "https://www.curseforge.com/minecraft/modpacks/enigmatic-skies"
+            - name: VERSION
+              value: "1.20.1"
             - name: MEMORY
               value: "8G"
             - name: OVERRIDE_SERVER_PROPERTIES
