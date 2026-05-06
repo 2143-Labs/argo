@@ -46,8 +46,8 @@ spec:
                 secretKeyRef:
                   name: curseforge-api-key
                   key: CF_API_KEY
-            - name: CF_PAGE_URL
-              value: "https://www.curseforge.com/minecraft/modpacks/enigmatic-skies"
+            - name: CF_SLUG
+              value: "enigmatic-skies"
             - name: VERSION
               value: "1.21.1"
             - name: MEMORY
