@@ -1,4 +1,4 @@
-# A deployment for an Enigmatic Skies NeoForge modpack server
+# A deployment for an Enigmatic Skies modpack server (auto-installed from CurseForge)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,9 +40,12 @@ spec:
             - name: EULA
               value: "TRUE"
             - name: TYPE
-              value: NEOFORGE
-            # TODO: switch to AUTO_CURSEFORGE and add CF_API_KEY to download modpack from CurseForge
-            #       see https://console.curseforge.com/ to generate an API key
+              value: AUTO_CURSEFORGE
+            - name: CF_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: curseforge-api-key
+                  key: CF_API_KEY
             - name: CF_PAGE_URL
               value: "https://www.curseforge.com/minecraft/modpacks/enigmatic-skies"
             - name: VERSION
