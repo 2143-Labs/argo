@@ -40,7 +40,7 @@ spec:
             - name: EULA
               value: "TRUE"
             - name: TYPE
-              value: NEOFORGE
+              value: AUTO_CURSEFORGE
             - name: CF_PAGE_URL
               value: "https://www.curseforge.com/minecraft/modpacks/enigmatic-skies"
             - name: VERSION
