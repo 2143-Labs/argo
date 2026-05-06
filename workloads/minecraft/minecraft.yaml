@@ -17,6 +17,11 @@ spec:
       labels:
         app: minecraft
     spec:
+      dnsConfig:
+        searches:
+          - default.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
       volumes:
         - name: data
           persistentVolumeClaim:
