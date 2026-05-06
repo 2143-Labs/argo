@@ -17,15 +17,21 @@ spec:
       labels:
         app: minecraft
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: nas
+      dnsPolicy: None
       dnsConfig:
+        nameservers:
+          - 10.43.0.10
         searches:
           - default.svc.cluster.local
           - svc.cluster.local
           - cluster.local
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: minecraft-data-lh
+          hostPath:
+            path: /tank/minecraft/skies
+            type: Directory
       containers:
         - name: minecraft
           image: itzg/minecraft-server:2025.5.0
@@ -74,15 +80,3 @@ spec:
       protocol: TCP
   selector:
     app: minecraft
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: minecraft-data-lh
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10G
-  storageClassName: longhorn
