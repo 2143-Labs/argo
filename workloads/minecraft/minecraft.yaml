@@ -40,18 +40,13 @@ spec:
             - name: EULA
               value: "TRUE"
             - name: TYPE
-              value: AUTO_CURSEFORGE
-            - name: CF_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: curseforge-api-key
-                  key: CF_API_KEY
-            - name: CF_SLUG
-              value: "enigmatic-skies"
-            - name: VERSION
-              value: "1.21.1"
+              value: CURSEFORGE
+            - name: CFG_SERVER_PACK_URL
+              value: "https://i.devolved.us/IeHj.zip"
             - name: MEMORY
-              value: "8G"
+              value: "16384M"
+            - name: INIT_MEMORY
+              value: "8192M"
             - name: OVERRIDE_SERVER_PROPERTIES
               value: "true"
           ports:
@@ -64,9 +59,9 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 6Gi
-            limits:
               memory: 8Gi
+            limits:
+              memory: 16Gi
           startupProbe:
             tcpSocket:
               port: game
