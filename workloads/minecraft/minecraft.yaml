@@ -40,7 +40,9 @@ spec:
             - name: EULA
               value: "TRUE"
             - name: TYPE
-              value: AUTO_CURSEFORGE
+              value: NEOFORGE
+            # TODO: switch to AUTO_CURSEFORGE and add CF_API_KEY to download modpack from CurseForge
+            #       see https://console.curseforge.com/ to generate an API key
             - name: CF_PAGE_URL
               value: "https://www.curseforge.com/minecraft/modpacks/enigmatic-skies"
             - name: VERSION
