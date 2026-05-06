@@ -252,6 +252,21 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: longhorn-system
     # These are defined as nodeports instead
+    - name: argocd-ts-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: argocd.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: argocd-ts-2143-me-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: argocd
     #- name: factorio-udp
       #protocol: UDP
       #port: 34197
