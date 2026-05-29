@@ -4,9 +4,7 @@
 # so only one node holds the VIP at a time. On failover, the new leader sends
 # a gratuitous ARP to claim 192.168.5.10.
 #
-# This VIP is the single A record target for all *.ts.2143.me headscale DNS
-# entries. Tailscale subnet routes (192.168.5.0/24 on each gateway node) let
-# tailnet clients reach the VIP.
+# kube-vip v0.8.9+ uses CLI flags, not environment variables.
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -44,21 +42,14 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - manager
-          env:
-            - name: vip_arp
-              value: "true"
-            - name: address
-              value: "192.168.5.10"
-            - name: vip_leaderelection
-              value: "true"
-            - name: lease_name
-              value: "kube-vip"
-            - name: lease_namespace
-              value: "kube-system"
-            # Interface auto-detected from default route. If this fails on
-            # a node with unusual routing, set vip_interface explicitly:
-            # - name: vip_interface
-            #   value: "enpXs0"
+            - --arp
+            - --address=192.168.5.10
+            - --leaderElection
+            - --inCluster
+            - --leaseNamespace=kube-system
+            - --leaseName=kube-vip
+            # Interface auto-detected from default route.
+            # If this fails, add: --interface=enpXs0
           securityContext:
             capabilities:
               add:
