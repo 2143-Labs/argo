@@ -3,8 +3,6 @@
 # Runs on all 3 control-plane nodes (closet, arch, nas). Uses leader election
 # so only one node holds the VIP at a time. On failover, the new leader sends
 # a gratuitous ARP to claim 192.168.5.10.
-#
-# kube-vip v0.8.9+ uses CLI flags, not environment variables.
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -45,7 +43,6 @@ spec:
             - --arp
             - --address=192.168.5.10
             - --leaderElection
-            - --leaseNamespace=kube-system
             - --leaseName=kube-vip
           securityContext:
             capabilities:
