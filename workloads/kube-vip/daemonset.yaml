@@ -45,11 +45,8 @@ spec:
             - --arp
             - --address=192.168.5.10
             - --leaderElection
-            - --inCluster
             - --leaseNamespace=kube-system
             - --leaseName=kube-vip
-            # Interface auto-detected from default route.
-            # If this fails, add: --interface=enpXs0
           securityContext:
             capabilities:
               add:
