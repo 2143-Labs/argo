@@ -1,8 +1,5 @@
-# kube-vip DaemonSet — ARP-based VIP on the LAN bridge for k8s service ingress.
-#
-# Runs on all 3 control-plane nodes (closet, arch, nas). Uses leader election
-# so only one node holds the VIP at a time. On failover, the new leader sends
-# a gratuitous ARP to claim 192.168.5.10.
+# kube-vip DaemonSet — ARP-based VIP on the LAN bridge.
+# v0.8.9 requires --controlplane or --services for any VIP to work.
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -41,6 +38,7 @@ spec:
           args:
             - manager
             - --arp
+            - --controlplane
             - --address=192.168.5.10
             - --leaderElection
             - --leaseName=kube-vip
