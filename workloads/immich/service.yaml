@@ -5,7 +5,7 @@ metadata:
   labels:
     app: immich
 spec:
-  # No selector — routes via manual EndpointSlice to nas.ts.2143.me:2283
+  # No selector — routes via manual Endpoints to nas.ts.2143.me:2283
   ports:
     - port: 80
       targetPort: 2283

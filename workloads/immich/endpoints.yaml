@@ -1,0 +1,11 @@
+# Direct endpoint to the Immich server running on the NAS (tailnet IP 100.64.0.14:2283).
+# No proxy pod needed — traffic flows Traefik → NAS directly.
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: immich
+subsets:
+  - addresses:
+      - ip: 100.64.0.14
+    ports:
+      - port: 2283
