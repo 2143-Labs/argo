@@ -10,7 +10,7 @@ data:
       900:
         regionid: 900
         regioncode: derp-r
-        regionname: "Remote DERP (Hetzner)"
+        regionname: "Remote DERP (NYC)"
         nodes:
           - name: derp-r
             regionid: 900
