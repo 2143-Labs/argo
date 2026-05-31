@@ -10,13 +10,13 @@ data:
       "Regions": {
         "900": {
           "RegionID": 900,
-          "RegionCode": "us-east-1",
-          "RegionName": "derp.2143.me",
+          "RegionCode": "derp-r",
+          "RegionName": "Remote DERP (Hetzner)",
           "Nodes": [
             {
-              "Name": "derp2143",
+              "Name": "derp-r",
               "RegionID": 900,
-              "HostName": "derp.2143.me",
+              "HostName": "derp-r.2143.me",
               "STUNPort": 3478,
               "DERPPort": 443
             }
