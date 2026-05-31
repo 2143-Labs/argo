@@ -5,25 +5,18 @@ metadata:
   labels:
     app: headscale
 data:
-  derp.json: |
-    {
-      "Regions": {
-        "900": {
-          "RegionID": 900,
-          "RegionCode": "derp-r",
-          "RegionName": "Remote DERP (Hetzner)",
-          "Nodes": [
-            {
-              "Name": "derp-r",
-              "RegionID": 900,
-              "HostName": "derp-r.2143.me",
-              "STUNPort": 3478,
-              "DERPPort": 443
-            }
-          ]
-        }
-      }
-    }
+  derp.yaml: |
+    regions:
+      "900":
+        regionid: 900
+        regioncode: derp-r
+        regionname: "Remote DERP (Hetzner)"
+        nodes:
+          - name: derp-r
+            regionid: 900
+            hostname: derp-r.2143.me
+            stunport: 3478
+            derpport: 443
   config.yaml: |
     server_url: https://net.john2143.com
     listen_addr: 0.0.0.0:8080
@@ -51,7 +44,7 @@ data:
         automatically_add_embedded_derp_region: true
       urls: []
       paths:
-        - /etc/headscale/derp.json
+        - /etc/headscale/derp.yaml
       auto_update_enabled: false
       update_frequency: 3h
 
@@ -70,7 +63,7 @@ data:
         wal_autocheckpoint: 1000
 
     log:
-      level: info
+      level: debug
       format: text
 
     policy:
