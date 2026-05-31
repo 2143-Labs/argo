@@ -7,7 +7,7 @@ metadata:
 data:
   derp.yaml: |
     regions:
-      "900":
+      900:
         regionid: 900
         regioncode: derp-r
         regionname: "Remote DERP (Hetzner)"
@@ -63,7 +63,7 @@ data:
         wal_autocheckpoint: 1000
 
     log:
-      level: debug
+      level: info
       format: text
 
     policy:
