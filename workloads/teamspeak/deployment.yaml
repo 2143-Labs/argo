@@ -20,14 +20,6 @@ spec:
     spec:
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - closet
-                      - arch
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               preference:
