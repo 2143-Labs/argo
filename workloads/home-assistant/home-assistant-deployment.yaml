@@ -16,6 +16,10 @@ spec:
       labels:
         app: home-assistant
     spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -30,8 +34,6 @@ spec:
           image: ghcr.io/home-assistant/home-assistant:stable
           securityContext:
             privileged: true
-            #runAsUser: 0
-            #allowPrivilegeEscalation: false
           ports:
             - containerPort: 8123
               name: http
@@ -40,8 +42,6 @@ spec:
               mountPath: /config
             - name: ttyusb0
               mountPath: /dev/ttyUSB0
-            #- name: ttyusb1
-              #mountPath: /dev/ttyUSB1
           resources:
             requests:
               cpu: 500m
@@ -57,7 +57,3 @@ spec:
           hostPath:
             path: /dev/ttyUSB0
             type: CharDevice
-        #- name: ttyusb1
-          #hostPath:
-            #path: /dev/ttyUSB1
-            #type: CharDevice
