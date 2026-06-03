@@ -33,6 +33,8 @@ spec:
           # Default disk path on labeled nodes. Both closet and arch have
           # /mnt/longhorn pre-prepared (see arch-hardware-configuration.nix
           # for arch's mount; closet uses the existing /mnt/sda1).
+          # Nas uses /var/lib/longhorn (ext4 on /dev/sda6) + root directory
+          # — set via Longhorn UI after neo pool was destroyed.
           defaultDataPath: /mnt/longhorn
           defaultReplicaCount: 2
           # Automatically force-delete Deployment pods on a down node so
