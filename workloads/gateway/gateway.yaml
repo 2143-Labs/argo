@@ -327,15 +327,15 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: pocket-id
 
-    - name: mg-2143-https
+    - name: m-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: mg.2143.me
+      hostname: m.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: mg-2143-me-tls
+            name: m-2143-me-tls
       allowedRoutes:
         namespaces:
           from: Selector
