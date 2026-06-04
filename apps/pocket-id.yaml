@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pocket-id
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: pocket-id
+    repoURL: https://anza-labs.github.io/charts
+    targetRevision: 2.1.3
+    helm:
+      releaseName: pocket-id
+      values: |
+        host: "au.2143.me"
+        ingress:
+          enabled: false
+        trustProxy: true
+        secret:
+          create: false
+          name: pocket-id-secrets
+        persistence:
+          data:
+            enabled: true
+            size: 5Gi
+            storageClass: longhorn
+            annotations:
+              longhorn.io/number-of-replicas: "3"
+        pocketID:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pocket-id
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
