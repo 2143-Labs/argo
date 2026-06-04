@@ -17,6 +17,29 @@ data:
             hostname: derp-r.2143.me
             stunport: 3478
             derpport: 443
+  policy.hujson: |
+    {
+      "grants": [
+        // Users can only reach their own devices
+        {
+          "src": ["autogroup:member"],
+          "dst": ["autogroup:self"],
+          "ip": ["*"]
+        },
+        // Everyone can use exit nodes
+        {
+          "src": ["autogroup:member"],
+          "dst": ["autogroup:internet"],
+          "ip": ["*"]
+        },
+        // Only john2143 can access 192.168.5.x subnet
+        {
+          "src": ["john2143@"],
+          "dst": ["192.168.5.0/24"],
+          "ip": ["*"]
+        }
+      ]
+    }
   config.yaml: |
     server_url: https://net.john2143.com
     listen_addr: 0.0.0.0:8080
@@ -68,7 +91,7 @@ data:
 
     policy:
       mode: file
-      path: ""
+      path: /etc/headscale/policy.hujson
 
     dns:
       magic_dns: true
