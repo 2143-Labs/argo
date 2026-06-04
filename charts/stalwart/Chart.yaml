@@ -1,0 +1,11 @@
+apiVersion: v2
+name: stalwart
+description: Stalwart Mail Server — secure modern all-in-one SMTP/IMAP/JMAP server
+type: application
+version: 0.1.0
+appVersion: "v0.16"
+home: https://stalw.art
+sources:
+  - https://github.com/stalwartlabs/stalwart
+maintainers:
+  - name: 2143-Labs
