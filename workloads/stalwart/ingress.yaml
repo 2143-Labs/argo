@@ -7,9 +7,9 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: mail-2143-https
+      sectionName: mg-2143-https
   hostnames:
-    - mail.2143.me
+    - mg.2143.me
   rules:
     - matches:
         - path:
