@@ -5,7 +5,7 @@ metadata:
   labels:
     app: rustfs
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -16,15 +16,13 @@ spec:
       labels:
         app: rustfs
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: closet
+
       securityContext:
         fsGroup: 10001
       volumes:
         - name: data
-          hostPath:
-            path: /mnt/rustfs
-            type: Directory
+          persistentVolumeClaim:
+            claimName: rustfs-data-lh
       containers:
         - name: rustfs
           image: rustfs/rustfs:1.0.0-alpha.90

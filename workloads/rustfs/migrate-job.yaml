@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rustfs-data-migrate
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: closet
+      restartPolicy: Never
+      volumes:
+        - name: source
+          hostPath:
+            path: /mnt/rustfs
+            type: Directory
+        - name: dest
+          persistentVolumeClaim:
+            claimName: rustfs-data-lh
+      containers:
+        - name: rsync
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache rsync
+              rsync -aHAX --info=progress2 /source/ /dest/
+              echo "Migration complete"
+          volumeMounts:
+            - name: source
+              mountPath: /source
+            - name: dest
+              mountPath: /dest
