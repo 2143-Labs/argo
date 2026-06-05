@@ -11,7 +11,7 @@ image:
 # Set via external secret (stalwart-env) in the stalwart namespace.
 # Remove recoveryAdmin from the secret after permanent account is created.
 recoveryAdmin:
-  enabled: true
+  enabled: false
   username: admin
 
 # Recovery mode — starts Stalwart in bootstrap mode (web UI only) for initial config.
