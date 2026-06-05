@@ -48,6 +48,8 @@ spec:
               containerPort: 587
             - name: imaps
               containerPort: 993
+            - name: https
+              containerPort: 443
             - name: mgmt
               containerPort: 8080
           livenessProbe:
