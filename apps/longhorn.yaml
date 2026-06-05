@@ -36,7 +36,7 @@ spec:
           # Nas uses /var/lib/longhorn (ext4 on /dev/sda6) + root directory
           # — set via Longhorn UI after neo pool was destroyed.
           defaultDataPath: /mnt/longhorn
-          defaultReplicaCount: 3
+          defaultReplicaCount: 2
           # Automatically force-delete Deployment pods on a down node so
           # RWO PVCs release and volumes reattach to replacement pods on
           # healthy nodes. Without this, pods stay Terminating indefinitely
