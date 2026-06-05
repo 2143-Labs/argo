@@ -36,16 +36,8 @@ service:
   type: LoadBalancer
   ports:
     smtp: 25
-    smtps: 465
     submission: 587
-    imap: 143
     imaps: 993
-    pop3: 110
-    pop3s: 995
-    sieve: 4190
-    http: 80
-    https: 443
-    mgmt: 8080
 
 ingress:
   enabled: false
