@@ -33,3 +33,19 @@ spec:
     - name: imaps
       port: {{ .Values.service.ports.imaps }}
       targetPort: imaps
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "stalwart.fullname" . }}-web
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "stalwart.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
