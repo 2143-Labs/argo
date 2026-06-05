@@ -14,6 +14,13 @@ recoveryAdmin:
   enabled: true
   username: admin
 
+# Recovery mode — starts Stalwart in bootstrap mode (web UI only) for initial config.
+# Disable after first successful configuration.
+recoveryMode:
+  enabled: true
+  port: "8443"
+  logLevel: info
+
 # config.json — only the DataStore. Everything else is configured via web UI.
 config:
   "@type": RocksDb
