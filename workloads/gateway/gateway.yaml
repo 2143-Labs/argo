@@ -14,6 +14,12 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: http-redirect
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
     - name: rots-https
       protocol: HTTPS
       port: 8443
