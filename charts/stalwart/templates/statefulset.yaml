@@ -35,6 +35,8 @@ spec:
             - name: STALWART_RECOVERY_MODE_LOG_LEVEL
               value: {{ .Values.recoveryMode.logLevel | quote }}
             {{- end }}
+            - name: STALWART_DEFAULT_HOSTNAME
+              value: {{ .Values.hostname | quote }}
           envFrom:
             - secretRef:
                 name: {{ include "stalwart.fullname" . }}-env

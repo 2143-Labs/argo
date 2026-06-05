@@ -7,6 +7,9 @@ image:
   tag: "v0.16"
   pullPolicy: IfNotPresent
 
+# Public hostname — required for OIDC redirect URIs behind reverse proxy
+hostname: m.2143.me
+
 # Recovery admin — bootstrap credential for first sign-in.
 # Set via external secret (stalwart-env) in the stalwart namespace.
 # Remove recoveryAdmin from the secret after permanent account is created.
