@@ -17,7 +17,7 @@ recoveryAdmin:
 # Recovery mode — starts Stalwart in bootstrap mode (web UI only) for initial config.
 # Disable after first successful configuration.
 recoveryMode:
-  enabled: true
+  enabled: false
   port: "8443"
   logLevel: info
 
