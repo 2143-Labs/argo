@@ -26,7 +26,7 @@ persistence:
   size: 20Gi
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
     smtp: 25
     smtps: 465
