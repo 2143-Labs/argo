@@ -19,24 +19,24 @@ data:
             derpport: 443
   policy.hujson: |
     {
-      "grants": [
+      "acls": [
         // Users can only reach their own devices
         {
+          "action": "accept",
           "src": ["autogroup:member"],
-          "dst": ["autogroup:self"],
-          "ip": ["*"]
+          "dst": ["autogroup:self:*"]
         },
         // Everyone can use exit nodes
         {
+          "action": "accept",
           "src": ["autogroup:member"],
-          "dst": ["autogroup:internet"],
-          "ip": ["*"]
+          "dst": ["autogroup:internet:*"]
         },
         // Only john2143 can access 192.168.5.x subnet
         {
+          "action": "accept",
           "src": ["john2143@"],
-          "dst": ["192.168.5.0/24"],
-          "ip": ["*"]
+          "dst": ["192.168.5.0/24:*"]
         }
       ]
     }
