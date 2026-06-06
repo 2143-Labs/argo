@@ -35,10 +35,8 @@ spec:
             - name: STALWART_RECOVERY_MODE_LOG_LEVEL
               value: {{ .Values.recoveryMode.logLevel | quote }}
             {{- end }}
-            - name: STALWART_DEFAULT_HOSTNAME
-              value: {{ .Values.hostname | quote }}
-            - name: STALWART_HTTP_USE_X_FORWARDED
-              value: "true"
+            - name: STALWART_PUBLIC_URL
+              value: "https://{{ .Values.hostname }}"
           envFrom:
             - secretRef:
                 name: {{ include "stalwart.fullname" . }}-env

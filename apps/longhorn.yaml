@@ -25,18 +25,14 @@ spec:
           jobEnabled: false
           upgradeVersionCheck: true
         defaultSettings:
-          # Only nodes labeled `node.longhorn.io/create-default-disk=true`
-          # get a default disk. We label closet + arch (wired NVMe-bearing
-          # nodes); office is deliberately left unlabeled because it's on
-          # Wi-Fi and would drag every Tier C fsync to Wi-Fi latency.
-          createDefaultDiskLabeledNodes: true
+        defaultSettings:
           # Default disk path on labeled nodes. Both closet and arch have
           # /mnt/longhorn pre-prepared (see arch-hardware-configuration.nix
           # for arch's mount; closet uses the existing /mnt/sda1).
-          # Nas uses /var/lib/longhorn (ext4 on /dev/sda6) + root directory
-          # — set via Longhorn UI after neo pool was destroyed.
+          # Nas uses /var/lib/longhorn (ext4 on /dev/sda6) — set via
+          # Longhorn node CRD after boot.
           defaultDataPath: /mnt/longhorn
-          defaultReplicaCount: 2
+          defaultReplicaCount: 3
           # Automatically force-delete Deployment pods on a down node so
           # RWO PVCs release and volumes reattach to replacement pods on
           # healthy nodes. Without this, pods stay Terminating indefinitely
@@ -75,7 +71,7 @@ spec:
         persistence:
           # We ship our own StorageClass in workloads/storage/.
           defaultClass: false
-          defaultClassReplicaCount: 2
+          defaultClassReplicaCount: 3
         ingress:
           enabled: false
   destination:

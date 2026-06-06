@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   annotations:
-    longhorn.io/number-of-replicas: "2"
+    longhorn.io/number-of-replicas: "3"
   name: grocy-config-lh
 spec:
   accessModes:
