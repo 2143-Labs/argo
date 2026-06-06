@@ -37,6 +37,8 @@ spec:
             {{- end }}
             - name: STALWART_DEFAULT_HOSTNAME
               value: {{ .Values.hostname | quote }}
+            - name: STALWART_HTTP_USE_X_FORWARDED
+              value: "true"
           envFrom:
             - secretRef:
                 name: {{ include "stalwart.fullname" . }}-env
