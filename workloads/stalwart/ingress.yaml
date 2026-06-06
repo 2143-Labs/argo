@@ -16,5 +16,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: stalwart-stalwart-web
-          port: 443
+        - name: stalwart-stalwart-headless
+          port: 8080
