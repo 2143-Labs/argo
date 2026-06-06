@@ -58,13 +58,13 @@ spec:
             httpGet:
               path: /healthz/live
               port: mgmt
-            initialDelaySeconds: 120
+            initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /healthz/ready
               port: mgmt
-            initialDelaySeconds: 30
+            initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
             - name: config
