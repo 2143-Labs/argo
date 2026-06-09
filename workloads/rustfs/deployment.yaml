@@ -17,6 +17,16 @@ spec:
         app: rustfs
     spec:
 
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - closet
+                      - nas
       securityContext:
         fsGroup: 10001
       volumes:
