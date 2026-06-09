@@ -17,6 +17,8 @@ spec:
         app: rustfs
     spec:
 
+      # Constrain to closet+nas (10G direct link) to avoid 280GB replica
+      # traffic over slower inter-node links on every pod reschedule.
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
