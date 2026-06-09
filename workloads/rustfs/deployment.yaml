@@ -31,6 +31,7 @@ spec:
                       - nas
       securityContext:
         fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
       volumes:
         - name: data
           persistentVolumeClaim:
