@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: john2143-worker
+  labels:
+    app: john2143-worker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: john2143-worker
+  template:
+    metadata:
+      labels:
+        app: john2143-worker
+    spec:
+      volumes:
+        - name: workdir
+          emptyDir:
+            sizeLimit: 10Gi
+      containers:
+        - name: worker
+          image: ghcr.io/john2143/john2143.com-worker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: RUN_MODE
+              value: "worker"
+            - name: DB
+              value: "mongodb://admin:pass@2143.me:4040"
+            - name: MINIO_ENDPOINT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: minio-creds
+                  key: S3_ENDPOINT_URL
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-creds
+                  key: S3_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-creds
+                  key: S3_SECRET_KEY
+            - name: S3_ENDPOINT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: s3-creds
+                  key: S3_ENDPOINT_URL
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: s3-creds
+                  key: S3_ACCESS_KEY
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: s3-creds
+                  key: S3_SECRET_KEY
+            - name: BUCKET
+              value: "imagehost-files"
+            - name: FOLDER
+              value: "public-prod"
+            - name: NODE_ENV
+              value: "production"
+          volumeMounts:
+            - name: workdir
+              mountPath: /tmp/juush-worker
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
