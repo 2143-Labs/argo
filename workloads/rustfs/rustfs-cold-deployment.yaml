@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs-cold
+  labels:
+    app: rustfs-cold
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rustfs-cold
+  template:
+    metadata:
+      labels:
+        app: rustfs-cold
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: nas
+      securityContext:
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+      volumes:
+        - name: data
+          hostPath:
+            path: /tank/rustfs-cold
+            type: DirectoryOrCreate
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.0-alpha.90
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+          env:
+            # Internal S3 credentials for hot→cold tier access
+            - name: RUSTFS_ROOT_USER
+              value: "cold-tier"
+            - name: RUSTFS_ROOT_PASSWORD
+              value: "cold-tier-secret"
+            - name: RUSTFS_ADDRESS
+              value: "0.0.0.0:9000"
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "false"
+            - name: RUSTFS_SERVER_DOMAINS
+              value: "rustfs-cold"
+          ports:
+            - containerPort: 9000
+              name: api
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
