@@ -28,7 +28,10 @@ spec:
             - name: RUN_MODE
               value: "worker"
             - name: DB
-              value: "mongodb://admin:pass@mongo.john2143.com:32040"
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-creds
+                  key: worker-uri
             - name: MINIO_ENDPOINT_URL
               valueFrom:
                 secretKeyRef:
