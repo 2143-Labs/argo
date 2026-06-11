@@ -43,7 +43,7 @@ spec:
             - name: RUSTFS_CONSOLE_ENABLE
               value: "false"
             - name: RUSTFS_SERVER_DOMAINS
-              value: "rustfs-cold"
+              value: "rustfs-cold,rustfs-cold.default,rustfs-cold.default.svc.cluster.local"
           ports:
             - containerPort: 9000
               name: api
