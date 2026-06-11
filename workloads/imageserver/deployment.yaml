@@ -19,17 +19,6 @@ spec:
           #claimName: files-pvc
         emptyDir:
           sizeLimit: 500Mi
-      - name: upload-fish
-        configMap:
-          name: upload-fish
-          defaultMode: 0555
-          items:
-            - key: upload.fish
-              path: upload.fish
-            - key: prune.fish
-              path: prune.fish
-            - key: shared.fish
-              path: shared.fish
 
       containers:
       - name: john2143-com
@@ -49,75 +38,15 @@ spec:
           valueFrom:
             secretKeyRef:
               name: mongo-creds
-              key: server-uri
+              key: worker-uri
         - name: PORT
           value: "3000"
         - name: IP
           value: "0.0.0.0"
         - name: NODE_ENV
           value: production
-        - name: S3_ENDPOINT_URL
-          valueFrom:
-            secretKeyRef:
-              name: s3-creds
-              key: S3_ENDPOINT_URL
-        - name: S3_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: s3-creds
-              key: S3_ACCESS_KEY
-        - name: S3_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: s3-creds
-              key: S3_SECRET_KEY
-        - name: MINIO_ENDPOINT_URL
-          valueFrom:
-            secretKeyRef:
-              name: minio-creds
-              key: S3_ENDPOINT_URL
-        - name: MINIO_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-creds
-              key: S3_ACCESS_KEY
-        - name: MINIO_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-creds
-              key: S3_SECRET_KEY
-        - name: BUCKET
-          value: "imagehost-files"
-        - name: FOLDER
-          value: "public-prod"
-        - name: AUTH_CALLBACK_BASE
-          value: "https://2143.me"
-        - name: POCKETID_ISSUER
-          value: "https://au.2143.me"
-        - name: POCKETID_ADMIN_GROUP
-          value: "admin"
-        - name: POCKETID_CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: oauth-creds
-              key: POCKETID_CLIENT_ID
-        - name: POCKETID_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: oauth-creds
-              key: POCKETID_CLIENT_SECRET
-        - name: DISCORD_CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: oauth-creds
-              key: DISCORD_CLIENT_ID
-        - name: DISCORD_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: oauth-creds
-              key: DISCORD_CLIENT_SECRET
-        - name: DISCORD_ADMIN_IDS
-          value: ""
+        - name: IS_HOME
+          value: "1"
 
         resources:
           requests:
