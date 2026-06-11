@@ -16,7 +16,7 @@ spec:
       volumes:
       - name: data-volume
         emptyDir:
-          sizeLimit: 2Gi
+          sizeLimit: 20Gi
       - name: upload-fish
         configMap:
           name: upload-fish
