@@ -39,6 +39,9 @@ spec:
             - manager
             - --arp
             - --controlplane
+            - --services
+            - --servicesElection
+            - --cidr=192.168.5.9/32
             - --address=192.168.5.10
             - --leaderElection
             - --leaseName=kube-vip
