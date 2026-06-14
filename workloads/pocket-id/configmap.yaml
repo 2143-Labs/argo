@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pocket-id
+  namespace: pocket-id
+data:
+  ANALYTICS_DISABLED: "false"
+  APP_URL: https://au.2143.me
+  AUDIT_LOG_RETENTION_DAYS: "90"
+  DISABLE_RATE_LIMITING: "false"
+  FILE_BACKEND: filesystem
+  GEOLITE_DB_PATH: data/GeoLite2-City.mmdb
+  GEOLITE_DB_URL: https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz
+  HOST: 0.0.0.0
+  INTERNAL_APP_URL: ""
+  LOCAL_IPV6_RANGES: ""
+  LOG_JSON: "false"
+  LOG_LEVEL: info
+  METRICS_ENABLED: "false"
+  PORT: "1411"
+  TRACING_ENABLED: "false"
+  TRUST_PROXY: "true"
+  TZ: Etc/UTC
+  UI_CONFIG_DISABLED: "false"
+  UPLOAD_PATH: data/uploads
+  VERSION_CHECK_DISABLED: "true"
