@@ -8,34 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    chart: pocket-id
-    repoURL: https://anza-labs.github.io/charts
-    targetRevision: 2.1.3
-    helm:
-      releaseName: pocket-id
-      values: |
-        host: "au.2143.me"
-        ingress:
-          enabled: false
-        trustProxy: true
-        secret:
-          create: false
-          name: pocket-id-secrets
-        persistence:
-          data:
-            enabled: true
-            size: 5Gi
-            storageClass: longhorn
-            annotations:
-              longhorn.io/number-of-replicas: "3"
-        pocketID:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/pocket-id
   destination:
     server: https://kubernetes.default.svc
     namespace: pocket-id
