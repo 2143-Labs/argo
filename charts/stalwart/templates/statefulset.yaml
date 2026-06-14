@@ -81,5 +81,5 @@ spec:
         {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
-            claimName: {{ include "stalwart.fullname" . }}-data-0
+	      claimName: data-{{ include "stalwart.fullname" . }}-0
         {{- end }}
