@@ -1,11 +1,10 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{ include "stalwart.fullname" . }}
   labels:
     {{- include "stalwart.labels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "stalwart.fullname" . }}-headless
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -79,17 +78,8 @@ spec:
         - name: config
           configMap:
             name: {{ include "stalwart.fullname" . }}-config
-  {{- if .Values.persistence.enabled }}
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-        annotations:
-          longhorn.io/number-of-replicas: "3"
-      spec:
-        accessModes:
-          - {{ .Values.persistence.accessMode | quote }}
-        storageClassName: {{ .Values.persistence.storageClass | quote }}
-        resources:
-          requests:
-            storage: {{ .Values.persistence.size | quote }}
-  {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "stalwart.fullname" . }}-data-0
+        {{- end }}
