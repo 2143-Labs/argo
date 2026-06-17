@@ -37,7 +37,7 @@ spec:
           # RWO PVCs release and volumes reattach to replacement pods on
           # healthy nodes. Without this, pods stay Terminating indefinitely
           # and services are stuck until the node returns (or manual cleanup).
-          nodeDownPodDeletionPolicy: delete-deployment-pod
+          nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
           # Wait this many seconds before triggering a replica rebuild on a
           # different node when one goes away. Long enough to cover routine
           # node reboots without churning rebuild traffic.
