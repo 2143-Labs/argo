@@ -40,6 +40,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: bgp_peers
+              value: "192.168.5.1:65001::false"
           args:
             - manager
             - --bgp
@@ -49,8 +51,6 @@ spec:
             - --leaseName=kube-vip
             - --localAS=65000
             - --bgpRouterID=$(NODE_IP)
-            - --bgppeers
-            - 192.168.5.1:65001::false
           securityContext:
             capabilities:
               add:
