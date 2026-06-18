@@ -23,8 +23,24 @@ spec:
           replicas: 1
           ingress:
             enabled: false
+          volumes:
+            - name: custom-blueprints
+              configMap:
+                name: custom-blueprints
+          volumeMounts:
+            - name: custom-blueprints
+              mountPath: /blueprints/custom
+              readOnly: true
         worker:
           replicas: 1
+          volumes:
+            - name: custom-blueprints
+              configMap:
+                name: custom-blueprints
+          volumeMounts:
+            - name: custom-blueprints
+              mountPath: /blueprints/custom
+              readOnly: true
         postgresql:
           enabled: false
         redis:
