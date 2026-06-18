@@ -35,19 +35,26 @@ spec:
         - name: kube-vip
           image: ghcr.io/kube-vip/kube-vip:v0.8.9
           imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
           args:
             - manager
-            - --arp
+            - --bgp
             - --controlplane
             - --address=192.168.5.10
             - --leaderElection
             - --leaseName=kube-vip
+            - --localAS=65000
+            - --bgpRouterID=$(NODE_IP)
+            - --bgpPeers=192.168.5.1:65001
           securityContext:
             capabilities:
               add:
                 - NET_ADMIN
                 - NET_RAW
-                - SYS_TIME
           resources:
             requests:
               cpu: 50m
