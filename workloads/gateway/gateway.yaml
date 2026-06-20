@@ -359,15 +359,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: grafana-ts-2143-https
+    - name: grafana-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: grafana.ts.2143.me
+      hostname: grafana.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: ts-2143-me-wildcard-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector

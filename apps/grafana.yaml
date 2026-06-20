@@ -16,11 +16,11 @@ spec:
       values: |
         grafana.ini:
           server:
-            root_url: https://grafana.ts.2143.me
+            root_url: https://grafana.2143.me
           auth.generic_oauth:
             enabled: true
             name: "Pocket ID"
-            client_id: grafana
+            client_id: ${GRAFANA_OIDC_CLIENT_ID}
             client_secret: ${GRAFANA_OIDC_CLIENT_SECRET}
             scopes: "openid profile email groups"
             auth_url: https://au.2143.me/authorize
@@ -32,7 +32,6 @@ spec:
             email_attribute_path: "email"
             login_attribute_path: "preferred_username"
             allow_assign_grafana_admin: true
-
         datasources:
           datasources.yaml:
             apiVersion: 1
