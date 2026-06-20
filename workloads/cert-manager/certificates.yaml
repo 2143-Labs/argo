@@ -1,12 +1,54 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: serverkvm-ts-2143-me
+  name: ts-2143-me-wildcard
   namespace: cert-manager
 spec:
-  secretName: serverkvm-ts-2143-me-tls
+  secretName: ts-2143-me-wildcard-tls
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - serverkvm.ts.2143.me
+    - "*.ts.2143.me"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: 2143-me-wildcard
+  namespace: cert-manager
+spec:
+  secretName: 2143-me-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.2143.me"
+    - "2143.me"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: john2143-com-wildcard
+  namespace: cert-manager
+spec:
+  secretName: john2143-com-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.john2143.com"
+    - "john2143.com"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rots-2143-me-wildcard
+  namespace: cert-manager
+spec:
+  secretName: rots-2143-me-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.rots.2143.me"
+    - "rots.2143.me"
