@@ -20,10 +20,13 @@ spec:
                 namespace: default
                 sectionName: acme-http
       - dns01:
-          digitalocean:
-            tokenSecretRef:
-              name: digitalocean-dns
-              key: access-token
+          webhook:
+            groupName: acme.2143.me
+            solverName: desec
+            config:
+              apiTokenSecretRef:
+                name: desec-io-dns
+                key: token
         selector:
           dnsZones:
             - "2143.me"
