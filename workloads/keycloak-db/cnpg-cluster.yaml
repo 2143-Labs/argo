@@ -23,7 +23,6 @@ spec:
         login: true
         passwordSecret:
           name: keycloak-db-password
-          key: password
   postgresql:
     parameters:
       max_connections: "200"
