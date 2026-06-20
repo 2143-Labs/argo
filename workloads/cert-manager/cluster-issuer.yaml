@@ -20,10 +20,10 @@ spec:
                 namespace: default
                 sectionName: acme-http
       - dns01:
-          desec:
-            apiKeySecretRef:
-              name: desec-io-dns
-              key: token
+          digitalocean:
+            tokenSecretRef:
+              name: digitalocean-dns
+              key: access-token
         selector:
           dnsZones:
             - "2143.me"
