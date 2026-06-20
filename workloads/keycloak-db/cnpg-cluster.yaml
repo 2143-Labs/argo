@@ -21,7 +21,6 @@ spec:
       - name: keycloak
         ensure: present
         login: true
-        createDB: true
         passwordSecret:
           name: keycloak-db-password
           key: password

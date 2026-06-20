@@ -1,0 +1,37 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: status-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: status-2143-https
+  hostnames: [status.2143.me]
+  rules:
+    - backendRefs:
+        - name: pite-status
+          port: 3030
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pite-status
+  namespace: default
+spec:
+  ports:
+    - port: 3030
+      targetPort: 3030
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: pite-status-1
+  namespace: default
+  labels:
+    kubernetes.io/service-name: pite-status
+addressType: IPv4
+ports:
+  - port: 3030
+endpoints:
+  - addresses: ["192.168.5.9"]

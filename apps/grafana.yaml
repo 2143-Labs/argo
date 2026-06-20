@@ -1,0 +1,75 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: grafana
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 8.12.0
+    helm:
+      releaseName: grafana
+      values: |
+        grafana.ini:
+          server:
+            root_url: https://grafana.ts.2143.me
+          auth.generic_oauth:
+            enabled: true
+            name: "Pocket ID"
+            client_id: grafana
+            client_secret: ${GRAFANA_OIDC_CLIENT_SECRET}
+            scopes: "openid profile email groups"
+            auth_url: https://au.2143.me/authorize
+            token_url: https://au.2143.me/api/oidc/token
+            api_url: https://au.2143.me/api/oidc/userinfo
+            use_pkce: true
+            jwk_set_url: https://au.2143.me/.well-known/jwks.json
+            role_attribute_path: "contains(groups[*], 'grafana_admin') && 'GrafanaAdmin' || contains(groups[*], 'grafana_editor') && 'Editor' || 'Viewer'"
+            email_attribute_path: "email"
+            login_attribute_path: "preferred_username"
+            allow_assign_grafana_admin: true
+
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Mimir
+                type: prometheus
+                uid: mimir
+                url: http://mimir.observability.svc:8080/prometheus
+                isDefault: true
+              - name: Loki
+                type: loki
+                uid: loki
+                url: http://loki-gateway.observability.svc
+                jsonData:
+                  derivedFields:
+                    - name: TraceID
+                      matcherRegex: 'trace_id=(\w+)'
+                      url: '$${__value.raw}'
+                      datasourceUid: tempo
+              - name: Tempo
+                type: tempo
+                uid: tempo
+                url: http://tempo.observability.svc:3200
+                jsonData:
+                  tracesToLogsV2:
+                    datasourceUid: loki
+
+        extraEnvFrom:
+          - secretRef:
+              name: grafana-oidc
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
