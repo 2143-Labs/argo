@@ -3,8 +3,6 @@ kind: Gateway
 metadata:
   name: shared-gateway
   namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   gatewayClassName: traefik
   listeners:
