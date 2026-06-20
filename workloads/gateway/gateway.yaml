@@ -28,7 +28,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: rots-2143-me-tls
+            name: rots-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -40,7 +40,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: rots-2143-me-tls
+            name: rots-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -52,7 +52,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: rots-2143-me-tls
+            name: rots-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -64,7 +64,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: rots-2143-me-tls
+            name: rots-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -76,7 +76,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: rots-2143-me-tls
+            name: rots-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -88,7 +88,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: auth-john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -103,7 +103,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: auth-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -118,7 +118,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -130,7 +130,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: home-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -142,7 +142,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: pihole-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -154,7 +154,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: fs-john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -166,7 +166,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: fsui-john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -178,7 +178,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: files-john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -190,7 +190,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: files-ui-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -202,7 +202,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: net-john2143-com-tls
+            name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -214,7 +214,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: net-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -226,7 +226,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: factorio-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -238,7 +238,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: images-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -250,7 +250,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: immich-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -263,7 +263,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: longhorn-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -279,7 +279,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: argocd-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -312,7 +312,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: grocy-ts-2143-me-tls
+            name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Same
@@ -325,7 +325,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: au-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -341,7 +341,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: sso-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
@@ -356,7 +356,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: m-2143-me-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
