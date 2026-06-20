@@ -60,13 +60,13 @@ Add a new listener entry to `shared-gateway`:
     mode: Terminate
     certificateRefs:
       - kind: Secret
-        name: <sub>-ts-2143-me-tls
+        name: ts-2143-me-wildcard-tls
   allowedRoutes:
     namespaces:
       from: Same
 ```
 
-The gateway has the `cert-manager.io/cluster-issuer: letsencrypt-prod` annotation, so cert-manager **automatically** creates the TLS certificate for each listener. You do **not** need to add a `Certificate` resource in `workloads/cert-manager/certificates.yaml` unless the hostname is not on the gateway (e.g. `serverkvm`).
+Wildcard certificates cover all subdomains. There are 4 wildcard certs managed in `workloads/gateway/wildcard-certs.yaml` — you do **not** need to add a `Certificate` resource. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
 ### b. HTTPRoute (`workloads/<name>/ingress.yaml`)
 
