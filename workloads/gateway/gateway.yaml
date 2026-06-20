@@ -78,36 +78,22 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: auth-john2143-https
+
+    - name: sso-2143-https
       protocol: HTTPS
       port: 8443
-      hostname: auth.john2143.com
+      hostname: sso.2143.me
       tls:
         mode: Terminate
         certificateRefs:
           - kind: Secret
-            name: john2143-com-wildcard-tls
+            name: 2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
           from: Selector
           selector:
             matchLabels:
-              kubernetes.io/metadata.name: authentik
-    - name: auth-ts-2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: auth.ts.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            name: ts-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: authentik
+              kubernetes.io/metadata.name: keycloak
     - name: john2143-https
       protocol: HTTPS
       port: 8443

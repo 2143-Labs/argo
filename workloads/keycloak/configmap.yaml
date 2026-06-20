@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  namespace: keycloak
+data:
+  realm.json: |
+    {
+      "realm": "primary",
+      "enabled": true,
+      "displayName": "2143",
+      "displayNameHtml": "2143",
+      "registrationAllowed": false,
+      "registrationEmailAsUsername": true,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "verifyEmail": false,
+      "clients": [
+        {
+          "clientId": "matrix-mas",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "standardFlowEnabled": true,
+          "serviceAccountsEnabled": true,
+          "redirectUris": ["https://chat.2143.me/*"],
+          "webOrigins": ["https://chat.2143.me"],
+          "attributes": {
+            "post.logout.redirect.uris": "https://chat.2143.me"
+          }
+        },
+        {
+          "clientId": "john2143-com",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "redirectUris": ["https://john2143.com/*"],
+          "webOrigins": ["https://john2143.com"]
+        }
+      ],
+      "identityProviderLinks": [],
+      "internationalizationEnabled": true,
+      "supportedLocales": ["en"],
+      "defaultLocale": "en",
+      "browserSecurityHeaders": {
+        "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';"
+      },
+      "rememberMe": true,
+      "sslRequired": "external"
+    }

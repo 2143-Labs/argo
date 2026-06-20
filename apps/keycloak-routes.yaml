@@ -1,10 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: authentik-routes
+  name: keycloak-routes
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -12,10 +10,10 @@ spec:
   source:
     repoURL: https://github.com/2143-Labs/argo.git
     targetRevision: HEAD
-    path: workloads/authentik
+    path: workloads/keycloak-routes
   destination:
     server: https://kubernetes.default.svc
-    namespace: authentik
+    namespace: keycloak
   syncPolicy:
     automated:
       prune: true
