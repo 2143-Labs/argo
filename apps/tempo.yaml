@@ -19,10 +19,10 @@ spec:
             trace:
               backend: s3
               s3:
-                endpoint: rustfs.default.svc:9000
+                endpoint: files.john2143.com
                 bucket: tempo-blocks
-                insecure: true
-                force_path_style: true
+                insecure: false
+                forcepathstyle: true
                 access_key: ${S3_ACCESS_KEY}
                 secret_key: ${S3_SECRET_KEY}
           retention: 168h
@@ -30,10 +30,11 @@ spec:
             requests:
               cpu: 500m
               memory: 1Gi
-        # Mount RustFS credentials into Tempo pods
-        extraEnvFrom:
-          - secretRef:
-              name: o11y-rustfs-buckets
+          extraArgs:
+            config.expand-env: "true"
+          extraEnvFrom:
+            - secretRef:
+                name: o11y-rustfs-buckets
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
