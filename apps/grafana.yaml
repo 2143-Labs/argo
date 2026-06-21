@@ -16,7 +16,7 @@ spec:
       values: |
         grafana.ini:
           server:
-            root_url: https://grafana.2143.me
+            root_url: https://grafana.john2143.com
           auth.generic_oauth:
             enabled: true
             name: "Pocket ID"

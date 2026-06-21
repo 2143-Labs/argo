@@ -6,8 +6,8 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: grafana-2143-https
-  hostnames: [grafana.2143.me]
+      sectionName: grafana-john2143-https
+  hostnames: [grafana.john2143.com]
   rules:
     - backendRefs:
         - name: grafana
