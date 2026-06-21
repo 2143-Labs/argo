@@ -5,7 +5,7 @@ metadata:
   namespace: observability
 spec:
   serviceName: mimir-headless
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: mimir
@@ -95,6 +95,9 @@ data:
       compactor_blocks_retention_period: 720h
     memberlist:
       bind_port: 7946
+      join_members:
+        - dns+mimir-memberlist.observability.svc.cluster.local:7946
+      abort_if_cluster_join_fails: false
 ---
 apiVersion: v1
 kind: Service
@@ -109,3 +112,16 @@ spec:
       port: 8080
     - name: grpc
       port: 9095
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mimir-memberlist
+  namespace: observability
+spec:
+  clusterIP: None
+  selector:
+    app: mimir
+  ports:
+    - name: memberlist
+      port: 7946
