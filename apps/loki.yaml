@@ -55,14 +55,14 @@ spec:
             retention_period: 720h
             max_query_lookback: 720h
         write:
-          replicas: 2
+          replicas: 1
           persistence:
             storageClass: longhorn
             size: 20Gi
         read:
-          replicas: 2
+          replicas: 1
         backend:
-          replicas: 2
+          replicas: 1
           persistence:
             storageClass: longhorn
             size: 10Gi
