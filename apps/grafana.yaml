@@ -59,9 +59,8 @@ spec:
                   tracesToLogsV2:
                     datasourceUid: loki
 
-        extraEnvFrom:
-          - secretRef:
-              name: grafana-oidc
+        envFromSecrets:
+          - grafana-oidc
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
