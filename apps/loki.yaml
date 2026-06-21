@@ -38,11 +38,10 @@ spec:
               insecure: false
               access_key_id: ${S3_ACCESS_KEY}
               secret_access_key: ${S3_SECRET_KEY}
-      memberlist:
-        join_members:
-          - dns+loki-memberlist.observability.svc.cluster.local:7946
-        bind_port: 7946
-        abort_if_cluster_join_fails: false
+          memberlist:
+            join_members:
+              - dns+loki-memberlist.observability.svc.cluster.local:7946
+            bind_port: 7946
       extraArgs:
             - "-config.expand-env=true"
           extraEnvFrom:
