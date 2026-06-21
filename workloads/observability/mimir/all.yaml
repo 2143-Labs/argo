@@ -87,13 +87,12 @@ data:
     alertmanager_storage:
       s3:
         bucket_name: mimir-alertmanager
-    compactor:
-      block_retention_period: 720h
     ingester:
       ring:
         replication_factor: 1
     limits:
       max_global_series_per_user: 500000
+      compactor_blocks_retention_period: 720h
     memberlist:
       bind_port: 7946
 ---
