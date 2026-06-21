@@ -17,25 +17,23 @@ spec:
                 - "s3:mimir-blocks"
                 - "/archive/mimir/"
                 - "--s3-endpoint=rustfs.default.svc:9000"
-                - "--s3-access-key-id=$(RUSTFS_ACCESS_KEY)"
-                - "--s3-secret-access-key=$(RUSTFS_SECRET_KEY)"
+                - "--s3-access-key-id=$(S3_ACCESS_KEY)"
+                - "--s3-secret-access-key=$(S3_SECRET_KEY)"
                 - "--s3-provider=Minio"
               env:
-                - name: RUSTFS_ACCESS_KEY
+                - name: S3_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: rustfs-credentials
-                      key: RUSTFS_ROOT_USER
-                - name: RUSTFS_SECRET_KEY
+                      name: o11y-rustfs-buckets
+                      key: S3_ACCESS_KEY
+                - name: S3_SECRET_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: rustfs-credentials
-                      key: RUSTFS_ROOT_PASSWORD
+                      name: o11y-rustfs-buckets
+                      key: S3_SECRET_KEY
               volumeMounts:
                 - name: archive
                   mountPath: /archive
-              # Run each bucket copy as a separate container in the same pod
-              # to simplify: one container per bucket.
           - name: rclone-loki
             image: rclone/rclone:latest
             args:
@@ -43,20 +41,20 @@ spec:
               - "s3:loki-chunks"
               - "/archive/loki/"
               - "--s3-endpoint=rustfs.default.svc:9000"
-              - "--s3-access-key-id=$(RUSTFS_ACCESS_KEY)"
-              - "--s3-secret-access-key=$(RUSTFS_SECRET_KEY)"
+              - "--s3-access-key-id=$(S3_ACCESS_KEY)"
+              - "--s3-secret-access-key=$(S3_SECRET_KEY)"
               - "--s3-provider=Minio"
             env:
-              - name: RUSTFS_ACCESS_KEY
+              - name: S3_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: rustfs-credentials
-                    key: RUSTFS_ROOT_USER
-              - name: RUSTFS_SECRET_KEY
+                    name: o11y-rustfs-buckets
+                    key: S3_ACCESS_KEY
+              - name: S3_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: rustfs-credentials
-                    key: RUSTFS_ROOT_PASSWORD
+                    name: o11y-rustfs-buckets
+                    key: S3_SECRET_KEY
             volumeMounts:
               - name: archive
                 mountPath: /archive
@@ -67,20 +65,20 @@ spec:
               - "s3:tempo-blocks"
               - "/archive/tempo/"
               - "--s3-endpoint=rustfs.default.svc:9000"
-              - "--s3-access-key-id=$(RUSTFS_ACCESS_KEY)"
-              - "--s3-secret-access-key=$(RUSTFS_SECRET_KEY)"
+              - "--s3-access-key-id=$(S3_ACCESS_KEY)"
+              - "--s3-secret-access-key=$(S3_SECRET_KEY)"
               - "--s3-provider=Minio"
             env:
-              - name: RUSTFS_ACCESS_KEY
+              - name: S3_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: rustfs-credentials
-                    key: RUSTFS_ROOT_USER
-              - name: RUSTFS_SECRET_KEY
+                    name: o11y-rustfs-buckets
+                    key: S3_ACCESS_KEY
+              - name: S3_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: rustfs-credentials
-                    key: RUSTFS_ROOT_PASSWORD
+                    name: o11y-rustfs-buckets
+                    key: S3_SECRET_KEY
             volumeMounts:
               - name: archive
                 mountPath: /archive
