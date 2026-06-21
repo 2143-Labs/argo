@@ -41,6 +41,7 @@ spec:
       memberlist:
         join_members:
           - loki-memberlist
+        abort_if_cluster_join_fails: false
       extraArgs:
             - "-config.expand-env=true"
           extraEnvFrom:
