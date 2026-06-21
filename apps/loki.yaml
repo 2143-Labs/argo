@@ -62,7 +62,7 @@ spec:
             max_query_lookback: 720h
         memberlist:
           service:
-            publishNotReadyAddresses: true
+            publishNotReadyAddresses: false
         write:
           replicas: 1
           persistence:
