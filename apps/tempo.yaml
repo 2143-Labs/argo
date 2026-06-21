@@ -14,6 +14,7 @@ spec:
     helm:
       releaseName: tempo
       values: |
+        replicas: 2
         tempo:
           storage:
             trace:
@@ -26,7 +27,6 @@ spec:
                 access_key: ${S3_ACCESS_KEY}
                 secret_key: ${S3_SECRET_KEY}
           retention: 168h
-        replicas: 2
           resources:
             requests:
               cpu: 500m
