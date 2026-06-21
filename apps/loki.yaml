@@ -40,7 +40,8 @@ spec:
               secret_access_key: ${S3_SECRET_KEY}
       memberlist:
         join_members:
-          - loki-memberlist
+          - dns+loki-memberlist.observability.svc.cluster.local:7946
+        bind_port: 7946
         abort_if_cluster_join_fails: false
       extraArgs:
             - "-config.expand-env=true"
