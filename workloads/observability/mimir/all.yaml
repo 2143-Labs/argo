@@ -88,7 +88,7 @@ data:
       s3:
         bucket_name: mimir-alertmanager
     compactor:
-      compactor_blocks_retention_period: 720h
+      block_retention_period: 720h
     ingester:
       ring:
         replication_factor: 1
