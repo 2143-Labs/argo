@@ -17,13 +17,11 @@ spec:
         loki:
           deploymentMode: SimpleScalable
           auth_enabled: false
-          dnsConfig:
-            nameservers:
-              - 10.43.0.10
-            options:
-              - name: single-request-reopen
           commonConfig:
             replication_factor: 1
+            ring:
+              kvstore:
+                store: inmemory
           readinessProbe:
             httpGet:
               path: /ready
@@ -52,11 +50,7 @@ spec:
               insecure: false
               access_key_id: ${S3_ACCESS_KEY}
               secret_access_key: ${S3_SECRET_KEY}
-          memberlistConfig:
-            join_members:
-              - loki-memberlist
-            bind_port: 7946
-            abort_if_cluster_join_fails: false
+          memberlistConfig: {}
           compactor:
             retention_enabled: true
             delete_request_store: s3
