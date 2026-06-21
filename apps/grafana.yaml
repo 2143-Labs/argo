@@ -60,7 +60,7 @@ spec:
                     datasourceUid: loki
 
         envFromSecrets:
-          - grafana-oidc
+          - name: grafana-oidc
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
