@@ -69,7 +69,7 @@ spec:
               memory: 4Gi
             limits:
               cpu: 2000m
-              memory: 10Gi
+              memory: 12Gi
           readinessProbe:
             httpGet:
               path: /health
