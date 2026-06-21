@@ -86,8 +86,12 @@ spec:
         namespaces:
           from: Selector
           selector:
-            matchLabels:
-              kubernetes.io/metadata.name: keycloak
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - keycloak
+                  - pocket-id-prod
     - name: john2143-https
       protocol: HTTPS
       port: 8443
@@ -297,22 +301,6 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: pocket-id
-
-    - name: sso-2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: sso.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            name: 2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: pocket-id-prod
     - name: m-2143-https
       protocol: HTTPS
       port: 8443
