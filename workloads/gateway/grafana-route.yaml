@@ -11,4 +11,5 @@ spec:
   rules:
     - backendRefs:
         - name: grafana
-          port: 3000
+          namespace: observability
+          port: 80
