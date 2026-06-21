@@ -17,6 +17,11 @@ spec:
         loki:
           deploymentMode: SimpleScalable
           auth_enabled: false
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            options:
+              - name: single-request-reopen
           commonConfig:
             replication_factor: 1
           readinessProbe:
@@ -49,7 +54,7 @@ spec:
               secret_access_key: ${S3_SECRET_KEY}
           memberlistConfig:
             join_members:
-              - 10.42.6.152
+              - loki-memberlist
             bind_port: 7946
             abort_if_cluster_join_fails: false
           compactor:
