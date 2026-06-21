@@ -7,7 +7,6 @@ metadata:
     kube-vip.io/loadbalancerIPs: "192.168.5.11"
 spec:
   type: LoadBalancer
-  loadBalancerClass: kube-vip.io/kube-vip-class
   selector:
     app: mimir
   ports:
@@ -24,7 +23,6 @@ metadata:
     kube-vip.io/loadbalancerIPs: "192.168.5.12"
 spec:
   type: LoadBalancer
-  loadBalancerClass: kube-vip.io/kube-vip-class
   selector:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/name: loki
