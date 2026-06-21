@@ -87,6 +87,7 @@ spec:
             storageClass: longhorn
             size: 10Gi
           extraArgs:
+            - "-log.level=debug"
             - "-config.expand-env=true"
           extraEnvFrom:
             - secretRef:
