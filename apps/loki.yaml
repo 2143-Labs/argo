@@ -42,14 +42,7 @@ spec:
             join_members:
               - dns+loki-memberlist.observability.svc.cluster.local:7946
             bind_port: 7946
-      extraArgs:
-            - "-config.expand-env=true"
-          extraEnvFrom:
-            - secretRef:
-                name: o11y-rustfs-buckets
-      memberlist:
-        service:
-          publishNotReadyAddresses: true
+            abort_if_cluster_join_fails: false
           compactor:
             retention_enabled: true
             delete_request_store: s3
@@ -58,18 +51,36 @@ spec:
           limits_config:
             retention_period: 720h
             max_query_lookback: 720h
+        memberlist:
+          service:
+            publishNotReadyAddresses: true
         write:
           replicas: 1
           persistence:
             storageClass: longhorn
             size: 20Gi
+          extraArgs:
+            - "-config.expand-env=true"
+          extraEnvFrom:
+            - secretRef:
+                name: o11y-rustfs-buckets
         read:
           replicas: 1
+          extraArgs:
+            - "-config.expand-env=true"
+          extraEnvFrom:
+            - secretRef:
+                name: o11y-rustfs-buckets
         backend:
           replicas: 1
           persistence:
             storageClass: longhorn
             size: 10Gi
+          extraArgs:
+            - "-config.expand-env=true"
+          extraEnvFrom:
+            - secretRef:
+                name: o11y-rustfs-buckets
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
