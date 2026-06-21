@@ -19,8 +19,19 @@ metadata:
   name: pite-status
   namespace: default
 spec:
-  type: ExternalName
-  externalName: 192.168.5.9
   ports:
     - port: 3030
       targetPort: 3030
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: pite-status
+  namespace: default
+subsets:
+  - addresses:
+      - ip: 192.168.5.9
+    ports:
+      - port: 3030
+        protocol: TCP
