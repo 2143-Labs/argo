@@ -17,7 +17,7 @@ spec:
         - "-port=9333"
         - "-volumeSizeLimitMB=30000"
         - "-mdir=/data/master"
-        ports: [{containerPort: 9333}]
+        ports: [{containerPort: 9333, name: http}, {containerPort: 19333, name: grpc}]
         resources:
           requests: {memory: "128Mi", cpu: "100m"}
           limits: {memory: "256Mi", cpu: "500m"}
@@ -35,4 +35,6 @@ metadata:
   name: seaweedfs-master
 spec:
   selector: {app: seaweedfs-master}
-  ports: [{port: 9333}]
+  ports:
+  - {port: 9333, name: http}
+  - {port: 19333, name: grpc}
