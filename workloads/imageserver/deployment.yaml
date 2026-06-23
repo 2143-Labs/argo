@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: john2143-com
 spec:
+  revisionHistoryLimit: 3
   replicas: 1
   selector:
     matchLabels:

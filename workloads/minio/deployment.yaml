@@ -5,6 +5,7 @@ metadata:
   labels:
     app: minio
 spec:
+  revisionHistoryLimit: 3
   replicas: 1
   strategy:
     type: Recreate

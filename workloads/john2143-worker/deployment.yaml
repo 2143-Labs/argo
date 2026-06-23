@@ -5,6 +5,7 @@ metadata:
   labels:
     app: john2143-worker
 spec:
+  revisionHistoryLimit: 3
   replicas: 1
   strategy:
     type: Recreate
