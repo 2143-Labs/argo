@@ -15,8 +15,8 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: rustfs
-          port: 9000
+        - name: seaweedfs-s3
+          port: 8333
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
