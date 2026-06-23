@@ -4,13 +4,14 @@ metadata:
   name: mimir-lb
   namespace: observability
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: mimir
   ports:
     - name: http
       port: 8080
       targetPort: 8080
+      nodePort: 30674
 ---
 apiVersion: v1
 kind: Service
@@ -18,7 +19,7 @@ metadata:
   name: loki-push-lb
   namespace: observability
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/name: loki
@@ -26,3 +27,4 @@ spec:
     - name: http
       port: 3100
       targetPort: 8080
+      nodePort: 30108
