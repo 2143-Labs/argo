@@ -65,6 +65,14 @@ spec:
           extraEnvFrom:
             - secretRef:
                 name: o11y-rustfs-buckets
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: write
+                  app.kubernetes.io/instance: loki
         read:
           replicas: 2
           extraArgs:
@@ -83,6 +91,14 @@ spec:
           extraEnvFrom:
             - secretRef:
                 name: o11y-rustfs-buckets
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: read
+                  app.kubernetes.io/instance: loki
         backend:
           replicas: 2
           persistence:
@@ -104,6 +120,14 @@ spec:
           extraEnvFrom:
             - secretRef:
                 name: o11y-rustfs-buckets
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: backend
+                  app.kubernetes.io/instance: loki
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
