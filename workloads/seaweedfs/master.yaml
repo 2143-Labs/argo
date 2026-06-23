@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-master
+  labels: {app: seaweedfs-master}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: seaweedfs-master}}
+  template:
+    metadata: {labels: {app: seaweedfs-master}}
+    spec:
+      containers:
+      - name: master
+        image: chrislusf/seaweedfs:3.85
+        args:
+        - "master"
+        - "-ip=seaweedfs-master"
+        - "-port=9333"
+        - "-volumeSizeLimitMB=30000"
+        - "-mdir=/data/master"
+        ports: [{containerPort: 9333}]
+        resources:
+          requests: {memory: "128Mi", cpu: "100m"}
+          limits: {memory: "256Mi", cpu: "500m"}
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: seaweedfs-master-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs-master
+spec:
+  selector: {app: seaweedfs-master}
+  ports: [{port: 9333}]

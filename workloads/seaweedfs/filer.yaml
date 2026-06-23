@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-filer
+  labels: {app: seaweedfs-filer}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: seaweedfs-filer}}
+  template:
+    metadata: {labels: {app: seaweedfs-filer}}
+    spec:
+      containers:
+      - name: filer
+        image: chrislusf/seaweedfs:3.85
+        args:
+        - "filer"
+        - "-master=seaweedfs-master:9333"
+        - "-port=8888"
+        - "-s3"
+        - "-s3.port=8333"
+        - "-s3.config=/etc/seaweedfs/s3.json"
+        ports:
+        - {containerPort: 8888, name: filer}
+        - {containerPort: 8333, name: s3}
+        resources:
+          requests: {memory: "256Mi", cpu: "100m"}
+          limits: {memory: "1Gi", cpu: "1000m"}
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: s3-config
+          mountPath: /etc/seaweedfs
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: seaweedfs-filer-data
+      - name: s3-config
+        configMap:
+          name: seaweedfs-s3-config

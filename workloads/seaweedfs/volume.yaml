@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-volume
+  labels: {app: seaweedfs-volume}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: seaweedfs-volume}}
+  template:
+    metadata: {labels: {app: seaweedfs-volume}}
+    spec:
+      nodeName: nas
+      containers:
+      - name: volume
+        image: chrislusf/seaweedfs:3.85
+        args:
+        - "volume"
+        - "-mserver=seaweedfs-master:9333"
+        - "-port=8080"
+        - "-dir=/data"
+        - "-index=leveldb"
+        - "-maxVolumes=0"
+        ports: [{containerPort: 8080}]
+        resources:
+          requests: {memory: "256Mi", cpu: "100m"}
+          limits: {memory: "1Gi", cpu: "1000m"}
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        hostPath:
+          path: /tank/seaweedfs-data
+          type: DirectoryOrCreate
