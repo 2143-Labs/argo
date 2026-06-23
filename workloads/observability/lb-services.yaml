@@ -3,16 +3,13 @@ kind: Service
 metadata:
   name: mimir-lb
   namespace: observability
-  annotations:
-    kube-vip.io/loadbalancerIPs: "192.168.5.11"
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: mimir
   ports:
     - name: http
       port: 8080
-      nodePort: 30674
       targetPort: 8080
 ---
 apiVersion: v1
@@ -20,15 +17,12 @@ kind: Service
 metadata:
   name: loki-push-lb
   namespace: observability
-  annotations:
-    kube-vip.io/loadbalancerIPs: "192.168.5.12"
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/name: loki
   ports:
     - name: http
       port: 3100
-      nodePort: 30108
       targetPort: 8080
