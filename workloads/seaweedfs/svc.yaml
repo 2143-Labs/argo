@@ -5,3 +5,11 @@ metadata:
 spec:
   selector: {app: seaweedfs-filer}
   ports: [{port: 8333, targetPort: 8333}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs-filer-www
+spec:
+  selector: {app: seaweedfs-filer}
+  ports: [{port: 8888, targetPort: 8888}]
