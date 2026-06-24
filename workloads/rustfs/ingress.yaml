@@ -15,5 +15,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: seaweedfs-s3
-          port: 8333
+        - name: rustfs
+          port: 9000
