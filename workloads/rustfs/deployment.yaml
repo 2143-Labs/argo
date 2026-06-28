@@ -6,7 +6,7 @@ metadata:
     app: rustfs
 spec:
   revisionHistoryLimit: 3
-  replicas: 1
+  replicas: 0  # permanently disabled — PVC extracted, migration in progress
   strategy:
     type: Recreate
   selector:
