@@ -18,6 +18,7 @@ spec:
     - auth.ts.2143.me
     - home.ts.2143.me
     - files-ui.ts.2143.me
+    - llm.2143.me
   rules:
     - matches:
         - path:

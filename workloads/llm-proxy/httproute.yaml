@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: litellm
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: llm-2143-https
+  hostnames:
+    - llm.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: litellm
+          port: 4000
