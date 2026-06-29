@@ -47,11 +47,13 @@ data:
       # ── Anthropic ─────────────────────────────────────────────────────
       - model_name: "claude/claude-sonnet-4-6"
         litellm_params:
-          model: "claude/claude-sonnet-4-6"
+          model: "claude-sonnet-4-20250514"
+          custom_llm_provider: "anthropic"
           api_key: "os.environ/ANTHROPIC_API_KEY"
       - model_name: "claude/claude-haiku-4-5"
         litellm_params:
-          model: "claude/claude-haiku-4-5"
+          model: "claude-haiku-4-20250514"
+          custom_llm_provider: "anthropic"
           api_key: "os.environ/ANTHROPIC_API_KEY"
       # ── OpenAI ────────────────────────────────────────────────────────
       - model_name: "openai/gpt-4.1-nano"
