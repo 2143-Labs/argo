@@ -17,6 +17,8 @@ spec:
       labels:
         app: mosquitto
     spec:
+      securityContext:
+        fsGroup: 1883
       containers:
         - name: mosquitto
           image: docker.io/eclipse-mosquitto:2.0
