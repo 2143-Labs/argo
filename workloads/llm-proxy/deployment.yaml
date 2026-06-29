@@ -37,13 +37,9 @@ spec:
               subPath: config.yaml
               readOnly: true
           command:
-            - litellm
-            - "--config"
-            - "/app/config.yaml"
-            - "--port"
-            - "4000"
-            - "--host"
-            - "0.0.0.0"
+            - sh
+            - "-c"
+            - "pip install Pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
           resources:
             requests:
               cpu: 200m
