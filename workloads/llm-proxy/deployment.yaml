@@ -28,6 +28,8 @@ spec:
               value: "https://llm.2143.me"
             - name: AUTO_REDIRECT_UI_LOGIN_TO_SSO
               value: "true"
+            - name: PYTHONPATH
+              value: "/usr/lib/python3.13/site-packages"
           envFrom:
             - secretRef:
                 name: litellm-secrets
@@ -39,7 +41,7 @@ spec:
           command:
             - sh
             - "-c"
-            - "/app/.venv/bin/python3 -m pip install -q Pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
+            - "apk add --no-cache py3-pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
           resources:
             requests:
               cpu: 200m
