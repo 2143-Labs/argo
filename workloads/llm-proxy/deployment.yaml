@@ -39,7 +39,7 @@ spec:
           command:
             - sh
             - "-c"
-            - "pip install Pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
+            - "/app/.venv/bin/pip install Pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
           resources:
             requests:
               cpu: 200m
