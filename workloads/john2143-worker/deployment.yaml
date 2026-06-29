@@ -23,7 +23,7 @@ spec:
             sizeLimit: 10Gi
       containers:
         - name: worker
-          image: ghcr.io/john2143/john2143.com-worker:185
+          image: ghcr.io/john2143/john2143.com-worker:186
           imagePullPolicy: IfNotPresent
           env:
             - name: RUN_MODE
