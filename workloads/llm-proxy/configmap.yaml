@@ -8,6 +8,8 @@ data:
   config.yaml: |
     general_settings:
       master_key: "os.environ/LITELLM_MASTER_KEY"
+      store_model_in_db: true
+      store_prompts_in_spend_logs: true
     model_list:
       # ── Local Ollama (office) ──────────────────────────────────────────
       - model_name: "ollama/huihui_ai/qwen3-vl-abliterated:8b"
