@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  labels:
+    app: mosquitto
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: docker.io/eclipse-mosquitto:2.0
+          ports:
+            - containerPort: 1883
+              protocol: TCP
+              name: mqtt
+          volumeMounts:
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+              readOnly: true
+            - name: mosquitto-credentials
+              mountPath: /mosquitto/config/password.txt
+              subPath: password.txt
+              readOnly: true
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config
+        - name: mosquitto-credentials
+          secret:
+            secretName: mosquitto-credentials
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: mosquitto-data-lh
