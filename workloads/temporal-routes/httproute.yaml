@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: temporal
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: temporal-ts-2143-https
+  hostnames:
+    - temporal.ts.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: temporal-web
+          port: 8080

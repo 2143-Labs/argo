@@ -11,6 +11,7 @@ spec:
     - https://github.com/kubernetes-sigs/gateway-api.git
     - https://charts.jetstack.io
     - https://charts.longhorn.io
+    - https://go.temporal.io/helm-charts
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc

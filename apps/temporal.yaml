@@ -1,0 +1,93 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: temporal
+    repoURL: https://go.temporal.io/helm-charts
+    targetRevision: 1.5.0
+    helm:
+      releaseName: temporal
+      values: |
+        fullnameOverride: "temporal"
+        server:
+          config:
+            persistence:
+              defaultStore: default
+              visibilityStore: visibility
+              numHistoryShards: 512
+              datastores:
+                default:
+                  sql:
+                    createDatabase: false
+                    manageSchema: true
+                    pluginName: postgres12
+                    databaseName: temporal
+                    connectAddr: "temporal-db-rw:5432"
+                    user: temporal
+                    existingSecret: temporal-db-app
+                    secretKey: password
+                    maxConns: 20
+                    maxConnLifetime: "1h"
+                visibility:
+                  sql:
+                    createDatabase: false
+                    manageSchema: true
+                    pluginName: postgres12
+                    databaseName: temporal_visibility
+                    connectAddr: "temporal-db-rw:5432"
+                    user: temporal
+                    existingSecret: temporal-db-app
+                    secretKey: password
+                    maxConns: 20
+                    maxConnLifetime: "1h"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+
+        cassandra:
+          enabled: false
+
+        mysql:
+          enabled: false
+
+        postgresql:
+          enabled: true
+
+        shims:
+          dockerize: false
+          elasticsearchTool: false
+
+        schema:
+          setup:
+            enabled: false
+          update:
+            enabled: false
+
+        web:
+          enabled: true
+
+        admintools:
+          enabled: true
+
+        prometheus:
+          enabled: false
+
+        grafana:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
