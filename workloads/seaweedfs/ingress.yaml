@@ -17,3 +17,23 @@ spec:
       backendRefs:
         - name: seaweedfs-filer-www
           port: 8888
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: seaweedfs-s3
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: files-john2143-https
+  hostnames:
+    - files.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: seaweedfs-s3
+          port: 8333
