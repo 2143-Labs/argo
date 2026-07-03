@@ -1,0 +1,112 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tuwunel
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: oci://ghcr.io/magikid/modern-conduwuit-helm/conduwuit
+    targetRevision: 2.1.0
+    helm:
+      releaseName: tuwunel
+      values: |
+        image:
+          repository: ghcr.io/matrix-construct/tuwunel
+          tag: v1.4.1
+          pullPolicy: IfNotPresent
+
+        config:
+          global:
+            server_name: "chat.2143.me"
+            database_path: "/var/lib/tuwunel"
+            allow_registration: false
+            allow_federation: false
+            allow_encryption: true
+            allow_room_creation: true
+            max_concurrent_requests: 256
+            proxy: true
+            proxy_allow_net: ["0.0.0.0/0"]
+
+            storage_provider:
+              seaweedfs:
+                s3:
+                  endpoint: "https://files.john2143.com"
+                  bucket: "tuwunel-media"
+                  region: "us-east-1"
+
+            matrix_rtc:
+              enabled: true
+              focus: "livekit"
+              livekit_server: "https://livekit.matrix.svc.cluster.local"
+
+            turn:
+              enabled: true
+              uris:
+                - "turn:turn.matrix.svc.cluster.local:3478?transport=udp"
+                - "turns:turn.matrix.svc.cluster.local:5349?transport=tcp"
+              secret: "CHANGE_ME_COTURN_SECRET"
+
+            federation:
+              whitelist:
+                - "*.2143.me"
+
+        extraEnv:
+          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: seaweedfs-s3-creds
+                key: access_key
+          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: seaweedfs-s3-creds
+                key: secret_key
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__BRAND
+            value: "Keycloak"
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID
+            value: "tuwunel"
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: au2143me-oidc
+                key: client_secret
+                optional: true
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL
+            value: "https://au.2143.me"
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL
+            value: "https://chat.2143.me/_matrix/client/unstable/login/sso/callback/tuwunel"
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__DEFAULT
+            value: "true"
+          - name: TUWUNEL_IDENTITY_PROVIDER__0__REGISTRATION
+            value: "true"
+
+        persistence:
+          data:
+            storageClass: "longhorn"
+            size: "4Gi"
+            accessMode: ReadWriteOnce
+
+        service:
+          type: ClusterIP
+          port: 8008
+
+        ingress:
+          enabled: false
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: matrix
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
