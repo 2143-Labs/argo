@@ -376,3 +376,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: temporal-ts-2143-grpc
+      protocol: HTTPS
+      port: 7233
+      hostname: temporal.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: ts-2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
