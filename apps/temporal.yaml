@@ -31,7 +31,7 @@ spec:
                     connectAddr: "temporal-db-rw:5432"
                     connectProtocol: "tcp"
                     user: temporal
-                    existingSecret: temporal-db-app
+                    existingSecret: temporal-db-password
                     secretKey: password
                     maxConns: 20
                     maxConnLifetime: "1h"
@@ -44,7 +44,7 @@ spec:
                     connectAddr: "temporal-db-rw:5432"
                     connectProtocol: "tcp"
                     user: temporal
-                    existingSecret: temporal-db-app
+                    existingSecret: temporal-db-password
                     secretKey: password
                     maxConns: 20
                     maxConnLifetime: "1h"
