@@ -70,11 +70,6 @@ spec:
         admintools:
           enabled: true
 
-        prometheus:
-          enabled: false
-
-        grafana:
-          enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: default
