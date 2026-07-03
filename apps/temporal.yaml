@@ -54,15 +54,6 @@ spec:
               cpu: 2000m
               memory: 2Gi
 
-        cassandra:
-          enabled: false
-
-        mysql:
-          enabled: false
-
-        postgresql:
-          enabled: true
-
         shims:
           dockerize: false
           elasticsearchTool: false
