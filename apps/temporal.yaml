@@ -56,6 +56,10 @@ spec:
               cpu: 2000m
               memory: 2Gi
 
+          frontend:
+            service:
+              type: NodePort
+
         shims:
           dockerize: false
           elasticsearchTool: false
