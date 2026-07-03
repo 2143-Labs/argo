@@ -1,0 +1,13 @@
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: tuwunel-daily-backup
+  namespace: longhorn-system
+spec:
+  concurrency: 1
+  cron: "0 3 * * *"
+  task: backup
+  groups: []
+  labels:
+    app.kubernetes.io/instance: tuwunel
+  retain: 30
