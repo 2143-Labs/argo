@@ -375,10 +375,3 @@ spec:
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
         namespaces:
-
-    - name: temporal-ts-2143-grpc
-      protocol: TCP
-      port: 7233
-      allowedRoutes:
-        namespaces:
-          from: Same
