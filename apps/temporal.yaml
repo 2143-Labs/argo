@@ -29,6 +29,7 @@ spec:
                     pluginName: postgres12
                     databaseName: temporal
                     connectAddr: "temporal-db-rw:5432"
+                    connectProtocol: "tcp"
                     user: temporal
                     existingSecret: temporal-db-app
                     secretKey: password
@@ -41,6 +42,7 @@ spec:
                     pluginName: postgres12
                     databaseName: temporal_visibility
                     connectAddr: "temporal-db-rw:5432"
+                    connectProtocol: "tcp"
                     user: temporal
                     existingSecret: temporal-db-app
                     secretKey: password
