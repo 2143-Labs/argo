@@ -328,6 +328,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: chat-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: chat.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: 2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: grafana-john2143-https
       protocol: HTTPS
       port: 8443
