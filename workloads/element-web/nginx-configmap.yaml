@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: element-web-nginx
+  namespace: matrix
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name element.chat.2143.me;
+        root /app;
+        index index.html;
+        location / {
+            try_files $uri $uri/ /index.html;
+            add_header Cache-Control "no-cache";
+        }
+        location /config.json {
+            add_header Cache-Control "no-cache, must-revalidate";
+            expires 0;
+        }
+    }
