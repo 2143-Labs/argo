@@ -58,11 +58,6 @@ spec:
           dockerize: false
           elasticsearchTool: false
 
-        schema:
-          setup:
-            enabled: false
-          update:
-            enabled: false
 
         web:
           enabled: true
