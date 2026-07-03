@@ -12,8 +12,6 @@ config:
     allow_encryption: true
     allow_room_creation: true
     max_concurrent_requests: 256
-    proxy: true
-    proxy_allow_net: ["0.0.0.0/0"]
 
     # Storage provider — SeaweedFS S3
     storage_provider:

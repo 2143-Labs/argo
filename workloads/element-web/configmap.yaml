@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: element-web
+  namespace: matrix
+data:
+  config.json: |
+    {
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://chat.2143.me"
+        },
+        "m.identity_server": {
+          "base_url": "https://chat.2143.me"
+        }
+      },
+      "features": {
+        "feature_element_call_via_turn": true
+      },
+      "element_call": {
+        "livekit": {
+          "base_url": "https://livekit.matrix.svc.cluster.local"
+        }
+      },
+      "sso_redirect_options": {
+        "immediate": true
+      }
+    }

@@ -16,6 +16,8 @@ spec:
           repository: ghcr.io/matrix-construct/tuwunel
           tag: v1.4.1
           pullPolicy: IfNotPresent
+        server_name: "chat.2143.me"
+        database_path: "/var/lib/tuwunel"
 
         config:
           global:
@@ -26,8 +28,6 @@ spec:
             allow_encryption: true
             allow_room_creation: true
             max_concurrent_requests: 256
-            proxy: true
-            proxy_allow_net: ["0.0.0.0/0"]
 
             storage_provider:
               seaweedfs:
@@ -53,29 +53,12 @@ spec:
                 - "*.2143.me"
 
         extraEnv:
-          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__ACCESS_KEY
-            valueFrom:
-              secretKeyRef:
-                name: seaweedfs-s3-creds
-                key: access_key
-          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__SECRET_KEY
-            valueFrom:
-              secretKeyRef:
-                name: seaweedfs-s3-creds
-                key: secret_key
           - name: TUWUNEL_IDENTITY_PROVIDER__0__BRAND
             value: "Keycloak"
           - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID
-            valueFrom:
-              secretKeyRef:
-                name: au2143me-oidc
-                key: client_id
+            value: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
           - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: au2143me-oidc
-                key: client_secret
-            optional: false
+            value: "APKpqPlSpI7neRj9rp5Olho3fEK6kY9A"
           - name: TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL
             value: "https://au.2143.me"
           - name: TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL
@@ -84,6 +67,10 @@ spec:
             value: "true"
           - name: TUWUNEL_IDENTITY_PROVIDER__0__REGISTRATION
             value: "true"
+          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__ACCESS_KEY
+            value: "john"
+          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__SECRET_KEY
+            value: "*XSjJP83VxDM"
 
         persistence:
           data:
