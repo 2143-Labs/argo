@@ -14,7 +14,7 @@ spec:
       values: |
         image:
           repository: ghcr.io/matrix-construct/tuwunel
-          tag: v1.4.1
+          tag: v1.8.0
           pullPolicy: IfNotPresent
         server_name: "chat.2143.me"
         database_path: "/var/lib/tuwunel"
@@ -51,22 +51,16 @@ spec:
             federation:
               whitelist:
                 - "*.2143.me"
+            identity_provider:
+              - brand: "PocketID"
+                client_id: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+                client_secret_file: "/etc/tuwunel/secrets/client_secret"
+                issuer_url: "https://au.2143.me"
+                callback_url: "https://chat.2143.me/_matrix/client/unstable/login/sso/callback/20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+                default: true
+                registration: true
 
         extraEnv:
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__BRAND
-            value: "Keycloak"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID
-            value: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET
-            value: "APKpqPlSpI7neRj9rp5Olho3fEK6kY9A"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL
-            value: "https://au.2143.me"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL
-            value: "https://chat.2143.me/_matrix/client/unstable/login/sso/callback/20a2823e-d15a-4cdd-a083-3ddc11b75afc"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__DEFAULT
-            value: "true"
-          - name: TUWUNEL_IDENTITY_PROVIDER__0__REGISTRATION
-            value: "true"
           - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__ACCESS_KEY
             value: "john"
           - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__SECRET_KEY

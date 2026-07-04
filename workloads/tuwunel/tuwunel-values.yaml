@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/matrix-construct/tuwunel
-  tag: v1.4.1
+  tag: v1.8.0
   pullPolicy: IfNotPresent
 
 config:
@@ -39,6 +39,16 @@ config:
     federation:
       whitelist:
         - "*.2143.me"
+    # OIDC identity provider — au.2143.me (Pocket ID)
+    # Client secret file mounted from au2143me-oidc Kubernetes Secret
+    identity_provider:
+      - brand: "PocketID"
+        client_id: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+        client_secret_file: "/etc/tuwunel/secrets/client_secret"
+        issuer_url: "https://au.2143.me"
+        callback_url: "https://chat.2143.me/_matrix/client/unstable/login/sso/callback/20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+        default: true
+        registration: true
 
 extraEnv:
   # S3 credentials from SeaweedFS secret
@@ -53,27 +63,9 @@ extraEnv:
         name: seaweedfs-s3-creds
         key: secret_key
 
-  # OIDC identity provider — au.2143.me (Pocket ID)
-  # Requires the user to create an OIDC client in Pocket ID admin first!
-  # See: https://au.2143.me/settings/admin/oidc-clients
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__BRAND
-    value: "Keycloak"
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID
-    value: "tuwunel"
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: au2143me-oidc
-        key: client_secret
-        optional: true
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL
-    value: "https://au.2143.me"
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL
-    value: "https://chat.2143.me/_matrix/client/unstable/login/sso/callback/tuwunel"
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__DEFAULT
-    value: "true"
-  - name: TUWUNEL_IDENTITY_PROVIDER__0__REGISTRATION
-    value: "true"
+  # OIDC identity provider — configured in config.global.identity_provider
+  # Client secret is mounted as a file from au2143me-oidc secret:
+  #   client_secret_file: "/etc/tuwunel/secrets/client_secret"
 
 persistence:
   data:
