@@ -1,0 +1,30 @@
+# Source: livekit-server/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-server
+  labels:
+    helm.sh/chart: livekit-server-1.9.0
+    app.kubernetes.io/name: livekit-server
+    app.kubernetes.io/instance: livekit-server
+    app.kubernetes.io/version: "v1.9.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+spec:
+  ports:
+    - port: 7880
+      targetPort: http
+      protocol: TCP
+      name: http
+    - name: rtc-tcp
+      port: 7881
+      protocol: TCP
+      targetPort: rtc-tcp
+    - name: rtc-udp
+      port: 50000
+      protocol: UDP
+      targetPort: rtc-udp
+  selector:
+    app.kubernetes.io/name: livekit-server
+    app.kubernetes.io/instance: livekit-server
+

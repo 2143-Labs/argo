@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: livekit-john2143
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: livekit-john2143-https
+  hostnames:
+    - livekit.john2143.com
+  rules:
+    - backendRefs:
+        - name: livekit-server
+          namespace: matrix
+          port: 7880

@@ -1,0 +1,41 @@
+replicaCount: 1
+
+podHostNetwork: false
+
+image:
+  repository: livekit/livekit-server
+  pullPolicy: IfNotPresent
+
+livekit:
+  port: 7880
+  log_level: info
+  rtc:
+    tcp_port: 7881
+    udp_port: 50000
+    port_range_start: 50001
+    port_range_end: 60000
+    use_external_ip: true
+  keys: {}
+  key_file: keys.yaml
+  turn:
+    enabled: true
+    domain: turns.john2143.com
+
+storeKeysInSecret:
+  enabled: true
+  existingSecret: livekit-keys
+
+loadBalancer:
+  type: disable
+  servicePort: 7880
+
+turnLoadBalancer:
+  enable: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 2
+    memory: 1Gi

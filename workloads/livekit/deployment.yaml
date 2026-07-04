@@ -1,0 +1,80 @@
+# Source: livekit-server/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-server
+  labels:
+    helm.sh/chart: livekit-server-1.9.0
+    app.kubernetes.io/name: livekit-server
+    app.kubernetes.io/instance: livekit-server
+    app.kubernetes.io/version: "v1.9.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: livekit-server
+      app.kubernetes.io/instance: livekit-server
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: disabled
+        sidecar.istio.io/inject: "false"
+        checksum/config: 4733d2eaefe1882290963c8e2a41fa80a0b15dfc12caef7fb3a0fb91c450daec
+      labels:
+        app.kubernetes.io/name: livekit-server
+        app.kubernetes.io/instance: livekit-server
+    spec:
+      serviceAccountName: default
+      securityContext:
+        {}
+      terminationGracePeriodSeconds: 18000
+      containers:
+        - name: livekit-server
+          securityContext:
+            {}
+          image: "livekit/livekit-server:v1.9.0"
+          imagePullPolicy: IfNotPresent
+          args: ["--disable-strict-config"]
+          env:
+            - name: LIVEKIT_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: livekit-server
+                  key: config.yaml
+          ports:
+            - name: http
+              containerPort: 7880
+              protocol: TCP
+            - name: rtc-udp
+              containerPort: 50000
+              hostPort: 50000
+              protocol: UDP
+            - name: rtc-tcp
+              containerPort: 7881
+              hostPort: 7881
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            limits:
+              cpu: 2
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: keys-volume
+              mountPath: keys.yaml
+              subPath: keys.yaml
+      volumes:
+        - name: keys-volume
+          secret:
+            secretName: livekit-keys
+            defaultMode: 0600
