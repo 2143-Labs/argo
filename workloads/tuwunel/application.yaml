@@ -55,10 +55,10 @@ spec:
               client: "https://matrix.2143.me"
             identity_provider:
               - brand: "PocketID"
-                client_id: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+                client_id: "dee01da6-5f13-4f11-9626-3dfef252c385"
                 client_secret_file: "/etc/tuwunel/secrets/client_secret"
                 issuer_url: "https://au.2143.me"
-                callback_url: "https://matrix.2143.me/_matrix/client/unstable/login/sso/callback/20a2823e-d15a-4cdd-a083-3ddc11b75afc"
+                callback_url: "https://matrix.2143.me/_matrix/client/unstable/login/sso/callback/dee01da6-5f13-4f11-9626-3dfef252c385"
                 default: true
                 registration: true
 
