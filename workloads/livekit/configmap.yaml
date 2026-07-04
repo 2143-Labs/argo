@@ -17,7 +17,5 @@ data:
       udp_port: 50000
       use_external_ip: true
     turn:
-      domain: turns.john2143.com
-      enabled: true
-      loadBalancerAnnotations: {}
+      enabled: false
 
