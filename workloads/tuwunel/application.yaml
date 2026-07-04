@@ -51,6 +51,8 @@ spec:
             federation:
               whitelist:
                 - "*.2143.me"
+            well_known:
+              client: "https://chat.2143.me"
             identity_provider:
               - brand: "PocketID"
                 client_id: "20a2823e-d15a-4cdd-a083-3ddc11b75afc"
