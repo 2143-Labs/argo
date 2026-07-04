@@ -33,7 +33,7 @@ spec:
                   listen 80;
                   root /app;
                   index index.html;
-                  rewrite ^/element/(.*) /$1 break;
+                  rewrite ^/element(.*)$ $1 last;
                   location / {
                       try_files $uri $uri/ /index.html;
                       add_header Cache-Control "no-cache";
