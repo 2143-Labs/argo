@@ -5,18 +5,18 @@ metadata:
   namespace: default
 spec:
   hostnames:
-    - element.chat.2143.me
+    - chat.2143.me
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: shared-gateway
       namespace: default
-      sectionName: element-chat-2143-https
+      sectionName: chat-2143-https
   rules:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /element
       backendRefs:
         - name: element-web
           namespace: matrix
