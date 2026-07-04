@@ -19,7 +19,7 @@ data:
       },
       "element_call": {
         "livekit": {
-          "base_url": "https://livekit.matrix.svc.cluster.local"
+          "base_url": "https://livekit.john2143.com"
         }
       },
       "sso_redirect_options": {
