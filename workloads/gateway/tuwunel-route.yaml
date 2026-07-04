@@ -18,5 +18,8 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: tuwunel
+        - group: ""
+          kind: Service
+          name: tuwunel-conduwuit
+          namespace: matrix
           port: 8008
