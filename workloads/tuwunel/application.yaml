@@ -54,6 +54,7 @@ spec:
                 - "*.2143.me"
             well_known:
               client: "https://matrix.2143.me"
+              livekit_url: "https://livekit.john2143.com"
             identity_provider:
               - brand: "PocketID"
                 client_id: "dee01da6-5f13-4f11-9626-3dfef252c385"
