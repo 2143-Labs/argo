@@ -101,6 +101,5 @@ spec:
     - group: apps
       kind: StatefulSet
       jsonPointers:
-        - /spec/template/spec/hostAliases
         - /spec/template/spec/volumes
         - /spec/template/spec/containers/0/volumeMounts
