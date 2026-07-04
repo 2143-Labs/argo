@@ -365,6 +365,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: livekit-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: livekit.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: llm-2143-https
       protocol: HTTPS
       port: 8443
