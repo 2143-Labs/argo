@@ -16,6 +16,31 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /element
+        - path:
+            type: PathPrefix
+            value: /bundles
+        - path:
+            type: PathPrefix
+            value: /icons
+        - path:
+            type: PathPrefix
+            value: /vector-icons
+        - path:
+            type: Exact
+            value: /manifest.json
+        - path:
+            type: Exact
+            value: /config.json
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: element-web
+          namespace: matrix
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
             value: /
       backendRefs:
         - group: ""
