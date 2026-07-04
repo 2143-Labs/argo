@@ -48,11 +48,9 @@ spec:
               protocol: TCP
             - name: rtc-udp
               containerPort: 50000
-              hostPort: 50000
               protocol: UDP
             - name: rtc-tcp
               containerPort: 7881
-              hostPort: 7881
               protocol: TCP
           livenessProbe:
             httpGet:
