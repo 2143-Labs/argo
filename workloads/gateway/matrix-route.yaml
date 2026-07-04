@@ -1,17 +1,17 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: chat-element
+  name: matrix-tuwunel
   namespace: default
 spec:
   hostnames:
-    - chat.2143.me
+    - matrix.2143.me
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: shared-gateway
       namespace: default
-      sectionName: chat-2143-https
+      sectionName: matrix-2143-https
   rules:
     - matches:
         - path:
@@ -20,6 +20,6 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: element-web
+          name: tuwunel-conduwuit
           namespace: matrix
-          port: 8080
+          port: 8008
