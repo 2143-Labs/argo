@@ -27,13 +27,11 @@ config:
       focus: "livekit"
       livekit_server: "https://livekit.matrix.svc.cluster.local"
 
-    # Turn server (placeholder, enable after Coturn deployed)
     turn:
       enabled: true
       uris:
-        - "turn:turn.matrix.svc.cluster.local:3478?transport=udp"
-        - "turns:turn.matrix.svc.cluster.local:5349?transport=tcp"
-      secret: "CHANGE_ME_COTURN_SECRET"
+        - "turn:turns.john2143.com:3478?transport=udp"
+      turn_secret_file: "/etc/tuwunel/secrets/turn/turn_secret"
 
     # Federation whitelist — only allow federation with trusted servers
     federation:

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coturn
+  namespace: matrix
+data:
+  turnserver.conf: |
+    listening-port=3478
+    realm=turns.john2143.com
+    use-auth-secret
+    static-auth-secret=/etc/coturn/secrets/turn_secret
+    no-tls
+    no-cli
+    no-multicast-peers
+    min-port=49152
+    max-port=65535
+    verbose

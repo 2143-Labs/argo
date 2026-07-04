@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coturn
+  namespace: matrix
+  labels:
+    app: coturn
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: coturn
+  template:
+    metadata:
+      labels:
+        app: coturn
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: arch
+      containers:
+        - name: coturn
+          image: coturn/coturn:4.6-alpine
+          args: ["-c", "/etc/coturn/turnserver.conf"]
+          ports:
+            - name: stun-turn
+              containerPort: 3478
+              protocol: UDP
+            - name: stun-turn-tcp
+              containerPort: 3478
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/coturn/turnserver.conf
+              subPath: turnserver.conf
+            - name: turn-secret
+              mountPath: /etc/coturn/secrets
+      volumes:
+        - name: config
+          configMap:
+            name: coturn
+        - name: turn-secret
+          secret:
+            secretName: tuwunel-turn
