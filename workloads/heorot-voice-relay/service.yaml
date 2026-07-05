@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: heorot-voice-relay
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: heorot-voice-relay
+    app.kubernetes.io/instance: heorot-voice-relay
+spec:
+  ports:
+    - name: http
+      port: 8088
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: heorot-voice-relay
+    app.kubernetes.io/instance: heorot-voice-relay
+  type: ClusterIP

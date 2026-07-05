@@ -16,6 +16,16 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /voice
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: heorot-voice-relay
+          namespace: matrix
+          port: 8088
+    - matches:
+        - path:
+            type: PathPrefix
             value: /
       backendRefs:
         - group: ""

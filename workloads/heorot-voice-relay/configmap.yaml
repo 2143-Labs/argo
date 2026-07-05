@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heorot-voice-relay
+  namespace: matrix
+data:
+  PORT: "8088"
+  PUBLIC_BASE_URL: "https://matrix.2143.me"
+  MATRIX_BASE_URL: "https://matrix.2143.me"
+  LIVEKIT_INTERNAL_URL: "http://10.43.185.23:7880"
+  LIVEKIT_PUBLIC_WS_URL: "wss://livekit.john2143.com"
+  CORS_ORIGIN: "https://chat.2143.me"
+  TOKEN_TTL_SECONDS: "300"
+  VOICE_PARTICIPANT_LIST_ENABLED: "true"
+  VOICE_STATE_TTL_SECONDS: "30"
+  VOICE_TOKEN_RATE_LIMIT_PER_MINUTE: "20"
+  VOICE_STATE_RATE_LIMIT_PER_MINUTE: "180"
+  VOICE_PARTICIPANTS_RATE_LIMIT_PER_MINUTE: "240"
