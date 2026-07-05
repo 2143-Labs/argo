@@ -57,7 +57,7 @@ spec:
               - brand: "PocketID"
                 client_id: "dee01da6-5f13-4f11-9626-3dfef252c385"
                 client_secret_file: "/etc/tuwunel/secrets/client_secret"
-                issuer_url: "https://au.2143.me"
+                issuer_url: "http://pocket-id.pocket-id.svc.cluster.local"
                 callback_url: "https://matrix.2143.me/_matrix/client/unstable/login/sso/callback/dee01da6-5f13-4f11-9626-3dfef252c385"
                 default: true
                 registration: true
