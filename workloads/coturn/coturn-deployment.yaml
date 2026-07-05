@@ -17,8 +17,6 @@ spec:
       labels:
         app: coturn
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: arch
       containers:
         - name: coturn
           image: coturn/coturn:4.6-alpine
