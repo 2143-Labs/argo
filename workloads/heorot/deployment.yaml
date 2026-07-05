@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heorot
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: heorot
+    app.kubernetes.io/instance: heorot
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: heorot
+      app.kubernetes.io/instance: heorot
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: heorot
+        app.kubernetes.io/instance: heorot
+    spec:
+      containers:
+        - name: heorot
+          image: docker-registry.kube-system:5000/heorot-web:v0.1.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+      volumes:
+        - name: config
+          configMap:
+            name: heorot-config
