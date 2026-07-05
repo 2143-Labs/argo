@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: heorot
-          image: docker-registry.kube-system:5000/heorot-web:v0.1.0
+          image: 10.43.114.59:5000/heorot-web:v0.1.0
           imagePullPolicy: Always
           ports:
             - name: http
