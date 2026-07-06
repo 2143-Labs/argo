@@ -7,7 +7,7 @@ data:
   default.conf: |
     server {
         listen 80;
-        server_name element.chat.2143.me;
+        server_name element.chat.2143.me element.john2143.com;
         root /app;
         index index.html;
         location / {

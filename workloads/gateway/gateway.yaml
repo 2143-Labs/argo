@@ -413,3 +413,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: element-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: element.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same

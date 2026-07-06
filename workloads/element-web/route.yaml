@@ -1,3 +1,25 @@
-# Replaced by workloads/gateway/tuwunel-route.yaml (chat-element route)
-# which routes ALL chat.2143.me traffic to element-web.
-# This file kept for reference but is no longer applied.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: element-web
+  namespace: default
+spec:
+  hostnames:
+    - element.john2143.com
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared-gateway
+      namespace: default
+      sectionName: element-john2143-https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: element-web
+          namespace: matrix
+          port: 80
