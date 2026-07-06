@@ -51,6 +51,12 @@ data:
           model: "openai/*"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+      # ── common models (explicit for OMP discovery) ────────────
+      - model_name: "yunwu/official/claude-fable-5"
+        litellm_params:
+          model: "openai/claude-fable-5"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
       # ── Yunwu Fast ──────────────────────────────────────────────
       - model_name: "yunwu/fast/*"
         litellm_params:
