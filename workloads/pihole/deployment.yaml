@@ -17,6 +17,16 @@ spec:
       labels:
         app: pihole
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: pihole
           image: docker.io/pihole/pihole:2025.08.0

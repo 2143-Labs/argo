@@ -23,6 +23,16 @@ spec:
         - name: openrct2-data
           persistentVolumeClaim:
             claimName: openrct2-data-lh
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: openrct2
           image: openrct2/openrct2-cli:0.5.0

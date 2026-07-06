@@ -21,6 +21,16 @@ spec:
         app.kubernetes.io/name: heorot
         app.kubernetes.io/instance: heorot
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: heorot
           image: 10.43.114.59:5000/heorot-web:v0.1.0

@@ -17,6 +17,16 @@ spec:
       labels:
         app: headscale
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: headscale
           image: docker.io/headscale/headscale:0.27.1

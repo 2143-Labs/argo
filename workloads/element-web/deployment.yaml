@@ -21,6 +21,16 @@ spec:
         app.kubernetes.io/name: element-web
         app.kubernetes.io/instance: element-web
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: element-web
           image: vectorim/element-web:latest

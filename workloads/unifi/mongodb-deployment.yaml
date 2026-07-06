@@ -16,6 +16,16 @@ spec:
       labels:
         app: unifi-mongodb
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: mongodb
           image: docker.io/mongo:7.0

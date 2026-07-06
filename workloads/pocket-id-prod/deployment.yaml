@@ -22,6 +22,16 @@ spec:
         app.kubernetes.io/instance: pocket-id
     spec:
       serviceAccountName: pocket-id
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: pocket-id
           image: "ghcr.io/pocket-id/pocket-id:v2.8.0"

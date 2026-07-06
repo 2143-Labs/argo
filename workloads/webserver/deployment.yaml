@@ -16,6 +16,16 @@ spec:
       labels:
         app: webserver
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: webserver
           image: ghcr.io/2143-labs/bevy2025:webserver-wasm-latest

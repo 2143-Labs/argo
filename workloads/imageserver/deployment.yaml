@@ -30,6 +30,16 @@ spec:
             - key: shared.fish
               path: shared.fish
 
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
       - name: john2143-com
         image: ghcr.io/john2143/john2143.com:186

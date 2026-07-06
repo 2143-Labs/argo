@@ -21,6 +21,16 @@ spec:
         app.kubernetes.io/name: heorot-voice-relay
         app.kubernetes.io/instance: heorot-voice-relay
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: heorot-voice-relay
           image: ghcr.io/vitosicz/heorot-voice-relay:main

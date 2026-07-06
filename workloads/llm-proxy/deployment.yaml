@@ -16,6 +16,16 @@ spec:
       labels:
         app: litellm
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: litellm
           image: ghcr.io/berriai/litellm:main-latest

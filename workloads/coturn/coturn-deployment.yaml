@@ -17,6 +17,16 @@ spec:
       labels:
         app: coturn
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: coturn
           image: coturn/coturn:4.6-alpine

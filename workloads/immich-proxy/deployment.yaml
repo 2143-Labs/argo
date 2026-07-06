@@ -27,6 +27,16 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 64Mi
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: immich-proxy
           image: ghcr.io/alangrainger/immich-public-proxy:1.15.5

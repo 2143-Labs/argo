@@ -21,6 +21,16 @@ spec:
         app.kubernetes.io/name: keycloak
         app.kubernetes.io/instance: keycloak
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.6.3

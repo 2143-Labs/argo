@@ -19,6 +19,16 @@ spec:
     spec:
       securityContext:
         fsGroup: 1883
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
       containers:
         - name: mosquitto
           image: docker.io/eclipse-mosquitto:2.0
