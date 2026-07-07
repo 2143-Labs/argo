@@ -1,0 +1,17 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: frigate-genai-ffmpeg
+spec:
+  scaleTargetRef: {name: frigate-genai-ffmpeg}
+  minReplicaCount: 0
+  maxReplicaCount: 3
+  cooldownPeriod: 600
+  triggers:
+  - type: temporal
+    metadata:
+      endpoint: temporal-frontend.default.svc.cluster.local:7233
+      namespace: default
+      taskQueue: "genai-tasks-ffmpeg"
+      queueTypes: activity
+      targetQueueSize: "2"

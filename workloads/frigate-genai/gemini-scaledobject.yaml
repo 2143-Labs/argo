@@ -1,0 +1,24 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: frigate-genai-gemini
+spec:
+  scaleTargetRef: {name: frigate-genai-gemini}
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 600
+  triggers:
+  - type: temporal
+    metadata:
+      endpoint: temporal-frontend.default.svc.cluster.local:7233
+      namespace: default
+      taskQueue: "genai-tasks"
+      queueTypes: activity
+      targetQueueSize: "2"
+  - type: temporal
+    metadata:
+      endpoint: temporal-frontend.default.svc.cluster.local:7233
+      namespace: default
+      taskQueue: "genai-tasks-gemini"
+      queueTypes: activity
+      targetQueueSize: "5"

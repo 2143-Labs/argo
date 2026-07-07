@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-gemini
+  labels: {app: frigate-genai-gemini}
+spec:
+  selector: {matchLabels: {app: frigate-genai-gemini}}
+  template:
+    metadata: {labels: {app: frigate-genai-gemini}}
+    spec:
+      terminationGracePeriodSeconds: 180
+      containers:
+      - name: worker
+        startupProbe:
+          exec:
+            command: ["python", "-c", "from temporalio.client import Client; import asyncio, os; asyncio.run(Client.connect(os.environ.get('TEMPORAL_ADDRESS','temporal-frontend.default.svc.cluster.local:7233')))"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 6
+        image: ghcr.io/John2143/frigate-genai-genai:latest
+        imagePullPolicy: Always
+        args: ["--mode=genai-gemini"]
+        envFrom:
+        - secretRef: {name: frigate-genai-worker-creds}
+        resources:
+          requests: {cpu: "250m", memory: "512Mi"}
+          limits: {cpu: "1000m", memory: "2Gi"}
