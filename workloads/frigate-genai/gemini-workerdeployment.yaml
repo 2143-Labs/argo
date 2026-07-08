@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "retry-fix"
+    unsafeCustomBuildID: "v51"
   rollout:
     strategy: Progressive
     steps:
@@ -44,7 +44,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-genai:v49
+        image: ghcr.io/john2143/frigate-genai-genai:v51
         args: ["--mode=genai-gemini"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -59,7 +59,7 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "retry-fix"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v51"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
