@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seaweedfs-s3-config
+  namespace: default
+data:
+  s3.json: |
+    {
+      "identities": [
+        {
+          "name": "admin",
+          "credentials": [
+            {
+              "accessKey": "john",
+              "secretKey": "*XSjJP83VxDM"
+            }
+          ],
+          "actions": [
+            "Admin",
+            "Read",
+            "Write"
+          ]
+        },
+        {
+          "name": "observability",
+          "credentials": [
+            {
+              "accessKey": "lrnu03nDDJeTlDT2HVMP",
+              "secretKey": "E9ycPwOgYgNhyfv92r4znR6U1a7pEm7tKgr54Ytb"
+            }
+          ],
+          "actions": [
+            "Admin",
+            "Read",
+            "Write"
+          ]
+        },
+        {
+          "name": "seaweedfs-frigate-genai",
+          "credentials": [
+            {
+              "accessKey": "64b7bd4e48b11e9bbddc07ae",
+              "secretKey": "282db8f05a1eb7d497010ea11ce2b0e8fded9f85bcb4e498"
+            }
+          ],
+          "actions": [
+            "Admin",
+            "Read",
+            "Write"
+          ]
+        }
+      ]
+    }
