@@ -15,7 +15,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:retry-fix
+        image: ghcr.io/john2143/frigate-genai-genai:v49
         args: ["--mode=triggers"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
