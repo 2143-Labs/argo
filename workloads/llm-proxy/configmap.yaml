@@ -45,28 +45,22 @@ data:
         litellm_params:
           model: "openrouter/*"
           api_key: "os.environ/OPENROUTER_API_KEY"
-      # ── Yunwu Official ──────────────────────────────────────────
-      - model_name: "yunwu/official/*"
+      # ── Yunwu ─────────────────────────────────────────────────────
+      - model_name: "fabog"
         litellm_params:
-          model: "openai/*"
+          model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
-      # ── concrete models (explicit for OMP discovery) ──────────
+      - model_name: "fabfast"
+        litellm_params:
+          model: "openai/claude-fable-5"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      # kept until OMP rebuild switches to fabog
       - model_name: "yunwu/official/claude-fable-5"
         litellm_params:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
-          api_base: "https://yunwu.ai/v1"
-      - model_name: "yunwu/fast/claude-fable-5"
-        litellm_params:
-          model: "openai/claude-fable-5"
-          api_key: "os.environ/YUNWU_FAST_API_KEY"
-          api_base: "https://yunwu.ai/v1"
-      # ── Yunwu Fast ──────────────────────────────────────────────
-      - model_name: "yunwu/fast/*"
-        litellm_params:
-          model: "openai/*"
-          api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
     litellm_settings:
       drop_params: true
