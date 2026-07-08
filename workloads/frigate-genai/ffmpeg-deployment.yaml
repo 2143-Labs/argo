@@ -10,6 +10,10 @@ spec:
     metadata: {labels: {app: frigate-genai-ffmpeg}}
     spec:
       terminationGracePeriodSeconds: 180
+      tolerations:
+      - key: "wifi"
+        operator: "Exists"
+        effect: "NoSchedule"
       containers:
       - name: worker
         startupProbe:
@@ -44,3 +48,9 @@ spec:
       - name: scratch
         emptyDir:
           sizeLimit: 2Gi
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels: {app: frigate-genai-ffmpeg}

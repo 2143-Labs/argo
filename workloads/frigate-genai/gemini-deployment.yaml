@@ -9,6 +9,13 @@ spec:
     metadata: {labels: {app: frigate-genai-gemini}}
     spec:
       terminationGracePeriodSeconds: 180
+      tolerations:
+      - key: "wifi"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "pi"
+        operator: "Exists"
+        effect: "NoSchedule"
       containers:
       - name: worker
         startupProbe:
@@ -36,3 +43,9 @@ spec:
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
           limits: {cpu: "1000m", memory: "2Gi"}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels: {app: frigate-genai-gemini}

@@ -9,6 +9,10 @@ spec:
   template:
     metadata: {labels: {app: frigate-genai-triggers}}
     spec:
+      tolerations:
+      - key: "wifi"
+        operator: "Exists"
+        effect: "NoSchedule"
       containers:
       - name: triggers
         image: ghcr.io/john2143/frigate-genai-genai:upscale-tool
