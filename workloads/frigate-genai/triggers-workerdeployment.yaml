@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v51"
+    unsafeCustomBuildID: "v52"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -23,7 +23,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:v51
+        image: ghcr.io/john2143/frigate-genai-genai:v52
         args: ["--mode=triggers"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -46,7 +46,7 @@ spec:
           value: "http://arch.ts.2143.me:5000"
         - name: HTTP_HOST
           value: "0.0.0.0"
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v51"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v52"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
         resources:
           requests: {cpu: "100m", memory: "128Mi"}
