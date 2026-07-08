@@ -22,8 +22,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-ffmpeg:latest
-        imagePullPolicy: Always
+        image: ghcr.io/john2143/frigate-genai-ffmpeg:v180
         args: ["--mode=ffmpeg"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
