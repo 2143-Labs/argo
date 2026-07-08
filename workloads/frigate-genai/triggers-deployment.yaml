@@ -21,6 +21,16 @@ spec:
           value: "mosquitto"
         - name: MQTT_PORT
           value: "1883"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: frigate-genai-worker-creds
+              key: AWS_ACCESS_KEY_ID
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: frigate-genai-worker-creds
+              key: AWS_SECRET_ACCESS_KEY
         - name: FRIGATE_BASE_URL
           value: "http://arch.ts.2143.me:5000"
         - name: HTTP_HOST
