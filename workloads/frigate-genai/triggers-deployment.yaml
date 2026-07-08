@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:latest
+        image: ghcr.io/john2143/frigate-genai-genai:upscale-tool
         imagePullPolicy: Always
         args: ["--mode=triggers"]
         envFrom:
