@@ -5,9 +5,12 @@ metadata:
   labels:
     app: litellm
 spec:
-  replicas: 1
+  replicas: 2
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: litellm
@@ -58,7 +61,21 @@ spec:
               memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 2Gi
+              memory: 3Gi
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 2
       volumes:
         - name: config
           configMap:
