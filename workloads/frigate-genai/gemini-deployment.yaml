@@ -32,7 +32,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-genai:compact-fix
+        image: ghcr.io/john2143/frigate-genai-genai:compact-fix-v2
         imagePullPolicy: Always
         args: ["--mode=genai-gemini"]
         envFrom:
