@@ -1,0 +1,21 @@
+apiVersion: temporal.io/v1alpha1
+kind: WorkerResourceTemplate
+metadata:
+  name: frigate-genai-ollama-keda
+spec:
+  workerDeploymentRef: {name: frigate-genai-ollama}
+  template:
+    apiVersion: keda.sh/v1alpha1
+    kind: ScaledObject
+    spec:
+      scaleTargetRef: {}
+      minReplicaCount: 0
+      maxReplicaCount: 1
+      cooldownPeriod: 600
+      triggers:
+      - type: temporal
+        metadata:
+          endpoint: temporal-frontend.default.svc.cluster.local:7233
+          taskQueue: "genai-tasks-ollama"
+          queueTypes: activity
+          targetQueueSize: "1"

@@ -1,12 +1,21 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
   name: frigate-genai-ollama
   labels: {app: frigate-genai-ollama}
 spec:
-  selector: {matchLabels: {app: frigate-genai-ollama}}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "retry-fix"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
-    metadata: {labels: {app: frigate-genai-ollama}}
+    metadata:
+      labels: {app: frigate-genai-ollama}
     spec:
       terminationGracePeriodSeconds: 180
       containers:
@@ -32,6 +41,8 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "retry-fix"}
+        - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ollama"}
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
           limits: {cpu: "1000m", memory: "2Gi"}

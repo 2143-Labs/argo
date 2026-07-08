@@ -1,0 +1,834 @@
+---
+# Source: temporal-worker-controller/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: twc-service-account
+  namespace: temporal-system
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: temporal-worker-controller/templates/auth_proxy.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-metrics-reader
+rules:
+  - nonResourceURLs:
+      - "/metrics"
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/auth_proxy.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-proxy-role
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: twc-temporal-system-manager-role
+rules:
+  # GENERATED RULES BEGIN - do not edit; run 'make manifests' to update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/scale
+    verbs:
+      - update
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections
+      - temporalconnections
+      - workerresourcetemplates
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections/finalizers
+      - temporalconnections/finalizers
+      - temporalworkerdeployments/finalizers
+      - workerdeployments/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalconnections/status
+      - temporalworkerdeployments/status
+      - workerdeployments/status
+      - workerresourcetemplates/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalworkerdeployments
+      - workerdeployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # GENERATED RULES END
+  # Rules for managing resources attached via WorkerResourceTemplate.
+  # Driven entirely by workerResourceTemplate.allowedResources in values.yaml.
+  - apiGroups:
+      - "autoscaling"
+    resources:
+      - "horizontalpodautoscalers"
+    verbs:
+      - create
+      - delete
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - "keda.sh"
+    resources:
+      - "scaledobjects"
+    verbs:
+      - create
+      - delete
+      - get
+      - patch
+      - update
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to edit connections (new name).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-connection-editor-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to view connections (new name).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-connection-viewer-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - connections/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to edit workerdeployments (new name).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-workerdeployment-editor-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerdeployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerdeployments/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to view workerdeployments (new name).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-workerdeployment-viewer-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerdeployments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerdeployments/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# Deprecated editor/viewer roles (migration window — remove in v1.8.0)
+# permissions for end users to edit temporalconnections.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-temporalconnection-editor-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalconnections
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalconnections/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to view temporalconnections.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-temporalconnection-viewer-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalconnections
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalconnections/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to edit temporalworkerdeployments.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-temporalworkerdeployment-editor-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalworkerdeployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalworkerdeployments/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to view temporalworkerdeployments.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-temporalworkerdeployment-viewer-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalworkerdeployments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - temporalworkerdeployments/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to edit workerresourcetemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-workerresourcetemplate-editor-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerresourcetemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerresourcetemplates/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions for end users to view workerresourcetemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-workerresourcetemplate-viewer-role
+rules:
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerresourcetemplates
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - temporal.io
+    resources:
+      - workerresourcetemplates/status
+    verbs:
+      - get
+---
+# Source: temporal-worker-controller/templates/auth_proxy.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: twc-temporal-system-proxy-role
+subjects:
+  - kind: ServiceAccount
+    name: twc-service-account
+    namespace: temporal-system
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-temporal-system-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: twc-temporal-system-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: twc-service-account
+    namespace: temporal-system
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-leader-election-role
+  namespace: temporal-system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+# Source: temporal-worker-controller/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-leader-election-rolebinding
+  namespace: temporal-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: twc-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: twc-service-account
+    namespace: temporal-system
+---
+# Source: temporal-worker-controller/templates/auth_proxy.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  name: twc-metrics-service
+  namespace: temporal-system
+spec:
+  ports:
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+---
+# Source: temporal-worker-controller/templates/webhook.yaml
+# Webhook Service — routes traffic from the k8s API server to the controller's webhook server.
+apiVersion: v1
+kind: Service
+metadata:
+  name: twc-webhook-service
+  namespace: temporal-system
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 9443
+  selector:
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+---
+# Source: temporal-worker-controller/templates/manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twc-manager
+  namespace: temporal-system
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: temporal-worker-controller
+      app.kubernetes.io/instance: twc
+  replicas: 2
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/component: manager
+        app.kubernetes.io/name: temporal-worker-controller
+        app.kubernetes.io/instance: twc
+        app.kubernetes.io/version: "1.8.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+
+                    app.kubernetes.io/name: temporal-worker-controller
+                    app.kubernetes.io/instance: twc
+                topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: manager
+        image: "temporalio/temporal-worker-controller:v1.8.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CONTROLLER_IDENTITY
+          value: "twc/temporal-system"
+        - name: CONTROLLER_VERSION
+          value: "1.8.0"
+        # POD_NAMESPACE and SERVICE_ACCOUNT_NAME are populated automatically by
+        # Kubernetes from the pod's own metadata (namespace and service account name).
+        # The validating webhook reads them to perform SubjectAccessReview checks
+        # using the controller's identity.
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_ACCOUNT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        # ALLOWED_KINDS controls which resource kinds are accepted by the
+        # WorkerResourceTemplate validating webhook. Derived from
+        # workerResourceTemplate.allowedResources[*].kinds in values.yaml.
+        # An empty value rejects all kinds — at least one must be configured.
+        - name: ALLOWED_KINDS
+          value: "HorizontalPodAutoscaler,ScaledObject"
+        args:
+        - --leader-elect
+        - "--metrics-bind-address=127.0.0.1:8080"
+        - "--health-probe-bind-address=:8081"
+        ports:
+          - containerPort: 9443
+            name: webhook-server
+            protocol: TCP
+        volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: cert
+            readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - "ALL"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+      - name: kube-rbac-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - "ALL"
+        image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.1
+        args:
+          - "--secure-listen-address=0.0.0.0:8443"
+          - --upstream=http://127.0.0.1:8080/
+          - "--logtostderr=true"
+          - "--v=0"
+        ports:
+          - containerPort: 8443
+            protocol: TCP
+            name: https
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: webhook-server-cert
+      serviceAccountName: twc-service-account
+      terminationGracePeriodSeconds: 10
+
+---
+# Source: temporal-worker-controller/templates/webhook.yaml
+# ValidatingWebhookConfiguration for WorkerResourceTemplate.
+# Always installed — this webhook is a required security control that validates
+# all WorkerResourceTemplate create/update/delete requests.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: twc-wrt-validating-webhook-configuration
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # cert-manager injects the CA bundle from the named Certificate into this field automatically.
+    cert-manager.io/inject-ca-from: temporal-system/twc-serving-cert
+webhooks:
+  - name: vworkerresourcetemplate.kb.io
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: twc-webhook-service
+        namespace: temporal-system
+        path: /validate-temporal-io-v1alpha1-workerresourcetemplate
+    failurePolicy: Fail
+    rules:
+      - apiGroups: ["temporal.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["workerresourcetemplates"]
+    sideEffects: None
+
+---
+# Source: temporal-worker-controller/templates/certmanager.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: twc-serving-cert
+  namespace: temporal-system
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  dnsNames:
+    - twc-webhook-service.temporal-system.svc
+    - twc-webhook-service.temporal-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: twc-selfsigned-issuer
+  secretName: webhook-server-cert
+
+---
+# Source: temporal-worker-controller/templates/certmanager.yaml
+# Self-signed issuer and certificate for the webhook server TLS.
+# Requires cert-manager to be installed in the cluster.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: twc-selfsigned-issuer
+  namespace: temporal-system
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/name: temporal-worker-controller
+    app.kubernetes.io/instance: twc
+    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selfSigned: {}

@@ -1,25 +1,23 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: frigate-genai
+  name: temporal-worker-controller
   namespace: argocd
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/2143-Labs/argo.git
     targetRevision: HEAD
-    path: workloads/frigate-genai
+    path: workloads/temporal-worker-controller
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
-  ignoreDifferences:
-  - group: temporal.io
-    kind: WorkerDeployment
-    jsonPointers:
-    - /spec/replicas
+    namespace: temporal-system
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
