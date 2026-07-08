@@ -1,0 +1,29 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: mattermost-db
+  namespace: mattermost
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  storage:
+    size: 10Gi
+    storageClass: longhorn-cnpg
+  walStorage:
+    size: 2Gi
+    storageClass: longhorn-cnpg
+  bootstrap:
+    initdb:
+      database: mattermost
+      owner: mattermost
+  managed:
+    roles:
+      - name: mattermost
+        ensure: present
+        login: true
+        passwordSecret:
+          name: mattermost-db-password
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"

@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mattermost
+  namespace: mattermost
+  labels:
+    app.kubernetes.io/name: mattermost
+    app.kubernetes.io/instance: mattermost
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mattermost
+      app.kubernetes.io/instance: mattermost
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mattermost
+        app.kubernetes.io/instance: mattermost
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: mattermost
+          image: mattermost/mattermost-team-edition:latest
+          ports:
+            - name: http
+              containerPort: 8065
+              protocol: TCP
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mattermost-db-password
+                  key: password
+            - name: MM_SQLSETTINGS_DRIVERNAME
+              value: postgres
+            - name: MM_SQLSETTINGS_DATASOURCE
+              value: postgres://mattermost:$(DB_PASSWORD)@mattermost-db-rw:5432/mattermost?sslmode=disable&connect_timeout=10
+            - name: MM_SERVICESETTINGS_SITEURL
+              value: https://mattermost.john2143.com
+          volumeMounts:
+            - name: mattermost-data
+              mountPath: /mattermost/data
+            - name: mattermost-config
+              mountPath: /mattermost/config
+          livenessProbe:
+            httpGet:
+              path: /api/v4/system/ping
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v4/system/ping
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 1
+      volumes:
+        - name: mattermost-data
+          persistentVolumeClaim:
+            claimName: mattermost-data
+        - name: mattermost-config
+          persistentVolumeClaim:
+            claimName: mattermost-config

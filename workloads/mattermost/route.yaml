@@ -1,0 +1,25 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mattermost
+  namespace: default
+spec:
+  hostnames:
+    - mattermost.john2143.com
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared-gateway
+      namespace: default
+      sectionName: mattermost-john2143-https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: mattermost
+          namespace: mattermost
+          port: 8065
