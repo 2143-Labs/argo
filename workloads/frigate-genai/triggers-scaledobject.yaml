@@ -5,4 +5,11 @@ metadata:
 spec:
   scaleTargetRef: {name: frigate-genai-triggers}
   minReplicaCount: 1
-  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/New_York
+      start: 0 0 * * *
+      end: 59 23 * * *
+      desiredReplicas: "1"
