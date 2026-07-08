@@ -17,7 +17,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-genai:v180
+        image: ghcr.io/john2143/frigate-genai-genai:v42
         args: ["--mode=genai-ollama"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
