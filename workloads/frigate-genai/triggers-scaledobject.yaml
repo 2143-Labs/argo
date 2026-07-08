@@ -1,0 +1,8 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: frigate-genai-triggers
+spec:
+  scaleTargetRef: {name: frigate-genai-triggers}
+  minReplicaCount: 1
+  maxReplicaCount: 1

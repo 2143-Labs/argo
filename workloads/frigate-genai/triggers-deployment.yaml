@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-triggers
+  labels: {app: frigate-genai-triggers}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: frigate-genai-triggers}}
+  template:
+    metadata: {labels: {app: frigate-genai-triggers}}
+    spec:
+      containers:
+      - name: triggers
+        image: ghcr.io/john2143/frigate-genai-genai:latest
+        imagePullPolicy: Always
+        args: ["--mode=triggers"]
+        envFrom:
+        - secretRef: {name: frigate-genai-worker-creds}
+        env:
+        - name: MQTT_HOST
+          value: "mosquitto"
+        - name: MQTT_PORT
+          value: "1883"
+        - name: FRIGATE_BASE_URL
+          value: "http://arch.ts.2143.me:5000"
+        - name: HTTP_HOST
+          value: "0.0.0.0"
+        resources:
+          requests: {cpu: "100m", memory: "128Mi"}
+          limits: {cpu: "250m", memory: "256Mi"}
+        ports:
+        - containerPort: 9090
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /api/stats
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 15
