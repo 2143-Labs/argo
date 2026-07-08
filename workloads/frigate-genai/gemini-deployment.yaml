@@ -16,6 +16,14 @@ spec:
       - key: "pi"
         operator: "Exists"
         effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values: [amd64]
       containers:
       - name: worker
         startupProbe:
@@ -24,7 +32,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-genai:upscale-tool
+        image: ghcr.io/john2143/frigate-genai-genai:compact-fix
         imagePullPolicy: Always
         args: ["--mode=genai-gemini"]
         envFrom:
