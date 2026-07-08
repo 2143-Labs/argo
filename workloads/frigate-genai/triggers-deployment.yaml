@@ -16,7 +16,6 @@ spec:
       containers:
       - name: triggers
         image: ghcr.io/john2143/frigate-genai-genai:v42
-        imagePullPolicy: Always
         args: ["--mode=triggers"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
