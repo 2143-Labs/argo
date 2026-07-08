@@ -1,13 +1,21 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
   name: frigate-genai-triggers
   labels: {app: frigate-genai-triggers}
 spec:
-  replicas: 1
-  selector: {matchLabels: {app: frigate-genai-triggers}}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "retry-fix"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
-    metadata: {labels: {app: frigate-genai-triggers}}
+    metadata:
+      labels: {app: frigate-genai-triggers}
     spec:
       tolerations:
       - key: "wifi"
@@ -38,6 +46,8 @@ spec:
           value: "http://arch.ts.2143.me:5000"
         - name: HTTP_HOST
           value: "0.0.0.0"
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "retry-fix"}
+        - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
         resources:
           requests: {cpu: "100m", memory: "128Mi"}
           limits: {cpu: "250m", memory: "256Mi"}

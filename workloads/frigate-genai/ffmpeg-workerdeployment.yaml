@@ -1,13 +1,21 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
   name: frigate-genai-ffmpeg
   labels: {app: frigate-genai-ffmpeg}
 spec:
-  # no replicas field — KEDA-managed
-  selector: {matchLabels: {app: frigate-genai-ffmpeg}}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "v45"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
-    metadata: {labels: {app: frigate-genai-ffmpeg}}
+    metadata:
+      labels: {app: frigate-genai-ffmpeg}
     spec:
       terminationGracePeriodSeconds: 180
       tolerations:
@@ -37,6 +45,8 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v45"}
+        - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
         resources:
           requests: {cpu: "500m", memory: "1Gi"}
           limits: {cpu: "2000m", memory: "4Gi"}
