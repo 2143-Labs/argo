@@ -15,7 +15,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:compact-fix-v2
+        image: ghcr.io/john2143/frigate-genai-genai:bbox-first
         imagePullPolicy: Always
         args: ["--mode=triggers"]
         envFrom:
