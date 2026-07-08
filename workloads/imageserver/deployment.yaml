@@ -132,11 +132,11 @@ spec:
 
         resources:
           requests:
-            memory: "100Mi"
+            memory: "256Mi"
             cpu: "10m"
           limits:
-            memory: "200Mi"
-            cpu: "100m"
+            memory: "512Mi"
+            cpu: "200m"
 
         livenessProbe:
           httpGet:

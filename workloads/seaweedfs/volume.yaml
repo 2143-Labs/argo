@@ -11,6 +11,7 @@ spec:
     metadata: {labels: {app: seaweedfs-volume}}
     spec:
       nodeName: nas
+      terminationGracePeriodSeconds: 120
       containers:
       - name: volume
         image: chrislusf/seaweedfs:3.85
