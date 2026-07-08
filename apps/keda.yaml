@@ -3,25 +3,16 @@ kind: Application
 metadata:
   name: keda
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://kedacore.github.io/charts
     chart: keda
-    targetRevision: 2.17.0
+    repoURL: https://kedacore.github.io/charts
+    targetRevision: 2.16.3
     helm:
-      valuesObject:
-        prometheus:
-          metricServer:
-            enabled: false
-        resources:
-          operator:
-            limits:
-              cpu: "1"
-              memory: 1000Mi
-            requests:
-              cpu: 100m
-              memory: 100Mi
+      releaseName: keda
   destination:
     server: https://kubernetes.default.svc
     namespace: keda
@@ -30,4 +21,4 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
+      - CreateNamespace=true

@@ -12,6 +12,7 @@ spec:
     - https://charts.jetstack.io
     - https://charts.longhorn.io
     - https://go.temporal.io/helm-charts
+    - https://kedacore.github.io/charts
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
