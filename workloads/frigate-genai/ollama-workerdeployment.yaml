@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v54"
+    unsafeCustomBuildID: "v193"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -26,7 +26,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-genai:v54
+        image: ghcr.io/john2143/frigate-genai-genai:v193
         args: ["--mode=genai-ollama"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -41,7 +41,7 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v54"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v193"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ollama"}
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
