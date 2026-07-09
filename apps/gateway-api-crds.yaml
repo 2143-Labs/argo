@@ -5,15 +5,15 @@ metadata:
   namespace: argocd
   annotations:
     # Install Gateway API CRDs before gateway/workload routes.
-    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-wave: "-5"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/kubernetes-sigs/gateway-api.git
-    targetRevision: v1.3.0
-    path: config/crd/experimental
+    targetRevision: v1.5.1
+    path: config/crd/standard
   destination:
     server: https://kubernetes.default.svc
     namespace: default
@@ -25,7 +25,9 @@ spec:
         - /status
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
     syncOptions:
       - RespectIgnoreDifferences=true
+
+      - ServerSideApply=true
