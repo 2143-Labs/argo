@@ -56,11 +56,25 @@ data:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
-      # kept until OMP rebuild switches to fabog
-      - model_name: "yunwu/official/claude-fable-5"
+      - model_name: "claude-opus-4-6-official"
         litellm_params:
-          model: "openai/claude-fable-5"
+          model: "openai/claude-opus-4-6"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "claude-opus-4-6-fast"
+        litellm_params:
+          model: "openai/claude-opus-4-6"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "claude-opus-4-8-official"
+        litellm_params:
+          model: "openai/claude-opus-4-8"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "claude-opus-4-8-fast"
+        litellm_params:
+          model: "openai/claude-opus-4-8"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
       # ── Yunwu fast ──────────────────────────────────────────
       - model_name: "yunwu/fast/*"
@@ -68,6 +82,13 @@ data:
           model: "openai/*"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+      # ── Yunwu Official ──────────────────────────────────────────
+      - model_name: "yunwu/official/*"
+        litellm_params:
+          model: "openai/*"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+
     litellm_settings:
       drop_params: true
       set_verbose: false
