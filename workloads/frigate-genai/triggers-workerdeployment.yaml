@@ -16,6 +16,10 @@ spec:
   template:
     metadata:
       labels: {app: frigate-genai-triggers}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       tolerations:
       - key: "wifi"
@@ -46,17 +50,32 @@ spec:
           value: "http://arch.ts.2143.me:5000"
         - name: HTTP_HOST
           value: "0.0.0.0"
+        - name: TEMPORAL_ADDRESS
+          value: "192.168.5.10:32682"
         - {name: TEMPORAL_WORKER_BUILD_ID, value: "v62"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
         resources:
           requests: {cpu: "100m", memory: "128Mi"}
           limits: {cpu: "250m", memory: "256Mi"}
         ports:
-        - containerPort: 9090
+        - containerPort: 8080
           name: http
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 12
         readinessProbe:
           httpGet:
-            path: /api/stats
-            port: 9090
-          initialDelaySeconds: 5
-          periodSeconds: 15
+            path: /readyz
+            port: 8080
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          periodSeconds: 30
+          failureThreshold: 3
