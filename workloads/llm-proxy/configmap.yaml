@@ -66,7 +66,7 @@ data:
       - model_name: "yunwu/fast/*"
         litellm_params:
           model: "openai/*"
-          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
     litellm_settings:
       drop_params: true
