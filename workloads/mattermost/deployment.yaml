@@ -21,6 +21,8 @@ spec:
         app.kubernetes.io/name: mattermost
         app.kubernetes.io/instance: mattermost
     spec:
+      securityContext:
+        fsGroup: 2000
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
