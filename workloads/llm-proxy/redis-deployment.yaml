@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm-redis
+  labels:
+    app: litellm-redis
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: litellm-redis
+  template:
+    metadata:
+      labels:
+        app: litellm-redis
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: redis
+          image: docker.io/redis:7-alpine
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+              name: redis
+          command:
+            - redis-server
+            - "--appendonly yes"
+            - "--maxmemory 256mb"
+            - "--maxmemory-policy allkeys-lru"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: litellm-redis-data-lh
