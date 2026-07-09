@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v62"
+    unsafeCustomBuildID: "v65"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -27,7 +27,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:v62
+        image: ghcr.io/john2143/frigate-genai-genai:v65
         args: ["--mode=triggers"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -52,7 +52,7 @@ spec:
           value: "0.0.0.0"
         - name: TEMPORAL_ADDRESS
           value: "192.168.5.10:32682"
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v62"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v65"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
         resources:
           requests: {cpu: "100m", memory: "128Mi"}
