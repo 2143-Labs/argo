@@ -76,6 +76,188 @@ data:
           model: "openai/claude-opus-4-8"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-terra-official"
+        litellm_params:
+          model: "openai/gpt-5.6-terra"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-terra-fast"
+        litellm_params:
+          model: "openai/gpt-5.6-terra"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-luna-official"
+        litellm_params:
+          model: "openai/gpt-5.6-luna"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-luna-fast"
+        litellm_params:
+          model: "openai/gpt-5.6-luna"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-sol-official"
+        litellm_params:
+          model: "openai/gpt-5.6-sol"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gpt-5.6-sol-fast"
+        litellm_params:
+          model: "openai/gpt-5.6-sol"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "yunwu/fast/claude-fable-5"
+        litellm_params:
+          model: "openai/claude-fable-5"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 8192
+          input_cost_per_token: 0.00000165
+          output_cost_per_token: 0.00000825
+          cache_read_input_token_cost: 0.000000165
+          cache_creation_input_token_cost: 0.0000020625
+      - model_name: "yunwu/fast/claude-opus-4-8"
+        litellm_params:
+          model: "openai/claude-opus-4-8"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 4096
+          input_cost_per_token: 0.00000034375
+          output_cost_per_token: 0.00000171875
+          cache_read_input_token_cost: 0.000000034375
+          cache_creation_input_token_cost: 0.000000429688
+      - model_name: "gemini-3.1-pro-official"
+        litellm_params:
+          model: "openai/gemini-3.1-pro-preview"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.1-pro-fast"
+        litellm_params:
+          model: "openai/gemini-3.1-pro-preview"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.1-flash-official"
+        litellm_params:
+          model: "openai/gemini-3.1-flash-preview"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.1-flash-fast"
+        litellm_params:
+          model: "openai/gemini-3.1-flash-preview"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.1-flash-lite-official"
+        litellm_params:
+          model: "openai/gemini-3.1-flash-lite-preview"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.1-flash-lite-fast"
+        litellm_params:
+          model: "openai/gemini-3.1-flash-lite-preview"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3-pro-official"
+        litellm_params:
+          model: "openai/gemini-3-pro-preview"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3-pro-fast"
+        litellm_params:
+          model: "openai/gemini-3-pro-preview"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3-flash-official"
+        litellm_params:
+          model: "openai/gemini-3-flash-preview"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3-flash-fast"
+        litellm_params:
+          model: "openai/gemini-3-flash-preview"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.5-flash-official"
+        litellm_params:
+          model: "openai/gemini-3.5-flash"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-3.5-flash-fast"
+        litellm_params:
+          model: "openai/gemini-3.5-flash"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-pro-official"
+        litellm_params:
+          model: "openai/gemini-2.5-pro"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-pro-fast"
+        litellm_params:
+          model: "openai/gemini-2.5-pro"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-flash-official"
+        litellm_params:
+          model: "openai/gemini-2.5-flash"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-flash-fast"
+        litellm_params:
+          model: "openai/gemini-2.5-flash"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-flash-lite-official"
+        litellm_params:
+          model: "openai/gemini-2.5-flash-lite"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.5-flash-lite-fast"
+        litellm_params:
+          model: "openai/gemini-2.5-flash-lite"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.0-flash-lite-official"
+        litellm_params:
+          model: "openai/gemini-2.0-flash-lite"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-2.0-flash-lite-fast"
+        litellm_params:
+          model: "openai/gemini-2.0-flash-lite"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-pro-latest-official"
+        litellm_params:
+          model: "openai/gemini-pro-latest"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-pro-latest-fast"
+        litellm_params:
+          model: "openai/gemini-pro-latest"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-flash-latest-official"
+        litellm_params:
+          model: "openai/gemini-flash-latest"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-flash-latest-fast"
+        litellm_params:
+          model: "openai/gemini-flash-latest"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-flash-lite-latest-official"
+        litellm_params:
+          model: "openai/gemini-flash-lite-latest"
+          api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
+          api_base: "https://yunwu.ai/v1"
+      - model_name: "gemini-flash-lite-latest-fast"
+        litellm_params:
+          model: "openai/gemini-flash-lite-latest"
+          api_key: "os.environ/YUNWU_FAST_API_KEY"
+          api_base: "https://yunwu.ai/v1"
       # ── Yunwu fast ──────────────────────────────────────────
       - model_name: "yunwu/fast/*"
         litellm_params:
