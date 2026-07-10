@@ -52,22 +52,46 @@ data:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000055
+          output_cost_per_token: 0.0000275
+          cache_read_input_token_cost: 0.00000055
+          cache_creation_input_token_cost: 0.000006875
       - model_name: "fabog"
         litellm_params:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000055
+          output_cost_per_token: 0.0000275
+          cache_read_input_token_cost: 0.00000055
+          cache_creation_input_token_cost: 0.000006875
       # ── Claude Fable 5 — fast tier ──
       - model_name: "claude-fable-5-fast"
         litellm_params:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000165
+          output_cost_per_token: 0.00000825
+          cache_read_input_token_cost: 0.000000165
+          cache_creation_input_token_cost: 0.0000020625
       - model_name: "fabfast"
         litellm_params:
           model: "openai/claude-fable-5"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000165
+          output_cost_per_token: 0.00000825
+          cache_read_input_token_cost: 0.000000165
+          cache_creation_input_token_cost: 0.0000020625
       - model_name: "yunwu/fast/claude-fable-5"
         litellm_params:
           model: "openai/claude-fable-5"
@@ -85,24 +109,48 @@ data:
           model: "openai/claude-opus-4-6"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000275
+          output_cost_per_token: 0.00001375
+          cache_read_input_token_cost: 0.000000275
+          cache_creation_input_token_cost: 0.0000034375
       # ── Claude Opus 4.6 — fast tier ──
       - model_name: "claude-opus-4-6-fast"
         litellm_params:
           model: "openai/claude-opus-4-6"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000825
+          output_cost_per_token: 0.000004125
+          cache_read_input_token_cost: 0.0000000825
+          cache_creation_input_token_cost: 0.00000103125
       # ── Claude Opus 4.8 — official tier ──
       - model_name: "claude-opus-4-8-official"
         litellm_params:
           model: "openai/claude-opus-4-8"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000275
+          output_cost_per_token: 0.00001375
+          cache_read_input_token_cost: 0.000000275
+          cache_creation_input_token_cost: 0.0000034375
       # ── Claude Opus 4.8 — fast tier ──
       - model_name: "claude-opus-4-8-fast"
         litellm_params:
           model: "openai/claude-opus-4-8"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000825
+          output_cost_per_token: 0.000004125
+          cache_read_input_token_cost: 0.0000000825
+          cache_creation_input_token_cost: 0.00000103125
       - model_name: "yunwu/fast/claude-opus-4-8"
         litellm_params:
           model: "openai/claude-opus-4-8"
@@ -110,202 +158,362 @@ data:
           api_base: "https://yunwu.ai/v1"
         model_info:
           max_tokens: 128000
-          input_cost_per_token: 0.00000034375
-          output_cost_per_token: 0.00000171875
-          cache_read_input_token_cost: 0.000000034375
-          cache_creation_input_token_cost: 0.000000429688
+          input_cost_per_token: 0.000000825
+          output_cost_per_token: 0.000004125
+          cache_read_input_token_cost: 0.0000000825
+          cache_creation_input_token_cost: 0.00000103125
       # ── GPT 5.6 Terra — official tier ──
       - model_name: "gpt-5.6-terra-official"
         litellm_params:
           model: "openai/gpt-5.6-terra"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000001375
+          output_cost_per_token: 0.00000825
+          cache_read_input_token_cost: 0.0000001375
       # ── GPT 5.6 Terra — fast tier ──
       - model_name: "gpt-5.6-terra-fast"
         litellm_params:
           model: "openai/gpt-5.6-terra"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000001375
+          output_cost_per_token: 0.0000011
+          cache_read_input_token_cost: 0.00000001375
       # ── GPT 5.6 Luna — official tier ──
       - model_name: "gpt-5.6-luna-official"
         litellm_params:
           model: "openai/gpt-5.6-luna"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000055
+          output_cost_per_token: 0.0000033
+          cache_read_input_token_cost: 0.000000055
       # ── GPT 5.6 Luna — fast tier ──
       - model_name: "gpt-5.6-luna-fast"
         litellm_params:
           model: "openai/gpt-5.6-luna"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000055
+          output_cost_per_token: 0.00000044
+          cache_read_input_token_cost: 0.0000000055
       # ── GPT 5.6 Sol — official tier ──
       - model_name: "gpt-5.6-sol-official"
         litellm_params:
           model: "openai/gpt-5.6-sol"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000275
+          output_cost_per_token: 0.0000165
+          cache_read_input_token_cost: 0.000000275
       # ── GPT 5.6 Sol — fast tier ──
       - model_name: "gpt-5.6-sol-fast"
         litellm_params:
           model: "openai/gpt-5.6-sol"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000275
+          output_cost_per_token: 0.0000022
+          cache_read_input_token_cost: 0.0000000275
       # ── Gemini 3.1 Pro — official tier ──
       - model_name: "gemini-3.1-pro-official"
         litellm_params:
           model: "openai/gemini-3.1-pro-preview"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000015125
+          output_cost_per_token: 0.000009075
+          cache_read_input_token_cost: 0.00000015125
       # ── Gemini 3.1 Pro — fast tier ──
       - model_name: "gemini-3.1-pro-fast"
         litellm_params:
           model: "openai/gemini-3.1-pro-preview"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000001375
+          output_cost_per_token: 0.000000825
+          cache_read_input_token_cost: 0.00000001375
       # ── Gemini 3.1 Flash — official tier ──
       - model_name: "gemini-3.1-flash-official"
         litellm_params:
           model: "openai/gemini-3.1-flash-preview"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000378125
+          output_cost_per_token: 0.00000226875
+          cache_read_input_token_cost: 0.0000000378125
       # ── Gemini 3.1 Flash — fast tier ──
       - model_name: "gemini-3.1-flash-fast"
         litellm_params:
           model: "openai/gemini-3.1-flash-preview"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000034375
+          output_cost_per_token: 0.00000020625
+          cache_read_input_token_cost: 0.0000000034375
       # ── Gemini 3 Pro — official tier ──
       - model_name: "gemini-3-pro-official"
         litellm_params:
           model: "openai/gemini-3-pro-preview"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000015125
+          output_cost_per_token: 0.000009075
+          cache_read_input_token_cost: 0.00000015125
       # ── Gemini 3 Pro — fast tier ──
       - model_name: "gemini-3-pro-fast"
         litellm_params:
           model: "openai/gemini-3-pro-preview"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000001375
+          output_cost_per_token: 0.000000825
+          cache_read_input_token_cost: 0.00000001375
       # ── Gemini 3 Flash — official tier ──
       - model_name: "gemini-3-flash-official"
         litellm_params:
           model: "openai/gemini-3-flash-preview"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000378125
+          output_cost_per_token: 0.00000226875
+          cache_read_input_token_cost: 0.0000000378125
       # ── Gemini 3 Flash — fast tier ──
       - model_name: "gemini-3-flash-fast"
         litellm_params:
           model: "openai/gemini-3-flash-preview"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000034375
+          output_cost_per_token: 0.00000020625
+          cache_read_input_token_cost: 0.0000000034375
       # ── Gemini 3.5 Flash — official tier ──
       - model_name: "gemini-3.5-flash-official"
         litellm_params:
           model: "openai/gemini-3.5-flash"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000001134375
+          output_cost_per_token: 0.00000680625
+          cache_read_input_token_cost: 0.0000001134375
       # ── Gemini 3.5 Flash — fast tier ──
       - model_name: "gemini-3.5-flash-fast"
         litellm_params:
           model: "openai/gemini-3.5-flash"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000103125
+          output_cost_per_token: 0.00000061875
+          cache_read_input_token_cost: 0.0000000103125
       # ── Gemini 2.5 Pro — official tier ──
       - model_name: "gemini-2.5-pro-official"
         litellm_params:
           model: "openai/gemini-2.5-pro"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000009453125
+          output_cost_per_token: 0.0000075625
+          cache_read_input_token_cost: 0.00000009453125
       # ── Gemini 2.5 Pro — fast tier ──
       - model_name: "gemini-2.5-pro-fast"
         litellm_params:
           model: "openai/gemini-2.5-pro"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000000859375
+          output_cost_per_token: 0.0000006875
+          cache_read_input_token_cost: 0.00000000859375
       # ── Gemini 2.5 Flash — official tier ──
       - model_name: "gemini-2.5-flash-official"
         litellm_params:
           model: "openai/gemini-2.5-flash"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000226875
+          output_cost_per_token: 0.0000018921375
+          cache_read_input_token_cost: 0.0000000226875
       # ── Gemini 2.5 Flash — fast tier ──
       - model_name: "gemini-2.5-flash-fast"
         litellm_params:
           model: "openai/gemini-2.5-flash"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000020625
+          output_cost_per_token: 0.0000001720125
+          cache_read_input_token_cost: 0.0000000020625
       # ── Gemini Pro Latest — official tier ──
       - model_name: "gemini-pro-latest-official"
         litellm_params:
           model: "openai/gemini-pro-latest"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000009453125
+          output_cost_per_token: 0.0000075625
+          cache_read_input_token_cost: 0.00000009453125
       # ── Gemini Pro Latest — fast tier ──
       - model_name: "gemini-pro-latest-fast"
         litellm_params:
           model: "openai/gemini-pro-latest"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000000859375
+          output_cost_per_token: 0.0000006875
+          cache_read_input_token_cost: 0.00000000859375
       # ── Gemini Flash Latest — official tier ──
       - model_name: "gemini-flash-latest-official"
         litellm_params:
           model: "openai/gemini-flash-latest"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000226875
+          output_cost_per_token: 0.00000189440625
+          cache_read_input_token_cost: 0.0000000226875
       # ── Gemini Flash Latest — fast tier ──
       - model_name: "gemini-flash-latest-fast"
         litellm_params:
           model: "openai/gemini-flash-latest"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000020625
+          output_cost_per_token: 0.00000017221875
+          cache_read_input_token_cost: 0.0000000020625
       # ── Gemini 3.1 Flash Lite — official tier ──
       - model_name: "gemini-3.1-flash-lite-official"
         litellm_params:
           model: "openai/gemini-3.1-flash-lite-preview"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000001890625
+          output_cost_per_token: 0.000001134375
+          cache_read_input_token_cost: 0.00000001890625
       # ── Gemini 3.1 Flash Lite — fast tier ──
       - model_name: "gemini-3.1-flash-lite-fast"
         litellm_params:
           model: "openai/gemini-3.1-flash-lite-preview"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.0000000171875
+          output_cost_per_token: 0.000000103125
+          cache_read_input_token_cost: 0.00000000171875
       # ── Gemini 2.5 Flash Lite — official tier ──
       - model_name: "gemini-2.5-flash-lite-official"
         litellm_params:
           model: "openai/gemini-2.5-flash-lite"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000075625
+          output_cost_per_token: 0.0000003025
+          cache_read_input_token_cost: 0.0000000075625
       # ── Gemini 2.5 Flash Lite — fast tier ──
       - model_name: "gemini-2.5-flash-lite-fast"
         litellm_params:
           model: "openai/gemini-2.5-flash-lite"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000006875
+          output_cost_per_token: 0.0000000275
+          cache_read_input_token_cost: 0.0000000006875
       # ── Gemini 2.0 Flash Lite — official tier ──
       - model_name: "gemini-2.0-flash-lite-official"
         litellm_params:
           model: "openai/gemini-2.0-flash-lite"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000005671875
+          output_cost_per_token: 0.000000226875
+          cache_read_input_token_cost: 0.000000005671875
       # ── Gemini 2.0 Flash Lite — fast tier ──
       - model_name: "gemini-2.0-flash-lite-fast"
         litellm_params:
           model: "openai/gemini-2.0-flash-lite"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.00000000515625
+          output_cost_per_token: 0.000000020625
+          cache_read_input_token_cost: 0.000000000515625
       # ── Gemini Flash Lite Latest — official tier ──
       - model_name: "gemini-flash-lite-latest-official"
         litellm_params:
           model: "openai/gemini-flash-lite-latest"
           api_key: "os.environ/YUNWU_OFFICIAL_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000075625
+          output_cost_per_token: 0.0000003025
+          cache_read_input_token_cost: 0.0000000075625
       # ── Gemini Flash Lite Latest — fast tier ──
       - model_name: "gemini-flash-lite-latest-fast"
         litellm_params:
           model: "openai/gemini-flash-lite-latest"
           api_key: "os.environ/YUNWU_FAST_API_KEY"
           api_base: "https://yunwu.ai/v1"
+        model_info:
+          max_tokens: 128000
+          input_cost_per_token: 0.000000006875
+          output_cost_per_token: 0.0000000275
+          cache_read_input_token_cost: 0.0000000006875
     
       # Yunwu fast
       - model_name: "yunwu/fast/*"
@@ -328,4 +536,3 @@ data:
         type: redis
         host: litellm-redis
         port: "6379"
-    
