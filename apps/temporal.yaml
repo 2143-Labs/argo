@@ -67,9 +67,23 @@ spec:
 
         web:
           enabled: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
 
         admintools:
           enabled: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
 
   destination:
     server: https://kubernetes.default.svc
