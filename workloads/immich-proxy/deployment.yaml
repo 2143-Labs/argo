@@ -27,10 +27,22 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 64Mi
+      tolerations:
+        - key: pi
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - pi-arm
+            - weight: 50
               preference:
                 matchExpressions:
                   - key: workload-type
