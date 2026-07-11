@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v74"
+    unsafeCustomBuildID: "v75"
   rollout:
     strategy: Progressive
     steps:
@@ -42,7 +42,7 @@ spec:
                 values: [amd64]
       containers:
       - name: worker
-        image: ghcr.io/john2143/frigate-genai-genai:v74
+        image: ghcr.io/john2143/frigate-genai-genai:v75
         args: ["--mode=genai-gemini"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -59,7 +59,7 @@ spec:
               key: AWS_SECRET_ACCESS_KEY
         - name: TEMPORAL_ADDRESS
           value: "192.168.5.10:32682"
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v74"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v75"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
