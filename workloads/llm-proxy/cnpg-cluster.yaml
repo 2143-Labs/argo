@@ -13,10 +13,10 @@ spec:
       cpu: 500m
       memory: 512Mi
   storage:
-    size: 5Gi
+    size: 10Gi
     storageClass: longhorn-cnpg
   walStorage:
-    size: 2Gi
+    size: 5Gi
     storageClass: longhorn-cnpg
   bootstrap:
     initdb:
