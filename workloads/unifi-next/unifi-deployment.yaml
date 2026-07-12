@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unifi-next
+  labels:
+    app: unifi-next
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: unifi-next
+  template:
+    metadata:
+      labels:
+        app: unifi-next
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: unifi-next
+          image: lscr.io/linuxserver/unifi-network-application:10.4.57-ls136@sha256:7d25457f8d0600388f663cd2316d7f86c8104de8e6fa9b6e2e44c7f6526476d6
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: MONGO_HOST
+              value: unifi-next-mongodb
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_DBNAME
+              value: unifi_next
+            - name: MONGO_AUTHSOURCE
+              value: admin
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-next-mongodb-credentials
+                  key: username
+            - name: MONGO_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: unifi-next-mongodb-credentials
+                  key: password
+          ports:
+            - containerPort: 8443
+              name: web-ui
+            - containerPort: 8080
+              name: inform
+            - containerPort: 3478
+              protocol: UDP
+              name: stun
+            - containerPort: 10001
+              protocol: UDP
+              name: discovery
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: unifi-next-config-lh
