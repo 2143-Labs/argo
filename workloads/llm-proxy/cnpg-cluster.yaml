@@ -16,7 +16,7 @@ spec:
     size: 10Gi
     storageClass: longhorn-cnpg
   walStorage:
-    size: 5Gi
+    size: 8Gi
     storageClass: longhorn-cnpg
   bootstrap:
     initdb:
