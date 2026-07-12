@@ -48,6 +48,20 @@ data:
             "Read",
             "Write"
           ]
+        },
+        {
+          "name": "litellm",
+          "credentials": [
+            {
+              "accessKey": "b2dc8683fb06a552d93851c9719db0f8",
+              "secretKey": "06eb2ad4714127429a3f8bddab7bf6b825ce7dfa49a2ac05"
+            }
+          ],
+          "actions": [
+            "Admin",
+            "Read",
+            "Write"
+          ]
         }
       ]
     }
