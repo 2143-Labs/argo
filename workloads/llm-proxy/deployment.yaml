@@ -43,13 +43,11 @@ spec:
               value: "true"
             - name: PYTHONPATH
               value: "/usr/lib/python3.13/site-packages"
-            - name: S3_ACCESS_KEY
-              value: "john"
-            - name: S3_SECRET_KEY
-              value: "*XSjJP83VxDM"
           envFrom:
             - secretRef:
                 name: litellm-secrets
+            - secretRef:
+                name: litellm-s3-creds
           volumeMounts:
             - name: config
               mountPath: /app/config.yaml
