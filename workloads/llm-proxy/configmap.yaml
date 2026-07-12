@@ -9,7 +9,7 @@ data:
     general_settings:
       master_key: "os.environ/LITELLM_MASTER_KEY"
       store_model_in_db: true
-      store_prompts_in_spend_logs: true
+      store_prompts_in_spend_logs: false
     model_list:
       # Local Ollama (office)
       - model_name: "ollama/huihui_ai/qwen3-vl-abliterated:8b"
@@ -532,7 +532,14 @@ data:
       drop_params: true
       set_verbose: false
       cache: true
+      success_callback: ["s3"]
       cache_params:
         type: redis
         host: litellm-redis
         port: "6379"
+
+    s3_callback_params:
+      s3_bucket_name: litellm-spend-logs
+      s3_endpoint_url: http://seaweedfs-s3:8333
+      s3_aws_access_key_id: "os.environ/S3_ACCESS_KEY"
+      s3_aws_secret_access_key: "os.environ/S3_SECRET_KEY"
