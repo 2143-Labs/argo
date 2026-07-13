@@ -35,5 +35,5 @@ spec:
         persistentVolumeClaim:
           claimName: seaweedfs-filer-data
       - name: s3-config
-        configMap:
-          name: seaweedfs-s3-config
+        secret:
+          secretName: seaweedfs-s3-config
