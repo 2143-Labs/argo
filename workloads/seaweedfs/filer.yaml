@@ -5,6 +5,7 @@ metadata:
   labels: {app: seaweedfs-filer}
 spec:
   replicas: 1
+  strategy: {type: Recreate}
   selector: {matchLabels: {app: seaweedfs-filer}}
   template:
     metadata: {labels: {app: seaweedfs-filer}}
