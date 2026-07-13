@@ -9,7 +9,7 @@ spec:
     kind: ScaledObject
     spec:
       scaleTargetRef: {}
-      minReplicaCount: 0
+      minReplicaCount: 1
       maxReplicaCount: 5
       cooldownPeriod: 600
       triggers:
