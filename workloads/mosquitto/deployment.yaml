@@ -17,6 +17,11 @@ spec:
       labels:
         app: mosquitto
     spec:
+      tolerations:
+        - key: pi
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       securityContext:
         fsGroup: 1883
       affinity:

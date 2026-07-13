@@ -10,6 +10,11 @@ spec:
   template:
     metadata: {labels: {app: seaweedfs-filer}}
     spec:
+      tolerations:
+        - key: wifi
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       containers:
       - name: filer
         image: chrislusf/seaweedfs:3.85
