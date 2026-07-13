@@ -19,11 +19,6 @@ spec:
       labels:
         app: litellm
     spec:
-      tolerations:
-        - key: wifi
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
