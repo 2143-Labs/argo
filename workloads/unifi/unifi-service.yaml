@@ -7,7 +7,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: unifi
+    app: unifi-next
   ports:
     - port: 443
       targetPort: 8443
@@ -38,7 +38,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: unifi
+    app: unifi-next
   ports:
     - port: 8080
       targetPort: 8080
@@ -53,7 +53,7 @@ metadata:
 spec:
   type: NodePort
   selector:
-    app: unifi
+    app: unifi-next
   ports:
     - port: 8443
       targetPort: 8443
@@ -69,7 +69,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: unifi
+    app: unifi-next
   ports:
     - port: 10001
       targetPort: 10001
