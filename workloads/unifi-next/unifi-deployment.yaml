@@ -16,11 +16,6 @@ spec:
       labels:
         app: unifi-next
     spec:
-      tolerations:
-        - key: wifi
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
