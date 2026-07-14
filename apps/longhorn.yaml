@@ -49,10 +49,14 @@ spec:
           # Allow Longhorn pods to schedule on tainted nodes (specifically
           # arch's seated=true:NoSchedule). Without this, no replica nor
           # CSI plugin would land on arch.
-          taintToleration: "seated=true:NoSchedule"
+          taintToleration: "seated=true:NoSchedule; wifi=true:NoSchedule"
         longhornManager:
           tolerations:
             - key: seated
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+            - key: wifi
               operator: Equal
               value: "true"
               effect: NoSchedule
@@ -62,9 +66,17 @@ spec:
               operator: Equal
               value: "true"
               effect: NoSchedule
+            - key: wifi
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
         longhornUI:
           tolerations:
             - key: seated
+              operator: Equal
+              value: "true"
+              effect: NoSchedule
+            - key: wifi
               operator: Equal
               value: "true"
               effect: NoSchedule
