@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v82"
+    unsafeCustomBuildID: "v83"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -30,7 +30,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-ffmpeg:v82
+        image: ghcr.io/john2143/frigate-genai-ffmpeg:v83
         args: ["--mode=ffmpeg"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -45,18 +45,35 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v82"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v83"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
+        - name: TEMPORAL_TLS
+          value: "true"
+        - name: TEMPORAL_TLS_CA_PATH
+          value: "/etc/temporal/certs/ca.crt"
+        - name: TEMPORAL_TLS_SERVER_NAME
+          value: "temporal-frontend.default.svc.cluster.local"
         resources:
           requests: {cpu: "500m", memory: "1Gi"}
           limits: {cpu: "2000m", memory: "4Gi"}
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: grpc-certs
+          mountPath: /etc/temporal/certs
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           sizeLimit: 2Gi
+      - name: grpc-certs
+        projected:
+          sources:
+          - secret:
+              name: temporal-grpc-ca-tls
+              items:
+              - key: tls.crt
+                path: ca.crt
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname

@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v82"
+    unsafeCustomBuildID: "v83"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -24,7 +24,7 @@ spec:
       terminationGracePeriodSeconds: 180
       containers:
       - name: worker
-        image: ghcr.io/john2143/frigate-genai-genai:v82
+        image: ghcr.io/john2143/frigate-genai-genai:v83
         args: ["--mode=genai-ollama"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -41,11 +41,21 @@ spec:
               key: AWS_SECRET_ACCESS_KEY
         - name: TEMPORAL_ADDRESS
           value: "192.168.5.10:32682"
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v82"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v83"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ollama"}
+        - name: TEMPORAL_TLS
+          value: "true"
+        - name: TEMPORAL_TLS_CA_PATH
+          value: "/etc/temporal/certs/ca.crt"
+        - name: TEMPORAL_TLS_SERVER_NAME
+          value: "temporal-frontend.default.svc.cluster.local"
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
           limits: {cpu: "1000m", memory: "2Gi"}
+        volumeMounts:
+        - name: grpc-certs
+          mountPath: /etc/temporal/certs
+          readOnly: true
         ports:
         - containerPort: 8080
           name: http
@@ -68,3 +78,12 @@ spec:
             port: 8080
           periodSeconds: 30
           failureThreshold: 3
+      volumes:
+      - name: grpc-certs
+        projected:
+          sources:
+          - secret:
+              name: temporal-grpc-ca-tls
+              items:
+              - key: tls.crt
+                path: ca.crt
