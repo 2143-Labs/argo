@@ -6,3 +6,5 @@ spec:
   hostPort: temporal-frontend.default.svc.cluster.local:7233
   tls:
     serverName: temporal-frontend.default.svc.cluster.local
+  mutualTLSSecretRef:
+    name: temporal-grpc-ca-tls
