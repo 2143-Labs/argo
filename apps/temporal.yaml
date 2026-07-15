@@ -110,7 +110,7 @@ spec:
             - name: TEMPORAL_TLS_CA_PATH
               value: "/etc/temporal/certs/ca.crt"
             - name: TEMPORAL_TLS_SERVER_NAME
-              value: "temporal-frontend"
+              value: "temporal-frontend.default.svc.cluster.local"
           resources:
             requests:
               cpu: 10m
