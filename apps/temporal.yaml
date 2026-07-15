@@ -88,12 +88,13 @@ spec:
           frontend:
             service:
               type: NodePort
+          worker:
+            enabled: false
+
 
         shims:
           dockerize: false
           elasticsearchTool: false
-        worker:
-          enabled: false
 
         web:
           enabled: true
