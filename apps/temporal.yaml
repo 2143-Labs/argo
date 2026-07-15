@@ -22,7 +22,7 @@ spec:
                 server:
                   certFile: /etc/temporal/certs/tls.crt
                   keyFile: /etc/temporal/certs/tls.key
-                  requireClientAuth: true
+                  requireClientAuth: false
                   clientCaFiles:
                     - /etc/temporal/certs/ca.crt
             persistence:
@@ -98,7 +98,6 @@ spec:
 
         web:
           enabled: true
-          temporalAddress: "temporal-frontend.default.svc:7243"
           additionalEnv:
             - name: TEMPORAL_AUTH_ENABLED
               value: "false"
