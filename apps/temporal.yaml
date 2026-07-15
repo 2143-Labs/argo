@@ -22,7 +22,7 @@ spec:
                 server:
                   certFile: /etc/temporal/certs/tls.crt
                   keyFile: /etc/temporal/certs/tls.key
-                  requireClientAuth: false
+                  requireClientAuth: true
                   clientCaFiles:
                     - /etc/temporal/certs/ca.crt
             persistence:
@@ -92,7 +92,8 @@ spec:
         shims:
           dockerize: false
           elasticsearchTool: false
-
+        worker:
+          enabled: false
 
         web:
           enabled: true
