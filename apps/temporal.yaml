@@ -99,12 +99,30 @@ spec:
         web:
           enabled: true
           additionalEnv:
+            - name: TEMPORAL_TLS_ENABLED
+              value: "true"
+            - name: TEMPORAL_TLS_CA_PATH
+              value: "/etc/temporal/certs/ca.crt"
+            - name: TEMPORAL_TLS_SERVER_NAME
+              value: "temporal-frontend"
             - name: TEMPORAL_AUTH_ENABLED
               value: "false"
             - name: TEMPORAL_FORWARD_HEADERS
               value: "X-Auth-Request-Email,X-Auth-Request-User,X-Auth-Request-Preferred-Username"
             - name: TEMPORAL_CSRF_COOKIE_INSECURE
               value: "true"
+          additionalVolumes:
+            - name: grpc-certs
+              projected:
+                sources:
+                  - secret:
+                      name: temporal-grpc-ca-tls
+                      items:
+                        - key: tls.crt
+                          path: ca.crt
+          additionalVolumeMounts:
+            - name: grpc-certs
+              mountPath: /etc/temporal/certs
           resources:
             requests:
               cpu: 10m
