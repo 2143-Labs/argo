@@ -17,15 +17,14 @@ spec:
         fullnameOverride: "temporal"
         server:
           config:
-            global:
-              tls:
-                frontend:
-                  server:
-                    certFile: /etc/temporal/certs/tls.crt
-                    keyFile: /etc/temporal/certs/tls.key
-                    requireClientAuth: true
-                    clientCAFiles:
-                      - /etc/temporal/certs/ca.crt
+            tls:
+              frontend:
+                server:
+                  certFile: /etc/temporal/certs/tls.crt
+                  keyFile: /etc/temporal/certs/tls.key
+                  requireClientAuth: true
+                  clientCAFiles:
+                    - /etc/temporal/certs/ca.crt
             persistence:
               defaultStore: default
               visibilityStore: visibility
