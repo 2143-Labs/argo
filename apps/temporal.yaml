@@ -22,7 +22,7 @@ spec:
                 server:
                   certFile: /etc/temporal/certs/tls.crt
                   keyFile: /etc/temporal/certs/tls.key
-                  requireClientAuth: true
+                  requireClientAuth: false
                   clientCaFiles:
                     - /etc/temporal/certs/ca.crt
             persistence:
