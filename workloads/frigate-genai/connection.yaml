@@ -4,3 +4,5 @@ metadata:
   name: frigate-genai-temporal
 spec:
   hostPort: temporal-frontend.default.svc.cluster.local:7233
+  tls:
+    serverName: temporal-frontend.default.svc.cluster.local
