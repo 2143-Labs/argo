@@ -111,6 +111,10 @@ spec:
               value: "/etc/temporal/certs/ca.crt"
             - name: TEMPORAL_TLS_SERVER_NAME
               value: "temporal-frontend.default.svc.cluster.local"
+            - name: TEMPORAL_TLS_CERT_PATH
+              value: "/etc/temporal/certs/tls.crt"
+            - name: TEMPORAL_TLS_KEY_PATH
+              value: "/etc/temporal/certs/tls.key"
           resources:
             requests:
               cpu: 10m
@@ -122,6 +126,13 @@ spec:
             - name: grpc-certs
               projected:
                 sources:
+                  - secret:
+                      name: temporal-grpc-server-tls
+                      items:
+                        - key: tls.crt
+                          path: tls.crt
+                        - key: tls.key
+                          path: tls.key
                   - secret:
                       name: temporal-grpc-ca-tls
                       items:
