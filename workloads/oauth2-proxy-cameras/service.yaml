@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-cameras
+  namespace: default
+  labels:
+    app: oauth2-proxy-cameras
+spec:
+  type: ClusterIP
+  selector:
+    app: oauth2-proxy-cameras
+  ports:
+    - port: 4180
+      targetPort: 4180
+      protocol: TCP
+      name: http

@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: temporal-grpc
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: temporal-grpc-mtls
+  hostnames:
+    - temporal-grpc.john2143.com
+  rules:
+    - backendRefs:
+        - name: temporal-frontend
+          port: 7233

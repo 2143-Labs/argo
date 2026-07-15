@@ -17,6 +17,15 @@ spec:
         fullnameOverride: "temporal"
         server:
           config:
+            global:
+              tls:
+                frontend:
+                  server:
+                    certFile: /etc/temporal/certs/tls.crt
+                    keyFile: /etc/temporal/certs/tls.key
+                    requireClientAuth: true
+                    clientCAFiles:
+                      - /etc/temporal/certs/ca.crt
             persistence:
               defaultStore: default
               visibilityStore: visibility
@@ -56,6 +65,27 @@ spec:
               cpu: 2000m
               memory: 2Gi
 
+          additionalVolumes:
+            - name: grpc-certs
+              projected:
+                sources:
+                  - secret:
+                      name: temporal-grpc-server-tls
+                      items:
+                        - key: tls.crt
+                          path: tls.crt
+                        - key: tls.key
+                          path: tls.key
+                  - secret:
+                      name: temporal-grpc-ca-tls
+                      items:
+                        - key: tls.crt
+                          path: ca.crt
+
+          additionalVolumeMounts:
+            - name: grpc-certs
+              mountPath: /etc/temporal/certs
+
           frontend:
             service:
               type: NodePort
@@ -67,6 +97,13 @@ spec:
 
         web:
           enabled: true
+          additionalEnv:
+            - name: TEMPORAL_AUTH_ENABLED
+              value: "false"
+            - name: TEMPORAL_FORWARD_HEADERS
+              value: "X-Auth-Request-Email,X-Auth-Request-User,X-Auth-Request-Preferred-Username"
+            - name: TEMPORAL_CSRF_COOKIE_INSECURE
+              value: "true"
           resources:
             requests:
               cpu: 10m

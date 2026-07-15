@@ -1,0 +1,54 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: temporal-selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-grpc-ca
+  namespace: default
+spec:
+  isCA: true
+  commonName: temporal-grpc-ca
+  secretName: temporal-grpc-ca-tls
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: temporal-selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: temporal-ca-issuer
+spec:
+  ca:
+    secretName: temporal-grpc-ca-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-grpc-server
+  namespace: default
+spec:
+  secretName: temporal-grpc-server-tls
+  dnsNames:
+    - temporal-grpc.john2143.com
+    - temporal-frontend.default.svc.cluster.local
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: temporal-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment

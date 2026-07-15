@@ -1,7 +1,8 @@
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: frigate-genai-triggers
+  name: frigate-genai-triggers-internal
   namespace: default
 spec:
   parentRefs:
@@ -14,6 +15,32 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: auth-security-headers
       backendRefs:
         - name: frigate-genai-triggers
           port: 9090
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: frigate-genai-triggers-public
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: cameras-john2143-https
+  hostnames:
+    - cameras.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: oauth2-proxy-cameras
+          port: 4180
