@@ -23,7 +23,7 @@ spec:
                   certFile: /etc/temporal/certs/tls.crt
                   keyFile: /etc/temporal/certs/tls.key
                   requireClientAuth: true
-                  clientCAFiles:
+                  clientCaFiles:
                     - /etc/temporal/certs/ca.crt
             persistence:
               defaultStore: default
