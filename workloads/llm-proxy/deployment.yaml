@@ -31,7 +31,7 @@ spec:
                       - general
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:main-latest
+          image: ghcr.io/berriai/litellm:v1.92.0
           ports:
             - containerPort: 4000
               protocol: TCP
@@ -43,6 +43,8 @@ spec:
               value: "true"
             - name: PYTHONPATH
               value: "/usr/lib/python3.13/site-packages"
+            - name: SERVER_ROOT_PATH
+              value: "/"
           envFrom:
             - secretRef:
                 name: litellm-secrets
