@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v83"
+    unsafeCustomBuildID: "v84"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -27,7 +27,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: triggers
-        image: ghcr.io/john2143/frigate-genai-genai:v83
+        image: ghcr.io/john2143/frigate-genai-genai:v84
         args: ["--mode=triggers"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -50,14 +50,10 @@ spec:
           value: "http://arch.ts.2143.me:5000"
         - name: HTTP_HOST
           value: "0.0.0.0"
-        - name: TEMPORAL_ADDRESS
-          value: "192.168.5.10:32682"
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v83"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v84"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
         - name: TEMPORAL_TLS
           value: "true"
-        - name: TEMPORAL_TLS_CA_PATH
-          value: "/etc/temporal/certs/ca.crt"
         - name: TEMPORAL_TLS_SERVER_NAME
           value: "temporal-frontend.default.svc.cluster.local"
         - name: SPIFFE_ENDPOINT_SOCKET

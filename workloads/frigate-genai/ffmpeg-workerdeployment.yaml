@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v83"
+    unsafeCustomBuildID: "v84"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -30,7 +30,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 6
-        image: ghcr.io/john2143/frigate-genai-ffmpeg:v83
+        image: ghcr.io/john2143/frigate-genai-ffmpeg:v84
         args: ["--mode=ffmpeg"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -45,12 +45,10 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v83"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v84"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
         - name: TEMPORAL_TLS
           value: "true"
-        - name: TEMPORAL_TLS_CA_PATH
-          value: "/etc/temporal/certs/ca.crt"
         - name: TEMPORAL_TLS_SERVER_NAME
           value: "temporal-frontend.default.svc.cluster.local"
         - name: SPIFFE_ENDPOINT_SOCKET
