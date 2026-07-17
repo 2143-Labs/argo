@@ -40,10 +40,11 @@ spec:
               value: "http://arch.ts.2143.me:5000"
             - name: HTTP_HOST
               value: "0.0.0.0"
+            - {name: TEMPORAL_ADDRESS, value: "temporal-grpc.john2143.com:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
             - {name: TEMPORAL_TLS, value: "true"}
-            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-frontend.default.svc.cluster.local"}
+            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-grpc.john2143.com"}
             - {name: SPIFFE_ENDPOINT_SOCKET, value: "unix:///spiffe-workload-api/spire-agent.sock"}
             - {name: TEMPORAL_TLS_CA_PATH, value: "/etc/temporal-certs/ca.crt"}
           resources:

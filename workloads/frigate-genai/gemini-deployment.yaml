@@ -46,10 +46,11 @@ spec:
             - name: S3_SECRET_KEY
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
+            - {name: TEMPORAL_ADDRESS, value: "temporal-grpc.john2143.com:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
             - {name: TEMPORAL_TLS, value: "true"}
-            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-frontend.default.svc.cluster.local"}
+            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-grpc.john2143.com"}
             - {name: SPIFFE_ENDPOINT_SOCKET, value: "unix:///spiffe-workload-api/spire-agent.sock"}
             - {name: TEMPORAL_TLS_CA_PATH, value: "/etc/temporal-certs/ca.crt"}
           resources:

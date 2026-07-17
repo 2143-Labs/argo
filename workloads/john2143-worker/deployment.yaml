@@ -69,6 +69,8 @@ spec:
               value: "unix:///spiffe-workload-api/spire-agent.sock"
             - name: TEMPORAL_TLS_CA_PATH
               value: "/etc/temporal-certs/ca.crt"
+            - {name: TEMPORAL_ADDRESS, value: "temporal-grpc.john2143.com:7233"}
+            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-grpc.john2143.com"}
             - name: S3_ENDPOINT_URL
               value: "https://imagehost-files.nyc3.digitaloceanspaces.com"
             - name: S3_ACCESS_KEY
