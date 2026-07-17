@@ -450,7 +450,7 @@ spec:
 
     - name: spire-grpc-passthrough
       protocol: TLS
-      port: 443
+      port: 8443
       hostname: spire.john2143.com
       tls:
         mode: Passthrough
@@ -462,7 +462,7 @@ spec:
               kubernetes.io/metadata.name: spire-server
     - name: spiffe-jwks-passthrough
       protocol: TLS
-      port: 443
+      port: 8443
       hostname: spiffe.john2143.com
       tls:
         mode: Passthrough
