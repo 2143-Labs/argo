@@ -25,6 +25,7 @@ spec:
                   requireClientAuth: false
                   clientCaFiles:
                     - /etc/temporal/certs/ca.crt
+                    - /etc/temporal/certs/spire-ca.crt
             persistence:
               defaultStore: default
               visibilityStore: visibility
@@ -80,10 +81,19 @@ spec:
                       items:
                         - key: tls.crt
                           path: ca.crt
+            - name: spire-ca
+              secret:
+                secretName: temporal-spire-ca
+                items:
+                  - key: tls.crt
+                    path: spire-ca.crt
 
           additionalVolumeMounts:
             - name: grpc-certs
               mountPath: /etc/temporal/certs
+            - name: spire-ca
+              mountPath: /etc/temporal/certs/spire-ca.crt
+              subPath: spire-ca.crt
 
           frontend:
             service:
