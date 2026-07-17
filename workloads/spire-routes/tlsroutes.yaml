@@ -1,0 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: spire-grpc
+  namespace: spire-server
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: spire-grpc-passthrough
+  hostnames:
+    - spire.john2143.com
+  rules:
+    - backendRefs:
+        - name: spire-external-server
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: spiffe-jwks
+  namespace: spire-server
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: spiffe-jwks-passthrough
+  hostnames:
+    - spiffe.john2143.com
+  rules:
+    - backendRefs:
+        - name: spiffe-oidc-discovery-provider
+          port: 443

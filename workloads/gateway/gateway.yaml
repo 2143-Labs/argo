@@ -447,6 +447,31 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: spire-grpc-passthrough
+      protocol: TLS
+      port: 443
+      hostname: spire.john2143.com
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire-server
+    - name: spiffe-jwks-passthrough
+      protocol: TLS
+      port: 443
+      hostname: spiffe.john2143.com
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire-server
     - name: element-chat-2143-https
       protocol: HTTPS
       port: 8443

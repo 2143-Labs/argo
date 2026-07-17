@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spire
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: spire-nested
+    repoURL: https://spiffe.github.io/helm-charts-hardened/
+    targetRevision: 0.29.0
+    helm:
+      releaseName: spire
+      values: |
+        global:
+          spire:
+            trustDomain: kube.john2143.com
+            clusterName: homelab
+            jwtIssuer: https://spiffe.john2143.com
+            caSubject:
+              country: US
+              organization: john2143
+              commonName: kube.john2143.com
+            recommendations:
+              enabled: true
+            namespaces:
+              create: true
+            ingressControllerType: other
+
+        tags:
+          nestedRoot: true
+
+        root-spire-server:
+          persistence:
+            type: pvc
+            size: 1Gi
+            accessMode: ReadWriteOnce
+            storageClass: longhorn
+
+        internal-spire-server:
+          persistence:
+            type: pvc
+            size: 1Gi
+            accessMode: ReadWriteOnce
+            storageClass: longhorn
+          controllerManager:
+            className: spire-mgmt-spire-internal-server
+            identities:
+              clusterSPIFFEIDs:
+                oidc-discovery-provider:
+                  dnsNameTemplates:
+                    - spiffe.john2143.com
+
+        external-spire-server:
+          persistence:
+            type: pvc
+            size: 1Gi
+            accessMode: ReadWriteOnce
+            storageClass: longhorn
+          service:
+            type: ClusterIP
+            port: 443
+          kubeConfigs:
+            do-john2143:
+              kubeConfigBase64: ""
+            five-nines:
+              kubeConfigBase64: ""
+
+        spiffe-oidc-discovery-provider:
+          enabled: true
+          tls:
+            spire:
+              enabled: false
+            externalSecret:
+              enabled: true
+              secretName: spiffe-oidc-tls
+          service:
+            type: ClusterIP
+            ports:
+              https: 443
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: spire-mgmt
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: spire-external-server-kubeconfigs
+      namespace: spire-server
+      jsonPointers:
+        - /data

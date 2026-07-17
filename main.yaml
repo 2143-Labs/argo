@@ -13,6 +13,7 @@ spec:
     - https://charts.longhorn.io
     - https://go.temporal.io/helm-charts
     - https://kedacore.github.io/charts
+    - https://spiffe.github.io/helm-charts-hardened/
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -23,6 +24,8 @@ spec:
       kind: '*'
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
+    - group: spire.spiffe.io
+      kind: '*'
     - group: cert-manager.io
       kind: ClusterIssuer
     - group: gateway.networking.k8s.io

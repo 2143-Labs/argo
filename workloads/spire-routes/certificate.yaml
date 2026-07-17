@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: spiffe-oidc
+  namespace: spire-server
+spec:
+  secretName: spiffe-oidc-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - spiffe.john2143.com

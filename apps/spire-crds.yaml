@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spire-crds
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: spire-crds
+    repoURL: https://spiffe.github.io/helm-charts-hardened/
+    targetRevision: 0.5.0
+    helm:
+      releaseName: spire-crds
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: spire-mgmt
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
