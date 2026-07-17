@@ -54,7 +54,7 @@ spec:
         - name: TEMPORAL_TLS_SERVER_NAME
           value: "temporal-frontend.default.svc.cluster.local"
         - name: SPIFFE_ENDPOINT_SOCKET
-          value: "unix:///spiffe-workload-api/agent.sock"
+          value: "unix:///spiffe-workload-api/spire-agent.sock"
         resources:
           requests: {cpu: "500m", memory: "1Gi"}
           limits: {cpu: "2000m", memory: "4Gi"}
@@ -70,7 +70,7 @@ spec:
           sizeLimit: 2Gi
       - name: spiffe-workload-api
         csi:
-          driver: upstream.csi.spiffe.io
+          driver: csi.spiffe.io
           readOnly: true
       topologySpreadConstraints:
       - maxSkew: 1
