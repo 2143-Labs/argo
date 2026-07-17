@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v85"
+    unsafeCustomBuildID: "v86"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -39,7 +39,7 @@ spec:
                 values: [amd64]
       containers:
       - name: worker
-        image: ghcr.io/john2143/frigate-genai-genai:v85
+        image: ghcr.io/john2143/frigate-genai-genai:v86
         args: ["--mode=genai-gemini"]
         envFrom:
         - secretRef: {name: frigate-genai-worker-creds}
@@ -54,7 +54,7 @@ spec:
             secretKeyRef:
               name: frigate-genai-worker-creds
               key: AWS_SECRET_ACCESS_KEY
-        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v85"}
+        - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
         - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
         - name: TEMPORAL_TLS
           value: "true"
