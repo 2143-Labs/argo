@@ -58,12 +58,17 @@ spec:
           value: "temporal-frontend.default.svc.cluster.local"
         - name: SPIFFE_ENDPOINT_SOCKET
           value: "unix:///spiffe-workload-api/spire-agent.sock"
+        - name: TEMPORAL_TLS_CA_PATH
+          value: "/etc/temporal-certs/ca.crt"
         resources:
           requests: {cpu: "100m", memory: "128Mi"}
           limits: {cpu: "250m", memory: "256Mi"}
         volumeMounts:
         - name: spiffe-workload-api
           mountPath: /spiffe-workload-api
+          readOnly: true
+        - name: temporal-certs
+          mountPath: /etc/temporal-certs
           readOnly: true
         ports:
         - containerPort: 8080
@@ -92,3 +97,7 @@ spec:
         csi:
           driver: csi.spiffe.io
           readOnly: true
+      - name: temporal-certs
+        secret:
+          secretName: temporal-grpc-ca-tls
+          defaultMode: 0444
