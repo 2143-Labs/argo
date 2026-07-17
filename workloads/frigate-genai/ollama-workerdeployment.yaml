@@ -49,12 +49,14 @@ spec:
           value: "/etc/temporal/certs/ca.crt"
         - name: TEMPORAL_TLS_SERVER_NAME
           value: "temporal-frontend.default.svc.cluster.local"
+        - name: SPIFFE_ENDPOINT_SOCKET
+          value: "unix:///spiffe-workload-api/agent.sock"
         resources:
           requests: {cpu: "250m", memory: "512Mi"}
           limits: {cpu: "1000m", memory: "2Gi"}
         volumeMounts:
-        - name: grpc-certs
-          mountPath: /etc/temporal/certs
+        - name: spiffe-workload-api
+          mountPath: /spiffe-workload-api
           readOnly: true
         ports:
         - containerPort: 8080
@@ -79,11 +81,7 @@ spec:
           periodSeconds: 30
           failureThreshold: 3
       volumes:
-      - name: grpc-certs
-        projected:
-          sources:
-          - secret:
-              name: temporal-grpc-ca-tls
-              items:
-              - key: tls.crt
-                path: ca.crt
+      - name: spiffe-workload-api
+        csi:
+          driver: upstream.csi.spiffe.io
+          readOnly: true
