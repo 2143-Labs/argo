@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-triggers
+  labels: {app: frigate-genai-triggers}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: frigate-genai-triggers}
+  template:
+    metadata:
+      labels: {app: frigate-genai-triggers}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      tolerations:
+        - {key: wifi, operator: Exists, effect: NoSchedule}
+      containers:
+        - name: triggers
+          image: ghcr.io/john2143/frigate-genai-genai:v86
+          args: ["--mode=triggers"]
+          envFrom:
+            - secretRef: {name: frigate-genai-worker-creds}
+          env:
+            - name: MQTT_HOST
+              value: mosquitto
+            - name: MQTT_PORT
+              value: "1883"
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
+            - name: FRIGATE_BASE_URL
+              value: "http://arch.ts.2143.me:5000"
+            - name: HTTP_HOST
+              value: "0.0.0.0"
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
+            - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
+            - {name: TEMPORAL_TLS, value: "true"}
+            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-frontend.default.svc.cluster.local"}
+            - {name: SPIFFE_ENDPOINT_SOCKET, value: "unix:///spiffe-workload-api/spire-agent.sock"}
+            - {name: TEMPORAL_TLS_CA_PATH, value: "/etc/temporal-certs/ca.crt"}
+          resources:
+            requests: {cpu: "100m", memory: "128Mi"}
+            limits: {cpu: "250m", memory: "256Mi"}
+          volumeMounts:
+            - {name: spiffe-workload-api, mountPath: /spiffe-workload-api, readOnly: true}
+            - {name: temporal-certs, mountPath: /etc/temporal-certs, readOnly: true}
+          ports:
+            - {containerPort: 8080, name: http}
+          startupProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet: {path: /readyz, port: 8080}
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: spiffe-workload-api
+          csi: {driver: csi.spiffe.io, readOnly: true}
+        - name: temporal-certs
+          secret: {secretName: temporal-grpc-ca-tls, defaultMode: 0444}

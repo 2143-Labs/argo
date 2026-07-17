@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-ffmpeg
+  labels: {app: frigate-genai-ffmpeg}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: frigate-genai-ffmpeg}
+  template:
+    metadata:
+      labels: {app: frigate-genai-ffmpeg}
+    spec:
+      terminationGracePeriodSeconds: 180
+      tolerations:
+        - {key: wifi, operator: Exists, effect: NoSchedule}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: frigate-genai-ffmpeg}
+      containers:
+        - name: worker
+          image: ghcr.io/john2143/frigate-genai-ffmpeg:v86
+          args: ["--mode=ffmpeg"]
+          envFrom:
+            - secretRef: {name: frigate-genai-worker-creds}
+          env:
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
+            - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
+            - {name: TEMPORAL_TLS, value: "true"}
+            - {name: TEMPORAL_TLS_SERVER_NAME, value: "temporal-frontend.default.svc.cluster.local"}
+            - {name: SPIFFE_ENDPOINT_SOCKET, value: "unix:///spiffe-workload-api/spire-agent.sock"}
+            - {name: TEMPORAL_TLS_CA_PATH, value: "/etc/temporal-certs/ca.crt"}
+          resources:
+            requests: {cpu: "500m", memory: "1Gi"}
+            limits: {cpu: "2000m", memory: "4Gi"}
+          volumeMounts:
+            - {name: scratch, mountPath: /tmp}
+            - {name: spiffe-workload-api, mountPath: /spiffe-workload-api, readOnly: true}
+            - {name: temporal-certs, mountPath: /etc/temporal-certs, readOnly: true}
+          startupProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+      volumes:
+        - name: scratch
+          emptyDir: {sizeLimit: 2Gi}
+        - name: spiffe-workload-api
+          csi: {driver: csi.spiffe.io, readOnly: true}
+        - name: temporal-certs
+          secret: {secretName: temporal-grpc-ca-tls, defaultMode: 0444}
