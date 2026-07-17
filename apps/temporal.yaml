@@ -81,19 +81,15 @@ spec:
                       items:
                         - key: tls.crt
                           path: ca.crt
-            - name: spire-ca
-              secret:
-                secretName: temporal-spire-ca
-                items:
-                  - key: tls.crt
-                    path: spire-ca.crt
+                  - secret:
+                      name: temporal-spire-ca
+                      items:
+                        - key: tls.crt
+                          path: spire-ca.crt
 
           additionalVolumeMounts:
             - name: grpc-certs
               mountPath: /etc/temporal/certs
-            - name: spire-ca
-              mountPath: /etc/temporal/certs/spire-ca.crt
-              subPath: spire-ca.crt
 
           frontend:
             service:
