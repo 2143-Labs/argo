@@ -32,6 +32,18 @@ spec:
         tags:
           nestedRoot: true
 
+        downstream-spire-agent-full:
+          tolerations:
+            - key: wifi
+              operator: Exists
+              effect: NoSchedule
+
+        downstream-spiffe-csi-driver:
+          tolerations:
+            - key: wifi
+              operator: Exists
+              effect: NoSchedule
+
         root-spire-server:
           persistence:
             type: pvc
