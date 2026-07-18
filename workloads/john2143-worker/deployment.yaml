@@ -41,7 +41,7 @@ spec:
                       - general
       containers:
         - name: worker
-          image: ghcr.io/john2143/john2143.com-worker:197
+          image: ghcr.io/john2143/john2143.com-worker:196
           imagePullPolicy: IfNotPresent
           env:
             - name: RUN_MODE
