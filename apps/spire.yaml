@@ -72,14 +72,12 @@ spec:
                     - spiffe.john2143.com
 
                 john2143-worker:
-                  className: spire-mgmt-spire-internal-server
                   podSelector:
                     matchLabels:
                       app: john2143-worker
                   spiffeIDTemplate: spiffe://{{ .TrustDomain }}/cluster/{{ .ClusterName }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}
 
                 frigate-genai:
-                  className: spire-mgmt-spire-internal-server
                   podSelector:
                     matchLabels:
                       app.kubernetes.io/part-of: frigate-genai
