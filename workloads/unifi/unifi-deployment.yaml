@@ -36,6 +36,18 @@ spec:
               value: "1000"
             - name: PGID
               value: "1000"
+            - name: MONGO_HOST
+              value: localhost
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_USER
+              value: unifi
+            - name: MONGO_PASS
+              value: f223658782e137d231073b609fac419cf9c9a2eb295044ae349ef1049f0b63f6
+            - name: MONGO_DBNAME
+              value: unifi
+            - name: MONGO_AUTHSOURCE
+              value: admin
           ports:
             - containerPort: 8443
               name: web-ui
@@ -84,7 +96,38 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 10
             failureThreshold: 3
+        - name: mongodb
+          image: docker.io/mongo:7.0
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: unifi
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: f223658782e137d231073b609fac419cf9c9a2eb295044ae349ef1049f0b63f6
+            - name: MONGO_INITDB_DATABASE
+              value: unifi
+            - name: MONGO_USER
+              value: unifi
+            - name: MONGO_PASS
+              value: f223658782e137d231073b609fac419cf9c9a2eb295044ae349ef1049f0b63f6
+            - name: MONGO_DBNAME
+              value: unifi
+          ports:
+            - containerPort: 27017
+              name: mongo
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
       volumes:
         - name: config
           persistentVolumeClaim:
             claimName: unifi-data
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: unifi-mongodb-data
