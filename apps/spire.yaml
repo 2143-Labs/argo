@@ -65,6 +65,13 @@ spec:
                   dnsNameTemplates:
                     - spiffe.john2143.com
 
+                john2143-worker:
+                  className: spire-mgmt-spire-internal-server
+                  podSelector:
+                    matchLabels:
+                      app: john2143-worker
+                  spiffeIDTemplate: spiffe://{{ .TrustDomain }}/cluster/{{ .ClusterName }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}
+
         external-spire-server:
           persistence:
             type: pvc
