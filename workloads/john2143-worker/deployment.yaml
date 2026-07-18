@@ -17,6 +17,7 @@ spec:
       labels:
         app: john2143-worker
     spec:
+      serviceAccountName: john2143-worker
       volumes:
         - name: workdir
           emptyDir:

@@ -11,8 +11,9 @@ spec:
     matchLabels: {app: frigate-genai-ffmpeg}
   template:
     metadata:
-      labels: {app: frigate-genai-ffmpeg}
+      labels: {app: frigate-genai-ffmpeg, app.kubernetes.io/part-of: frigate-genai}
     spec:
+      serviceAccountName: frigate-genai
       terminationGracePeriodSeconds: 180
       tolerations:
         - {key: wifi, operator: Exists, effect: NoSchedule}

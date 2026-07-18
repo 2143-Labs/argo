@@ -50,6 +50,12 @@ spec:
             size: 1Gi
             accessMode: ReadWriteOnce
             storageClass: longhorn
+          bundleConfigMap: spire-bundle-upstream
+          bundlePublisher:
+            k8sConfigMap:
+              enabled: true
+              namespace: default
+              format: pem
 
         internal-spire-server:
           persistence:
@@ -70,6 +76,13 @@ spec:
                   podSelector:
                     matchLabels:
                       app: john2143-worker
+                  spiffeIDTemplate: spiffe://{{ .TrustDomain }}/cluster/{{ .ClusterName }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}
+
+                frigate-genai:
+                  className: spire-mgmt-spire-internal-server
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/part-of: frigate-genai
                   spiffeIDTemplate: spiffe://{{ .TrustDomain }}/cluster/{{ .ClusterName }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}
 
         external-spire-server:

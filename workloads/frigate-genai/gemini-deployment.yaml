@@ -11,12 +11,13 @@ spec:
     matchLabels: {app: frigate-genai-gemini}
   template:
     metadata:
-      labels: {app: frigate-genai-gemini}
+      labels: {app: frigate-genai-gemini, app.kubernetes.io/part-of: frigate-genai}
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      serviceAccountName: frigate-genai
       terminationGracePeriodSeconds: 180
       tolerations:
         - {key: wifi, operator: Exists, effect: NoSchedule}

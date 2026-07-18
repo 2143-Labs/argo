@@ -18,6 +18,7 @@ spec:
         server:
           config:
             tls:
+              refreshInterval: 1m
               frontend:
                 server:
                   certFile: /etc/temporal/certs/tls.crt
@@ -81,10 +82,10 @@ spec:
                       items:
                         - key: tls.crt
                           path: ca.crt
-                  - secret:
-                      name: temporal-spire-ca
+                  - configMap:
+                      name: spire-bundle-upstream
                       items:
-                        - key: tls.crt
+                        - key: bundle.pem
                           path: spire-ca.crt
 
           additionalVolumeMounts:

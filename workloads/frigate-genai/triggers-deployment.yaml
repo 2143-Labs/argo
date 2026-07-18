@@ -11,12 +11,13 @@ spec:
     matchLabels: {app: frigate-genai-triggers}
   template:
     metadata:
-      labels: {app: frigate-genai-triggers}
+      labels: {app: frigate-genai-triggers, app.kubernetes.io/part-of: frigate-genai}
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      serviceAccountName: frigate-genai
       tolerations:
         - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
