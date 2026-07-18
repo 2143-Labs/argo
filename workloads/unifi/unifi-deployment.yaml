@@ -5,7 +5,7 @@ metadata:
   labels:
     app: unifi
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -16,11 +16,6 @@ spec:
       labels:
         app: unifi
     spec:
-      tolerations:
-        - key: wifi
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -33,16 +28,14 @@ spec:
                       - general
       containers:
         - name: unifi
-          image: docker.io/jacobalberty/unifi:latest
+          image: lscr.io/linuxserver/unifi-network-application:10.4.57-ls136
           env:
             - name: TZ
               value: America/New_York
-            - name: DB_URI
-              value: mongodb://unifi:unifi@unifi-mongodb:27017/unifi
-            - name: STATDB_URI
-              value: mongodb://unifi:unifi@unifi-mongodb:27017/unifi_stat
-            - name: DB_NAME
-              value: unifi
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
           ports:
             - containerPort: 8443
               name: web-ui
@@ -54,14 +47,9 @@ spec:
             - containerPort: 10001
               protocol: UDP
               name: discovery
-            - containerPort: 6789
-              name: speed-test
-            - containerPort: 1900
-              protocol: UDP
-              name: l2-discovery
           volumeMounts:
-            - name: data
-              mountPath: /unifi
+            - name: config
+              mountPath: /config
           resources:
             requests:
               cpu: 200m
@@ -69,7 +57,34 @@ spec:
             limits:
               cpu: 2000m
               memory: 2Gi
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'curl -skL https://localhost:8443/status | jq -e ".meta.up == true"'
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
       volumes:
-        - name: data
+        - name: config
           persistentVolumeClaim:
-            claimName: unifi-config-lh
+            claimName: unifi-data
