@@ -36,7 +36,7 @@ metadata:
     mirror.linkerd.io/remote-gateway-identity: linkerd-gateway.linkerd-multicluster.serviceaccount.identity.linkerd.cluster.local
 subsets:
 - addresses:
-  - ip: mtls.john2143.com
+  - ip: 108.56.153.222
   ports:
   - name: grpc
     port: 4143
