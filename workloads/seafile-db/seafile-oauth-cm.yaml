@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seafile-oauth-config
+  namespace: default
+data:
+  oauth_settings.py: |
+    import os
+    
+    # OAuth / OIDC configuration for Pocket ID (Authentik)
+    ENABLE_OAUTH = True
+    OAUTH_CREATE_UNKNOWN_USER = True
+    OAUTH_ACTIVATE_USER_AFTER_CREATION = True
+    OAUTH_REDIRECT_URL = "https://seafile.john2143.com/oauth/callback/"
+    OAUTH_AUTHORIZATION_URL = "https://au.2143.me/authorize"
+    OAUTH_TOKEN_URL = "https://au.2143.me/api/oidc/token"
+    OAUTH_USER_INFO_URL = "https://au.2143.me/api/oidc/userinfo"
+    OAUTH_SCOPE = ["openid", "profile", "email"]
+    OAUTH_ATTRIBUTE_MAP = {
+        "sub": (True, "uid"),
+        "email": (True, "email"),
+        "name": (False, "name"),
+    }
+    OAUTH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID", "MISSING")
+    OAUTH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET", "MISSING")
