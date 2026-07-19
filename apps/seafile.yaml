@@ -62,6 +62,8 @@ spec:
         seafile:
           env:
             SEAFILE_SERVER_HOSTNAME: "seafile.john2143.com"
+            SEAFILE_MYSQL_DB_HOST: "seafile-mariadb"
+            MEMCACHED_HOST: "seafile-memcached"
             ENABLE_OAUTH: "True"
             OAUTH_PROVIDER: "authentik"
             OAUTH_REDIRECT_URL: "https://seafile.john2143.com/oauth/callback/"
