@@ -61,6 +61,7 @@ spec:
         # Environment variables injected into seahub_settings.py
         seafile:
           env:
+            SEAFILE_SERVER_HOSTNAME: "seafile.john2143.com"
             ENABLE_OAUTH: "True"
             OAUTH_PROVIDER: "authentik"
             OAUTH_REDIRECT_URL: "https://seafile.john2143.com/oauth/callback/"
