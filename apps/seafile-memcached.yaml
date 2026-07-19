@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: seafile-memcached
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: memcached
+    repoURL: https://charts.bitnami.com/bitnami
+    targetRevision: 7.4.17
+    helm:
+      releaseName: seafile-memcached
+      values: |
+        architecture: standalone
+        
+        persistence:
+          enabled: false
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

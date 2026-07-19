@@ -15,6 +15,7 @@ spec:
     - https://go.temporal.io/helm-charts
     - https://kedacore.github.io/charts
     - https://spiffe.github.io/helm-charts-hardened/
+    - https://charts.bitnami.com/bitnami
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
