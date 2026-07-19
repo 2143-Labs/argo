@@ -1,0 +1,40 @@
+---
+# MongoDB mirrored service from DO cluster
+# This is a service mirror created by Linkerd multicluster
+# Policy applies to traffic routing through the gateway
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: mongo-do-mirror
+  namespace: default
+  labels:
+    service: mongo-do-john2143
+spec:
+  # Service mirrors don't have pods, they route through gateway
+  # Policy enforcement happens on the remote (DO) cluster
+  # This is a placeholder for future local MongoDB if deployed
+  podSelector:
+    matchLabels:
+      app: mongo
+  port: 27017
+  proxyProtocol: opaque
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: mongo-allowed-clients
+  namespace: default
+  labels:
+    service: mongo
+spec:
+  server:
+    name: mongo-do-mirror
+  client:
+    meshTLS:
+      serviceAccounts:
+        - name: john2143-worker
+          namespace: default
+        - name: frigate-genai
+          namespace: default
+        # Explicitly NOT allowing other services
+        # Future: Add john2143-com from five-nines cluster

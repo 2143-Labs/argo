@@ -1,0 +1,39 @@
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: temporal-frontend-grpc
+  namespace: default
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: frontend
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+      app.kubernetes.io/name: temporal
+  port: 7233
+  proxyProtocol: gRPC
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: temporal-frontend-clients
+  namespace: default
+  labels:
+    app.kubernetes.io/name: temporal
+    app.kubernetes.io/component: frontend
+spec:
+  server:
+    name: temporal-frontend-grpc
+  client:
+    meshTLS:
+      serviceAccounts:
+        - name: john2143-worker
+          namespace: default
+        - name: frigate-genai
+          namespace: default
+        # Future: Add five-nines cluster john2143-com when federated
+        # - name: john2143-com
+        #   namespace: default
+        #   cluster: five-nines

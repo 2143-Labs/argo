@@ -1,0 +1,33 @@
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: temporal-db-postgres
+  namespace: default
+  labels:
+    cnpg.io/cluster: temporal-db
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: temporal-db
+  port: 5432
+  proxyProtocol: opaque
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: temporal-db-allowed-clients
+  namespace: default
+  labels:
+    cnpg.io/cluster: temporal-db
+spec:
+  server:
+    name: temporal-db-postgres
+  client:
+    meshTLS:
+      serviceAccounts:
+        # Only Temporal components can access the database
+        - name: temporal
+          namespace: default
+        - name: temporal-db
+          namespace: default
