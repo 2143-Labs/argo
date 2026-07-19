@@ -54,13 +54,6 @@ spec:
             MEMCACHED_HOST: "seafile-memcached"
             INIT_SEAFILE_ADMIN_EMAIL: "admin@john2143.com"
             CACHE_PROVIDER: "memcached"
-          extraEnvFrom:
-            - secretRef:
-                name: seafile-oidc
-            - secretRef:
-                name: seafile-admin
-            - secretRef:
-                name: seafile-db
           extraVolumes:
             - name: oauth-config
               mountPath: /scripts/seafile_oauth_settings.py
@@ -79,6 +72,21 @@ spec:
                 secretKeyRef:
                   name: seafile-oidc
                   key: OAUTH_CLIENT_SECRET
+            - name: SEAFILE_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: seafile-admin
+                  key: SEAFILE_ADMIN_PASSWORD
+            - name: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: seafile-db
+                  key: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
+            - name: SEAFILE_MYSQL_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: seafile-db
+                  key: SEAFILE_MYSQL_DB_PASSWORD
 
   destination:
     server: https://kubernetes.default.svc
