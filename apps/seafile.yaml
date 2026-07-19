@@ -37,7 +37,7 @@ spec:
 
         # First-deploy init: auto-creates DB tables and admin account.
         # Set to false AFTER first successful sync.
-        initMode: false
+        initMode: true
 
         # Admin account — created on init
         adminEmail: admin@john2143.com
