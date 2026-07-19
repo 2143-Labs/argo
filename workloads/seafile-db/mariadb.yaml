@@ -32,13 +32,19 @@ spec:
         image: mariadb:11.4
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: "changeme-root"
+          valueFrom:
+            secretKeyRef:
+              name: seafile-db
+              key: SEAFILE_MYSQL_DB_ROOT_PASSWD
         - name: MYSQL_DATABASE
           value: "seafile_db"
         - name: MYSQL_USER
           value: "seafile"
         - name: MYSQL_PASSWORD
-          value: "changeme-seafile"
+          valueFrom:
+            secretKeyRef:
+              name: seafile-db
+              key: SEAFILE_MYSQL_DB_PASSWORD
         ports:
         - containerPort: 3306
           name: mysql
