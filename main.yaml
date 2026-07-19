@@ -9,6 +9,7 @@ spec:
   sourceRepos:
     - https://github.com/2143-Labs/argo.git
     - https://github.com/kubernetes-sigs/gateway-api.git
+    - https://haiwen.github.io/seafile-helm-chart/repo
     - https://charts.jetstack.io
     - https://charts.longhorn.io
     - https://go.temporal.io/helm-charts

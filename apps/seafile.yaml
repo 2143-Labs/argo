@@ -1,0 +1,86 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: seafile
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: seafile
+    repoURL: https://haiwen.github.io/seafile-helm-chart/repo
+    targetRevision: 13.0.2
+    helm:
+      releaseName: seafile
+      values: |
+        # Community Edition multi-container image
+        image: seafileltd/seafile-mc
+        imageTag: 13.0-latest
+
+        # Disable bundled ingress — we route via Gateway API
+        ingress:
+          enabled: false
+
+        # Expose the bundled Nginx on port 80 via ClusterIP
+        service:
+          type: ClusterIP
+          port: 80
+
+        # Persistent storage via Longhorn
+        persistence:
+          enabled: true
+          storageClass: longhorn
+          size: 50Gi
+          accessMode: ReadWriteOnce
+
+        # MariaDB (bundled — no external DB)
+        mariadb:
+          enabled: true
+          persistence:
+            enabled: true
+            storageClass: longhorn
+            size: 10Gi
+            accessMode: ReadWriteOnce
+
+        # Memcached (bundled)
+        memcached:
+          enabled: true
+
+        # First-deploy init: auto-creates DB tables and admin account.
+        # Set to false AFTER first successful sync.
+        initMode: true
+
+        # Admin account — created on init
+        adminEmail: admin@john2143.com
+        # adminPassword comes from envFromSecrets below
+
+        # Server URL
+        serverUrl: https://seafile.john2143.com
+
+        # Environment variables injected into seahub_settings.py
+        seafile:
+          env:
+            ENABLE_OAUTH: "True"
+            OAUTH_PROVIDER: "authentik"
+            OAUTH_REDIRECT_URL: "https://seafile.john2143.com/oauth/callback/"
+            OAUTH_AUTHORIZATION_URL: "https://au.2143.me/authorize"
+            OAUTH_TOKEN_URL: "https://au.2143.me/api/oidc/token"
+            OAUTH_USER_INFO_URL: "https://au.2143.me/api/oidc/userinfo"
+            OAUTH_SCOPE: "openid profile email"
+            OAUTH_CREATE_UNKNOWN_USER: "True"
+            OAUTH_ACTIVATE_USER_AFTER_CREATION: "True"
+            OAUTH_ATTRIBUTE_MAP: "{'sub': (True, 'uid'), 'email': (True, 'email'), 'name': (False, 'name')}"
+          extraEnvFrom:
+            - secretRef:
+                name: seafile-oidc
+            - secretRef:
+                name: seafile-admin
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
