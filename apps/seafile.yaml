@@ -61,32 +61,6 @@ spec:
               volumeInfo:
                 configMap:
                   name: seafile-oauth-config
-          extraEnv:
-            - name: OAUTH_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: seafile-oidc
-                  key: OAUTH_CLIENT_ID
-            - name: OAUTH_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: seafile-oidc
-                  key: OAUTH_CLIENT_SECRET
-            - name: SEAFILE_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: seafile-admin
-                  key: SEAFILE_ADMIN_PASSWORD
-            - name: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: seafile-db
-                  key: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
-            - name: SEAFILE_MYSQL_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: seafile-db
-                  key: SEAFILE_MYSQL_DB_PASSWORD
 
   destination:
     server: https://kubernetes.default.svc
