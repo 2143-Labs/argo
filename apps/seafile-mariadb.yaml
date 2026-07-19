@@ -9,8 +9,7 @@ spec:
   project: default
   source:
     chart: mariadb
-    repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: 19.0.7
+    targetRevision: 18.x
     helm:
       releaseName: seafile-mariadb
       values: |
