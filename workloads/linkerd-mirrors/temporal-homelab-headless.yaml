@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-homelab-headless
+  namespace: default
+  labels:
+    mirror.linkerd.io/cluster-name: homelab
+    mirror.linkerd.io/mirrored-service: "true"
+  annotations:
+    mirror.linkerd.io/remote-svc-fq-name: temporal-frontend-headless.default.svc.cluster.local
+    mirror.linkerd.io/remote-gateway-identity: linkerd-gateway.linkerd-multicluster.serviceaccount.identity.linkerd.cluster.local
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 7233
+    protocol: TCP
+    targetPort: 7233
+  - name: membership
+    port: 6933
+    protocol: TCP
+    targetPort: 6933
+  - name: http
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: temporal-homelab-headless
+  namespace: default
+  labels:
+    mirror.linkerd.io/cluster-name: homelab
+    mirror.linkerd.io/mirrored-service: "true"
+  annotations:
+    mirror.linkerd.io/remote-svc-fq-name: temporal-frontend-headless.default.svc.cluster.local
+    mirror.linkerd.io/remote-gateway-identity: linkerd-gateway.linkerd-multicluster.serviceaccount.identity.linkerd.cluster.local
+subsets:
+- addresses:
+  - ip: mtls.john2143.com
+  ports:
+  - name: grpc
+    port: 4143
+    protocol: TCP
+  - name: membership
+    port: 4143
+    protocol: TCP
+  - name: http
+    port: 4143
+    protocol: TCP
