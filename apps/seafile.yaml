@@ -66,6 +66,7 @@ spec:
             MEMCACHED_HOST: "seafile-memcached"
             INIT_SEAFILE_ADMIN_EMAIL: "admin@john2143.com"
             CACHE_PROVIDER: "memcached"
+            SEAFILE_MYSQL_DB_PASSWORD: "changeme-seafile"
             ENABLE_OAUTH: "True"
             OAUTH_PROVIDER: "authentik"
             OAUTH_REDIRECT_URL: "https://seafile.john2143.com/oauth/callback/"
