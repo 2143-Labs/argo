@@ -103,7 +103,7 @@ spec:
             config.linkerd.io/default-inbound-policy: all-authenticated
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
-              value: "true"
+              value: "false"
             - name: TEMPORAL_TLS_CA_PATH
               value: "/etc/temporal/certs/ca.crt"
             - name: TEMPORAL_TLS_CERT_PATH
