@@ -1,0 +1,13 @@
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: temporal-frontend-grpc
+  namespace: default
+spec:
+  server:
+    name: temporal-frontend-grpc
+  client:
+    meshTLS:
+      identities:
+        - frigate-genai.default.serviceaccount.identity.linkerd.cluster.local
+        - default.default.serviceaccount.identity.linkerd.cluster.local

@@ -17,7 +17,7 @@ spec:
         fullnameOverride: "temporal"
         server:
           podAnnotations:
-            linkerd.io/inject: enabled
+            linkerd.io/inject: disabled
             config.linkerd.io/default-inbound-policy: all-authenticated
           config:
             tls:
@@ -109,7 +109,7 @@ spec:
         web:
           enabled: true
           podAnnotations:
-            linkerd.io/inject: enabled
+            linkerd.io/inject: disabled
             config.linkerd.io/default-inbound-policy: all-authenticated
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
