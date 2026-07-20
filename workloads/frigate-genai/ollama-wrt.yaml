@@ -1,0 +1,20 @@
+apiVersion: temporal.io/v1alpha1
+kind: WorkerResourceTemplate
+metadata:
+  name: frigate-genai-ollama-keda
+spec:
+  workerDeploymentRef: {name: frigate-genai-ollama}
+  template:
+    apiVersion: keda.sh/v1alpha1
+    kind: ScaledObject
+    spec:
+      scaleTargetRef: {}
+      minReplicaCount: 1
+      cooldownPeriod: 300
+      triggers:
+      - type: cron
+        metadata:
+          timezone: America/New_York
+          start: 0 0 * * *
+          end: 59 23 * * *
+          desiredReplicas: "1"

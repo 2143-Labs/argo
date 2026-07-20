@@ -1,14 +1,18 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
   name: frigate-genai-ollama
   labels: {app: frigate-genai-ollama}
 spec:
-  replicas: 1
-  revisionHistoryLimit: 3
-  strategy: {type: Recreate}
-  selector:
-    matchLabels: {app: frigate-genai-ollama}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "v91"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
     metadata:
       labels: {app: frigate-genai-ollama, app.kubernetes.io/part-of: frigate-genai}

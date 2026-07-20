@@ -1,14 +1,18 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
   name: frigate-genai-ffmpeg
   labels: {app: frigate-genai-ffmpeg}
 spec:
-  replicas: 1
-  revisionHistoryLimit: 3
-  strategy: {type: Recreate}
-  selector:
-    matchLabels: {app: frigate-genai-ffmpeg}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "v91"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
     metadata:
       labels: {app: frigate-genai-ffmpeg, app.kubernetes.io/part-of: frigate-genai}

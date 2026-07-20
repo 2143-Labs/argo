@@ -1,17 +1,21 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: temporal.io/v1alpha1
+kind: WorkerDeployment
 metadata:
-  name: frigate-genai-triggers
-  labels: {app: frigate-genai-triggers}
+  name: frigate-genai-gemini
+  labels: {app: frigate-genai-gemini}
 spec:
-  replicas: 1
-  revisionHistoryLimit: 3
-  strategy: {type: Recreate}
-  selector:
-    matchLabels: {app: frigate-genai-triggers}
+  workerOptions:
+    connectionRef: {name: frigate-genai-temporal}
+    temporalNamespace: default
+    unsafeCustomBuildID: "v91"
+  rollout:
+    strategy: AllAtOnce
+  sunset:
+    scaledownDelay: 10m
+    deleteDelay: 1h
   template:
     metadata:
-      labels: {app: frigate-genai-triggers, app.kubernetes.io/part-of: frigate-genai}
+      labels: {app: frigate-genai-gemini, app.kubernetes.io/part-of: frigate-genai}
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
@@ -20,35 +24,41 @@ spec:
         config.linkerd.io/skip-outbound-ports: "7233"
     spec:
       serviceAccountName: frigate-genai
+      terminationGracePeriodSeconds: 180
       tolerations:
         - {key: wifi, operator: Exists, effect: NoSchedule}
+        - {key: pi, operator: Exists, effect: NoSchedule}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: kubernetes.io/arch, operator: In, values: [amd64]}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: frigate-genai-gemini}
       containers:
-        - name: triggers
+        - name: worker
           image: ghcr.io/john2143/frigate-genai-genai:v91
-          args: ["--mode=triggers"]
+          args: ["--mode=genai-gemini"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
           env:
-            - name: MQTT_HOST
-              value: mosquitto
-            - name: MQTT_PORT
-              value: "1883"
             - name: S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}
             - name: S3_SECRET_KEY
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
-            - name: FRIGATE_BASE_URL
-              value: "http://arch.ts.2143.me:5000"
-            - name: HTTP_HOST
-              value: "0.0.0.0"
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v91"}
-            - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
+            - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
           resources:
-            requests: {cpu: "100m", memory: "128Mi"}
-            limits: {cpu: "250m", memory: "256Mi"}
+            requests: {cpu: "250m", memory: "512Mi"}
+            limits: {cpu: "1000m", memory: "2Gi"}
           ports:
             - {containerPort: 8080, name: http}
           startupProbe:
