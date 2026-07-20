@@ -7,7 +7,7 @@ data:
   oauth_settings.py: |
     import os
     
-    # OAuth / OIDC configuration for Pocket ID (Authentik)
+    # OAuth / OIDC configuration for Pocket ID
     ENABLE_OAUTH = True
     OAUTH_CREATE_UNKNOWN_USER = True
     OAUTH_ACTIVATE_USER_AFTER_CREATION = True
@@ -21,5 +21,6 @@ data:
         "email": (True, "email"),
         "name": (False, "name"),
     }
+    OAUTH_PROVIDER = "pocketid"
     OAUTH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID", "MISSING")
     OAUTH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET", "MISSING")
