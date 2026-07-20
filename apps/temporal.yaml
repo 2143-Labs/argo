@@ -104,6 +104,20 @@ spec:
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
               value: "false"
+            - name: TEMPORAL_TLS_CA
+              value: ""
+            - name: TEMPORAL_TLS_CERT
+              value: ""
+            - name: TEMPORAL_TLS_KEY
+              value: ""
+            - name: TEMPORAL_TLS_SERVER_NAME
+              value: ""
+            - name: TEMPORAL_TLS_CA_PATH
+              value: ""
+            - name: TEMPORAL_TLS_CERT_PATH
+              value: ""
+            - name: TEMPORAL_TLS_KEY_PATH
+              value: ""
               value: "/etc/temporal/certs/ca.crt"
               value: "/etc/temporal/certs/tls.crt"
               value: "/etc/temporal/certs/tls.key"
