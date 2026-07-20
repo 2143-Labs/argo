@@ -1,15 +1,11 @@
-# Add the admin service account and role binding. It has the cluster admin permissions and ability to deploy/view all. Including cross namespace.
+# Admin service account with cluster-admin permissions.
+# Lives in default namespace alongside developer SA for kubetoken compatibility.
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: admin
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: admin
-  namespace: admin
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -18,7 +14,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: admin
-    namespace: admin
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: cluster-admin
