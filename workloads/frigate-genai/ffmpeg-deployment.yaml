@@ -41,7 +41,6 @@ spec:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_TLS, value: "true"}
-            - {name: TEMPORAL_TLS_CA, value: "/etc/temporal-certs/ca.crt"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
           resources:
