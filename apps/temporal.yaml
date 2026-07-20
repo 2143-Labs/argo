@@ -104,13 +104,9 @@ spec:
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
               value: "false"
-            - name: TEMPORAL_TLS_CA_PATH
               value: "/etc/temporal/certs/ca.crt"
-            - name: TEMPORAL_TLS_CERT_PATH
               value: "/etc/temporal/certs/tls.crt"
-            - name: TEMPORAL_TLS_KEY_PATH
               value: "/etc/temporal/certs/tls.key"
-            - name: TEMPORAL_TLS_SERVER_NAME
               value: "temporal-frontend.default.svc.cluster.local"
             - name: TEMPORAL_AUTH_ENABLED
               value: "false"
