@@ -42,7 +42,7 @@ spec:
               value: "http://arch.ts.2143.me:5000"
             - name: HTTP_HOST
               value: "0.0.0.0"
-            - {name: TEMPORAL_ADDRESS, value: "temporal-grpc.john2143.com:7233"}
+            - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
           resources:
