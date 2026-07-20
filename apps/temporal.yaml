@@ -20,16 +20,6 @@ spec:
             linkerd.io/inject: disabled
             config.linkerd.io/default-inbound-policy: all-authenticated
           config:
-            tls:
-              refreshInterval: 1m
-              frontend:
-                server:
-                  certFile: /etc/temporal/certs/tls.crt
-                  keyFile: /etc/temporal/certs/tls.key
-                  requireClientAuth: false
-                  clientCaFiles:
-                    - /etc/temporal/certs/ca.crt
-                    - /etc/temporal/certs/spire-ca.crt
             persistence:
               defaultStore: default
               visibilityStore: visibility
