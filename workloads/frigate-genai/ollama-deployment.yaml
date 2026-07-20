@@ -16,6 +16,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         linkerd.io/inject: enabled
+        config.linkerd.io/skip-outbound-ports: "7233"
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: frigate-genai
