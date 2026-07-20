@@ -52,6 +52,7 @@ spec:
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_TLS, value: "true"}
             - {name: TEMPORAL_TLS_CA, value: "/etc/temporal-certs/tls.crt"}
+            - {name: TEMPORAL_TLS_INSECURE, value: "true"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-gemini"}
           resources:
