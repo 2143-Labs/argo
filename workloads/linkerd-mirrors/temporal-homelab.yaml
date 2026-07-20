@@ -36,7 +36,7 @@ metadata:
     mirror.linkerd.io/remote-gateway-identity: linkerd-gateway.linkerd-multicluster.serviceaccount.identity.linkerd.cluster.local
 subsets:
 - addresses:
-  - ip: 108.56.153.222
+  - ip: 100.64.0.2
   ports:
   - name: grpc
     port: 4143
