@@ -24,7 +24,7 @@ spec:
         - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
         - name: triggers
-          image: ghcr.io/john2143/frigate-genai-genai:v86
+          image: ghcr.io/john2143/frigate-genai-genai:v91
           args: ["--mode=triggers"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
@@ -44,7 +44,7 @@ spec:
             - name: HTTP_HOST
               value: "0.0.0.0"
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v86"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v91"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
           resources:
             requests: {cpu: "100m", memory: "128Mi"}
