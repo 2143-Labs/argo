@@ -18,6 +18,7 @@ spec:
         server:
           podAnnotations:
             linkerd.io/inject: enabled
+            config.linkerd.io/default-inbound-policy: all-authenticated
           config:
             tls:
               refreshInterval: 1m
@@ -109,6 +110,7 @@ spec:
           enabled: true
           podAnnotations:
             linkerd.io/inject: enabled
+            config.linkerd.io/default-inbound-policy: all-authenticated
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
               value: "true"
