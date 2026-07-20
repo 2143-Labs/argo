@@ -14,7 +14,6 @@ spec:
       labels: {app: frigate-genai-ffmpeg, app.kubernetes.io/part-of: frigate-genai}
       annotations:
         linkerd.io/inject: enabled
-        config.linkerd.io/skip-outbound-ports: "7233"
     spec:
       serviceAccountName: frigate-genai
       terminationGracePeriodSeconds: 180
