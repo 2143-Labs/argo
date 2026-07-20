@@ -65,7 +65,17 @@ spec:
             service:
               type: NodePort
           worker:
-            enabled: false
+            enabled: true
+            podAnnotations:
+              linkerd.io/inject: disabled
+              config.linkerd.io/default-inbound-policy: all-authenticated
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
 
 
         shims:
