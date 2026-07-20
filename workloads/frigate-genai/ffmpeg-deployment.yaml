@@ -13,7 +13,7 @@ spec:
     metadata:
       labels: {app: frigate-genai-ffmpeg, app.kubernetes.io/part-of: frigate-genai}
       annotations:
-        linkerd.io/inject: enabled
+        linkerd.io/inject: disabled
         config.linkerd.io/skip-outbound-ports: "7233"
     spec:
       serviceAccountName: frigate-genai
