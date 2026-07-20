@@ -59,31 +59,7 @@ spec:
               cpu: 2000m
               memory: 2Gi
 
-          additionalVolumes:
-            - name: grpc-certs
-              projected:
-                sources:
-                  - secret:
-                      name: temporal-grpc-server-tls
-                      items:
-                        - key: tls.crt
-                          path: tls.crt
-                        - key: tls.key
-                          path: tls.key
-                  - secret:
-                      name: temporal-grpc-ca-tls
-                      items:
-                        - key: tls.crt
-                          path: ca.crt
-                  - configMap:
-                      name: spire-bundle-upstream
-                      items:
-                        - key: bundle.pem
-                          path: spire-ca.crt
 
-          additionalVolumeMounts:
-            - name: grpc-certs
-              mountPath: /etc/temporal/certs
 
           frontend:
             service:
@@ -104,49 +80,13 @@ spec:
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
               value: "false"
-            - name: TEMPORAL_TLS_CA
-              value: ""
-            - name: TEMPORAL_TLS_CERT
-              value: ""
-            - name: TEMPORAL_TLS_KEY
-              value: ""
-            - name: TEMPORAL_TLS_SERVER_NAME
-              value: ""
-            - name: TEMPORAL_TLS_CA_PATH
-              value: ""
-            - name: TEMPORAL_TLS_CERT_PATH
-              value: ""
-            - name: TEMPORAL_TLS_KEY_PATH
-              value: ""
-              value: "/etc/temporal/certs/ca.crt"
-              value: "/etc/temporal/certs/tls.crt"
-              value: "/etc/temporal/certs/tls.key"
-              value: "temporal-frontend.default.svc.cluster.local"
             - name: TEMPORAL_AUTH_ENABLED
               value: "false"
             - name: TEMPORAL_FORWARD_HEADERS
               value: "X-Auth-Request-Email,X-Auth-Request-User,X-Auth-Request-Preferred-Username"
             - name: TEMPORAL_CSRF_COOKIE_INSECURE
               value: "true"
-          additionalVolumes:
-            - name: grpc-certs
-              projected:
-                sources:
-                  - secret:
-                      name: temporal-grpc-ca-tls
-                      items:
-                        - key: tls.crt
-                          path: ca.crt
-                  - secret:
-                      name: temporal-web-client-tls
-                      items:
-                        - key: tls.crt
-                          path: tls.crt
-                        - key: tls.key
-                          path: tls.key
-          additionalVolumeMounts:
-            - name: grpc-certs
-              mountPath: /etc/temporal/certs
+
           resources:
             requests:
               cpu: 10m
