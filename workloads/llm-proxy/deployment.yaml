@@ -16,6 +16,8 @@ spec:
       app: litellm
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: litellm
     spec:
