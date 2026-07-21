@@ -46,6 +46,11 @@ data:
       - /metadata
       - /endpoints
       - /ports
+
+  resource.customizations: |
+    apiextensions.k8s.io/CustomResourceDefinition:
+      syncOptions:
+        - ServerSideApply=true
   resource.exclusions: |
     ### Internal Kubernetes resources excluded reduce the number of watched events
     - apiGroups:
