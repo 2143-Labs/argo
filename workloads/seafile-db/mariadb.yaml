@@ -34,8 +34,8 @@ spec:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: seafile-db
-              key: SEAFILE_MYSQL_DB_ROOT_PASSWD
+              name: seafile-secret
+              key: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
         - name: MYSQL_DATABASE
           value: "seafile_db"
         - name: MYSQL_USER
@@ -43,7 +43,7 @@ spec:
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: seafile-db
+              name: seafile-secret
               key: SEAFILE_MYSQL_DB_PASSWORD
         ports:
         - containerPort: 3306
