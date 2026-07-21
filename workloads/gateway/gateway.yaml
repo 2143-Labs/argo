@@ -19,6 +19,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: rots-2143-me-wildcard-tls
       allowedRoutes:
@@ -31,6 +32,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: rots-2143-me-wildcard-tls
       allowedRoutes:
@@ -43,6 +45,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: rots-2143-me-wildcard-tls
       allowedRoutes:
@@ -55,6 +58,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: rots-2143-me-wildcard-tls
       allowedRoutes:
@@ -67,6 +71,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: rots-2143-me-wildcard-tls
       allowedRoutes:
@@ -80,6 +85,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -92,6 +98,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -104,6 +111,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -116,6 +124,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -128,6 +137,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -140,6 +150,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -152,6 +163,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -164,6 +176,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -176,6 +189,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -188,6 +202,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -200,6 +215,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -212,6 +228,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -224,6 +241,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -237,6 +255,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -253,6 +272,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -286,6 +306,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -301,6 +322,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -316,6 +338,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -328,6 +351,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -340,6 +364,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -353,6 +378,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -365,6 +391,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -377,6 +404,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -389,6 +417,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: ts-2143-me-wildcard-tls
       allowedRoutes:
@@ -402,6 +431,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -414,6 +444,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -459,6 +490,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: 2143-me-wildcard-tls
       allowedRoutes:
@@ -471,6 +503,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -484,6 +517,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
@@ -497,6 +531,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
+          - group: \'\'
           - kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
