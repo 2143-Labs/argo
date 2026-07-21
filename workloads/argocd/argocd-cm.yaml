@@ -97,7 +97,7 @@ data:
 
   url: https://argocd.ts.2143.me
   oidc.config: |
-    name: AU
+    name: 2143.me
     issuer: https://au.2143.me
     clientID: 9b3dc9dd-5ca9-42a6-b1c4-23e33ba58c87
     clientSecret: $oidc.au.clientSecret
