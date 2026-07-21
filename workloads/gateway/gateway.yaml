@@ -73,25 +73,6 @@ spec:
         namespaces:
           from: Same
 
-    - name: sso-2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: sso.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            name: 2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchExpressions:
-              - key: kubernetes.io/metadata.name
-                operator: In
-                values:
-                  - keycloak
-                  - pocket-id-prod
     - name: john2143-https
       protocol: HTTPS
       port: 8443
@@ -440,8 +421,7 @@ spec:
           from: Same
     - name: temporal-grpc-mtls
       protocol: TLS
-      port: 7233
-      hostname: temporal-grpc.john2143.com
+      port: 8443
       tls:
         mode: Passthrough
       allowedRoutes:
