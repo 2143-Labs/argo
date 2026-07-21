@@ -45,6 +45,12 @@ data:
         litellm_params:
           model: "openrouter/*"
           api_key: "os.environ/OPENROUTER_API_KEY"
+
+      # Kimi / Moonshot
+      - model_name: "moonshot/*"
+        litellm_params:
+          model: "moonshot/*"
+          api_key: "os.environ/MOONSHOT_API_KEY"
       # Yunwu
       # ── Claude Fable 5 — official tier ──
       - model_name: "claude-fable-5-official"
