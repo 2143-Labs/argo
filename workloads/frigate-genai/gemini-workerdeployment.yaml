@@ -4,7 +4,6 @@ metadata:
   name: frigate-genai-gemini
   labels: {app: frigate-genai-gemini}
 spec:
-  replicas: 3
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default

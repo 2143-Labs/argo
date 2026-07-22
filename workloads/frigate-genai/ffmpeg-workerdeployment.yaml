@@ -4,7 +4,6 @@ metadata:
   name: frigate-genai-ffmpeg
   labels: {app: frigate-genai-ffmpeg}
 spec:
-  replicas: 2
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default

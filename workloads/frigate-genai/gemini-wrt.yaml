@@ -10,11 +10,17 @@ spec:
     spec:
       scaleTargetRef: {}
       minReplicaCount: 1
-      cooldownPeriod: 300
+      maxReplicaCount: 10
+      pollingInterval: 15
+      cooldownPeriod: 120
       triggers:
-      - type: cron
+      - type: temporal
         metadata:
-          timezone: America/New_York
-          start: 0 0 * * *
-          end: 59 23 * * *
-          desiredReplicas: "1"
+          endpoint: temporal-frontend.default.svc.cluster.local:7233
+          namespace: default
+          taskQueue: genai-gemini
+          targetQueueSize: "20"
+          activationTargetQueueSize: "5"
+          queueTypes: activity
+          workerDeploymentName: frigate-genai-gemini
+          workerDeploymentBuildId: v103

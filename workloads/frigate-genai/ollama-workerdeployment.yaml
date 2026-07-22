@@ -4,7 +4,6 @@ metadata:
   name: frigate-genai-ollama
   labels: {app: frigate-genai-ollama}
 spec:
-  replicas: 2
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
