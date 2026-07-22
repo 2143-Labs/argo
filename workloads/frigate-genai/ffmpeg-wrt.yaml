@@ -17,6 +17,9 @@ spec:
       - type: temporal
         metadata:
           endpoint: temporal-frontend.default.svc.cluster.local:7233
+          namespace: ""
+          workerDeploymentName: ""
+          workerDeploymentBuildId: ""
           taskQueue: ffmpeg
           targetQueueSize: "5"
           activationTargetQueueSize: "2"
