@@ -20,7 +20,7 @@ spec:
           namespace: ""
           workerDeploymentName: ""
           workerDeploymentBuildId: ""
-          taskQueue: ffmpeg
+          taskQueue: genai-tasks-ffmpeg
           targetQueueSize: "5"
           activationTargetQueueSize: "2"
           queueTypes: activity

@@ -20,7 +20,7 @@ spec:
           namespace: ""
           workerDeploymentName: ""
           workerDeploymentBuildId: ""
-          taskQueue: genai-ollama
+          taskQueue: genai-tasks-ollama
           targetQueueSize: "3"
           activationTargetQueueSize: "1"
           queueTypes: activity
