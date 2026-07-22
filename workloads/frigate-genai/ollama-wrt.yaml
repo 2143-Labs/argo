@@ -17,10 +17,7 @@ spec:
       - type: temporal
         metadata:
           endpoint: temporal-frontend.default.svc.cluster.local:7233
-          namespace: default
           taskQueue: genai-ollama
           targetQueueSize: "3"
           activationTargetQueueSize: "1"
           queueTypes: activity
-          workerDeploymentName: frigate-genai-ollama
-          workerDeploymentBuildId: v103

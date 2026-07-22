@@ -17,10 +17,7 @@ spec:
       - type: temporal
         metadata:
           endpoint: temporal-frontend.default.svc.cluster.local:7233
-          namespace: default
           taskQueue: genai-gemini
           targetQueueSize: "20"
           activationTargetQueueSize: "5"
           queueTypes: activity
-          workerDeploymentName: frigate-genai-gemini
-          workerDeploymentBuildId: v103
