@@ -8,7 +8,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v102"
+    unsafeCustomBuildID: "v103"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -33,7 +33,7 @@ spec:
             matchLabels: {app: frigate-genai-ffmpeg}
       containers:
         - name: worker
-          image: ghcr.io/john2143/frigate-genai-ffmpeg:v102
+          image: ghcr.io/john2143/frigate-genai-ffmpeg:v103
           args: ["--mode=ffmpeg"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
@@ -45,7 +45,7 @@ spec:
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v102"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v103"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
             - {name: TEMPORAL_MAX_FFMPEG, value: "5"}
           resources:
