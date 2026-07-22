@@ -17,10 +17,7 @@ spec:
       - type: temporal
         metadata:
           endpoint: temporal-frontend.default.svc.cluster.local:7233
-          namespace: default
           taskQueue: ffmpeg
           targetQueueSize: "5"
           activationTargetQueueSize: "2"
           queueTypes: activity
-          workerDeploymentName: frigate-genai-ffmpeg
-          workerDeploymentBuildId: ""
