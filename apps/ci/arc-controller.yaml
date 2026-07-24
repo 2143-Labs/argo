@@ -1,0 +1,29 @@
+# GitHub Actions Runner Controller — cluster-scoped controller.
+# Manages listener pods and runner scale sets.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/actions/actions-runner-controller
+    chart: gha-runner-scale-set-controller
+    targetRevision: 0.14.1
+    helm:
+      values: |
+        replicaCount: 1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

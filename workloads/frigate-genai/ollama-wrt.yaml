@@ -23,4 +23,5 @@ spec:
           taskQueue: genai-tasks-ollama
           targetQueueSize: "3"
           activationTargetQueueSize: "1"
+          mode: default
           queueTypes: activity

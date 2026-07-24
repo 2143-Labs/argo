@@ -1,0 +1,72 @@
+# GitHub Actions Runner Scale Set — DinD mode.
+# Provides self-hosted runners with Docker-in-Docker sidecar for
+# Docker builds, Nix builds, and workflow services (Postgres sidecars).
+#
+# The runner image must include Nix (ghcr.io/john2143/arc-runner-nix).
+# Until that image is built, temporarily use ghcr.io/actions/actions-runner
+# and install Nix via cachix/install-nix-action in workflow steps.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-runners
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/actions/actions-runner-controller
+    chart: gha-runner-scale-set
+    targetRevision: 0.14.1
+    helm:
+      values: |
+        githubConfigUrl: "https://github.com/John2143"
+        githubConfigSecret: arc-github-app-creds
+        minRunners: 0
+        maxRunners: 4
+        containerMode:
+          type: "dind"
+        template:
+          spec:
+            containers:
+              - name: runner
+                image: ghcr.io/john2143/arc-runner-nix:latest
+                command: ["/home/runner/run.sh"]
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "1Gi"
+                  limits:
+                    cpu: "4000m"
+                    memory: "8Gi"
+                volumeMounts:
+                  - name: work
+                    mountPath: /home/runner/_work
+                env:
+                  - name: DOCKER_HOST
+                    value: "tcp://localhost:2376"
+              - name: dind
+                image: docker:27-dind
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: work
+                    mountPath: /home/runner/_work
+                  - name: dind-sock
+                    mountPath: /var/run
+            volumes:
+              - name: work
+                emptyDir: {}
+              - name: dind-sock
+                emptyDir: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-runners
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

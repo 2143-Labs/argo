@@ -1,0 +1,40 @@
+# ArgoCD — deployed to the CI k3s cluster.
+# After initial bootstrap (kubectl apply of upstream install.yaml),
+# this app makes ArgoCD self-managing from git.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    targetRevision: 7.9.1
+    helm:
+      values: |
+        global:
+          domain: argocd.ci.ts.2143.me
+        configs:
+          cm:
+            admin.enabled: true
+            timeout.reconciliation: 60s
+          params:
+            server.insecure: true
+        server:
+          extraArgs:
+            - --insecure
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

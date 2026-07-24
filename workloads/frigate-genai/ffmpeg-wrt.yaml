@@ -23,4 +23,5 @@ spec:
           taskQueue: genai-tasks-ffmpeg
           targetQueueSize: "5"
           activationTargetQueueSize: "2"
+          mode: default
           queueTypes: activity

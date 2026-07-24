@@ -23,4 +23,5 @@ spec:
           taskQueue: genai-tasks-gemini
           targetQueueSize: "20"
           activationTargetQueueSize: "5"
+          mode: default
           queueTypes: activity
