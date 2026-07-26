@@ -9,7 +9,7 @@ spec:
     kind: ScaledObject
     spec:
       scaleTargetRef: {}
-      minReplicaCount: 0
+      minReplicaCount: 1
       maxReplicaCount: 5
       pollingInterval: 15
       cooldownPeriod: 120
@@ -23,5 +23,4 @@ spec:
           taskQueue: genai-tasks-ollama
           targetQueueSize: "3"
           activationTargetQueueSize: "1"
-          mode: default
           queueTypes: activity
