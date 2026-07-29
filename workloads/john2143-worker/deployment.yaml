@@ -16,9 +16,6 @@ spec:
     metadata:
       labels:
         app: john2143-worker
-      annotations:
-        linkerd.io/inject: enabled
-        config.linkerd.io/skip-outbound-ports: "32040"
     spec:
       serviceAccountName: john2143-worker
       volumes:
