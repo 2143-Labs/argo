@@ -537,3 +537,43 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: aross-studio-https
+      protocol: HTTPS
+      port: 8443
+      hostname: aross.studio
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ''
+          - kind: Secret
+            name: aross-studio-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: design-aross-studio-https
+      protocol: HTTPS
+      port: 8443
+      hostname: design.aross.studio
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ''
+          - kind: Secret
+            name: aross-studio-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: portfolio-aross-studio-https
+      protocol: HTTPS
+      port: 8443
+      hostname: portfolio.aross.studio
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ''
+          - kind: Secret
+            name: aross-studio-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same

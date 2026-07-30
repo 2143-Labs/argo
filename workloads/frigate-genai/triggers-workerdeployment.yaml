@@ -51,8 +51,8 @@ spec:
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v123"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
           resources:
-            requests: {cpu: "100m", memory: "128Mi"}
-            limits: {cpu: "250m", memory: "256Mi"}
+            requests: {cpu: "100m", memory: "512Mi"}
+            limits: {cpu: "250m", memory: "512Mi"}
           ports:
             - {containerPort: 8080, name: http}
           startupProbe:

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aross-studio
+  labels:
+    app: aross-studio
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aross-studio
+  template:
+    metadata:
+      labels:
+        app: aross-studio
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: aross-studio
+          image: ghcr.io/amandistry/aross.studio:0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
