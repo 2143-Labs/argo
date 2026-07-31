@@ -13,6 +13,7 @@ spec:
       sectionName: acme-http
   hostnames:
     - john2143.com
+    - aross.studio
     - auth.john2143.com
     - files.john2143.com
     - auth.ts.2143.me
