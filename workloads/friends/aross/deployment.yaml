@@ -30,7 +30,6 @@ spec:
           image: ghcr.io/amandistry/aross.studio:2
           imagePullPolicy: IfNotPresent
           securityContext:
-            runAsNonRoot: true
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
