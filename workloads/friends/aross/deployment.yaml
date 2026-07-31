@@ -30,6 +30,9 @@ spec:
           image: ghcr.io/amandistry/aross.studio:3
           imagePullPolicy: IfNotPresent
           securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
