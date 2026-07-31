@@ -27,7 +27,7 @@ spec:
                       - general
       containers:
         - name: aross-studio
-          image: ghcr.io/amandistry/aross.studio:2
+          image: ghcr.io/amandistry/aross.studio:3
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
