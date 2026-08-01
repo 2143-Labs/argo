@@ -54,11 +54,10 @@ spec:
     - "rots.2143.me"
 
 
----
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: aross-studio-wildcard
+  name: aross-studio-tls
   namespace: default
 spec:
   secretName: aross-studio-wildcard-tls
@@ -66,5 +65,4 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - "*.aross.studio"
-    - "aross.studio"
+    - aross.studio
