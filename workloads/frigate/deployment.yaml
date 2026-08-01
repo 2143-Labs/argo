@@ -33,7 +33,7 @@ spec:
             - {name: config, mountPath: /config-out}
       containers:
         - name: frigate
-          image: ghcr.io/blakeblackshear/frigate:0.16.1
+          image: ghcr.io/blakeblackshear/frigate:0.16.1-tensorrt
           command: ["/bin/sh", "/frigate-entrypoint.sh"]
           env:
             - {name: PLUS_API_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: PLUS_API_KEY}}}

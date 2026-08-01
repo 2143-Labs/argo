@@ -6,6 +6,9 @@ spec:
   capacity:
     storage: 18Ti
   accessModes: [ReadWriteMany]
+  mountOptions:
+    - nfsvers=3
+    - nolock
   nfs:
     server: 192.168.5.175
     path: /tank/frigate
