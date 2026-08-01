@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate
+  namespace: default
+  labels: {app: frigate}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}   # SQLite DB on RWO PVC — rolling update would deadlock
+  selector:
+    matchLabels: {app: frigate}
+  template:
+    metadata:
+      labels: {app: frigate}
+    spec:
+      initContainers:
+        - name: config-subst
+          image: docker.io/library/alpine:3.21
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              apk add --no-cache gettext
+              envsubst < /config-tpl/config.yml > /config-out/config.yml
+              chown 1000:1000 /config-out/config.yml
+          env:
+            - {name: NVR_USER, valueFrom: {secretKeyRef: {name: frigate-creds, key: NVR_USER}}}
+            - {name: NVR_PASS, valueFrom: {secretKeyRef: {name: frigate-creds, key: NVR_PASS}}}
+            - {name: NVR_HOST, valueFrom: {secretKeyRef: {name: frigate-creds, key: NVR_HOST}}}
+            - {name: EUFY_USER, valueFrom: {secretKeyRef: {name: frigate-creds, key: EUFY_USER}}}
+            - {name: EUFY_PASS, valueFrom: {secretKeyRef: {name: frigate-creds, key: EUFY_PASS}}}
+          volumeMounts:
+            - {name: config-tpl, mountPath: /config-tpl, readOnly: true}
+            - {name: config, mountPath: /config-out}
+      containers:
+        - name: frigate
+          image: ghcr.io/blakeblackshear/frigate:0.16.1
+          command: ["/bin/sh", "/frigate-entrypoint.sh"]
+          env:
+            - {name: PLUS_API_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: PLUS_API_KEY}}}
+            - {name: LITELLM_FRIGATE_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: LITELLM_FRIGATE_KEY}}}
+            - {name: FRIGATE_GEMINI_API_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: FRIGATE_GEMINI_API_KEY}}}
+          resources:
+            requests: {cpu: "2000m", memory: "4Gi", "nvidia.com/gpu": "1"}
+            limits:   {cpu: "4000m", memory: "8Gi", "nvidia.com/gpu": "1"}
+          ports:
+            - {containerPort: 5000, name: http}
+            - {containerPort: 8554, name: go2rtc-tcp}
+            - {containerPort: 8555, name: go2rtc-udp, protocol: UDP}
+            - {containerPort: 1984, name: go2rtc-api}
+          volumeMounts:
+            - {name: config, mountPath: /config}
+            - {name: recordings, mountPath: /media/frigate}
+            - {name: frigate-entrypoint, mountPath: /frigate-entrypoint.sh, subPath: frigate-entrypoint.sh, readOnly: true}
+            - {name: shm, mountPath: /dev/shm}
+      volumes:
+        - {name: config, persistentVolumeClaim: {claimName: frigate-config}}
+        - {name: recordings, persistentVolumeClaim: {claimName: frigate-recordings}}
+        - {name: config-tpl, configMap: {name: frigate-config-tpl}}
+        - {name: frigate-entrypoint, configMap: {name: frigate-entrypoint}}
+        - {name: shm, emptyDir: {medium: Memory, sizeLimit: 2Gi}}
