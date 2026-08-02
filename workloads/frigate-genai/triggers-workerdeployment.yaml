@@ -39,7 +39,7 @@ spec:
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - name: FRIGATE_BASE_URL
-              value: "http://arch.ts.2143.me:5000"
+              value: "http://frigate.default.svc.cluster.local:5000"
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v132"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
