@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-mqtt
+  labels: {app: frigate-genai-mqtt}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: frigate-genai-mqtt}}
+  template:
+    metadata:
+      labels: {app: frigate-genai-mqtt, app.kubernetes.io/part-of: frigate-genai}
+      annotations:
+        linkerd.io/inject: disabled
+        config.linkerd.io/skip-outbound-ports: "7233"
+    spec:
+      serviceAccountName: frigate-genai
+      tolerations:
+        - {key: wifi, operator: Exists, effect: NoSchedule}
+      containers:
+        - name: mqtt-listener
+          image: ghcr.io/john2143/frigate-genai-genai:v129
+          args: ["--mode=mqtt-listener"]
+          envFrom:
+            - secretRef: {name: frigate-genai-worker-creds}
+          env:
+            - {name: S3_ACCESS_KEY, valueFrom: {secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}}}
+            - {name: S3_SECRET_KEY, valueFrom: {secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}}}
+            - {name: MQTT_HOST, value: mosquitto}
+            - {name: MQTT_PORT, value: "1883"}
+            - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
+            - {name: FRIGATE_BASE_URL, value: "http://arch.ts.2143.me:5000"}
+          resources:
+            requests: {cpu: "50m", memory: "64Mi"}
+            limits: {cpu: "200m", memory: "128Mi"}
+          startupProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12

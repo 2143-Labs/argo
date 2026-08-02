@@ -9,10 +9,10 @@ spec:
     kind: ScaledObject
     spec:
       scaleTargetRef: {}
-      minReplicaCount: 1
+      minReplicaCount: 0
       maxReplicaCount: 10
       pollingInterval: 15
-      cooldownPeriod: 120
+      cooldownPeriod: 300
       triggers:
       - type: temporal
         metadata:

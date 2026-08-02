@@ -42,7 +42,7 @@ spec:
             - "--redirect-url=https://cameras.john2143.com/oauth2/callback"
             - "--reverse-proxy=true"
             - "--http-address=0.0.0.0:4180"
-            - "--upstream=http://frigate-genai-triggers.default.svc.cluster.local:9090"
+            - "--upstream=http://frigate-genai-dashboard.default.svc.cluster.local:9090"
             - "--email-domain=*"
             - "--cookie-domain=cameras.john2143.com"
             - "--cookie-secure=true"

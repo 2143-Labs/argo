@@ -9,12 +9,18 @@ spec:
     kind: ScaledObject
     spec:
       scaleTargetRef: {}
-      minReplicaCount: 1
+      minReplicaCount: 0
+      maxReplicaCount: 5
+      pollingInterval: 15
       cooldownPeriod: 300
       triggers:
-      - type: cron
+      - type: temporal
         metadata:
-          timezone: America/New_York
-          start: 0 0 * * *
-          end: 59 23 * * *
-          desiredReplicas: "1"
+          endpoint: temporal-frontend.default.svc.cluster.local:7233
+          namespace: ""
+          workerDeploymentName: ""
+          workerDeploymentBuildId: ""
+          taskQueue: genai-tasks
+          targetQueueSize: "5"
+          activationTargetQueueSize: "2"
+          queueTypes: workflow

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate-genai-dashboard
+  labels: {app: frigate-genai-dashboard}
+spec:
+  replicas: 1
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app: frigate-genai-dashboard}}
+  template:
+    metadata:
+      labels: {app: frigate-genai-dashboard, app.kubernetes.io/part-of: frigate-genai}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        linkerd.io/inject: disabled
+        config.linkerd.io/skip-outbound-ports: "7233"
+    spec:
+      serviceAccountName: frigate-genai
+      tolerations:
+        - {key: wifi, operator: Exists, effect: NoSchedule}
+      containers:
+        - name: dashboard
+          image: ghcr.io/john2143/frigate-genai-genai:v129
+          args: ["--mode=dashboard"]
+          envFrom:
+            - secretRef: {name: frigate-genai-worker-creds}
+          env:
+            - {name: S3_ACCESS_KEY, valueFrom: {secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}}}
+            - {name: S3_SECRET_KEY, valueFrom: {secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}}}
+            - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
+            - {name: FRIGATE_BASE_URL, value: "http://arch.ts.2143.me:5000"}
+            - {name: HTTP_HOST, value: "0.0.0.0"}
+            - {name: HTTP_PORT, value: "8080"}
+          resources:
+            requests: {cpu: "100m", memory: "128Mi"}
+            limits: {cpu: "250m", memory: "256Mi"}
+          ports:
+            - {containerPort: 8080, name: http}
+          startupProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet: {path: /readyz, port: 8080}
+            periodSeconds: 10
+            failureThreshold: 3

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: frigate-genai-triggers
-  labels: {app: frigate-genai-triggers}
+  name: frigate-genai-dashboard
+  labels: {app: frigate-genai-dashboard}
 spec:
   type: ClusterIP
-  selector: {app: frigate-genai-triggers}
+  selector: {app: frigate-genai-dashboard}
   ports:
     - port: 9090
       targetPort: 8080

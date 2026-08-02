@@ -20,7 +20,6 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
-        linkerd.io/inject: disabled
         config.linkerd.io/skip-outbound-ports: "7233"
     spec:
       serviceAccountName: frigate-genai
@@ -33,10 +32,6 @@ spec:
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
           env:
-            - name: MQTT_HOST
-              value: mosquitto
-            - name: MQTT_PORT
-              value: "1883"
             - name: S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_ACCESS_KEY_ID}
@@ -45,26 +40,14 @@ spec:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - name: FRIGATE_BASE_URL
               value: "http://arch.ts.2143.me:5000"
-            - name: HTTP_HOST
-              value: "0.0.0.0"
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v129"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
           resources:
             requests: {cpu: "100m", memory: "512Mi"}
             limits: {cpu: "250m", memory: "512Mi"}
-          ports:
-            - {containerPort: 8080, name: http}
           startupProbe:
             httpGet: {path: /healthz, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 12
-          readinessProbe:
-            httpGet: {path: /readyz, port: 8080}
-            periodSeconds: 10
-            failureThreshold: 3
-          livenessProbe:
-            httpGet: {path: /healthz, port: 8080}
-            periodSeconds: 30
-            failureThreshold: 3
