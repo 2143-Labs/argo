@@ -46,7 +46,7 @@ spec:
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v130"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
-            - {name: TEMPORAL_MAX_FFMPEG, value: "5"}
+            - {name: TEMPORAL_MAX_FFMPEG, value: "2"}
           resources:
             requests: {cpu: "8000m", memory: "8Gi"}
             limits: {cpu: "8000m", memory: "8Gi"}
