@@ -28,6 +28,9 @@ spec:
             - {name: NVR_HOST, valueFrom: {secretKeyRef: {name: frigate-creds, key: NVR_HOST}}}
             - {name: EUFY_USER, valueFrom: {secretKeyRef: {name: frigate-creds, key: EUFY_USER}}}
             - {name: EUFY_PASS, valueFrom: {secretKeyRef: {name: frigate-creds, key: EUFY_PASS}}}
+          resources:
+            requests: {cpu: "100m", memory: "64Mi"}
+            limits:   {cpu: "100m", memory: "64Mi"}
           volumeMounts:
             - {name: config-tpl, mountPath: /config-tpl, readOnly: true}
             - {name: config, mountPath: /config-out}
