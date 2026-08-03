@@ -15,3 +15,6 @@ spec:
     driver: driver.longhorn.io
     fsType: ext4
     volumeHandle: pocket-id-restored
+    volumeAttributes:
+      numberOfReplicas: "2"
+      staleReplicaTimeout: "20"
