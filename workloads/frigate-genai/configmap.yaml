@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frigate-genai-config
+  namespace: default
+  labels: {app.kubernetes.io/part-of: frigate-genai}
+data:
+  FRIGATE_BASE_URL: "http://frigate.default.svc.cluster.local:5000"

@@ -29,7 +29,7 @@ spec:
             - {name: MQTT_HOST, value: mosquitto}
             - {name: MQTT_PORT, value: "1883"}
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: FRIGATE_BASE_URL, value: "http://frigate.default.svc.cluster.local:5000"}
+            - {name: FRIGATE_BASE_URL, valueFrom: {configMapKeyRef: {name: frigate-genai-config, key: FRIGATE_BASE_URL}}}
           resources:
             requests: {cpu: "50m", memory: "64Mi"}
             limits: {cpu: "200m", memory: "128Mi"}

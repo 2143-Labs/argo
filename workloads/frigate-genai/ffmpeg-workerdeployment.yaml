@@ -47,6 +47,7 @@ spec:
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v133"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ffmpeg"}
             - {name: TEMPORAL_MAX_FFMPEG, value: "2"}
+            - {name: FRIGATE_BASE_URL, valueFrom: {configMapKeyRef: {name: frigate-genai-config, key: FRIGATE_BASE_URL}}}
           resources:
             requests: {cpu: "8000m", memory: "8Gi"}
             limits: {cpu: "8000m", memory: "8Gi"}
