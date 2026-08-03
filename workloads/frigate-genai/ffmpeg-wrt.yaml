@@ -10,7 +10,7 @@ spec:
     spec:
       scaleTargetRef: {}
       minReplicaCount: 0
-      maxReplicaCount: 1
+      maxReplicaCount: 5
       pollingInterval: 15
       cooldownPeriod: 300
       triggers:
