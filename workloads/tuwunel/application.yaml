@@ -73,6 +73,7 @@ spec:
             storageClass: "longhorn-3"
             size: "4Gi"
             accessMode: ReadWriteOnce
+            volumeName: "pvc-2fb820a3-351e-443d-93d3-97392b431a19"
 
         service:
           type: ClusterIP
