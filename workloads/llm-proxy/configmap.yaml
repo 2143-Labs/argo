@@ -25,6 +25,11 @@ data:
         litellm_params:
           model: "gemini/*"
           api_key: "os.environ/GEMINI_API_KEY"
+      # Google Veo (video generation)
+      - model_name: "veo-3.1"
+        litellm_params:
+          model: "gemini/veo-3.1-generate-preview"
+          api_key: "os.environ/GEMINI_API_KEY"
       # DeepSeek
       - model_name: "deepseek/*"
         litellm_params:
