@@ -33,7 +33,7 @@ config:
 persistence:
   enabled: true
   accessMode: ReadWriteOnce
-  storageClass: longhorn
+  storageClass: longhorn-3
   size: 20Gi
 
 service:

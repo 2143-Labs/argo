@@ -4,7 +4,7 @@ metadata:
   name: seaweedfs-master-data
 spec:
   accessModes: [ReadWriteOnce]
-  storageClassName: longhorn
+  storageClassName: longhorn-3
   resources: {requests: {storage: 1Gi}}
 ---
 apiVersion: v1

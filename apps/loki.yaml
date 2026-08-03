@@ -47,7 +47,7 @@ spec:
         write:
           replicas: 2
           persistence:
-            storageClass: longhorn
+            storageClass: longhorn-2
             size: 20Gi
           extraArgs:
             - "-config.expand-env=true"
@@ -102,7 +102,7 @@ spec:
         backend:
           replicas: 2
           persistence:
-            storageClass: longhorn
+            storageClass: longhorn-2
             size: 10Gi
           extraArgs:
             - "-config.expand-env=true"

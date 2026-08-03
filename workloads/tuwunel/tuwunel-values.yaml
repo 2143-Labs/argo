@@ -67,7 +67,7 @@ extraEnv:
 
 persistence:
   data:
-    storageClass: "longhorn"
+    storageClass: "longhorn-3"
     size: "4Gi"
     accessMode: ReadWriteOnce
 

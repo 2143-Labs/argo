@@ -59,7 +59,7 @@ spec:
     - metadata:
         name: storage
       spec:
-        storageClassName: longhorn
+        storageClassName: longhorn-2
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
