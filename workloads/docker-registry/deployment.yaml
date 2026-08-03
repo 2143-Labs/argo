@@ -5,6 +5,7 @@ metadata:
   namespace: kube-system
 spec:
   storageClassName: longhorn-2
+  volumeName: pvc-883bd590-92a8-4f21-a1a7-d41c50166e83
   accessModes:
     - ReadWriteOnce
   resources:

@@ -103,3 +103,7 @@ spec:
       jsonPointers:
         - /spec/template/spec/volumes
         - /spec/template/spec/containers/0/volumeMounts
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/volumeName

@@ -9,5 +9,5 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: ""
+  storageClassName: longhorn-3
   volumeName: pocket-id-restored-pv
