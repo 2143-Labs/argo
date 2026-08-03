@@ -40,8 +40,8 @@ spec:
             - {name: LITELLM_FRIGATE_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: LITELLM_FRIGATE_KEY}}}
             - {name: FRIGATE_GEMINI_API_KEY, valueFrom: {secretKeyRef: {name: frigate-creds, key: FRIGATE_GEMINI_API_KEY}}}
           resources:
-            requests: {cpu: "16000m", memory: "16Gi", "nvidia.com/gpu": "1"}
-            limits:   {cpu: "16000m", memory: "16Gi", "nvidia.com/gpu": "1"}
+            requests: {cpu: "12000m", memory: "12Gi", "nvidia.com/gpu": "1"}
+            limits:   {cpu: "12000m", memory: "12Gi", "nvidia.com/gpu": "1"}
           ports:
             - {containerPort: 5000, name: http}
             - {containerPort: 8554, name: go2rtc-tcp}
