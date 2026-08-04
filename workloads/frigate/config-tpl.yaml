@@ -645,13 +645,11 @@ data:
         cam08: rtsp://${EUFY_USER}:${EUFY_PASS}@192.168.5.59/live0
     logger:
       default: info
-      logs:
-        frigate.genai: debug
     lpr:
       detection_threshold: 0.7
       device: GPU
       enabled: true
-      model_size: large
+      model_size: small
       recognition_threshold: 0.9
     model:
       path: plus://7132ccf17b6cec25b827d04c5bb0b78d

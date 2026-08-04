@@ -36,8 +36,7 @@ spec:
             - {name: config, mountPath: /config-out}
       containers:
         - name: frigate
-          image: ghcr.io/blakeblackshear/frigate:0.16.1-tensorrt
-          command: ["/bin/sh", "/frigate-entrypoint.sh"]
+          image: ghcr.io/blakeblackshear/frigate:0.17.2-tensorrt
           env:
           resources:
             requests: {cpu: "16000m", memory: "16Gi", "nvidia.com/gpu": "1"}
@@ -50,11 +49,9 @@ spec:
           volumeMounts:
             - {name: config, mountPath: /config}
             - {name: recordings, mountPath: /media/frigate}
-            - {name: frigate-entrypoint, mountPath: /frigate-entrypoint.sh, subPath: frigate-entrypoint.sh, readOnly: true}
             - {name: shm, mountPath: /dev/shm}
       volumes:
         - {name: config, persistentVolumeClaim: {claimName: frigate-config}}
         - {name: recordings, persistentVolumeClaim: {claimName: frigate-recordings}}
         - {name: config-tpl, configMap: {name: frigate-config-tpl}}
-        - {name: frigate-entrypoint, configMap: {name: frigate-entrypoint}}
         - {name: shm, emptyDir: {medium: Memory, sizeLimit: 2Gi}}
