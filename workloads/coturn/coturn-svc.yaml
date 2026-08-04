@@ -4,10 +4,10 @@ metadata:
   name: coturn
   namespace: matrix
   annotations:
-    kube-vip.io/loadbalancerIPs: "192.168.5.10"
+    metallb.io/loadBalancerIPs: "192.168.6.21"
 spec:
   type: LoadBalancer
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: Cluster
   selector:
     app: coturn
   ports:

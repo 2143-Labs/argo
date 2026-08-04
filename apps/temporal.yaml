@@ -63,7 +63,9 @@ spec:
 
           frontend:
             service:
-              type: NodePort
+              type: LoadBalancer
+              annotations:
+                metallb.io/loadBalancerIPs: "192.168.6.20"
           worker:
             enabled: true
             podAnnotations:

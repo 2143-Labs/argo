@@ -24,8 +24,10 @@ metadata:
   name: headscale-stun
   labels:
     app: headscale
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.18"
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: headscale
   ports:

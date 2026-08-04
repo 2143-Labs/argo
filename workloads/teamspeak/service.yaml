@@ -22,8 +22,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ts-voice
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.15"
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
   - port: 9987
     targetPort: 9987
@@ -37,8 +39,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ts-files
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.16"
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
   - port: 30033
     targetPort: 30033

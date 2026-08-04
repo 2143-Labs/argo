@@ -3,8 +3,10 @@ kind: Service
 metadata:
   name: mimir-lb
   namespace: observability
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.23"
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: mimir
   ports:
@@ -18,8 +20,10 @@ kind: Service
 metadata:
   name: loki-push-lb
   namespace: observability
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.24"
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app.kubernetes.io/component: gateway
     app.kubernetes.io/name: loki

@@ -62,8 +62,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: openrct2-game
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.17"
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
     - port: 11753
       targetPort: 11753

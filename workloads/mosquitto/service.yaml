@@ -20,8 +20,10 @@ metadata:
   name: mosquitto-nodeport
   labels:
     app: mosquitto
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.19"
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: mosquitto
   ports:
