@@ -18,15 +18,14 @@ spec:
     spec:
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
                     operator: In
                     values:
-                      - arch
-                      - closet
-                      - nas
+                      - general
       containers:
         - name: unifi
           image: lscr.io/linuxserver/unifi-network-application:10.4.57-ls136
