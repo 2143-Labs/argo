@@ -4,6 +4,8 @@ metadata:
   name: unifi-inform
   labels:
     app: unifi
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.10"
 spec:
   type: LoadBalancer
   selector:
