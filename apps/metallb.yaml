@@ -19,11 +19,14 @@ spec:
             - key: pi
               operator: Exists
               effect: NoSchedule
-        frrk8s:
-          tolerations:
-            - key: pi
-              operator: Exists
-              effect: NoSchedule
+        # Subchart values nest under "frr-k8s:" (hyphen), NOT "frrk8s:" —
+        # the parent chart only accepts enabled/external/namespace there.
+        frr-k8s:
+          frrk8s:
+            tolerations:
+              - key: pi
+                operator: Exists
+                effect: NoSchedule
   destination:
     server: https://kubernetes.default.svc
     namespace: metallb-system
