@@ -37,6 +37,8 @@ metadata:
   name: unifi-discovery
   labels:
     app: unifi
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.12"
 spec:
   type: LoadBalancer
   selector:
