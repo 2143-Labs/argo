@@ -19,6 +19,10 @@ metadata:
   name: {{ include "stalwart.fullname" . }}
   labels:
     {{- include "stalwart.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   selector:
