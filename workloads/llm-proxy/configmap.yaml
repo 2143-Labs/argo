@@ -554,3 +554,4 @@ data:
         type: redis
         host: litellm-redis
         port: "6379"
+        ttl: 3600
