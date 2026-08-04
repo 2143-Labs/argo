@@ -1,0 +1,18 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: services
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.6.10-192.168.6.50
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: control-plane-vip
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.5.10-192.168.5.10
+  autoAssign: false

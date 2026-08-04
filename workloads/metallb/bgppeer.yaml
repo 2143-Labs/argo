@@ -1,0 +1,9 @@
+apiVersion: metallb.io/v1beta2
+kind: BGPPeer
+metadata:
+  name: mikrotik-router
+  namespace: metallb-system
+spec:
+  myASN: 65000
+  peerASN: 65001
+  peerAddress: 192.168.5.1
