@@ -49,8 +49,8 @@ spec:
             - {name: TEMPORAL_MAX_FFMPEG, value: "2"}
             - {name: FRIGATE_BASE_URL, valueFrom: {configMapKeyRef: {name: frigate-genai-config, key: FRIGATE_BASE_URL}}}
           resources:
-            requests: {cpu: "8000m", memory: "8Gi"}
-            limits: {cpu: "8000m", memory: "8Gi"}
+            requests: {cpu: "4000m", memory: "8Gi"}
+            limits: {cpu: "4000m", memory: "8Gi"}
           volumeMounts:
             - {name: scratch, mountPath: /tmp}
           startupProbe:
