@@ -142,8 +142,8 @@ data:
         - name: "cameras.ts.2143.me"
           type: "A"
           value: "192.168.6.11"
-        # frigate.ts.2143.me
-        - name: "frigate.ts.2143.me"
+        # cams.ts.2143.me
+        - name: "cams.ts.2143.me"
           type: "A"
           value: "192.168.6.11"
         # temporal.ts.2143.me

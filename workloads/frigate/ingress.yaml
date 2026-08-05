@@ -6,9 +6,9 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: frigate-ts-2143-https
+      sectionName: cams-ts-2143-https
   hostnames:
-    - frigate.ts.2143.me
+    - cams.ts.2143.me
   rules:
     - matches:
         - path:
