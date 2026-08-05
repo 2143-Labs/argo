@@ -48,6 +48,7 @@ spec:
             retention_period: 2160h
           compactor:
             retention_enabled: true
+            delete_request_store: s3
         write:
           replicas: 2
           persistence:
