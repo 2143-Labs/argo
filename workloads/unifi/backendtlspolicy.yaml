@@ -14,3 +14,7 @@ spec:
       name: unifi-web
   validation:
     hostname: unifi
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: unifi-web-ca

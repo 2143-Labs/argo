@@ -1,0 +1,40 @@
+# UniFi controller's self-signed certificate (CN=unifi), pinned as the trust
+# anchor for the BackendTLSPolicy so traefik can re-encrypt to the controller's
+# HTTPS port. The cert is generated once on first boot and persisted in the
+# controller keystore on the unifi-data PVC (valid 2026-07-18 to 2036-07-15);
+# if the keystore is ever wiped, re-extract and update this ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unifi-web-ca
+  namespace: default
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIE1TCCAr2gAwIBAgIIDFGzUICHHtYwDQYJKoZIhvcNAQEMBQAwEDEOMAwGA1UE
+    AxMFdW5pZmkwHhcNMjYwNzE4MjA1NDUzWhcNMzYwNzE1MjA1NDUzWjAQMQ4wDAYD
+    VQQDEwV1bmlmaTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAK/0BjpO
+    kAU304Is/T614/L3gdgx2Q+inOzyotkQoqO3es6Br/sEbBhI+c5B1COLWtfqbFpQ
+    M86X2EGfnofJvIL3qCTaZC4220hEpI4CrCwyj6c1VwV0q1v5T2i0aMOaPIjXt/IE
+    Py+Fod9tl13EMbgjxH0CZg3f8EAQDLz5oVtpC2t8D9aObn6abcGTBrzM1VkC4SKf
+    TtIiVsU9pp9+YOfNsaF/+K+uqSLchfJv7antA/U55t+HCbTk8brs1r1J1xsh2LXe
+    feeOz98hr8N7eB36Yn0eqfwTr70vjSbebKTO6C8RFv4iRYclC0+e+3KslaJ6+G08
+    KMDz9qlyqN+ahKU4MwCiAuoIk2Lbg++Q0QDged9xktlXCl/GABujrzW3QF3yff2h
+    6YQLIHcogxtM+Oqf1t0ACbISK+ORVOGTwHC0DIzNFolxHicTIlBA8sjPu67vqCXs
+    ufn90xyuE1a3TddswblMnJMqJeunIf+mzMYVA7Iwg7U1A5w4yFLqNYUgiQbdjxaV
+    3/l9R2WG9ntam03vFTHofovwTVWkZU/4Bjc0L6c9rUgXjrvsSAeI5fSLucIK35Nu
+    rf5biZWigOPXWRSS9qrWng1zVZDppX9MYvHmgKXJ2yiwimh3EW662YWXs/IqhjRt
+    0MZ/O1osG9TMxYaNs7NdLj7gC+HFSyI+IdLvAgMBAAGjMzAxMB0GA1UdDgQWBBQ4
+    JpOHkBqQ+zN2mMCQU+moIvf3gTAQBgNVHREECTAHggV1bmlmaTANBgkqhkiG9w0B
+    AQwFAAOCAgEAmF2Wy8P3YfOlsjKaVCkjwkLHUsUZXO5mfDZiWIWJTIfZ/B1HAz02
+    0vElZz4xOOwyDP1js3BRoAZ2EMuFO6Sfo2w1q5ZGDlncLaAW5hD3w04aIQSiozPq
+    dONo+Zijv2X0aOp0HgbeNEJ0oSJ2OnZx1zCQxAEnAENBVuyTgV4J+FDMMDyrrvJ7
+    YBcfyv6l8jZwK91PBa04Cx9GK4+LzSteJvZvBJpQLxX4FOE3VZX3E9cVs7GpYw2o
+    TGvw7feMQDTs/mvs/hsAxCPjnFe7SFNBS7lK9+xJPIqVoPrp0Vv9RYERKCWnTxzF
+    dOoeyK8LHAR3E6D6iwZx+uJ0HGm6JbbXFR/g0Kvz5B6uxGSYn9wAY2nZqAMeNXdD
+    Fn8gRla79LNkf8B48vaYker46qEec8aDjNW/ylGqXPjASSjJzIPDMf0XRg8bidzI
+    uGA2RlTmHUDhHH+/k8wQtwXxFL0gmDywLaG+mjtgqie6+vayh/bFHw2cZWXYU7Tn
+    YZS0PAY7N3RYHtfBE/KbueTEN124WUSzRg3q52R7r/Hr33QPTnvFFsW7MMxFgdj1
+    1hX8aN8A0bSdcKjToPbGmFhhZaMYB7Ad2/RKzj7vpKMlZscZqPxslPWJmo9sRAfd
+    RvO/PQHvw1Yo9FfxLSg1nWrlrkA83StHFyDJgNX+5uTlEbT0yWEb5Ac=
+    -----END CERTIFICATE-----
