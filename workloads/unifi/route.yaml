@@ -1,0 +1,19 @@
+# unifi.ts.2143.me — TLS passthrough to the UniFi controller's own HTTPS
+# (port 8443). The gateway does not terminate TLS here: UniFi serves its own
+# self-signed certificate, and the browser shows the standard self-signed
+# warning (acceptable for a tailnet-only admin UI).
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: unifi-ts-2143
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: unifi-ts-2143-https
+  hostnames:
+    - unifi.ts.2143.me
+  rules:
+    - backendRefs:
+        - name: unifi-web
+          port: 8443

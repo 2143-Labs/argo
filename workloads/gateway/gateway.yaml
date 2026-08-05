@@ -241,6 +241,15 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: unifi-ts-2143-https
+      protocol: TLS
+      port: 8443
+      hostname: unifi.ts.2143.me
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Same
 
     - name: longhorn-ts-2143-https
       protocol: HTTPS

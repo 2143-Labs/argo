@@ -106,10 +106,6 @@ data:
       split: {}
       search_domains: []
       extra_records:
-        # auth.ts.2143.me
-        - name: "auth.ts.2143.me"
-          type: "A"
-          value: "192.168.6.11"
         # home.ts.2143.me
         - name: "home.ts.2143.me"
           type: "A"
@@ -148,6 +144,10 @@ data:
           value: "192.168.6.11"
         # temporal.ts.2143.me
         - name: "temporal.ts.2143.me"
+          type: "A"
+          value: "192.168.6.11"
+        # unifi.ts.2143.me
+        - name: "unifi.ts.2143.me"
           type: "A"
           value: "192.168.6.11"
     unix_socket: /var/run/headscale/headscale.sock
