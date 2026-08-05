@@ -48,6 +48,8 @@ spec:
               value: unifi
             - name: MONGO_AUTHSOURCE
               value: admin
+            - name: INFORM_HOST
+              value: http://192.168.6.10:8080
           ports:
             - containerPort: 8443
               name: web-ui
