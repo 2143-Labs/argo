@@ -61,10 +61,269 @@ spec:
                 }
                 external_labels = { cluster = "home" }
               }
+
+              // ── Metrics: remote write to Mimir ──
+              prometheus.remote_write "mimir" {
+                endpoint {
+                  url = "http://mimir.observability.svc:8080/api/v1/push"
+                }
+              }
+
+              // kubelet + cAdvisor per node (role=node → <internalIP>:10250)
+              discovery.kubernetes "nodes" {
+                role = "node"
+              }
+
+              prometheus.scrape "kubelet" {
+                targets           = discovery.kubernetes.nodes.targets
+                job_name          = "kubelet"
+                scheme            = "https"
+                metrics_path      = "/metrics"
+                scrape_interval   = "30s"
+                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                tls_config {
+                  insecure_skip_verify = true
+                }
+                clustering {
+                  enabled = true
+                }
+                forward_to = [prometheus.remote_write.mimir.receiver]
+              }
+
+              prometheus.scrape "cadvisor" {
+                targets           = discovery.kubernetes.nodes.targets
+                job_name          = "cadvisor"
+                scheme            = "https"
+                metrics_path      = "/metrics/cadvisor"
+                scrape_interval   = "30s"
+                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                tls_config {
+                  insecure_skip_verify = true
+                }
+                clustering {
+                  enabled = true
+                }
+                forward_to = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // kube-state-metrics (deployed in Step 2)
+              discovery.kubernetes "ksm" {
+                role = "pod"
+                namespaces {
+                  names = ["kube-state-metrics"]
+                }
+              }
+
+              prometheus.scrape "ksm" {
+                targets         = discovery.kubernetes.ksm.targets
+                job_name        = "kube-state-metrics"
+                scrape_interval = "30s"
+                clustering {
+                  enabled = true
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // traefik (kube-system, metrics port 9100 declared)
+              discovery.kubernetes "traefik" {
+                role = "pod"
+                namespaces {
+                  names = ["kube-system"]
+                }
+                selectors {
+                  role  = "pod"
+                  label = "app.kubernetes.io/name=traefik"
+                }
+              }
+
+              prometheus.scrape "traefik" {
+                targets         = discovery.kubernetes.traefik.targets
+                job_name        = "traefik"
+                scrape_interval = "30s"
+                clustering {
+                  enabled = true
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // temporal server services (default ns; metrics on :9090 — force address since
+              // the pods may not declare the container port)
+              discovery.kubernetes "temporal" {
+                role = "pod"
+                namespaces {
+                  names = ["default"]
+                }
+                selectors {
+                  role  = "pod"
+                  label = "app.kubernetes.io/name=temporal"
+                }
+              }
+
+              discovery.relabel "temporal" {
+                targets = discovery.kubernetes.temporal.targets
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  regex         = "temporal-(frontend|history|matching|worker)-.*"
+                  action        = "keep"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_ip"]
+                  regex         = "(.+)"
+                  replacement   = "$1:9090"
+                  target_label  = "__address__"
+                }
+              }
+
+              prometheus.scrape "temporal" {
+                targets         = discovery.relabel.temporal.output
+                job_name        = "temporal"
+                scrape_interval = "30s"
+                clustering {
+                  enabled = true
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // metallb BGP metrics — HTTPS, bearer token. frr exporter on :9140, speaker on
+              // :9120 (ports named metricshttps; observed 401 without auth).
+              discovery.kubernetes "metallb" {
+                role = "pod"
+                namespaces {
+                  names = ["metallb-system"]
+                }
+              }
+
+              discovery.relabel "frr" {
+                targets = discovery.kubernetes.metallb.targets
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_port_number"]
+                  regex         = "9140"
+                  action        = "keep"
+                }
+              }
+
+              prometheus.scrape "frr" {
+                targets           = discovery.relabel.frr.output
+                job_name          = "metallb-frr"
+                scheme            = "https"
+                scrape_interval   = "30s"
+                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                tls_config {
+                  insecure_skip_verify = true
+                }
+                clustering {
+                  enabled = true
+                }
+                forward_to = [prometheus.remote_write.mimir.receiver]
+              }
+
+              discovery.relabel "speaker" {
+                targets = discovery.kubernetes.metallb.targets
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_port_number"]
+                  regex         = "9120"
+                  action        = "keep"
+                }
+              }
+
+              prometheus.scrape "speaker" {
+                targets           = discovery.relabel.speaker.output
+                job_name          = "metallb-speaker"
+                scheme            = "https"
+                scrape_interval   = "30s"
+                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                tls_config {
+                  insecure_skip_verify = true
+                }
+                clustering {
+                  enabled = true
+                }
+                forward_to = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // LGTM + Alloy self-metrics (static targets — services are stable)
+              prometheus.scrape "observability" {
+                targets = [
+                  { __address__ = "mimir.observability.svc:8080" },
+                  { __address__ = "loki-read.observability.svc:3100" },
+                  { __address__ = "loki-write.observability.svc:3100" },
+                  { __address__ = "loki-backend.observability.svc:3100" },
+                  { __address__ = "tempo.observability.svc:3200" },
+                  { __address__ = "grafana.observability.svc:80" },
+                  { __address__ = "alloy.observability.svc:12345" },
+                ]
+                job_name        = "observability"
+                scrape_interval = "30s"
+                clustering {
+                  enabled = true
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // keda metrics API server (verified 200 on :8080/metrics)
+              prometheus.scrape "keda" {
+                targets = [
+                  { __address__ = "keda-operator-metrics-apiserver.keda.svc:8080" },
+                ]
+                job_name        = "keda"
+                scrape_interval = "30s"
+                clustering {
+                  enabled = true
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+              }
+
+              // ── Traces: OTLP receiver → batch → Tempo ──
+              otelcol.receiver.otlp "traces" {
+                grpc {
+                  endpoint = "0.0.0.0:4317"
+                }
+                http {
+                  endpoint = "0.0.0.0:4318"
+                }
+                output {
+                  traces = [otelcol.processor.batch.traces.input]
+                }
+              }
+
+              otelcol.processor.batch "traces" {
+                output {
+                  traces = [otelcol.exporter.otlp.tempo.input]
+                }
+              }
+
+              otelcol.exporter.otlp "tempo" {
+                client {
+                  endpoint = "tempo.observability.svc:4317"
+                  tls {
+                    insecure = true
+                  }
+                }
+              }
           clustering:
             enabled: true
             name: alloy
           enableReporting: false
+          storagePath: /var/lib/alloy
+          mounts:
+            extra:
+              - name: positions
+                mountPath: /var/lib/alloy
+          extraPorts:
+            - name: otlp-grpc
+              port: 4317
+              targetPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              port: 4318
+              targetPort: 4318
+              protocol: TCP
+        volumes:
+          extra:
+            - name: positions
+              hostPath:
+                path: /var/lib/alloy
+                type: DirectoryOrCreate
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

@@ -44,6 +44,10 @@ spec:
               insecure: false
               access_key_id: ${S3_ACCESS_KEY}
               secret_access_key: ${S3_SECRET_KEY}
+          limits_config:
+            retention_period: 2160h
+          compactor:
+            retention_enabled: true
         write:
           replicas: 2
           persistence:
