@@ -23,15 +23,23 @@ spec:
   ignoreDifferences:
     - group: postgresql.cnpg.io
       kind: Cluster
-      jsonPointers:
-        - /spec/enablePDB
-        - /spec/enableSuperuserAccess
-        - /spec/failoverDelay
-        - /spec/logLevel
-        - /spec/maxSyncReplicas
-        - /spec/minSyncReplicas
-        - /spec/monitoring
-        - /spec/affinity
-        - /spec/primaryUpdateStrategy
-        - /spec/primaryUpdateMethod
-        - /spec/backup
+      # ServerSideApply=true: jsonPointers are unreliable under server-side
+      # diff; jqPathExpressions are the supported form. Fields below are
+      # operator-defaulted (written back into spec by the CNPG controller).
+      jqPathExpressions:
+        - .spec.enablePDB
+        - .spec.enableSuperuserAccess
+        - .spec.failoverDelay
+        - .spec.logLevel
+        - .spec.maxSyncReplicas
+        - .spec.minSyncReplicas
+        - .spec.monitoring
+        - .spec.affinity
+        - .spec.primaryUpdateStrategy
+        - .spec.primaryUpdateMethod
+        - .spec.backup
+        - .spec.postgresUID
+        - .spec.postgresGID
+        - .spec.postgresql.parameters
+        - .spec.probes
+        - .spec.syncReplicaElectionConstraint
