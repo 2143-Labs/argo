@@ -318,12 +318,13 @@ spec:
               port: 4318
               targetPort: 4318
               protocol: TCP
-        volumes:
-          extra:
-            - name: positions
-              hostPath:
-                path: /var/lib/alloy
-                type: DirectoryOrCreate
+        controller:
+          volumes:
+            extra:
+              - name: positions
+                hostPath:
+                  path: /var/lib/alloy
+                  type: DirectoryOrCreate
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
