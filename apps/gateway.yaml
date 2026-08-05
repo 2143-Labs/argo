@@ -22,3 +22,22 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      # API-server defaulting on Gateway API CRDs: certificateRefs items gain
+      # a defaulted group:"" field not present in the manifests.
+      jqPathExpressions:
+        - .spec.listeners[].tls.certificateRefs[].group
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # API-server defaulting on Gateway API CRDs: parentRefs gain group/kind
+      # defaults, rules[].matches defaults to a / prefix, backendRefs gain
+      # group/kind/weight defaults - none present in the manifests.
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].matches
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
