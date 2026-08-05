@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v137"
+    unsafeCustomBuildID: "v138"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -27,7 +27,7 @@ spec:
         - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
         - name: triggers
-          image: ghcr.io/john2143/frigate-genai-genai:v137
+          image: ghcr.io/john2143/frigate-genai-genai:v138
           args: ["--mode=triggers"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
@@ -40,7 +40,7 @@ spec:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - {name: FRIGATE_BASE_URL, valueFrom: {configMapKeyRef: {name: frigate-genai-config, key: FRIGATE_BASE_URL}}}
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v137"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v138"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-triggers"}
           resources:
             requests: {cpu: "100m", memory: "512Mi"}
