@@ -43,9 +43,7 @@ spec:
                 endpoint {
                   url = "http://loki-gateway.observability.svc:80/loki/api/v1/push"
                 }
-                external_labels = {
-                  cluster = "home"
-                }
+                external_labels = { cluster = "home" }
               }
           clustering:
             enabled: true
