@@ -1,9 +1,9 @@
-# unifi.ts.2143.me — TLS passthrough to the UniFi controller's own HTTPS
-# (port 8443). The gateway does not terminate TLS here: UniFi serves its own
-# self-signed certificate, and the browser shows the standard self-signed
-# warning (acceptable for a tailnet-only admin UI).
+# unifi.ts.2143.me — traefik terminates TLS with the cert-manager wildcard
+# cert (*.ts.2143.me), then re-encrypts to the UniFi controller's own HTTPS
+# on 8443 (see backendtlspolicy.yaml). Clients get a valid Let's Encrypt cert;
+# the controller's self-signed cert never reaches them.
 apiVersion: gateway.networking.k8s.io/v1
-kind: TLSRoute
+kind: HTTPRoute
 metadata:
   name: unifi-ts-2143
   namespace: default

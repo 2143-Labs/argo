@@ -50,15 +50,6 @@ spec:
               value: admin
             - name: INFORM_HOST
               value: http://192.168.6.10:8080
-            # Serve the cert-manager wildcard cert (*.ts.2143.me) so the
-            # controller UI at unifi.ts.2143.me has a valid Let's Encrypt cert.
-            # linuxserver's init imports these at container start; when
-            # cert-manager rotates the secret (~every 60-90d), rollout-restart
-            # this deployment to re-import.
-            - name: CERT_FILE
-              value: /certs/tls.crt
-            - name: CERT_KEY
-              value: /certs/tls.key
           ports:
             - containerPort: 8443
               name: web-ui
@@ -73,9 +64,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
-            - name: wildcard-cert
-              mountPath: /certs
-              readOnly: true
           resources:
             requests:
               cpu: 200m
@@ -145,6 +133,3 @@ spec:
         - name: mongodb-data
           persistentVolumeClaim:
             claimName: unifi-mongodb-data
-        - name: wildcard-cert
-          secret:
-            secretName: ts-2143-me-wildcard-tls

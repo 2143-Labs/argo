@@ -1,0 +1,16 @@
+# Traefik re-encrypts to the UniFi controller's self-signed HTTPS on 8443.
+# Validation targets the controller's own CN ("unifi"): the self-signed cert
+# is trusted for this hop only and never exposed to clients (traefik terminates
+# with the valid *.ts.2143.me wildcard cert upstream).
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: unifi-web-tls
+  namespace: default
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: unifi-web
+  validation:
+    hostname: unifi
