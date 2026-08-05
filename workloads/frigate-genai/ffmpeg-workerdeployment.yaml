@@ -60,4 +60,4 @@ spec:
             failureThreshold: 6
       volumes:
         - name: scratch
-          emptyDir: {sizeLimit: 2Gi}
+          emptyDir: {sizeLimit: 10Gi}
