@@ -247,6 +247,19 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: frigate-ts-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: frigate.ts.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ''
+          - kind: Secret
+            name: ts-2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
 
     - name: longhorn-ts-2143-https
       protocol: HTTPS
