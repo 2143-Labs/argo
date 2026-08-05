@@ -23,9 +23,9 @@ spec:
   ignoreDifferences:
     - group: postgresql.cnpg.io
       kind: Cluster
-      # ServerSideApply=true: jsonPointers are unreliable under server-side
-      # diff; jqPathExpressions are the supported form. Fields below are
-      # operator-defaulted (written back into spec by the CNPG controller).
+      # ServerSideApply=true: jqPathExpressions are the supported form.
+      # The CNPG operator writes these fields back into spec on reconcile;
+      # the list is the complete set observed on this cluster (2026-08-05).
       jqPathExpressions:
         - .spec.enablePDB
         - .spec.enableSuperuserAccess
@@ -40,6 +40,15 @@ spec:
         - .spec.backup
         - .spec.postgresUID
         - .spec.postgresGID
-        - .spec.postgresql.parameters
+        - .spec.postgresql
         - .spec.probes
-        - .spec.syncReplicaElectionConstraint
+        - .spec.replicationSlots
+        - .spec.smartShutdownTimeout
+        - .spec.startDelay
+        - .spec.stopDelay
+        - .spec.switchoverDelay
+        - .spec.storage.resizeInUseVolumes
+        - .spec.walStorage.resizeInUseVolumes
+        - .spec.bootstrap.initdb.encoding
+        - .spec.bootstrap.initdb.localeCType
+        - .spec.bootstrap.initdb.localeCollate
