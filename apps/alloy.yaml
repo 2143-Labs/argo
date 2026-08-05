@@ -184,62 +184,6 @@ spec:
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
-              // metallb BGP metrics — HTTPS, bearer token. frr exporter on :9140, speaker on
-              // :9120 (ports named metricshttps; observed 401 without auth).
-              discovery.kubernetes "metallb" {
-                role = "pod"
-                namespaces {
-                  names = ["metallb-system"]
-                }
-              }
-
-              discovery.relabel "frr" {
-                targets = discovery.kubernetes.metallb.targets
-                rule {
-                  source_labels = ["__meta_kubernetes_pod_container_port_number"]
-                  regex         = "9140"
-                  action        = "keep"
-                }
-              }
-
-              prometheus.scrape "frr" {
-                targets           = discovery.relabel.frr.output
-                job_name          = "metallb-frr"
-                scheme            = "https"
-                scrape_interval   = "30s"
-                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-                tls_config {
-                  insecure_skip_verify = true
-                }
-                clustering {
-                  enabled = true
-                }
-                forward_to = [prometheus.remote_write.mimir.receiver]
-              }
-
-              discovery.relabel "speaker" {
-                targets = discovery.kubernetes.metallb.targets
-                rule {
-                  source_labels = ["__meta_kubernetes_pod_container_port_number"]
-                  regex         = "9120"
-                  action        = "keep"
-                }
-              }
-
-              prometheus.scrape "speaker" {
-                targets           = discovery.relabel.speaker.output
-                job_name          = "metallb-speaker"
-                scheme            = "https"
-                scrape_interval   = "30s"
-                bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-                tls_config {
-                  insecure_skip_verify = true
-                }
-                clustering {
-                  enabled = true
-                }
-                forward_to = [prometheus.remote_write.mimir.receiver]
-              }
 
               // LGTM + Alloy self-metrics (static targets — services are stable)
               prometheus.scrape "observability" {
