@@ -18,7 +18,7 @@ spec:
         - name: mimir
           image: grafana/mimir:2.14.2
           args:
-            - "-target=all"
+            - "-target=all,alertmanager"
             - "-config.file=/etc/mimir/mimir.yaml"
             - "-config.expand-env=true"
           env:
@@ -94,6 +94,9 @@ data:
     alertmanager_storage:
       s3:
         bucket_name: mimir-alertmanager
+    ruler:
+      alertmanager_url: http://127.0.0.1:8080/alertmanager
+      rule_path: /data/rules
     ingester:
       ring:
         replication_factor: 1
