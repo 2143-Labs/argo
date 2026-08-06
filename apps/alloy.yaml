@@ -84,9 +84,6 @@ spec:
                 tls_config {
                   insecure_skip_verify = true
                 }
-                clustering {
-                  enabled = true
-                }
                 forward_to = [prometheus.remote_write.mimir.receiver]
               }
 
@@ -99,9 +96,6 @@ spec:
                 bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                 tls_config {
                   insecure_skip_verify = true
-                }
-                clustering {
-                  enabled = true
                 }
                 forward_to = [prometheus.remote_write.mimir.receiver]
               }
@@ -118,9 +112,6 @@ spec:
                 targets         = discovery.kubernetes.ksm.targets
                 job_name        = "kube-state-metrics"
                 scrape_interval = "30s"
-                clustering {
-                  enabled = true
-                }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
@@ -149,9 +140,6 @@ spec:
                 targets         = discovery.relabel.traefik.output
                 job_name        = "traefik"
                 scrape_interval = "30s"
-                clustering {
-                  enabled = true
-                }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
@@ -174,9 +162,6 @@ spec:
                 targets         = discovery.relabel.temporal.output
                 job_name        = "temporal"
                 scrape_interval = "30s"
-                clustering {
-                  enabled = true
-                }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
@@ -194,9 +179,6 @@ spec:
                 ]
                 job_name        = "observability"
                 scrape_interval = "30s"
-                clustering {
-                  enabled = true
-                }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
@@ -207,9 +189,6 @@ spec:
                 ]
                 job_name        = "keda"
                 scrape_interval = "30s"
-                clustering {
-                  enabled = true
-                }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
