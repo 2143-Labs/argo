@@ -59,6 +59,11 @@ spec:
                   tracesToLogsV2:
                     datasourceUid: loki
 
+        sidecar:
+          dashboards:
+            enabled: true
+            label: grafana_dashboard
+
         envFromSecrets:
           - name: grafana-oidc
   destination:
