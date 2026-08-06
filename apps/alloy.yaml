@@ -136,27 +136,23 @@ spec:
                 }
               }
 
+              discovery.relabel "traefik" {
+                targets = discovery.kubernetes.traefik.targets
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_port_number"]
+                  regex         = "9100"
+                  action        = "keep"
+                }
+              }
+
               prometheus.scrape "traefik" {
-                targets         = discovery.kubernetes.traefik.targets
+                targets         = discovery.relabel.traefik.output
                 job_name        = "traefik"
                 scrape_interval = "30s"
                 clustering {
                   enabled = true
                 }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
-              }
-
-              // temporal server services (default ns; metrics on :9090 — force address since
-              // the pods may not declare the container port)
-              discovery.kubernetes "temporal" {
-                role = "pod"
-                namespaces {
-                  names = ["default"]
-                }
-                selectors {
-                  role  = "pod"
-                  label = "app.kubernetes.io/name=temporal"
-                }
               }
 
               discovery.relabel "temporal" {
