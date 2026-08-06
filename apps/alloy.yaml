@@ -143,6 +143,19 @@ spec:
                 forward_to      = [prometheus.remote_write.mimir.receiver]
               }
 
+              // temporal server services (default ns; metrics on :9090 — force address since
+              // the pods may not declare the container port)
+              discovery.kubernetes "temporal" {
+                role = "pod"
+                namespaces {
+                  names = ["default"]
+                }
+                selectors {
+                  role  = "pod"
+                  label = "app.kubernetes.io/name=temporal"
+                }
+              }
+
               discovery.relabel "temporal" {
                 targets = discovery.kubernetes.temporal.targets
                 rule {
