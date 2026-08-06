@@ -24,6 +24,7 @@ spec:
       terminationGracePeriodSeconds: 180
       tolerations:
         - {key: wifi, operator: Exists, effect: NoSchedule}
+        - {key: seated, operator: Exists, effect: NoSchedule}
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
