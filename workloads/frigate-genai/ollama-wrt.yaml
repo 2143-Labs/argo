@@ -22,5 +22,5 @@ spec:
           workerDeploymentBuildId: ""
           taskQueue: genai-tasks-ollama
           targetQueueSize: "3"
-          activationTargetQueueSize: "1"
+          activationTargetQueueSize: "0"
           queueTypes: "workflow,activity"
