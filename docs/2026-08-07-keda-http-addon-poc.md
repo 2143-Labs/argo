@@ -48,7 +48,7 @@ public/LAN → Traefik shared-gateway (listener aross-studio-https, LB 192.168.6
 3. HTTPRoute: change `backendRefs` to `name: keda-add-ons-http-interceptor-proxy, namespace: keda, port: 8080` (needs the ReferenceGrant — already in `keda` ns, scope `from: default ns HTTPRoutes`).
 4. Add `scaledobject.yaml`: `keda.sh/v1alpha1`, `scaleTargetRef.name: <deployment>`, min 0 / max 1, cooldown 60, `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown.stabilizationWindowSeconds: 60`, trigger `external-push` with `scalerAddress: keda-add-ons-http-external-scaler.keda:9090` + `interceptorRoute: <name>`.
 
-Order matters: the ScaledObject must land only **after** the InterceptorRoute exists (else the HPA falls back to a CPU metric) and **after** traffic flows through the interceptor (else the scaler reports idle and drops the live site to 0 immediately).
+Order matters when converting a **live** site: the ScaledObject must land only **after** the InterceptorRoute exists (else the HPA falls back to a CPU metric and scale-up from 0 breaks until KEDA re-reconciles) and **after** traffic flows through the interceptor (else the scaler reports idle and the operator drops the live site to 0 → 502s until it scales back). **For a brand-new site with no traffic, a single commit with all 4 changes is acceptable**: the CPU-metric race self-heals in ~30–60s (worst case one re-sync of the child app), and immediate scale-to-0 on deploy is the designed behavior — the first real visit cold-starts it (~4s). Verify after sync either way: curl → wait ~2 min → 0 pods → curl again (200, pod 0→1).
 
 ## 6. Tuning knobs
 
