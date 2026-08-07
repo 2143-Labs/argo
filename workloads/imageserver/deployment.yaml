@@ -131,6 +131,8 @@ spec:
               key: DISCORD_CLIENT_SECRET
         - name: DISCORD_ADMIN_IDS
           value: ""
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-frontend.default.svc.cluster.local:7233"
 
         resources:
           requests:
