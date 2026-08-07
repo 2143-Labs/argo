@@ -21,5 +21,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: aross-studio
-          port: 80
+        - name: keda-add-ons-http-interceptor-proxy
+          namespace: keda
+          port: 8080
