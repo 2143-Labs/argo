@@ -10,7 +10,7 @@ data:
     use-auth-secret
     # static-auth-secret is injected by the render-auth init container from the
     # mounted steam-lobby-turn Secret (static-auth-secret takes a literal value,
-    # not a file path - a path here would be used as the secret itself)
+    external-ip=turn.john2143.com
     no-cli
     no-multicast-peers
     external-ip=192.168.6.14
