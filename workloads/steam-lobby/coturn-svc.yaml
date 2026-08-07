@@ -8,7 +8,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerIP: 192.168.6.14
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: Cluster
   selector:
     app: coturn
   ports:
@@ -20,3 +20,259 @@ spec:
       port: 3478
       protocol: TCP
       targetPort: 3478
+    - name: relay-45000
+      port: 45000
+      protocol: UDP
+      targetPort: 45000
+    - name: relay-45001
+      port: 45001
+      protocol: UDP
+      targetPort: 45001
+    - name: relay-45002
+      port: 45002
+      protocol: UDP
+      targetPort: 45002
+    - name: relay-45003
+      port: 45003
+      protocol: UDP
+      targetPort: 45003
+    - name: relay-45004
+      port: 45004
+      protocol: UDP
+      targetPort: 45004
+    - name: relay-45005
+      port: 45005
+      protocol: UDP
+      targetPort: 45005
+    - name: relay-45006
+      port: 45006
+      protocol: UDP
+      targetPort: 45006
+    - name: relay-45007
+      port: 45007
+      protocol: UDP
+      targetPort: 45007
+    - name: relay-45008
+      port: 45008
+      protocol: UDP
+      targetPort: 45008
+    - name: relay-45009
+      port: 45009
+      protocol: UDP
+      targetPort: 45009
+    - name: relay-45010
+      port: 45010
+      protocol: UDP
+      targetPort: 45010
+    - name: relay-45011
+      port: 45011
+      protocol: UDP
+      targetPort: 45011
+    - name: relay-45012
+      port: 45012
+      protocol: UDP
+      targetPort: 45012
+    - name: relay-45013
+      port: 45013
+      protocol: UDP
+      targetPort: 45013
+    - name: relay-45014
+      port: 45014
+      protocol: UDP
+      targetPort: 45014
+    - name: relay-45015
+      port: 45015
+      protocol: UDP
+      targetPort: 45015
+    - name: relay-45016
+      port: 45016
+      protocol: UDP
+      targetPort: 45016
+    - name: relay-45017
+      port: 45017
+      protocol: UDP
+      targetPort: 45017
+    - name: relay-45018
+      port: 45018
+      protocol: UDP
+      targetPort: 45018
+    - name: relay-45019
+      port: 45019
+      protocol: UDP
+      targetPort: 45019
+    - name: relay-45020
+      port: 45020
+      protocol: UDP
+      targetPort: 45020
+    - name: relay-45021
+      port: 45021
+      protocol: UDP
+      targetPort: 45021
+    - name: relay-45022
+      port: 45022
+      protocol: UDP
+      targetPort: 45022
+    - name: relay-45023
+      port: 45023
+      protocol: UDP
+      targetPort: 45023
+    - name: relay-45024
+      port: 45024
+      protocol: UDP
+      targetPort: 45024
+    - name: relay-45025
+      port: 45025
+      protocol: UDP
+      targetPort: 45025
+    - name: relay-45026
+      port: 45026
+      protocol: UDP
+      targetPort: 45026
+    - name: relay-45027
+      port: 45027
+      protocol: UDP
+      targetPort: 45027
+    - name: relay-45028
+      port: 45028
+      protocol: UDP
+      targetPort: 45028
+    - name: relay-45029
+      port: 45029
+      protocol: UDP
+      targetPort: 45029
+    - name: relay-45030
+      port: 45030
+      protocol: UDP
+      targetPort: 45030
+    - name: relay-45031
+      port: 45031
+      protocol: UDP
+      targetPort: 45031
+    - name: relay-45032
+      port: 45032
+      protocol: UDP
+      targetPort: 45032
+    - name: relay-45033
+      port: 45033
+      protocol: UDP
+      targetPort: 45033
+    - name: relay-45034
+      port: 45034
+      protocol: UDP
+      targetPort: 45034
+    - name: relay-45035
+      port: 45035
+      protocol: UDP
+      targetPort: 45035
+    - name: relay-45036
+      port: 45036
+      protocol: UDP
+      targetPort: 45036
+    - name: relay-45037
+      port: 45037
+      protocol: UDP
+      targetPort: 45037
+    - name: relay-45038
+      port: 45038
+      protocol: UDP
+      targetPort: 45038
+    - name: relay-45039
+      port: 45039
+      protocol: UDP
+      targetPort: 45039
+    - name: relay-45040
+      port: 45040
+      protocol: UDP
+      targetPort: 45040
+    - name: relay-45041
+      port: 45041
+      protocol: UDP
+      targetPort: 45041
+    - name: relay-45042
+      port: 45042
+      protocol: UDP
+      targetPort: 45042
+    - name: relay-45043
+      port: 45043
+      protocol: UDP
+      targetPort: 45043
+    - name: relay-45044
+      port: 45044
+      protocol: UDP
+      targetPort: 45044
+    - name: relay-45045
+      port: 45045
+      protocol: UDP
+      targetPort: 45045
+    - name: relay-45046
+      port: 45046
+      protocol: UDP
+      targetPort: 45046
+    - name: relay-45047
+      port: 45047
+      protocol: UDP
+      targetPort: 45047
+    - name: relay-45048
+      port: 45048
+      protocol: UDP
+      targetPort: 45048
+    - name: relay-45049
+      port: 45049
+      protocol: UDP
+      targetPort: 45049
+    - name: relay-45050
+      port: 45050
+      protocol: UDP
+      targetPort: 45050
+    - name: relay-45051
+      port: 45051
+      protocol: UDP
+      targetPort: 45051
+    - name: relay-45052
+      port: 45052
+      protocol: UDP
+      targetPort: 45052
+    - name: relay-45053
+      port: 45053
+      protocol: UDP
+      targetPort: 45053
+    - name: relay-45054
+      port: 45054
+      protocol: UDP
+      targetPort: 45054
+    - name: relay-45055
+      port: 45055
+      protocol: UDP
+      targetPort: 45055
+    - name: relay-45056
+      port: 45056
+      protocol: UDP
+      targetPort: 45056
+    - name: relay-45057
+      port: 45057
+      protocol: UDP
+      targetPort: 45057
+    - name: relay-45058
+      port: 45058
+      protocol: UDP
+      targetPort: 45058
+    - name: relay-45059
+      port: 45059
+      protocol: UDP
+      targetPort: 45059
+    - name: relay-45060
+      port: 45060
+      protocol: UDP
+      targetPort: 45060
+    - name: relay-45061
+      port: 45061
+      protocol: UDP
+      targetPort: 45061
+    - name: relay-45062
+      port: 45062
+      protocol: UDP
+      targetPort: 45062
+    - name: relay-45063
+      port: 45063
+      protocol: UDP
+      targetPort: 45063

@@ -12,6 +12,7 @@ data:
     no-tls
     no-cli
     no-multicast-peers
+    external-ip=192.168.6.14
     min-port=45000
-    max-port=49999
+    max-port=45063
     verbose
