@@ -20,15 +20,9 @@ spec:
       serviceAccountName: john2143-worker
       volumes:
         - name: data-volume
-          persistentVolumeClaim:
-            claimName: files-pvc
+          emptyDir:
+            sizeLimit: 20Gi
       affinity:
-        podAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  app: john2143-com
-              topologyKey: kubernetes.io/hostname
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
