@@ -132,3 +132,44 @@ spec:
       protocol: TCP
       name: dns-tcp
 ```
+
+## 5. Expose as a LoadBalancer (MetalLB — preferred for non-HTTP)
+
+Since 2026-08-04 the home cluster runs MetalLB in BGP mode (frr-k8s): every
+LoadBalancer service gets a dedicated `192.168.6.x` IP announced to the router,
+reachable from the LAN/WAN (dst-nat) without nodePort guessing.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: <name>
+  annotations:
+    metallb.io/address-pool: service-subnet
+    metallb.io/loadBalancerIPs: "192.168.6.2X"
+spec:
+  type: LoadBalancer
+  selector:
+    app: <name>
+  ports:
+    - port: 8080
+      targetPort: 8080
+```
+
+Rules of thumb:
+- **Pick the next free IP** in `192.168.6.10–.50` (see the table in
+  `network-engineer` skill). Never reuse an in-use `.6.x`.
+- The annotation (not `spec.loadBalancerIP`) is the supported path; do not set both.
+- Keep the `nodePort` (default) alongside the LB IP — the NodePort path remains
+  as a fallback and for node-IP access.
+- **WAN access?** Add a dst-nat rule on the MikroTik pointing the WAN port at
+  the `.6.x` IP (LAN-only services like mimir/loki/unifi-web need no dst-nat).
+- **Zero endpoints = not announced.** MetalLB will not announce a service
+  without Ready endpoints (e.g. a scaled-to-0 deployment) — allocate the IP
+  anyway; it starts announcing when endpoints exist.
+- Deleting a converted LB service can leave a stuck
+  `service.kubernetes.io/load-balancer-cleanup` finalizer (k3s, no cloud-provider)
+  — remove it via `kubectl patch svc <name> --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`.
+
+**NodePort (section 4) is legacy** — use it only for services that must NOT
+move onto a `.6.x` IP (e.g. minecraft's bare-metal redirect).
