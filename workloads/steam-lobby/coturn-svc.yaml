@@ -6,7 +6,9 @@ metadata:
   labels:
     app: coturn
 spec:
-  type: ClusterIP
+  type: LoadBalancer
+  loadBalancerIP: 192.168.6.23
+  externalTrafficPolicy: Local
   selector:
     app: coturn
   ports:
