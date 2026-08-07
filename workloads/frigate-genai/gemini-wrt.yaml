@@ -23,4 +23,4 @@ spec:
           taskQueue: genai-tasks-gemini
           targetQueueSize: "20"
           activationTargetQueueSize: "5"
-          queueTypes: activity
+          queueTypes: "workflow,activity"
