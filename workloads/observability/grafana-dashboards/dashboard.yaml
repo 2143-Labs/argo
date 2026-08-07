@@ -685,24 +685,21 @@ data:
             "uid": "mimir"
           },
           "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "lineWidth": 1,
-                "pointSize": 5,
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                }
+            "defaults": {},
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Value #A"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Targets"
+                  }
+                ]
               }
-            },
-            "overrides": []
+            ]
           },
           "gridPos": {
             "h": 8,
@@ -712,16 +709,8 @@ data:
           },
           "id": 12,
           "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
+            "showHeader": true,
+            "sortBy": []
           },
           "targets": [
             {
@@ -730,14 +719,16 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "rate(prometheus_forwarded_samples_total[5m])",
-              "legendFormat": "{{component_id}}",
-              "range": true,
+              "expr": "prometheus_target_scrape_pool_targets",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
               "refId": "A"
             }
           ],
-          "title": "Alloy forwarded samples/s",
-          "type": "timeseries"
+          "title": "Scrape targets per job",
+          "type": "table",
+          "transformations": []
         }
       ],
       "refresh": "30s",
