@@ -28,9 +28,9 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: argo-webhook-2143-https
+      sectionName: argo-webhook-john2143-https
   hostnames:
-    - argo-webhook.2143.me
+    - argo-webhook.john2143.com
   rules:
     - matches:
         - path:
