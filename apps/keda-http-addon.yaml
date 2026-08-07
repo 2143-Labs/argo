@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda-http-addon
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: keda-add-ons-http
+    repoURL: https://kedacore.github.io/charts
+    targetRevision: 0.15.0
+    helm:
+      releaseName: keda-add-ons-http
+      values: |
+        interceptor:
+          replicas:
+            min: 1
+          readinessTimeout: "30s"
+        scaler:
+          replicas: 1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
