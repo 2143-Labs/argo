@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coturn
+  namespace: steam-lobby
+  labels:
+    app: coturn
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: coturn
+  template:
+    metadata:
+      labels:
+        app: coturn
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: big
+      containers:
+        - name: coturn
+          image: coturn/coturn:4.17.0-alpine3.24
+          args: ["-c", "/etc/coturn/turnserver.conf"]
+          ports:
+            - name: stun-turn
+              containerPort: 3478
+              protocol: UDP
+            - name: stun-turn-tcp
+              containerPort: 3478
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/coturn/turnserver.conf
+              subPath: turnserver.conf
+            - name: turn-secret
+              mountPath: /etc/coturn/secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: coturn
+        - name: turn-secret
+          secret:
+            secretName: steam-lobby-turn

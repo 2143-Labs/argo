@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coturn
+  namespace: steam-lobby
+data:
+  turnserver.conf: |
+    listening-port=3478
+    realm=turns-steam-lobby.john2143.com
+    use-auth-secret
+    static-auth-secret=/etc/coturn/secrets/turn_secret
+    no-tls
+    no-cli
+    no-multicast-peers
+    min-port=45000
+    max-port=49999
+    verbose

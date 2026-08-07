@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: coturn
+  namespace: steam-lobby
+  labels:
+    app: coturn
+spec:
+  type: ClusterIP
+  selector:
+    app: coturn
+  ports:
+    - name: stun-turn
+      port: 3478
+      protocol: UDP
+      targetPort: 3478
+    - name: stun-turn-tcp
+      port: 3478
+      protocol: TCP
+      targetPort: 3478
