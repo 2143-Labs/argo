@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: "13.0"
+description: Helm chart for Seafile Pro.
+home: https://seafile.com
+icon: https://de.seafile.com/wp-content/themes/seafileger/img/svg/seafile_logo_proposed.svg
+maintainers:
+- name: seafileDocs
+name: ce
+sources:
+- https://github.com/haiwen/seafile
+type: application
+version: 13.0.2

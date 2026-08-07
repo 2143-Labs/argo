@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    chart: ce
-    repoURL: https://haiwen.github.io/seafile-helm-chart/repo
-    targetRevision: 13.0.2
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/seafile
     helm:
       releaseName: seafile
       values: |
