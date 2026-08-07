@@ -1,0 +1,17 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: aross-studio
+  namespace: default
+spec:
+  target:
+    service: aross-studio
+    port: 80
+  rules:
+    - hosts:
+        - aross.studio
+        - design.aross.studio
+        - portfolio.aross.studio
+  scalingMetric:
+    concurrency:
+      targetValue: 10

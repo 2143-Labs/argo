@@ -6,7 +6,6 @@ metadata:
     app: aross-studio
 spec:
   revisionHistoryLimit: 3
-  replicas: 1
   selector:
     matchLabels:
       app: aross-studio
