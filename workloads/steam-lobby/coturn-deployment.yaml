@@ -17,6 +17,22 @@ spec:
       labels:
         app: coturn
     spec:
+      initContainers:
+        - name: render-auth
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cp /etc/coturn/turnserver.conf.base /cfg/turnserver.conf
+              printf 'static-auth-secret=%s\n' "$(cat /etc/coturn/secrets/turn_secret)" >> /cfg/turnserver.conf
+          volumeMounts:
+            - name: config
+              mountPath: /etc/coturn/turnserver.conf.base
+              subPath: turnserver.conf
+            - name: turn-secret
+              mountPath: /etc/coturn/secrets
+            - name: cfg
+              mountPath: /cfg
       containers:
         - name: coturn
           image: coturn/coturn:4.17.0-alpine3.24
@@ -29,11 +45,9 @@ spec:
               containerPort: 3478
               protocol: TCP
           volumeMounts:
-            - name: config
+            - name: cfg
               mountPath: /etc/coturn/turnserver.conf
               subPath: turnserver.conf
-            - name: turn-secret
-              mountPath: /etc/coturn/secrets
           resources:
             requests:
               cpu: 50m
@@ -48,3 +62,5 @@ spec:
         - name: turn-secret
           secret:
             secretName: steam-lobby-turn
+        - name: cfg
+          emptyDir: {}

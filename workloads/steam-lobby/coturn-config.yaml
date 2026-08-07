@@ -8,8 +8,9 @@ data:
     listening-port=3478
     realm=turns-steam-lobby.john2143.com
     use-auth-secret
-    static-auth-secret=/etc/coturn/secrets/turn_secret
-    no-tls
+    # static-auth-secret is injected by the render-auth init container from the
+    # mounted steam-lobby-turn Secret (static-auth-secret takes a literal value,
+    # not a file path - a path here would be used as the secret itself)
     no-cli
     no-multicast-peers
     external-ip=192.168.6.14
