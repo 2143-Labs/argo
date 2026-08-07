@@ -6,7 +6,7 @@ metadata:
     app: john2143-worker
 spec:
   revisionHistoryLimit: 3
-  replicas: 1
+  replicas: 2
   strategy:
     type: Recreate
   selector:
@@ -19,10 +19,16 @@ spec:
     spec:
       serviceAccountName: john2143-worker
       volumes:
-        - name: workdir
-          emptyDir:
-            sizeLimit: 10Gi
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: files-pvc
       affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: john2143-com
+              topologyKey: kubernetes.io/hostname
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
@@ -34,7 +40,7 @@ spec:
                       - general
       containers:
         - name: worker
-          image: ghcr.io/john2143/john2143.com-worker:206
+          image: ghcr.io/john2143/john2143.com-worker:207
           imagePullPolicy: IfNotPresent
           env:
             - name: RUN_MODE
@@ -76,8 +82,8 @@ spec:
             - name: NODE_ENV
               value: "production"
           volumeMounts:
-            - name: workdir
-              mountPath: /tmp/juush-worker
+            - name: data-volume
+              mountPath: /app/juushFiles
           resources:
             requests:
               memory: "256Mi"
