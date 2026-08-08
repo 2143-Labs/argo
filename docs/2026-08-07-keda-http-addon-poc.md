@@ -64,3 +64,37 @@ Order matters when converting a **live** site: the ScaledObject must land only *
 ## 8. Pre-existing issue (out of scope, recorded per user decision)
 
 `design.aross.studio` and `portfolio.aross.studio` **fail TLS at the home cluster at baseline**: Certificate `aross-studio-tls` (`workloads/gateway/wildcard-certs.yaml`) covers only `aross.studio`, but all three Gateway listeners (`gateway.yaml` lines 583–618) serve secret `aross-studio-wildcard-tls`. Public DNS: design → CNAME `amandaross.design` (external Fastly hosting — never served from this cluster), portfolio → **no DNS records**. POC verified **aross.studio only** (per user decision); the two subdomains remain in the HTTPRoute/InterceptorRoute manifests unchanged. Fixing the cert was explicitly not taken (design is externally hosted; portfolio is not public).
+
+## 9. Deployed sites (2026-08-08 rollout)
+
+The pattern is now live on three sites (element-web, webserver; aross from the POC). heorot was attempted and **reverted** — see §9.4.
+
+### 9.1 Live sites
+
+| site | hostnames | ns (InterceptorRoute + ScaledObject) | commits |
+|---|---|---|---|
+| aross | aross.studio | default | POC commits §1 |
+| element-web | element.john2143.com | matrix | `c478101` (app + interceptor + route flip), `6213125` (ScaledObject) |
+| webserver | rots.2143.me, prod.rots.2143.me | default | `137a2a5` (app re-enable + flip), `685f5ee` (runAsUser fix) |
+
+All three verified: idle→0 in ~2 min, cold start HTTP 200 in ~3.4–3.8s (warm image), ArgoCD app Synced/Healthy at 0 replicas.
+
+### 9.2 The namespace rule (load-bearing, verified live)
+
+`InterceptorRoute.spec.target` has **no namespace field** — it resolves in the InterceptorRoute's own namespace. So **InterceptorRoutes + ScaledObjects live in the target's namespace** (matrix for heorot/element-web, default for aross/webserver), while the HTTPRoutes stay in `default` and are covered by the existing keda ReferenceGrant (`from: default` → interceptor). The interceptor's routing table is **cluster-wide** — the add-on operator watches `InterceptorRoute` in all namespaces by default (`operator.watchNamespace` unset in our chart values), confirmed against the keda.sh docs 2026-08-08 and proven live by element-web (matrix ns) routing through the interceptor.
+
+### 9.3 Fixes folded into the rollout
+
+- **element-web was an orphaned workload**: live resources in `matrix` with no Argo app managing them (a manual Aug 3 scale-up of a manifest pinned at `replicas: 0`). Fixed by creating `apps/element-web.yaml` (mirror of `apps/heorot.yaml`); the live Deployment keeps its manual `replicas: 1` through the flip (ArgoCD doesn't touch the absent field), then the operator drives it to 0.
+- **webserver was disabled**: app commented out in `15f0b3c` "webserer off"; restored verbatim in `137a2a5`.
+- **webserver deployment was broken as-committed**: `runAsNonRoot: true` with an image whose default user is root → kubelet refused to create the container (`CreateContainerConfigError`). Fixed with `runAsUser: 101` (aross precedent) in `685f5ee`. The site had never run, so the bug predates the rollout.
+
+### 9.4 heorot (chat.2143.me) — reverted, blocked by node registry config
+
+heorot's flip commit (`281d2b4`) was **reverted** (`ace9a06`); the site is back to its pre-change 503. The interceptor mechanism worked (request triggered 0→1 through the matrix-ns InterceptorRoute), but the pod hit `ErrImagePull` on `10.43.114.59:5000/heorot-web:v0.1.0`: **"server gave HTTP response to HTTPS client"**. Only the `closet` node carries `/etc/rancher/k3s/registries.yaml` mapping `10.43.114.59:5000` → plain HTTP; **`big` and `pite` have no such file** (heorot's preferred node is `big`). The site last ran on closet before `ccaa274` scaled it to 0, so the gap went unnoticed.
+
+**To enable heorot:** add the `registries.yaml` insecure-registry config to `big` and `pite` (node provisioning — outside the argo repo), then re-run the single-commit flip (4 changes: drop `replicas: 0`, InterceptorRoute + ScaledObject in `matrix`, chat-heorot HTTPRoute backendRef → interceptor).
+
+### 9.5 element-web cold-start note
+
+`vectorim/element-web:latest` (default pull policy `Always`) made the first cold start 20.9s (15s image pull on a node without the cache; absorbed by the 30s interceptor buffer). Warm-cache cold starts are 3.8s. Pinning a versioned tag + `IfNotPresent` (aross precedent) would make cold-node starts ~4s too; not changed to keep the rollout minimal.
