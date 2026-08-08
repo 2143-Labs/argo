@@ -1,0 +1,15 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: heorot
+  namespace: matrix
+spec:
+  target:
+    service: heorot
+    port: 8080
+  rules:
+    - hosts:
+        - chat.2143.me
+  scalingMetric:
+    concurrency:
+      targetValue: 10
