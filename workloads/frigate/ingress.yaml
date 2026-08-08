@@ -14,6 +14,12 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
       backendRefs:
         - name: frigate
           port: 5000

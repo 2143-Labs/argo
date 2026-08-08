@@ -22,6 +22,11 @@ spec:
             group: traefik.io
             kind: Middleware
             name: auth-security-headers
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
       backendRefs:
         - name: temporal-web
           port: 8080

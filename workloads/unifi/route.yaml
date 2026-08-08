@@ -14,6 +14,12 @@ spec:
   hostnames:
     - unifi.ts.2143.me
   rules:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
     - backendRefs:
         - name: unifi-web
           port: 8443
