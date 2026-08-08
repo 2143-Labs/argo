@@ -20,6 +20,6 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: keda-add-ons-http-interceptor-proxy
-          namespace: keda
+          name: heorot
+          namespace: matrix
           port: 8080
