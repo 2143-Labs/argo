@@ -1,0 +1,26 @@
+apiVersion: temporal.io/v1alpha1
+kind: WorkerResourceTemplate
+metadata:
+  name: john2143-com-worker-keda
+spec:
+  workerDeploymentRef: {name: john2143-com-worker}
+  template:
+    apiVersion: keda.sh/v1alpha1
+    kind: ScaledObject
+    spec:
+      scaleTargetRef: {}
+      minReplicaCount: 1
+      maxReplicaCount: 5
+      pollingInterval: 15
+      cooldownPeriod: 300
+      triggers:
+      - type: temporal
+        metadata:
+          endpoint: temporal-frontend.default.svc.cluster.local:7233
+          namespace: ""
+          workerDeploymentName: ""
+          workerDeploymentBuildId: ""
+          taskQueue: john2143-com
+          targetQueueSize: "5"
+          activationTargetQueueSize: "2"
+          queueTypes: workflow

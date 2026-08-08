@@ -1,0 +1,6 @@
+apiVersion: temporal.io/v1alpha1
+kind: Connection
+metadata:
+  name: john2143-temporal
+spec:
+  hostPort: temporal-frontend.default.svc.cluster.local:7233

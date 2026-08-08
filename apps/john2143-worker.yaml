@@ -14,6 +14,12 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: default
+  ignoreDifferences:
+  - group: temporal.io
+    kind: WorkerDeployment
+    jsonPointers:
+    - /spec/replicas
+    - /spec/workerOptions/unsafeCustomBuildID
   syncPolicy:
     automated:
       prune: true
