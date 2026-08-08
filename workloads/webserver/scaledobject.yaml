@@ -1,0 +1,21 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: webserver
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: webserver
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 60
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: webserver

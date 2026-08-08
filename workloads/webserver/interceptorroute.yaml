@@ -1,0 +1,16 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: webserver
+  namespace: default
+spec:
+  target:
+    service: webserver
+    port: 80
+  rules:
+    - hosts:
+        - rots.2143.me
+        - prod.rots.2143.me
+  scalingMetric:
+    concurrency:
+      targetValue: 10
