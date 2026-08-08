@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: john2143-temporal}
     temporalNamespace: john2143-com
-    unsafeCustomBuildID: "207"
+    unsafeCustomBuildID: "208"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -33,7 +33,7 @@ spec:
                       - general
       containers:
         - name: worker
-          image: ghcr.io/john2143/john2143.com-worker:207
+          image: ghcr.io/john2143/john2143.com-worker:208
           imagePullPolicy: IfNotPresent
           env:
             - name: RUN_MODE
@@ -56,7 +56,7 @@ spec:
                   name: minio-credentials
                   key: MINIO_SECRET_KEY
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "207"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "208"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "john2143-com-worker"}
             - name: S3_ENDPOINT_URL
               value: "https://imagehost-files.nyc3.digitaloceanspaces.com"
