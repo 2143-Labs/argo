@@ -1,0 +1,15 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: element-web
+  namespace: matrix
+spec:
+  target:
+    service: element-web
+    port: 8080
+  rules:
+    - hosts:
+        - element.john2143.com
+  scalingMetric:
+    concurrency:
+      targetValue: 10
