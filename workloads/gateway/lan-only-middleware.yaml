@@ -1,24 +1,3 @@
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: longhorn
-  namespace: longhorn-system
-spec:
-  parentRefs:
-    - name: shared-gateway
-      namespace: default
-      sectionName: longhorn-ts-2143-https
-  hostnames:
-    - longhorn.ts.2143.me
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: longhorn-frontend
-          port: 80
----
 # Internal-only hosts (LAN + tailnet). Attach this middleware via ExtensionRef to
 # any HTTPRoute that must NOT be reachable from the public internet. Do NOT add
 # ipStrategy/forwardedHeaders — ipAllowList intentionally matches the socket
@@ -27,7 +6,7 @@ apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: lan-only
-  namespace: longhorn-system
+  namespace: default
 spec:
   ipAllowList:
     sourceRange:
