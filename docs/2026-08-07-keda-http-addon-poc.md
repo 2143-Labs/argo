@@ -1,6 +1,6 @@
 # KEDA HTTP Add-on scale-to-zero POC for aross.studio — execution log (2026-08-07)
 
-**Status: COMPLETE and verified.** aross.studio now runs behind the KEDA HTTP Add-on: 1 pod under traffic, **0 pods when idle (~2 min)**, cold-starting in ~3.5–4s on the first request. Two full idle→0→curl→1 cycles verified identically; ArgoCD reads `friend-aross` **Synced/Healthy** at 0 replicas.
+**Status: COMPLETE and verified.** aross.studio now runs behind the KEDA HTTP Add-on: 1 pod under traffic, **0 pods when idle (~10–20 min after the last request — retention raised from ~2 min on 2026-08-09)**, cold-starting in ~3.5–4s on the first request. Two full idle→0→curl→1 cycles verified identically; ArgoCD reads `friend-aross` **Synced/Healthy** at 0 replicas.
 
 ## 1. Commits (pushed to origin/main, in order)
 
@@ -46,14 +46,14 @@ public/LAN → Traefik shared-gateway (listener aross-studio-https, LB 192.168.6
 1. Deployment: delete `replicas:` (stop ArgoCD from owning the field).
 2. Add `interceptorroute.yaml`: `http.keda.sh/v1beta1`, name `<site>`, `spec.target.service/port` → the site's Service, `spec.rules[].hosts` → its hostnames, `scalingMetric.concurrency.targetValue: 10`.
 3. HTTPRoute: change `backendRefs` to `name: keda-add-ons-http-interceptor-proxy, namespace: keda, port: 8080` (needs the ReferenceGrant — already in `keda` ns, scope `from: default ns HTTPRoutes`).
-4. Add `scaledobject.yaml`: `keda.sh/v1alpha1`, `scaleTargetRef.name: <deployment>`, min 0 / max 1, cooldown 60, `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown.stabilizationWindowSeconds: 60`, trigger `external-push` with `scalerAddress: keda-add-ons-http-external-scaler.keda:9090` + `interceptorRoute: <name>`.
+4. Add `scaledobject.yaml`: `keda.sh/v1alpha1`, `scaleTargetRef.name: <deployment>`, min 0 / max 1, cooldown 600, `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown.stabilizationWindowSeconds: 600`, trigger `external-push` with `scalerAddress: keda-add-ons-http-external-scaler.keda:9090` + `interceptorRoute: <name>`.
 
-Order matters when converting a **live** site: the ScaledObject must land only **after** the InterceptorRoute exists (else the HPA falls back to a CPU metric and scale-up from 0 breaks until KEDA re-reconciles) and **after** traffic flows through the interceptor (else the scaler reports idle and the operator drops the live site to 0 → 502s until it scales back). **For a brand-new site with no traffic, a single commit with all 4 changes is acceptable**: the CPU-metric race self-heals in ~30–60s (worst case one re-sync of the child app), and immediate scale-to-0 on deploy is the designed behavior — the first real visit cold-starts it (~4s). Verify after sync either way: curl → wait ~2 min → 0 pods → curl again (200, pod 0→1).
+Order matters when converting a **live** site: the ScaledObject must land only **after** the InterceptorRoute exists (else the HPA falls back to a CPU metric and scale-up from 0 breaks until KEDA re-reconciles) and **after** traffic flows through the interceptor (else the scaler reports idle and the operator drops the live site to 0 → 502s until it scales back). **For a brand-new site with no traffic, a single commit with all 4 changes is acceptable**: the CPU-metric race self-heals in ~30–60s (worst case one re-sync of the child app), and immediate scale-to-0 on deploy is the designed behavior — the first real visit cold-starts it (~4s). Verify after sync either way: curl → wait ~10–20 min → 0 pods → curl again (200, pod 0→1).
 
 ## 6. Tuning knobs
 
 - `interceptor.readinessTimeout: "30s"` (chart value) — **load-bearing**: since v0.14.0 the default is 0 (disabled), which would NOT buffer requests during cold start.
-- `cooldownPeriod: 60` + `stabilizationWindowSeconds: 60` — idle→0 ≈ 2 min instead of the ~10 min defaults.
+- `cooldownPeriod: 600` + `stabilizationWindowSeconds: 600` — idle→0 ≈ **10–20 min after the last request** (raised from 60/60 ≈ 2 min on 2026-08-09 per user request: keep sites live ≥10 min; the two windows sum, per the POC calibration).
 - `scalingMetric.concurrency.targetValue: 10` (InterceptorRoute) — request count that drives scale-up.
 - No `coldStart.placeholder` / `fallback` configured: first request is served, not placeholder'd.
 
@@ -77,7 +77,7 @@ The pattern is now live on three sites (element-web, webserver; aross from the P
 | element-web | element.john2143.com | matrix | `c478101` (app + interceptor + route flip), `6213125` (ScaledObject) |
 | webserver | rots.2143.me, prod.rots.2143.me | default | `137a2a5` (app re-enable + flip), `685f5ee` (runAsUser fix) |
 
-All three verified: idle→0 in ~2 min, cold start HTTP 200 in ~3.4–3.8s (warm image), ArgoCD app Synced/Healthy at 0 replicas.
+All three verified: cold start HTTP 200 in ~3.4–3.8s (warm image), ArgoCD app Synced/Healthy at 0 replicas; idle retention ~10–20 min (tuned from ~2 min, 2026-08-09).
 
 ### 9.2 The namespace rule (load-bearing, verified live)
 

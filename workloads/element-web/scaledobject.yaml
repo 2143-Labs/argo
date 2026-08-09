@@ -8,12 +8,12 @@ spec:
     name: element-web
   minReplicaCount: 0
   maxReplicaCount: 1
-  cooldownPeriod: 60
+  cooldownPeriod: 600
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
         scaleDown:
-          stabilizationWindowSeconds: 60
+          stabilizationWindowSeconds: 600
   triggers:
     - type: external-push
       metadata:
