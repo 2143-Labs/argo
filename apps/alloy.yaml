@@ -85,6 +85,9 @@ spec:
                   insecure_skip_verify = true
                 }
                 forward_to = [prometheus.relabel.kubelet_metrics.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               prometheus.relabel "kubelet_metrics" {
@@ -107,6 +110,9 @@ spec:
                   insecure_skip_verify = true
                 }
                 forward_to = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               // kube-state-metrics (deployed in Step 2)
@@ -122,6 +128,9 @@ spec:
                 job_name        = "kube-state-metrics"
                 scrape_interval = "30s"
                 forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               // traefik (kube-system, metrics port 9100 declared)
@@ -150,6 +159,9 @@ spec:
                 job_name        = "traefik"
                 scrape_interval = "30s"
                 forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               // temporal server services (default ns; metrics on :9090 — force address since
@@ -185,6 +197,9 @@ spec:
                 job_name        = "temporal"
                 scrape_interval = "30s"
                 forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
 
@@ -202,6 +217,9 @@ spec:
                 job_name        = "observability"
                 scrape_interval = "30s"
                 forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               // keda metrics API server (verified 200 on :8080/metrics)
@@ -212,6 +230,9 @@ spec:
                 job_name        = "keda"
                 scrape_interval = "30s"
                 forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
               }
 
               // ── Traces: OTLP receiver → batch → Tempo ──
