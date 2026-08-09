@@ -65,6 +65,17 @@ spec:
           value: "info,lobby_server=debug"
         - name: GAME_MODES
           value: "ranked_1v1:p2p"
+        # Temporal: the in-process worker runs in this pod and connects to the
+        # cluster Temporal frontend in the default namespace (plaintext
+        # in-cluster gRPC, mirroring the frigate-genai workers). The `pvp`
+        # namespace must exist on the cluster Temporal before rollout:
+        #   tctl --address temporal-frontend.default.svc.cluster.local:7233 namespace register pvp
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-frontend.default.svc.cluster.local:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "pvp"
+        - name: TEMPORAL_TASK_QUEUE
+          value: "lobby"
         resources:
           requests:
             memory: "128Mi"
