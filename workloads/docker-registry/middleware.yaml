@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: registry-basic-auth
+  namespace: kube-system
+spec:
+  basicAuth:
+    # Secret must contain htpasswd-formatted users in key "users"
+    # Generate: htpasswd -Bbn <username> <password>
+    # Create: kubectl -n kube-system create secret generic docker-registry-auth \
+    #           --from-literal=users="$(htpasswd -Bbn github-actions 'your-password')"
+    secret: docker-registry-auth

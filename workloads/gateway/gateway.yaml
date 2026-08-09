@@ -91,6 +91,22 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: containerstore-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: containerstore.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+
     - name: home-ts-2143-https
       protocol: HTTPS
       port: 8443
