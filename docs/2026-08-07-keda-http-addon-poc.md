@@ -1,6 +1,6 @@
 # KEDA HTTP Add-on scale-to-zero POC for aross.studio — execution log (2026-08-07)
 
-**Status: COMPLETE and verified.** aross.studio now runs behind the KEDA HTTP Add-on: 1 pod under traffic, **0 pods when idle (~10–20 min after the last request — retention raised from ~2 min on 2026-08-09)**, cold-starting in ~3.5–4s on the first request. Two full idle→0→curl→1 cycles verified identically; ArgoCD reads `friend-aross` **Synced/Healthy** at 0 replicas.
+**Status: COMPLETE and verified.** aross.studio now runs behind the KEDA HTTP Add-on: 1 pod under traffic, **0 pods when idle (~15 min after the last request — retention raised from ~2 min on 2026-08-09)**, cold-starting in ~3.5–4s on the first request. Two full idle→0→curl→1 cycles verified identically; ArgoCD reads `friend-aross` **Synced/Healthy** at 0 replicas.
 
 ## 1. Commits (pushed to origin/main, in order)
 
@@ -53,7 +53,7 @@ Order matters when converting a **live** site: the ScaledObject must land only *
 ## 6. Tuning knobs
 
 - `interceptor.readinessTimeout: "30s"` (chart value) — **load-bearing**: since v0.14.0 the default is 0 (disabled), which would NOT buffer requests during cold start.
-- `cooldownPeriod: 600` + `stabilizationWindowSeconds: 600` — idle→0 ≈ **10–20 min after the last request** (raised from 60/60 ≈ 2 min on 2026-08-09 per user request: keep sites live ≥10 min; the two windows sum, per the POC calibration).
+- `cooldownPeriod: 900` — **the retention knob**: the operator zero-scales ~cooldownPeriod after the last request (measured: 600 → ~10–12 min; 900 → ~15 min). `stabilizationWindowSeconds` does NOT add to the operator's zero-scale — the operator disables the HPA (`ScalingActive: False`) before scaling to 0, so the HPA downscale window is never consulted (kept at 600, harmless).
 - `scalingMetric.concurrency.targetValue: 10` (InterceptorRoute) — request count that drives scale-up.
 - No `coldStart.placeholder` / `fallback` configured: first request is served, not placeholder'd.
 
@@ -77,7 +77,7 @@ The pattern is now live on three sites (element-web, webserver; aross from the P
 | element-web | element.john2143.com | matrix | `c478101` (app + interceptor + route flip), `6213125` (ScaledObject) |
 | webserver | rots.2143.me, prod.rots.2143.me | default | `137a2a5` (app re-enable + flip), `685f5ee` (runAsUser fix) |
 
-All three verified: cold start HTTP 200 in ~3.4–3.8s (warm image), ArgoCD app Synced/Healthy at 0 replicas; idle retention ~10–20 min (tuned from ~2 min, 2026-08-09).
+All three verified: cold start HTTP 200 in ~3.4–3.8s (warm image), ArgoCD app Synced/Healthy at 0 replicas; idle retention ~15 min after the last request (cooldown 900, tuned 2026-08-09).
 
 ### 9.2 The namespace rule (load-bearing, verified live)
 
@@ -98,3 +98,9 @@ heorot's flip commit (`281d2b4`) was **reverted** (`ace9a06`); the site is back 
 ### 9.5 element-web cold-start note
 
 `vectorim/element-web:latest` (default pull policy `Always`) made the first cold start 20.9s (15s image pull on a node without the cache; absorbed by the 30s interceptor buffer). **Pinned in `8e25bc2`/`a52a7e8`** to `vectorim/element-web:v1.12.25` + `imagePullPolicy: IfNotPresent` (aross precedent). The pin is content-identical to the `latest` that was running (same digest `sha256:ac50d4ee…`, verified against Docker Hub 2026-08-08), so no functional change. Result: first pull of the pinned tag reuses cached layers (412ms), subsequent cold starts have **zero pull events** and serve in **~3.9s** (verified two consecutive cycles: 4.48s, 3.95s, no `Pulling` events). `:latest` moves on each release; the pin makes cold-start latency deterministic.
+
+### 9.6 Idle retention tuning (2026-08-09, measured)
+
+**`cooldownPeriod` is the retention knob.** The operator zero-scales the Deployment ~cooldownPeriod after the last request and disables the HPA first (`ScalingActive: False`), so `stabilizationWindowSeconds` never extends the idle hold (the POC's "60+60 ≈ 2 min" was cooldown + overhead, not a sum of both windows). Measured with 600: pod deleted ~10–12 min after the request that served it. Bumped to **900 → ~15 min** on all three sites (2026-08-09).
+
+**Idle flapping (pre-existing, not introduced by tuning):** even with zero traffic, KEDA periodically re-enables the HPA (min 1), cycling an idle site 0→1→0 every ~10–30 min; the operator then holds the pod for the cooldown and zero-scales again. The interceptor log shows aross "cold-start: endpoints became ready" events through the night during the POC with 60s cooldown — same behavior, shorter up-phase. Cost: one small pod for the cooldown duration per cycle (~15 min of every ~15–30 min when idle). Fixing it would require the KEDA operator `--enable-scale-to-zero` flag (operator args, out of repo scope); with 60s cooldown the duty cycle was negligible, with 900 it is visible but bounded.
