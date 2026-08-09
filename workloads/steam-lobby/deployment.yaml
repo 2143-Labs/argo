@@ -71,7 +71,7 @@ spec:
         # namespace must exist on the cluster Temporal before rollout:
         #   tctl --address temporal-frontend.default.svc.cluster.local:7233 namespace register pvp
         - name: TEMPORAL_ADDRESS
-          value: "temporal-frontend.default.svc.cluster.local:7233"
+          value: "http://temporal-frontend.default.svc.cluster.local:7233"
         - name: TEMPORAL_NAMESPACE
           value: "pvp"
         - name: TEMPORAL_TASK_QUEUE
