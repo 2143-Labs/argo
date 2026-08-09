@@ -9,7 +9,27 @@ spec:
       sectionName: status-2143-https
   hostnames: [status.2143.me]
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
         - name: pite-status
           port: 3030
 ---

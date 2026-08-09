@@ -9,7 +9,27 @@ spec:
       sectionName: grafana-john2143-https
   hostnames: [grafana.john2143.com]
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
         - name: grafana
           namespace: observability
           port: 80
