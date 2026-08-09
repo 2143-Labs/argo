@@ -68,7 +68,11 @@ Append the three ExtensionRefs to the HTTPRoute rule's `filters:` (same shape as
           extensionRef: {group: traefik.io, kind: Middleware, name: crowdsec-bouncer}
 ```
 
+For a machine/API surface (S3, upload endpoints, webhooks that aren't GitHub), use `crowdsec-bouncer-noappsec` as the third filter instead of `crowdsec-bouncer` — see the S3 note below.
+
 (The middleware must exist in the route's namespace; the default-ns copies are in `workloads/gateway/security-middlewares.yaml`.)
+
+**S3 API surfaces use the no-AppSec bouncer**: `files.john2143.com` (`seaweedfs-s3`) serves machine S3 traffic (Loki, Tempo, tuwunel, workers). The CRS out-of-band rule flags Loki's encoded S3 object keys (`/loki-chunks/...` with `%3A`, `.tsdb.gz`) as suspicious and bans the shared WAN IP — taking down every public host for the household. So the S3 route uses `crowdsec-bouncer-noappsec` (IP-ban only, `crowdsecAppsecEnabled: false`) instead of the full `crowdsec-bouncer`. Web UIs keep full AppSec. If a new machine/API route is added, use the no-AppSec bouncer there too.
 
 ## 5. Operational notes
 
