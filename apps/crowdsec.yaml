@@ -23,6 +23,13 @@ spec:
               program: traefik
         appsec:
           enabled: true
+          acquisitions:
+            - source: appsec
+              listen_addr: "0.0.0.0:7422"
+              path: /
+              appsec_config: crowdsecurity/virtual-patching
+              labels:
+                type: appsec
         lapi:
           replicas: 1
   destination:
