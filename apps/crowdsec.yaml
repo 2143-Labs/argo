@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crowdsec
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: crowdsec
+    repoURL: https://crowdsecurity.github.io/helm-charts
+    targetRevision: 0.24.0
+    helm:
+      releaseName: crowdsec
+      values: |
+        agent:
+          hostVarLog: true
+          container_runtime: containerd
+          acquisition:
+            - namespace: kube-system
+              podName: "traefik-*"
+              program: traefik
+        appsec:
+          enabled: true
+        lapi:
+          replicas: 1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crowdsec
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
