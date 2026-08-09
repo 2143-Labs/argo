@@ -55,3 +55,22 @@ spec:
       crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
       crowdsecAppsecFailureBlock: false
       crowdsecAppsecUnreachableBlock: false
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer-noappsec
+  namespace: default
+spec:
+  plugin:
+    bouncer:
+      enabled: true
+      crowdsecMode: stream
+      crowdsecLapiScheme: http
+      crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
+      crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
+      crowdsecAppsecEnabled: false
+      crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
+      crowdsecAppsecFailureBlock: false
+      crowdsecAppsecUnreachableBlock: false

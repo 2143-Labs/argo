@@ -55,7 +55,7 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: crowdsec-bouncer
+            name: crowdsec-bouncer-noappsec
       backendRefs:
         - name: seaweedfs-s3
           port: 8333
