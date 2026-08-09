@@ -213,6 +213,9 @@ spec:
                   { __address__ = "tempo.observability.svc:3200" },
                   { __address__ = "grafana.observability.svc:80" },
                   { __address__ = "alloy.observability.svc:12345" },
+                  { __address__ = "crowdsec-service.crowdsec.svc:6060" },
+                  { __address__ = "crowdsec-appsec-service.crowdsec.svc:6060" },
+                  { __address__ = "crowdsec-agent-service.crowdsec.svc:6060" },
                 ]
                 job_name        = "observability"
                 scrape_interval = "30s"
