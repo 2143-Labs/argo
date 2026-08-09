@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: john2143-temporal}
     temporalNamespace: john2143-com
-    unsafeCustomBuildID: "211"
+    unsafeCustomBuildID: "212"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -56,10 +56,10 @@ spec:
                   name: minio-creds
                   key: S3_SECRET_KEY
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "211"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "212"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "john2143-com-worker"}
             - name: S3_ENDPOINT_URL
-              value: "https://imagehost-files.nyc3.digitaloceanspaces.com"
+              value: "https://nyc3.digitaloceanspaces.com"
             - name: S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
