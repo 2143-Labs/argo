@@ -18,11 +18,12 @@ spec:
     storageClass: longhorn-cnpg
   walStorage:
     size: 4Gi
-    storageClass: longhorn-cnpg
   bootstrap:
     initdb:
       database: lobby
       owner: lobby
+      secret:
+        name: steam-lobby-db-password
   managed:
     roles:
       - name: lobby
