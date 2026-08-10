@@ -225,15 +225,6 @@ spec:
                 }
               }
 
-              // nas SMART metrics (smartctl_exporter on 9633)
-              prometheus.scrape "nas_smart" {
-                targets = [
-                  { __address__ = "192.168.5.175:9633" },
-                ]
-                job_name        = "smartctl"
-                scrape_interval = "60s"
-                forward_to      = [prometheus.remote_write.mimir.receiver]
-              }
 
               // keda metrics API server (verified 200 on :8080/metrics)
               prometheus.scrape "keda" {
