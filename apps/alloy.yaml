@@ -257,13 +257,29 @@ spec:
                   endpoint = "0.0.0.0:4318"
                 }
                 output {
-                  traces = [otelcol.processor.batch.traces.input]
+                  traces  = [otelcol.processor.batch.traces.input]
+                  metrics = [otelcol.processor.batch.metrics.input]
                 }
               }
 
               otelcol.processor.batch "traces" {
                 output {
                   traces = [otelcol.exporter.otlp.tempo.input]
+                }
+              }
+
+              otelcol.processor.batch "metrics" {
+                output {
+                  metrics = [otelcol.exporter.otlp.mimir.input]
+                }
+              }
+
+              otelcol.exporter.otlp "mimir" {
+                client {
+                  endpoint = "mimir.observability.svc:8080/otlp"
+                  tls {
+                    insecure = true
+                  }
                 }
               }
 
