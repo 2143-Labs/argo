@@ -4,7 +4,7 @@ metadata:
   name: seaweedfs-volume
   labels: {app: seaweedfs-volume}
 spec:
-  replicas: 1
+  replicas: 0
   strategy: {type: Recreate}
   selector: {matchLabels: {app: seaweedfs-volume}}
   template:
