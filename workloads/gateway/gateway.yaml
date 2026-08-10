@@ -92,13 +92,15 @@ spec:
         namespaces:
           from: Same
 
-    # Per-PR steam-lobby previews: pvp-{N}.john2143.com attaches here (Traefik
-    # requires exact hostname match on concrete listeners; a wildcard listener
-    # accepts all subdomains). Additive — no other route references this section.
+    # Per-PR steam-lobby previews: pvp-{N}.john2143.com attaches here. The
+    # listener has NO hostname (match-all) because this Traefik build only
+    # string-matches listener↔route hostnames — a wildcard listener rejects
+    # concrete route hostnames, while a hostname-less listener accepts any.
+    # Only routes that explicitly name this section attach, so existing exact-
+    # hostname services are unaffected (more-specific listeners win by SNI).
     - name: pvp-john2143-https
       protocol: HTTPS
       port: 8443
-      hostname: "*.john2143.com"
       tls:
         mode: Terminate
         certificateRefs:
