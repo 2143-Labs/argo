@@ -98,7 +98,7 @@ spec:
     # concrete route hostnames, while a hostname-less listener accepts any.
     # Only routes that explicitly name this section attach, so existing exact-
     # hostname services are unaffected (more-specific listeners win by SNI).
-    - name: pvp-john2143-https
+    - name: pvp-pr-john2143-https
       protocol: HTTPS
       port: 8443
       tls:
