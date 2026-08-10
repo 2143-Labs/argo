@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: steam-lobby-secret-init
+  namespace: {{ .Values.namespace }}
+spec:
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: steam-lobby-secret-init
+      containers:
+        - name: init
+          image: docker.io/bitnami/kubectl:1.31   # unverified — confirm pull works; any kubectl image is fine
+          env:
+            - { name: CLUSTER, value: "{{ .Values.db.clusterName }}" }
+            - { name: NAMESPACE, value: "{{ .Values.namespace }}" }
+          command:
+            - /bin/bash
+            - -c
+            - |-
+              set -e
+              for i in $(seq 1 60); do
+                if kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" >/dev/null 2>&1; then break; fi
+                sleep 5
+              done
+              if ! kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" >/dev/null 2>&1; then
+                echo "CNPG app secret never appeared" >&2
+                exit 1   # backoffLimit retries the whole job
+              fi
+              DATABASE_URL=$(kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" -o jsonpath='{.data.fqdn-uri}' | base64 -d)
+              if [ -z "$DATABASE_URL" ]; then   # operator version without fqdn-uri: compose from the parts
+                USER=$(kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" -o jsonpath='{.data.username}' | base64 -d)
+                PW=$(kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" -o jsonpath='{.data.password}' | base64 -d)
+                DB=$(kubectl get secret "$CLUSTER-app" -n "$NAMESPACE" -o jsonpath='{.data.database}' | base64 -d)
+                DATABASE_URL="postgres://${USER}:${PW}@${CLUSTER}-rw.${NAMESPACE}.svc:5432/${DB}"
+              fi
+              JWT_SECRET=$(openssl rand -hex 32)
+              kubectl create secret generic steam-lobby-secret -n "$NAMESPACE" \
+                --from-literal=DATABASE_URL="${DATABASE_URL}" \
+                --from-literal=JWT_SECRET="${JWT_SECRET}" \
+                --dry-run=client -o yaml | kubectl apply -f -

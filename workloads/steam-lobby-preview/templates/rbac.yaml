@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: steam-lobby-secret-init
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: steam-lobby-secret-init
+  namespace: {{ .Values.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    # get = read the CNPG-generated <cluster>-app secret; create/patch = the
+    # `kubectl apply` on steam-lobby-secret (apply needs patch once it exists,
+    # e.g. on a job retry).
+    verbs: ["get", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: steam-lobby-secret-init
+  namespace: {{ .Values.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: steam-lobby-secret-init
+subjects:
+  - kind: ServiceAccount
+    name: steam-lobby-secret-init
+    namespace: {{ .Values.namespace }}

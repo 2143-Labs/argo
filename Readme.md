@@ -113,3 +113,41 @@ temporal worker deployment describe -d default/frigate-genai-gemini
 KEDA (ArgoCD-managed): change `targetRevision` in `argo/apps/keda.yaml` to previous version.
 Worker deployments (ArgoCD-managed): revert the git commit, push, wait for sync.
 Bucket data: TTL is 14d on new objects; existing objects with TtlSec=0 are permanent.
+
+---
+
+# steam-lobby PR previews
+
+Every PR to `2143-Labs/steam-lobby` gets a live preview at `https://pvp-{N}.john2143.com` (dev), while `pvp.john2143.com` stays production.
+
+How it works: an [ApplicationSet PR generator](apps/steam-lobby-preview.yaml) polls the GitHub PR API (120s) and, per open PR, renders an Application that deploys the Helm chart `workloads/steam-lobby-preview/` into its own namespace `steam-lobby-pr-{N}`:
+
+- PR-tagged image `ghcr.io/2143-labs/steam-lobby:pr-{N}` (built by the repo's `build.yaml` workflow)
+- its own CNPG Postgres (`steam-lobby-db-pr-{N}`, throwaway)
+- shared cluster Temporal with a per-PR task queue `lobby-pr-{N}` (isolated from prod's `lobby` queue)
+- dev-mode auth: `AUTH_DEV_MODE=true` — anyone can mint a test token; no prod credentials (no TURN, no Discord/OIDC)
+- URL at `pvp-{N}.john2143.com` via the shared gateway (`john2143-https` listener, wildcard TLS)
+
+PR close/merge → the Application and its namespace are pruned automatically.
+
+## Health checks
+
+```fish
+# Per-PR stack
+kubectl get app -n argocd steam-lobby-pr-{N}
+kubectl get cluster,secret,deploy,pods -n steam-lobby-pr-{N}
+
+# Reachability + dev auth
+curl -s https://pvp-{N}.john2143.com/health
+curl -s -X POST https://pvp-{N}.john2143.com/auth/test-token \
+  -H 'content-type: application/json' -d '{"steam_id": 900000}'
+```
+
+## Cleanup
+
+Per-PR Temporal schedules are normally paused when idle. If a PR closes while players were queued, delete the lingering schedule (via the `temporal-admintools` pod):
+
+```fish
+kubectl exec -n default <temporal-admintools-pod> -- temporal schedule delete \
+  --schedule-id matchmaker-ranked_1v1-lobby-pr-{N} --namespace pvp
+```

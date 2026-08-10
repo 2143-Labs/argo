@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: steam-lobby-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: steam-lobby
+          tokenRef: { secretName: github-token, key: token }
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'steam-lobby-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/steam-lobby-preview
+        helm:
+          parameters:
+            - { name: image.tag, value: 'pr-{{.number}}' }
+            - { name: namespace, value: 'steam-lobby-pr-{{.number}}' }
+            - { name: ingress.host, value: 'pvp-{{.number}}.john2143.com' }
+            - { name: publicUrl, value: 'https://pvp-{{.number}}.john2143.com' }
+            - { name: temporal.taskQueue, value: 'lobby-pr-{{.number}}' }
+            - { name: db.clusterName, value: 'steam-lobby-db-pr-{{.number}}' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'steam-lobby-pr-{{.number}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

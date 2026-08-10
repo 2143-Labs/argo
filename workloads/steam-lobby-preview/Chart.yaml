@@ -1,0 +1,9 @@
+apiVersion: v2
+name: steam-lobby-preview
+description: Per-PR preview environment for steam-lobby (deployed by the PR-generator ApplicationSet)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/2143-Labs/steam-lobby
+maintainers:
+  - name: 2143-Labs

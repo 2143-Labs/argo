@@ -1,0 +1,17 @@
+image:
+  repository: ghcr.io/2143-labs/steam-lobby
+  tag: ""          # e.g. pr-123 — supplied by the ApplicationSet helm parameters
+namespace: ""      # e.g. steam-lobby-pr-123 — the per-PR release namespace
+ingress:
+  host: ""         # e.g. pvp-123.john2143.com
+publicUrl: ""      # e.g. https://pvp-123.john2143.com
+temporal:
+  address: http://temporal-frontend.default.svc.cluster.local:7233
+  namespace: pvp
+  taskQueue: ""    # e.g. lobby-pr-123 — per-PR queue, isolated from prod "lobby"
+db:
+  clusterName: ""  # e.g. steam-lobby-db-pr-123
+  name: lobby
+  size: 2Gi
+  walSize: 1Gi
+  storageClass: longhorn-cnpg

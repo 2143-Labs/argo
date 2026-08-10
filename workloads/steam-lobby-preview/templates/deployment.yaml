@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steam-lobby
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: steam-lobby
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steam-lobby
+  template:
+    metadata:
+      labels:
+        app: steam-lobby
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+      - name: steam-lobby
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        ports:
+        - containerPort: &port 8080
+        envFrom:
+        - secretRef:
+            name: steam-lobby-secret
+        env:
+        - name: STEAM_APP_ID
+          value: "480"
+        - name: AUTH_DEV_MODE
+          value: "true"
+        - name: PUBLIC_URL
+          value: {{ .Values.publicUrl | quote }}
+        - name: CORS_ORIGINS
+          value: {{ .Values.publicUrl | quote }}
+        - name: JWT_TTL_S
+          value: "86400"
+        - name: LOBBY_HOST
+          value: "0.0.0.0"
+        - name: LOBBY_PORT
+          value: "8080"
+        - name: RUST_LOG
+          value: "info,lobby_server=debug"
+        - name: GAME_MODES
+          value: "ranked_1v1:p2p"
+        - name: LOBBY_PONG
+          value: "true"
+        # Temporal: the in-process worker runs in this pod and connects to the
+        # shared cluster Temporal frontend in the default namespace (plaintext
+        # in-cluster gRPC, mirroring prod). The per-PR task queue isolates this
+        # preview from prod's "lobby" queue; the `pvp` namespace must exist on
+        # the cluster Temporal before rollout (it already does for prod).
+        - name: TEMPORAL_ADDRESS
+          value: {{ .Values.temporal.address | quote }}
+        - name: TEMPORAL_NAMESPACE
+          value: {{ .Values.temporal.namespace | quote }}
+        - name: TEMPORAL_TASK_QUEUE
+          value: {{ .Values.temporal.taskQueue | quote }}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "10m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: *port
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: *port
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          failureThreshold: 3
