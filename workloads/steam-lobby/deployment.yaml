@@ -47,6 +47,26 @@ spec:
             secretKeyRef:
               name: steam-lobby-turn
               key: turn_secret
+        - name: DISCORD_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: steam-lobby-secret
+              key: DISCORD_CLIENT_ID
+        - name: DISCORD_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: steam-lobby-secret
+              key: DISCORD_CLIENT_SECRET
+        - name: AU2143_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: steam-lobby-secret
+              key: AU2143_CLIENT_ID
+        - name: AU2143_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: steam-lobby-secret
+              key: AU2143_CLIENT_SECRET
         - name: STEAM_APP_ID
           value: "480"
         - name: AUTH_DEV_MODE
