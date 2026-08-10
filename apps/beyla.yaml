@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: beyla
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: beyla
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 1.16.10
+    helm:
+      releaseName: beyla
+      values: |
+        config:
+          create: true
+          data:
+            otel_traces_export:
+              endpoint: http://alloy.observability.svc:4317
+            otel_metrics_export:
+              endpoint: http://alloy.observability.svc:4317
+            attributes:
+              kubernetes:
+                enable: true
+            filter:
+              network:
+                k8s_dst_owner_name:
+                  not_match: '{kube*,*jaeger-agent*,*prometheus*,*promtail*,*grafana-agent*}'
+                k8s_src_owner_name:
+                  not_match: '{kube*,*jaeger-agent*,*prometheus*,*promtail*,*grafana-agent*}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
