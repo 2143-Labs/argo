@@ -22,7 +22,7 @@ spec:
         - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
         - name: dashboard
-          image: ghcr.io/john2143/frigate-genai-genai:v149
+          image: ghcr.io/john2143/frigate-genai-genai:v150
           args: ["--mode=dashboard"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
