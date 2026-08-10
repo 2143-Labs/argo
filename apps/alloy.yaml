@@ -261,7 +261,7 @@ spec:
 
               otelcol.processor.batch "metrics" {
                 output {
-                  metrics = [otelcol.exporter.otlp.mimir.input]
+                  metrics = [otelcol.exporter.otlphttp.mimir.input]
                 }
               }
 
