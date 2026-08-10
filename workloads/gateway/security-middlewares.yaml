@@ -55,6 +55,8 @@ spec:
       crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
       crowdsecAppsecFailureBlock: false
       crowdsecAppsecUnreachableBlock: false
+      clientTrustedIps:
+        - 108.56.153.222/32
 
 ---
 apiVersion: traefik.io/v1alpha1
@@ -74,3 +76,5 @@ spec:
       crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
       crowdsecAppsecFailureBlock: false
       crowdsecAppsecUnreachableBlock: false
+      clientTrustedIps:
+        - 108.56.153.222/32
