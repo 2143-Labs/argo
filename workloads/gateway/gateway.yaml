@@ -91,6 +91,23 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    # Per-PR steam-lobby previews: pvp-{N}.john2143.com attaches here (Traefik
+    # requires exact hostname match on concrete listeners; a wildcard listener
+    # accepts all subdomains). Additive — no other route references this section.
+    - name: pvp-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.john2143.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: containerstore-john2143-https
       protocol: HTTPS
       port: 8443
