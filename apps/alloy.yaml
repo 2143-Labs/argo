@@ -274,9 +274,9 @@ spec:
                 }
               }
 
-              otelcol.exporter.otlp "mimir" {
+              otelcol.exporter.otlphttp "mimir" {
                 client {
-                  endpoint = "mimir.observability.svc:8080/otlp"
+                  endpoint = "http://mimir.observability.svc:8080/otlp"
                   tls {
                     insecure = true
                   }
