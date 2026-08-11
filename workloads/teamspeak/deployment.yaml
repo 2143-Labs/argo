@@ -19,16 +19,6 @@ spec:
       labels:
         app: teamspeak
     spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - closet
       volumes:
       - name: ts-all
         persistentVolumeClaim:
