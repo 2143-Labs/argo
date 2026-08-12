@@ -31,7 +31,9 @@ spec:
       containers:
       - name: steam-lobby
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: IfNotPresent
+        # Always: the pr-N tag is a moving target (every CI push overwrites it);
+        # IfNotPresent would keep serving the stale cached image on rebuilds.
+        imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
