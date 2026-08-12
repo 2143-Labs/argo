@@ -307,6 +307,12 @@ spec:
                 hostPath:
                   path: /var/lib/alloy
                   type: DirectoryOrCreate
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

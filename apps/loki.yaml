@@ -49,6 +49,8 @@ spec:
           compactor:
             retention_enabled: true
             delete_request_store: s3
+          chunksCache:
+            allocatedMemory: 4096
         write:
           replicas: 2
           persistence:
