@@ -8,7 +8,7 @@ spec:
     name: aross-studio
   minReplicaCount: 0
   maxReplicaCount: 1
-  cooldownPeriod: 900
+  cooldownPeriod: 1800
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
