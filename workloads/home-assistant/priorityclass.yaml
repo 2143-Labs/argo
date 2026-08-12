@@ -1,0 +1,7 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: home-assistant-critical
+value: 1000000000
+globalDefault: false
+description: "Home Assistant is the top-priority workload on closet — preempts lower-priority pods when closet memory is constrained (USB/Z-Wave hardware affinity)."

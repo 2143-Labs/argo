@@ -16,6 +16,7 @@ spec:
       labels:
         app: home-assistant
     spec:
+      priorityClassName: home-assistant-critical
       dnsConfig:
         options:
           - name: ndots
@@ -44,11 +45,11 @@ spec:
               mountPath: /dev/ttyUSB0
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 1500m
+              memory: 3Gi
             limits:
               cpu: 1500m
-              memory: 2Gi
+              memory: 3Gi
       volumes:
         - name: config
           persistentVolumeClaim:
