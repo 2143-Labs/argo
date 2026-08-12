@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: anni
+  labels:
+    app: anni
+spec:
+  type: ClusterIP
+  selector:
+    app: anni
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http

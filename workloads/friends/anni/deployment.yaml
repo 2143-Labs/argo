@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anni
+  labels:
+    app: anni
+spec:
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: anni
+  template:
+    metadata:
+      labels:
+        app: anni
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: anni
+          image: ghcr.io/sooperu/1stanniversary:1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3

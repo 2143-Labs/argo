@@ -683,3 +683,17 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: anni-2143-me-https
+      protocol: HTTPS
+      port: 8443
+      hostname: anni.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: 2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same

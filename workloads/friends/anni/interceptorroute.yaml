@@ -1,0 +1,15 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: anni
+  namespace: default
+spec:
+  target:
+    service: anni
+    port: 80
+  rules:
+    - hosts:
+        - anni.2143.me
+  scalingMetric:
+    concurrency:
+      targetValue: 10

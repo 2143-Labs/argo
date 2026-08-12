@@ -9,6 +9,7 @@ spec:
     - list:
         elements:
           - name: aross
+          - name: anni
   template:
     metadata:
       name: "friend-{{.name}}"
