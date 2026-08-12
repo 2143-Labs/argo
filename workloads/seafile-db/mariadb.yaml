@@ -51,6 +51,13 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 500m
+            memory: 1Gi
   volumeClaimTemplates:
   - metadata:
       name: data
