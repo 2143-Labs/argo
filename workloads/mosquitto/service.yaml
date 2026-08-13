@@ -21,8 +21,10 @@ metadata:
   labels:
     app: mosquitto
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.19"
+    metallb.io/loadBalancerIPs: "192.168.6.19,fd00:6::19"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   selector:
     app: mosquitto
