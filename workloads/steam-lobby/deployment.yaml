@@ -30,7 +30,7 @@ spec:
                       - general
       containers:
       - name: steam-lobby
-        image: ghcr.io/2143-labs/steam-lobby:30
+        image: ghcr.io/2143-labs/steam-lobby:35
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
