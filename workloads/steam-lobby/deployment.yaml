@@ -84,7 +84,7 @@ spec:
         - name: RUST_LOG
           value: "info,lobby_server=debug"
         - name: GAME_MODES
-          value: "ranked_1v1:rps_1v1:p2p"
+          value: "ranked_1v1:p2p,rps_1v1:p2p"
         # Temporal: the in-process worker runs in this pod and connects to the
         # cluster Temporal frontend in the default namespace (plaintext
         # in-cluster gRPC, mirroring the frigate-genai workers). The `pvp`
