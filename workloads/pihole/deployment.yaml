@@ -40,6 +40,8 @@ spec:
               value: America/Chicago
             - name: DNSMASQ_LISTENING
               value: all
+            - name: FTLCONF_dns_listeningMode
+              value: "all"
             - name: FTLCONF_webserver_api_password
               value: ""
           ports:
