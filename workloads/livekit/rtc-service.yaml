@@ -4,7 +4,7 @@ metadata:
   name: livekit-server-rtc
   namespace: matrix
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.22"
+    metallb.io/loadBalancerIPs: "192.168.6.22,fd00:6::22"
 spec:
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
