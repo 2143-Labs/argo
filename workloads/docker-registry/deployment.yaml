@@ -52,6 +52,8 @@ spec:
           env:
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: /var/lib/registry
+            - name: REGISTRY_PROXY_REMOTEURL
+              value: https://ghcr.io
           volumeMounts:
             - name: data
               mountPath: /var/lib/registry
