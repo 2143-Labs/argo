@@ -117,7 +117,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - kind: Secret
+          - group: ""
+            kind: Secret
             name: john2143-com-wildcard-tls
       allowedRoutes:
         namespaces:
