@@ -77,6 +77,11 @@ spec:
     automated:
       prune: true
       selfHeal: true
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .metadata.finalizers
 ---
 # RBAC and roles
 apiVersion: argoproj.io/v1alpha1

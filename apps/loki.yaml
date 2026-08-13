@@ -19,6 +19,8 @@ spec:
           auth_enabled: false
           commonConfig:
             replication_factor: 2
+            ring:
+              autoforget_unhealthy: true
           memberlistConfig:
             join_members:
               - dns+loki-memberlist.observability.svc.cluster.local:7946

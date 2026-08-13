@@ -61,6 +61,10 @@ spec:
               volumeInfo:
                 configMap:
                   name: seafile-oauth-config
+          configs:
+            seafileDataVolume:
+              storageClassName: longhorn-3
+              storage: 50Gi
 
   destination:
     server: https://kubernetes.default.svc

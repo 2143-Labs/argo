@@ -45,6 +45,11 @@ spec:
               value: "crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-crs"
         lapi:
           replicas: 1
+          persistentVolume:
+            data:
+              storageClassName: longhorn-2
+            config:
+              storageClassName: longhorn-2
   destination:
     server: https://kubernetes.default.svc
     namespace: crowdsec

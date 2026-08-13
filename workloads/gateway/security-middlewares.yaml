@@ -57,6 +57,7 @@ spec:
       crowdsecAppsecUnreachableBlock: false
       clientTrustedIps:
         - 108.56.153.222/32
+        - 10.42.0.0/16
 
 ---
 apiVersion: traefik.io/v1alpha1
@@ -78,3 +79,4 @@ spec:
       crowdsecAppsecUnreachableBlock: false
       clientTrustedIps:
         - 108.56.153.222/32
+        - 10.42.0.0/16

@@ -18,6 +18,7 @@ spec:
     storageClass: longhorn-cnpg
   walStorage:
     size: 4Gi
+    storageClass: longhorn-cnpg
   bootstrap:
     initdb:
       database: lobby

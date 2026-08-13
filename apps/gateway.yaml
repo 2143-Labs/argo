@@ -29,6 +29,7 @@ spec:
       # a defaulted group:"" field not present in the manifests.
       jqPathExpressions:
         - .spec.listeners[].tls.certificateRefs[].group
+        - .metadata.annotations."traefik.ingress.kubernetes.io/router.tls"
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       # API-server defaulting on Gateway API CRDs: parentRefs gain group/kind
