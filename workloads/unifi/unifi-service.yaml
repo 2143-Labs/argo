@@ -5,7 +5,7 @@ metadata:
   labels:
     app: unifi
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.10,fd00:6::30"
+    metallb.io/loadBalancerIPs: "192.168.6.10"
 spec:
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
@@ -25,7 +25,7 @@ metadata:
   labels:
     app: unifi
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.25,fd00:6::25"
+    metallb.io/loadBalancerIPs: "192.168.6.25"
 spec:
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
@@ -46,7 +46,7 @@ metadata:
   labels:
     app: unifi
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.12,fd00:6::12"
+    metallb.io/loadBalancerIPs: "192.168.6.12"
 spec:
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
