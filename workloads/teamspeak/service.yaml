@@ -23,8 +23,10 @@ kind: Service
 metadata:
   name: ts-voice
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.15"
+    metallb.io/loadBalancerIPs: "192.168.6.15,fd00:6::15"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   ports:
   - port: 9987
@@ -40,8 +42,10 @@ kind: Service
 metadata:
   name: ts-files
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.16"
+    metallb.io/loadBalancerIPs: "192.168.6.16,fd00:6::16"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   ports:
   - port: 30033

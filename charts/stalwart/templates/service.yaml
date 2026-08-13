@@ -23,10 +23,12 @@ metadata:
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-spec:
-  type: {{ .Values.service.type }}
-  selector:
-    {{- include "stalwart.selectorLabels" . | nindent 4 }}
+  spec:
+    type: {{ .Values.service.type }}
+    ipFamilyPolicy: PreferDualStack
+    ipFamilies: [IPv4, IPv6]
+    selector:
+      {{- include "stalwart.selectorLabels" . | nindent 6 }}
   ports:
     - name: smtp
       port: {{ .Values.service.ports.smtp }}

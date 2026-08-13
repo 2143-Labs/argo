@@ -63,8 +63,10 @@ kind: Service
 metadata:
   name: openrct2-game
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.17"
+    metallb.io/loadBalancerIPs: "192.168.6.17,fd00:6::17"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   ports:
     - port: 11753

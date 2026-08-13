@@ -4,8 +4,10 @@ metadata:
   name: mimir-lb
   namespace: observability
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.23"
+    metallb.io/loadBalancerIPs: "192.168.6.23,fd00:6::23"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   selector:
     app: mimir
@@ -21,8 +23,10 @@ metadata:
   name: loki-push-lb
   namespace: observability
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.24"
+    metallb.io/loadBalancerIPs: "192.168.6.24,fd00:6::24"
 spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   type: LoadBalancer
   selector:
     app.kubernetes.io/component: gateway
