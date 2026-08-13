@@ -12,6 +12,8 @@ spec:
     - https://argoproj.github.io/argo-helm
     - https://cloudnative-pg.github.io/charts
     - https://crowdsecurity.github.io/helm-charts
+    - https://github.com/2143-Labs/cert-manager-webhook-desec
+    - ghcr.io/magikid/modern-conduwuit-helm
     - https://github.com/actions/actions-runner-controller
     - https://grafana.github.io/helm-charts
     - https://prometheus-community.github.io/helm-charts
