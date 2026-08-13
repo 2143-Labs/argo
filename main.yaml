@@ -44,6 +44,10 @@ spec:
       kind: '*'
     - group: admissionregistration.k8s.io
       kind: '*'
+    - group: apiregistration.k8s.io
+      kind: '*'
+    - group: scheduling.k8s.io
+      kind: '*'
 
 ---
 # ArgoCD Repository Secret
