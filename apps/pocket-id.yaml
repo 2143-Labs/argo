@@ -26,3 +26,4 @@ spec:
       jqPathExpressions:
         - .metadata.annotations
         - .status
+        - .spec.claimRef
