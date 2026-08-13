@@ -19,9 +19,6 @@ spec:
           auth_enabled: false
           commonConfig:
             replication_factor: 2
-          runtimeConfig:
-            ring:
-              auto_forget_unhealthy_periods: "10m"
           memberlistConfig:
             join_members:
               - dns+loki-memberlist.observability.svc.cluster.local:7946
@@ -49,6 +46,7 @@ spec:
               secret_access_key: ${S3_SECRET_KEY}
           limits_config:
             retention_period: 2160h
+            auto_forget_unhealthy_periods: "10m"
           compactor:
             retention_enabled: true
             delete_request_store: s3
