@@ -28,18 +28,21 @@ metadata:
   name: pihole-dns
   labels:
     app: pihole
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.27,fd00:6::27"
 spec:
-  type: NodePort
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   selector:
     app: pihole
   ports:
     - port: 53
       targetPort: 53
-      nodePort: 30053
       protocol: UDP
       name: dns-udp
     - port: 53
       targetPort: 53
-      nodePort: 30053
       protocol: TCP
       name: dns-tcp

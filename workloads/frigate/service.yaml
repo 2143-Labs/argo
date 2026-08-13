@@ -3,9 +3,16 @@ kind: Service
 metadata:
   name: frigate
   namespace: default
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.26,fd00:6::26"
 spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
   selector: {app: frigate}
   ports:
-    - {name: http, port: 5000, targetPort: 5000, nodePort: 30500}
+    - {name: http, port: 5000, targetPort: 5000}
     - {name: go2rtc-api, port: 1984, targetPort: 1984}
-  type: NodePort
+    - {name: go2rtc-tcp, port: 8554, targetPort: 8554, protocol: TCP}
+    - {name: go2rtc-udp, port: 8555, targetPort: 8555, protocol: UDP}
