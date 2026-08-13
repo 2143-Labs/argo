@@ -9,6 +9,12 @@ spec:
   sourceRepos:
     - https://github.com/2143-Labs/argo.git
     - https://github.com/kubernetes-sigs/gateway-api.git
+    - https://argoproj.github.io/argo-helm
+    - https://cloudnative-pg.github.io/charts
+    - https://crowdsecurity.github.io/helm-charts
+    - https://github.com/actions/actions-runner-controller
+    - https://grafana.github.io/helm-charts
+    - https://prometheus-community.github.io/helm-charts
     - https://haiwen.github.io/seafile-helm-chart/repo
     - https://charts.jetstack.io
     - https://charts.longhorn.io
