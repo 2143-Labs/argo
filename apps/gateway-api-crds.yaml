@@ -23,6 +23,16 @@ spec:
       jsonPointers:
         - /metadata/annotations
         - /status
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicy
+      jqPathExpressions:
+        - .metadata.annotations
+        - .status
+    - group: admissionregistration.k8s.io
+      kind: ValidatingAdmissionPolicyBinding
+      jqPathExpressions:
+        - .metadata.annotations
+        - .status
   syncPolicy:
     automated:
       prune: false
