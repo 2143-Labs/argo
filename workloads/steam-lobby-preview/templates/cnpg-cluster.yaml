@@ -18,6 +18,10 @@ spec:
     storageClass: {{ .Values.db.storageClass }}
   walStorage:
     size: {{ .Values.db.walSize }}
+    # Explicit class — the default (local-path) provisioner half-failed during
+    # a node outage and left a PV with no hostPath, blocking the WAL mount
+    # (FailedMount) and crash-looping the DB. Longhorn is the reliable class.
+    storageClass: longhorn
   bootstrap:
     initdb:
       database: {{ .Values.db.name }}
