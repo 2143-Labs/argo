@@ -1,0 +1,29 @@
+# Pelican panel runtime env (non-secret). APP_KEY + DB_PASSWORD come from the
+# pelican-env Secret via envFrom. The ofsm-style contract is the official
+# pelican-dev/panel image: single container runs php-fpm + queue-worker +
+# supercronic via supervisord; Caddy serves :80 HTTP-only behind the proxy
+# (BEHIND_PROXY=true); /pelican-data persists .env/backups/plugins.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pelican-config
+  namespace: default
+data:
+  env:
+    APP_ENV: "production"
+    APP_DEBUG: "false"
+    APP_URL: "https://pelican.john2143.com"
+    APP_INSTALLED: "true"
+    APP_LOCALE: "en"
+    BEHIND_PROXY: "true"
+    TRUSTED_PROXIES: "0.0.0.0/0"
+    XDG_DATA_HOME: "/pelican-data"
+    MAIL_DRIVER: "log"
+    DB_CONNECTION: "pgsql"
+    DB_HOST: "pelican-db-rw"
+    DB_PORT: "5432"
+    DB_DATABASE: "pelican"
+    DB_USERNAME: "pelican"
+    QUEUE_CONNECTION: "database"
+    SESSION_DRIVER: "database"
+    CACHE_STORE: "database"

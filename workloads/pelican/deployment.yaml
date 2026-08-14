@@ -1,0 +1,85 @@
+# Pelican panel: single container (official ghcr.io/pelican-dev/panel image).
+# supervisord inside runs php-fpm + queue-worker + supercronic (scheduler);
+# Caddy serves :80 HTTP-only because BEHIND_PROXY=true (traefik terminates
+# TLS). The entrypoint runs `artisan migrate --force` on start when
+# APP_INSTALLED=true, so no separate init/worker/scheduler workloads.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pelican
+  namespace: default
+  labels:
+    app: pelican
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pelican
+  template:
+    metadata:
+      labels:
+        app: pelican
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: panel
+          image: ghcr.io/pelican-dev/panel:v1.0.0-beta37
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              protocol: TCP
+              name: http
+          envFrom:
+            - configMapRef:
+                name: pelican-config
+            - secretRef:
+                name: pelican-env
+          volumeMounts:
+            - mountPath: /pelican-data
+              name: pelican-data
+            # plugins live under the data volume (compose uses subpath)
+            - mountPath: /var/www/html/plugins
+              name: pelican-data
+              subPath: plugins
+            - mountPath: /var/www/html/storage/logs
+              name: pelican-logs
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+      volumes:
+        - name: pelican-data
+          persistentVolumeClaim:
+            claimName: pelican-data-lh
+        - name: pelican-logs
+          persistentVolumeClaim:
+            claimName: pelican-logs-lh

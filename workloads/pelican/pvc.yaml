@@ -1,0 +1,24 @@
+# Pelican state PVCs on longhorn-2 (2-replica Retain tier).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pelican-data-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pelican-logs-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 1Gi
