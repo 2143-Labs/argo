@@ -180,9 +180,10 @@ Notes:
 | pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.28–.50`; v6 `fd00:6::11`, `::20`, `::28`, `::29`,
-`::31–::50`. Never reuse an in-use address; a collision surfaces as
-`AllocationFailed: address also in use by <ns>/<svc>`.
+**Free:** v4 `192.168.6.28–.200` (`.201–.254` reserved headroom); v6
+`fd00:6::11`, `::20`, `::28`, `::29`, `::31–::ff`. Never reuse an in-use
+address; a collision surfaces as `AllocationFailed: address also in use by
+<ns>/<svc>`.
 
 ### Rules of thumb
 
