@@ -1,0 +1,78 @@
+# A deployment for a Factorio server via OFSM (Open Factorio Server Manager):
+# web UI on :80 + headless Factorio server on UDP 34197.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: factorio
+  labels:
+    app: factorio
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: factorio
+  template:
+    metadata:
+      labels:
+        app: factorio
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      volumes:
+        - name: factorio-saves
+          persistentVolumeClaim:
+            claimName: factorio-saves-lh
+        - name: factorio-configs
+          persistentVolumeClaim:
+            claimName: factorio-configs-lh
+        - name: factorio-db
+          persistentVolumeClaim:
+            claimName: factorio-db-lh
+        - name: factorio-mod-packs
+          persistentVolumeClaim:
+            claimName: factorio-mod-packs-lh
+      containers:
+        - name: factorio
+          image: ofsm/ofsm:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              protocol: TCP
+              name: http
+            - containerPort: 34197
+              protocol: UDP
+              name: game
+          env:
+            - name: FSM_AUTOSTART
+              value: "true"
+            # MUST match the mod-packs mountPath below (/mnt/mod_packs/).
+            # The old config used /mnt/modpacks/ — a path mismatch that made
+            # the modpack directory ineffective.
+            - name: FSM_MODPACK_DIR
+              value: /mnt/mod_packs/
+            - name: SQ_LITE_DATABASE_FILE
+              value: /mnt/db/sqlite.db
+          volumeMounts:
+            - mountPath: /opt/factorio/saves/
+              name: factorio-saves
+            - mountPath: /opt/factorio/config/
+              name: factorio-configs
+            - mountPath: /mnt/db
+              name: factorio-db
+            - mountPath: /mnt/mod_packs/
+              name: factorio-mod-packs
+          resources:
+            requests:
+              memory: "3000Mi"
+              cpu: "2"

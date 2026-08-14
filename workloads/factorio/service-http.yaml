@@ -1,0 +1,13 @@
+# v4-only ClusterIP backing the factorio HTTPRoute (frigate-http pattern).
+# No ipFamilyPolicy field => single-stack v4, avoids the dual-stack 502
+# regression when the backend binds IPv4-only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: factorio-http
+  namespace: default
+spec:
+  type: ClusterIP
+  selector: {app: factorio}
+  ports:
+    - {name: http, port: 80, targetPort: 80}

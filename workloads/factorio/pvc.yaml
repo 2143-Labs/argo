@@ -1,0 +1,50 @@
+# Factorio state PVCs on longhorn-2 (2-replica Retain tier; protects saves
+# from Argo prune / accidental deletion). Do NOT use the 'longhorn' SC
+# (Delete reclaim).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: factorio-saves-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: factorio-configs-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: factorio-db-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: factorio-mod-packs-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      storage: 5Gi

@@ -178,6 +178,7 @@ Notes:
 | unifi-web | 192.168.6.25 | fd00:6::25 |
 | frigate (5000/1984/8554/8555) | 192.168.6.26 | fd00:6::26 |
 | pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
+| factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
 **Free:** v4 `192.168.6.28–.200` (`.201–.254` reserved headroom); v6

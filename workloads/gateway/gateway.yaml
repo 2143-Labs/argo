@@ -231,19 +231,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: factorio-https
-      protocol: HTTPS
-      port: 8443
-      hostname: factorio.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: 2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
     - name: images-2143-https
       protocol: HTTPS
       port: 8443
@@ -343,12 +330,6 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: argocd
-    #- name: factorio-udp
-      #protocol: UDP
-      #port: 34197
-      #allowedRoutes:
-        #namespaces:
-          #from: Same
     #- name: teamspeak-udp
       #protocol: UDP
       #port: 9987
@@ -469,6 +450,19 @@ spec:
       protocol: HTTPS
       port: 8443
       hostname: grafana.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: factorio-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: factorio.john2143.com
       tls:
         mode: Terminate
         certificateRefs:
