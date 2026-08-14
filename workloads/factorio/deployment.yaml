@@ -36,7 +36,7 @@ spec:
         - name: factorio-configs
           persistentVolumeClaim:
             claimName: factorio-configs-lh
-        - name: factorio-db
+        - name: factorio-fsm-data
           persistentVolumeClaim:
             claimName: factorio-db-lh
         - name: factorio-mod-packs
@@ -54,23 +54,31 @@ spec:
               protocol: UDP
               name: game
           env:
+            # The ofsm/ofsm image entrypoint ignores FSM_MODPACK_DIR /
+            # SQ_LITE_DATABASE_FILE (verified against /opt/entrypoint.sh and
+            # binary strings). Its real contract: the OFSM sqlite DB + conf
+            # live at /opt/fsm-data (hardcoded), the game is installed from
+            # FACTORIO_VERSION=latest (image default -> Factorio 2.1.x), and
+            # the binary's modpack dir defaults to /opt/fsm/mod_packs.
+            # FSM_AUTOSTART is a UI-managed setting; kept for intent.
             - name: FSM_AUTOSTART
               value: "true"
-            # MUST match the mod-packs mountPath below (/mnt/mod_packs/).
-            # The old config used /mnt/modpacks/ — a path mismatch that made
-            # the modpack directory ineffective.
-            - name: FSM_MODPACK_DIR
-              value: /mnt/mod_packs/
-            - name: SQ_LITE_DATABASE_FILE
-              value: /mnt/db/sqlite.db
           volumeMounts:
             - mountPath: /opt/factorio/saves/
               name: factorio-saves
             - mountPath: /opt/factorio/config/
               name: factorio-configs
-            - mountPath: /mnt/db
-              name: factorio-db
-            - mountPath: /mnt/mod_packs/
+            # OFSM's own data dir (sqlite.db, conf.json, log) — persist on
+            # longhorn-2 via factorio-db-lh so admin user/settings survive
+            # restarts. The old config mounted /mnt/db which nothing reads.
+            - mountPath: /opt/fsm-data
+              name: factorio-fsm-data
+            # The binary's default modpack dir (log: "/opt/fsm/mod_packs").
+            # Same PVC also mounted at the game's mods dir so active mods
+            # (e.g. the K2+SE pack) persist across pod restarts.
+            - mountPath: /opt/fsm/mod_packs
+              name: factorio-mod-packs
+            - mountPath: /opt/factorio/mods
               name: factorio-mod-packs
           resources:
             requests:
