@@ -9,6 +9,26 @@ spec:
     spec:
       restartPolicy: OnFailure
       serviceAccountName: steam-lobby-secret-init
+      # The preview's Temporal namespace (pvp-preview) must exist before the
+      # worker connects — Temporal clients can't self-register, and a missing
+      # namespace silently degrades the app to in-process only (queueing
+      # breaks). Ensure it idempotently; also self-heals a rebuilt Temporal
+      # (the namespace was lost once during the DB recovery).
+      initContainers:
+        - name: ensure-temporal-namespace
+          image: docker.io/temporalio/admin-tools:1.31.1
+          env:
+            - { name: TEMPORAL_CLI_ADDRESS, value: "temporal-frontend.default.svc:7233" }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |-
+              set -e
+              if ! temporal operator namespace describe "{{ .Values.temporal.namespace }}" >/dev/null 2>&1; then
+                echo "registering namespace {{ .Values.temporal.namespace }}"
+                temporal operator namespace create "{{ .Values.temporal.namespace }}" --retention 72h
+              else
+                echo "namespace {{ .Values.temporal.namespace }} already exists"
+              fi
       containers:
         - name: init
           image: docker.io/alpine/k8s:1.35.6   # kubectl client matching the k3s cluster version; alpine base → /bin/sh

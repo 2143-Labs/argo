@@ -7,7 +7,7 @@ ingress:
 publicUrl: ""      # e.g. https://pvp-123.john2143.com
 temporal:
   address: http://temporal-frontend.default.svc.cluster.local:7233
-  namespace: pvp
+  namespace: pvp-preview   # all previews share one namespace (per-PR task queues isolate); prod stays on "pvp"
   taskQueue: ""    # e.g. lobby-pr-123 — per-PR queue, isolated from prod "lobby"
 db:
   clusterName: ""  # e.g. steam-lobby-db-pr-123
