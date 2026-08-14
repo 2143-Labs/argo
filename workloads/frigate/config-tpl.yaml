@@ -531,6 +531,10 @@ data:
           - canada_post
           - robot_lawnmower
           - umbrella
+          filters:
+            car:
+              mask:
+              - 0.987,0.284,0.974,0.394,0.929,0.431,0.924,0.531,0.895,0.624,0.966,0.763,0.999,0.71,0.998,0.299
         record:
           enabled: true
           events:
