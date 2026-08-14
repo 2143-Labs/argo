@@ -3,12 +3,6 @@ kind: Cluster
 metadata:
   name: mattermost-db
   namespace: mattermost
-  annotations:
-    # Hibernate (scale to zero pods) while mattermost is disabled (app scaled
-    # to 0 since 2026-07-12). PVCs + nightly backups are preserved; remove the
-    # annotation to resume. Note: spec.instances cannot be 0 (CRD minimum 1),
-    # so hibernation is the data-safe way to stop the cluster.
-    cnpg.io/hibernation: "on"
 spec:
   instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
