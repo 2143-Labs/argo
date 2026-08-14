@@ -84,8 +84,10 @@ Notes:
   which is why stalwart could be patched). To dual-stack it later: vendor the
   chart or add a post-sync patch; do not hand-edit the deployed Service
   (ArgoCD `temporal` app owns it).
-- `fd00:6::11` (traefik's twin slot), `::20` (temporal's twin slot) and
-  `::26-::50` are free for future pins.
+- `fd00:6::11` (traefik's twin slot) and `::20` (temporal's twin slot) are free;
+  `::28`–`::50` are free for future pins. `.26/::26` (frigate) and `.27/::27`
+  (pihole-dns) were allocated 2026-08-13 — the authoritative allocation table
+  now lives in `adding-a-workload.md` §5.
 
 ## Router state (post-change)
 
@@ -119,11 +121,10 @@ Notes:
   single-stack. Pool/BGPPeer are additive — reverting them only stops new v6
   allocations.
 
-## Follow-ups
-
-- Matter-server fabric: `Loaded 0 nodes` at startup despite node stores on disk
-  and PVC `matter-server-data-restored` — re-commission lights via HA Matter
-  integration, or investigate the PVC restore.
+- ~~Matter-server fabric: `Loaded 0 nodes` at startup~~ — **RESOLVED 2026-08-13**:
+  fabric restored from the 2026-08-07 Longhorn backup (PVC
+  `matter-server-data-aug7`, byte-exact 243269632-byte restore, `Loaded 11
+  nodes`, devices working). See the restore runbook/plan notes.
 - matter-server websocket: hourly `No PONG received after 27.5s` (HA ↔
   matter-server) — HA-side processing stall, not IPv6.
 - temporal-frontend dual-stack (chart passthrough needed — see above).
