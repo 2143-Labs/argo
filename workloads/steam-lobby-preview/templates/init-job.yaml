@@ -18,6 +18,7 @@ spec:
         - name: ensure-temporal-namespace
           image: docker.io/temporalio/admin-tools:1.31.1
           env:
+            - { name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc:7233" }
             - { name: TEMPORAL_CLI_ADDRESS, value: "temporal-frontend.default.svc:7233" }
           command: ["/bin/sh", "-c"]
           args:
