@@ -17,24 +17,3 @@ spec:
       targetPort: 5580
       protocol: TCP
       name: ws
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: matter-server-nodeport
-  labels:
-    app: matter-server
-spec:
-  type: NodePort
-  ipFamilyPolicy: PreferDualStack
-  ipFamilies:
-    - IPv4
-    - IPv6
-  selector:
-    app: matter-server
-  ports:
-    - port: 5580
-      nodePort: 30167
-      targetPort: 5580
-      protocol: TCP
-      name: ws
