@@ -26,7 +26,7 @@ spec:
                       - general
       containers:
         - name: anni
-          image: ghcr.io/sooperu/1stanniversary:6
+          image: ghcr.io/sooperu/1stanniversary:7
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 101
