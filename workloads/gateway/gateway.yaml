@@ -705,3 +705,17 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: i-dsstar-us-https
+      protocol: HTTPS
+      port: 8443
+      hostname: i.dsstar.us
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: dsstar-us-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
