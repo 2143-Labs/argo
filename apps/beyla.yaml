@@ -15,7 +15,7 @@ spec:
       releaseName: beyla
       values: |
         nodeSelector:
-          beyla.enabled: "true"
+          beyla.enabled: "false"
         config:
           create: true
           data:
