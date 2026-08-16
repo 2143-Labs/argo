@@ -7,11 +7,8 @@ spec:
   parentRefs:
     - name: shared-gateway
       sectionName: john2143-https
-    - name: shared-gateway
-      sectionName: i-dsstar-us-https
   hostnames:
     - john2143.com
-    - i.dsstar.us
   rules:
     - matches:
         - path:

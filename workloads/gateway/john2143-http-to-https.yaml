@@ -24,7 +24,6 @@ spec:
     - files-ui.ts.2143.me
     - mattermost.john2143.com
     - llm.2143.me
-    - i.dsstar.us
   rules:
     - matches:
         - path:
