@@ -19,7 +19,7 @@ spec:
         - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
         - name: mqtt-listener
-          image: ghcr.io/john2143/frigate-genai-genai:v169
+          image: ghcr.io/john2143/frigate-genai-genai:v170
           args: ["--mode=mqtt-listener"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
