@@ -25,10 +25,10 @@ spec:
             - weight: 100
               preference:
                 matchExpressions:
-                  - key: workload-type
+                  - key: kubernetes.io/hostname
                     operator: In
                     values:
-                      - general
+                      - closet
       volumes:
         - name: factorio-saves
           persistentVolumeClaim:
