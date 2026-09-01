@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acquis-configmap
+  namespace: crowdsec
+data:
+  acquis.yaml: |-
+    ---
+    filenames:
+      - /var/log/containers/traefik-*_kube-system_*.log
+    force_inotify: true
+    poll_without_inotify: false
+    labels:
+      type: containerd
+      program: traefik

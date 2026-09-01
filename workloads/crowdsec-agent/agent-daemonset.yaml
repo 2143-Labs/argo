@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: crowdsec-agent
+  namespace: crowdsec
+  labels:
+    k8s-app: crowdsec
+    type: agent
+    version: v1
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: crowdsec
+      type: agent
+  template:
+    metadata:
+      labels:
+        k8s-app: crowdsec
+        type: agent
+        version: v1
+    spec:
+      containers:
+      - name: crowdsec-agent
+        image: crowdsecurity/crowdsec:v1.7.8
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - cp /tmp_config/local_api_credentials.yaml /staging/etc/crowdsec/local_api_credentials.yaml && ./docker_start.sh
+        env:
+        - name: DISABLE_LOCAL_API
+          value: "true"
+        - name: DISABLE_ONLINE_API
+          value: "true"
+        - name: CROWDSEC_BYPASS_DB_VOLUME_CHECK
+          value: "true"
+        - name: LOCAL_API_URL
+          value: http://crowdsec-service.crowdsec:8080
+        ports:
+        - containerPort: 6060
+          name: metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+            scheme: HTTP
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+            scheme: HTTP
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+            scheme: HTTP
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 250Mi
+          requests:
+            cpu: 500m
+            memory: 250Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp_config
+          name: crowdsec-config
+        - mountPath: /etc/crowdsec/acquis.yaml
+          name: acquis-config-volume
+          subPath: acquis.yaml
+        - mountPath: /var/log
+          name: varlog
+          readOnly: true
+      initContainers:
+      - name: wait-for-lapi-and-register
+        image: crowdsecurity/crowdsec:v1.7.8
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |-
+          # Idempotent registration: reuse emptyDir credentials on in-place restarts (lapi 403s on re-registering an existing machine name; stable machine names would make the wedge permanent, pod-name identity self-heals on recreation).
+          until nc "$LAPI_HOST" "$LAPI_PORT" -z; do echo waiting for lapi to start; sleep 5; done; if [ ! -f /tmp_config/local_api_credentials.yaml ]; then ln -s /staging/etc/crowdsec /etc/crowdsec; cscli lapi register --machine "$USERNAME" -u "$LAPI_URL" --token "$REGISTRATION_TOKEN"; cp /etc/crowdsec/local_api_credentials.yaml /tmp_config/local_api_credentials.yaml; fi
+        env:
+        - name: REGISTRATION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: registrationToken
+              name: crowdsec-lapi-secrets
+        - name: USERNAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: LAPI_URL
+          value: http://crowdsec-service.crowdsec:8080
+        - name: LAPI_HOST
+          value: crowdsec-service.crowdsec
+        - name: LAPI_PORT
+          value: "8080"
+        resources:
+          limits:
+            memory: 50Mi
+          requests:
+            cpu: 1m
+            memory: 10Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp_config
+          name: crowdsec-config
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: acquis-configmap
+        name: acquis-config-volume
+      - emptyDir: {}
+        name: crowdsec-config
+      - hostPath:
+          path: /var/log
+          type: ""
+        name: varlog
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1

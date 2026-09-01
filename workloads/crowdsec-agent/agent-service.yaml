@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: crowdsec-agent-service
+  namespace: crowdsec
+  labels:
+    app: crowdsec-agent-service
+spec:
+  type: ClusterIP
+  selector:
+    k8s-app: crowdsec
+    type: agent
+    version: v1
+  ports:
+  - name: metrics
+    port: 6060
+    protocol: TCP
+    targetPort: 6060
