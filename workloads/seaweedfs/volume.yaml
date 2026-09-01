@@ -10,7 +10,15 @@ spec:
   template:
     metadata: {labels: {app: seaweedfs-volume}}
     spec:
-      nodeName: nas
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - nas
       terminationGracePeriodSeconds: 120
       containers:
       - name: volume
