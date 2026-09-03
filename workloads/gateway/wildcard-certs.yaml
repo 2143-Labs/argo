@@ -88,7 +88,7 @@ metadata:
 spec:
   secretName: mm-timestone-tls
   issuerRef:
-    name: letsencrypt-prod
+    name: letsencrypt-http01
     kind: ClusterIssuer
   dnsNames:
     - mm.timestone.2143.me
