@@ -1,0 +1,35 @@
+# mm.b.hero.rehab /joinlobby -> steam-lobby service /steam/joinlobby.
+# Mirrored on the timestone domains so any of the three can serve in a pinch
+# (all three resolve to the cluster WAN; certs in workloads/gateway/wildcard-certs.yaml).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: steam-lobby-mm-joinlobby
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: mm-b-hero-rehab-https
+    - name: shared-gateway
+      sectionName: mm-timestone-2143-https
+    - name: shared-gateway
+      sectionName: mm-timestone-john2143-https
+  hostnames:
+    - mm.b.hero.rehab
+    - mm.timestone.2143.me
+    - mm.timestone.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /joinlobby
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /steam/joinlobby
+      backendRefs:
+        - name: steam-lobby
+          namespace: steam-lobby
+          port: 80

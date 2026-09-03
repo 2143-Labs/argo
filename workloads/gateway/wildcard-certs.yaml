@@ -66,3 +66,30 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - aross.studio
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mm-b-hero-rehab-tls
+  namespace: default
+spec:
+  secretName: mm-b-hero-rehab-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - mm.b.hero.rehab
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mm-timestone-tls
+  namespace: default
+spec:
+  secretName: mm-timestone-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - mm.timestone.2143.me
+    - mm.timestone.john2143.com

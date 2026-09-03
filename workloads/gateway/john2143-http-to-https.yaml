@@ -23,6 +23,9 @@ spec:
     - home.ts.2143.me
     - files-ui.ts.2143.me
     - mattermost.john2143.com
+    - mm.b.hero.rehab
+    - mm.timestone.2143.me
+    - mm.timestone.john2143.com
     - llm.2143.me
   rules:
     - matches:

@@ -652,6 +652,46 @@ spec:
         namespaces:
           from: Same
 
+    - name: mm-b-hero-rehab-https
+      protocol: HTTPS
+      port: 8443
+      hostname: mm.b.hero.rehab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: mm-b-hero-rehab-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: mm-timestone-2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: mm.timestone.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: mm-timestone-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: mm-timestone-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: mm.timestone.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: mm-timestone-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+
     - name: aross-studio-https
       protocol: HTTPS
       port: 8443
