@@ -23,6 +23,9 @@ spec:
       labels:
         app: pelican
     spec:
+      securityContext:
+        fsGroup: 82
+        fsGroupChangePolicy: OnRootMismatch
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
