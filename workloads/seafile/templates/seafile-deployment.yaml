@@ -21,6 +21,12 @@ spec:
           volumeMounts:  
           - name: seafile-data  
             mountPath: /shared
+        - name: configure-oauth
+          image: busybox
+          command: ['sh', '-c', 'f=/shared/seafile/conf/seahub_settings.py; [ -f "$f" ] || exit 0; grep -q "seafile_oauth_settings" "$f" || printf "\n# Pocket ID OAuth (managed)\nimport sys\nsys.path.insert(0, \"/scripts\")\nfrom seafile_oauth_settings import *\n" >> "$f"']
+          volumeMounts:
+          - name: seafile-data
+            mountPath: /shared
       {{- end }}
       containers:
         - name: seafile
