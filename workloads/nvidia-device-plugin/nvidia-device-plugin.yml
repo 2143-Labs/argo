@@ -33,6 +33,7 @@ spec:
           value: /
         - name: LD_LIBRARY_PATH
           value: /driver-root
+        securityContext:
           privileged: true
         volumeMounts:
         - name: kubelet-device-plugins-dir
