@@ -15,7 +15,10 @@ spec:
       releaseName: beyla
       values: |
         nodeSelector:
-          beyla.enabled: "false"
+          beyla.enabled: "true"
+          kubernetes.io/hostname: big
+        image:
+          tag: "3.33.0"
         config:
           create: true
           data:
