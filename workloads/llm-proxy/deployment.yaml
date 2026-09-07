@@ -45,6 +45,8 @@ spec:
               value: "true"
             - name: PYTHONPATH
               value: "/usr/lib/python3.13/site-packages"
+            - name: DISABLE_SCHEMA_UPDATE
+              value: "true"
           envFrom:
             - secretRef:
                 name: litellm-secrets
@@ -59,6 +61,13 @@ spec:
             - sh
             - "-c"
             - "apk add --no-cache py3-pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
+          startupProbe:
+            httpGet:
+              path: /health/liveliness
+              port: 4000
+            failureThreshold: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: 200m
