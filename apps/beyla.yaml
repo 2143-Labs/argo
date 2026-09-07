@@ -16,7 +16,6 @@ spec:
       values: |
         nodeSelector:
           beyla.enabled: "true"
-          kubernetes.io/hostname: big
         image:
           tag: "3.33.0"
         config:
