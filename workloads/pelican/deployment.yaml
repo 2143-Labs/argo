@@ -11,8 +11,8 @@ metadata:
   labels:
     app: pelican
 spec:
+  replicas: 0
   revisionHistoryLimit: 3
-  replicas: 1
   strategy:
     type: Recreate
   selector:
