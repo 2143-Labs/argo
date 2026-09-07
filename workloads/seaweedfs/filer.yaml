@@ -29,7 +29,7 @@ spec:
         - {containerPort: 8888, name: filer}
         - {containerPort: 8333, name: s3}
         resources:
-          requests: {memory: "2Gi", cpu: "500m"}
+          requests: {memory: "2Gi", cpu: "200m"}
           limits: {memory: "2Gi", cpu: "500m"}
         volumeMounts:
         - name: data

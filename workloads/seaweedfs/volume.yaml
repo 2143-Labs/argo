@@ -31,7 +31,7 @@ spec:
         - "-index=leveldb"
         ports: [{containerPort: 8080}]
         resources:
-          requests: {memory: "3Gi", cpu: "1000m"}
+          requests: {memory: "3Gi", cpu: "250m"}
           limits: {memory: "3Gi", cpu: "1000m"}
         volumeMounts:
         - name: data
