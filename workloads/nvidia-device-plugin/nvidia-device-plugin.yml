@@ -28,7 +28,7 @@ spec:
         - name: DEVICE_LIST_STRATEGY
           value: cdi-annotations
         - name: NVIDIA_CDI_HOOK_PATH
-          value: /nix/store/7hwzcmspf6ia3k5fspfnsddij7qpbr7i-nvidia-container-toolkit-1.19.1-tools/bin/nvidia-cdi-hook
+          value: /nix/store/7hwzcmspf6ia3kf5spfnsddij7qpbr7i-nvidia-container-toolkit-1.19.1-tools/bin/nvidia-cdi-hook
         - name: DRIVER_ROOT_CTR_PATH
           value: /
         - name: LD_LIBRARY_PATH
