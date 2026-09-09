@@ -45,6 +45,14 @@ data:
         litellm_params:
           model: "openai/*"
           api_key: "os.environ/OPENAI_API_KEY"
+      # ChatGPT subscription (OAuth login — auth.openai.com/codex/device)
+      # Request model name is "chatgpt/<slug>", e.g. chatgpt/gpt-5.6-terra.
+      # mode: responses is required; /v1/chat/completions is bridged to Responses.
+      - model_name: "chatgpt/*"
+        model_info:
+          mode: responses
+        litellm_params:
+          model: "chatgpt/*"
       # OpenRouter
       - model_name: "openrouter/*"
         litellm_params:

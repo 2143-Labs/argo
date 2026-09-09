@@ -47,6 +47,8 @@ spec:
               value: "/usr/lib/python3.13/site-packages"
             - name: DISABLE_SCHEMA_UPDATE
               value: "true"
+            - name: CHATGPT_TOKEN_DIR
+              value: /litellm/chatgpt
           envFrom:
             - secretRef:
                 name: litellm-secrets
@@ -57,6 +59,8 @@ spec:
               mountPath: /app/config.yaml
               subPath: config.yaml
               readOnly: true
+            - name: chatgpt-auth
+              mountPath: /litellm/chatgpt
           command:
             - sh
             - "-c"
@@ -93,3 +97,6 @@ spec:
         - name: config
           configMap:
             name: litellm-config
+        - name: chatgpt-auth
+          persistentVolumeClaim:
+            claimName: litellm-chatgpt-auth
