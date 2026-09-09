@@ -53,6 +53,35 @@ data:
           mode: responses
         litellm_params:
           model: "chatgpt/*"
+      # Explicit per-model entries are required so litellm registers these
+      # slugs in model_cost with mode=responses. Without them,
+      # supports_native_streaming() returns False (model not in static map)
+      # → should_fake_stream=True → litellm strips stream → codex 400
+      # "Stream must be set to true".
+      - model_name: "chatgpt/gpt-6-astra"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-6-astra"
+      - model_name: "chatgpt/gpt-5.6-terra"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-5.6-terra"
+      - model_name: "chatgpt/gpt-5.6-sol"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-5.6-sol"
+      - model_name: "chatgpt/gpt-5.6-luna"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-5.6-luna"
       # OpenRouter
       - model_name: "openrouter/*"
         litellm_params:
