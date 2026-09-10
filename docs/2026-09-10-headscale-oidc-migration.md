@@ -46,9 +46,12 @@ subnet grant never went dark (partial alias resolution keeps the rule alive). Th
 The 3y `oidc.expiry` is stamped when a node is *created* through an OIDC login; it is not re-applied
 to pre-existing nodes when they are moved onto an SSO user. So the migration does not give the 13
 moved nodes a 3-year expiry — they have none, as they did before. Devices that register *new* against
-Pocket ID get the 3-year expiry automatically. To stamp a 3-year expiry on an existing node today,
-the options are direct database surgery on `nodes.expiry`, or deleting the node and re-registering
-that device through OIDC (which issues new keys and a new node identity).
+Pocket ID get the 3-year expiry automatically.
+
+Decision (2026-09-10): the 13 moved nodes keep no expiry — nothing is stamped on them. `oidc.expiry`
+governs devices that register through Pocket ID from now on. (`headscale nodes expire -i <id>
+--expiry <RFC3339>` does accept a future expiry, but it is the expire/logout path — documented as
+forcing the node to re-authenticate — so it was deliberately not used to retro-fit the window.)
 
 ## Deviation: the old CLI user is retained
 
