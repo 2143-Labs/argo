@@ -32,10 +32,10 @@ data:
           "src": ["autogroup:member"],
           "dst": ["autogroup:internet:*"]
         },
-        // Only john2143 can access the 192.168.5.x and 192.168.6.x subnets
+        // Only john (john@2143.me via Pocket ID SSO) can access the 192.168.5.x and 192.168.6.x subnets
         {
           "action": "accept",
-          "src": ["john2143@", "john@2143.me"],
+          "src": ["john@2143.me"],
           "dst": ["192.168.5.0/24:*", "192.168.6.0/24:*"]
         }
       ]
