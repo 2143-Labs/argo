@@ -32,7 +32,7 @@ until that group is configured, so the gate lives entirely in the IdP; headscale
 |---|---|
 | SSO user | id **14** — username `John2143`, name `John Schmidt`, email `john@2143.me` |
 | Nodes moved | 13: `1 2 3 4 5 6 7 8 14 17 26 27 28` (`headscale nodes move -i <node id> -u 14`) |
-| Node expiry | OIDC nodes expire at login + 3y (the pilot node showed `2029-09-09`); CLI/preauth nodes remain `N/A` |
+| Node expiry | Nodes **created through an OIDC login** expire at login + 3y (the pilot node read `2029-09-09`). The 13 moved nodes keep their previous setting — **no expiry** (`0001-01-01 00:00:00`, `Expired: no`) — because `nodes move` only rewrites `user_id` |
 | Final ACL | `"src": ["john@2143.me"]` on the `192.168.5.0/24` + `192.168.6.0/24` rule |
 | `office` identity | `UserID 14` → `LoginName john@2143.me` |
 
@@ -40,6 +40,15 @@ No interruption: the ACL carried **both** `john2143@` and `john@2143.me` across 
 subnet grant never went dark (partial alias resolution keeps the rule alive). The canary
 (`tailscale debug netmap | grep -c '192.168.6.0/24'` → 4, `'192.168.5.0/24'` → 5, measured on
 `office`) read the same values before the change, after the moves, and after the collapse.
+
+### Expiry scope (verified)
+
+The 3y `oidc.expiry` is stamped when a node is *created* through an OIDC login; it is not re-applied
+to pre-existing nodes when they are moved onto an SSO user. So the migration does not give the 13
+moved nodes a 3-year expiry — they have none, as they did before. Devices that register *new* against
+Pocket ID get the 3-year expiry automatically. To stamp a 3-year expiry on an existing node today,
+the options are direct database surgery on `nodes.expiry`, or deleting the node and re-registering
+that device through OIDC (which issues new keys and a new node identity).
 
 ## Deviation: the old CLI user is retained
 
