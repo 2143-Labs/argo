@@ -161,14 +161,17 @@ data:
     taildrop:
       enabled: true
 
-#    oidc:
-#      issuer: https://auth.john2143.com/application/o/headscale/
-#      client_id: headscale
-#      client_secret: env-override
-#      pkce:
-#        enabled: true
-#      scope:
-#        - openid
-#        - profile
-#        - email
-#
+    oidc:
+      issuer: https://au.2143.me
+      client_id: e650ddc2-f11b-4ce6-ab0b-5d6b1d492dfd
+      # client_secret is injected via env HEADSCALE_OIDC_CLIENT_SECRET (Secret headscale-oidc)
+      scope:
+        - openid
+        - profile
+        - email
+      pkce:
+        enabled: true
+        method: S256
+      expiry: 3y
+      use_expiry_from_token: false
+      only_start_if_oidc_is_available: true
