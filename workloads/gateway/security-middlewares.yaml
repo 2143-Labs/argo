@@ -55,9 +55,18 @@ spec:
       crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
       crowdsecAppsecFailureBlock: false
       crowdsecAppsecUnreachableBlock: false
+      # Home, tailnet, and cluster clients must not trigger or receive CrowdSec bans.
+      # The WAN IP remains explicit because hairpin NAT presents LAN clients as public.
       clientTrustedIps:
         - 108.56.153.222/32
-        - 10.42.0.0/16
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 100.64.0.0/10
+        - 127.0.0.1/32
+        - ::1/128
+        - fd00::/8
+        - fe80::/10
 
 ---
 apiVersion: traefik.io/v1alpha1
@@ -79,4 +88,11 @@ spec:
       crowdsecAppsecUnreachableBlock: false
       clientTrustedIps:
         - 108.56.153.222/32
-        - 10.42.0.0/16
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 100.64.0.0/10
+        - 127.0.0.1/32
+        - ::1/128
+        - fd00::/8
+        - fe80::/10
