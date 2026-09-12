@@ -10,7 +10,7 @@ spec:
   source:
     chart: kube-state-metrics
     repoURL: https://prometheus-community.github.io/helm-charts
-    targetRevision: 8.1.3
+    targetRevision: 8.4.2
     helm:
       releaseName: kube-state-metrics
   destination:
