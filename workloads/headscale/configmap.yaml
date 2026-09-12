@@ -29,6 +29,13 @@ data:
           "src": ["john@2143.me"],
           "dst": ["tag:vpin:*"]
         },
+        // Tagged VPN nodes can reach the whole tailnet (restores the
+        // autogroup:self coverage that tagging removes from a member device).
+        {
+          "action": "accept",
+          "src": ["tag:vpin"],
+          "dst": ["*:*"]
+        },
         // Users can only reach their own devices
         {
           "action": "accept",
