@@ -74,9 +74,9 @@ data:
     disable_check_updates: true
 
     node:
-      expiry: 0
+      expiry: 3y
       ephemeral:
-        inactivity_timeout: 30m
+        inactivity_timeout: 120s
 
     database:
       type: sqlite
@@ -160,7 +160,6 @@ data:
     logtail:
       enabled: false
 
-    randomize_client_port: false
 
     taildrop:
       enabled: true
@@ -176,6 +175,5 @@ data:
       pkce:
         enabled: true
         method: S256
-      expiry: 3y
       use_expiry_from_token: false
       only_start_if_oidc_is_available: true
