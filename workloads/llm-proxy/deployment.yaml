@@ -5,6 +5,7 @@ metadata:
   labels:
     app: litellm
 spec:
+  revisionHistoryLimit: 3
   replicas: 2
   strategy:
     type: RollingUpdate

@@ -36,6 +36,9 @@ spec:
           mountPath: /data
         - name: s3-config
           mountPath: /etc/seaweedfs
+        - name: filer-config
+          mountPath: /etc/seaweedfs/filer.toml
+          subPath: filer.toml
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -43,3 +46,6 @@ spec:
       - name: s3-config
         secret:
           secretName: seaweedfs-s3-config
+      - name: filer-config
+        configMap:
+          name: seaweedfs-filer-config
