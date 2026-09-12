@@ -22,6 +22,9 @@ data:
       "tagOwners": {
         "tag:vpin": ["john@2143.me"]
       },
+      "autoApprovers": {
+        "exitNode": ["john@2143.me"]
+      },
       "acls": [
         // Preserve John's management access when vpin becomes a tagged service.
         {
