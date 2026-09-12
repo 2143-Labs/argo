@@ -18,6 +18,13 @@ spec:
       containers:
       - name: filer
         image: chrislusf/seaweedfs:3.85
+        env:
+        # viper maps the key filer.options.max_file_name_length to this env var.
+        # 0 disables the 255-byte entry-name cap: litellm's spend-log object names
+        # (built from Responses-API ids) exceed it, and the filer's body-less 414
+        # rejection was failing every such upload.
+        - name: WEED_FILER_OPTIONS_MAX_FILE_NAME_LENGTH
+          value: "0"
         args:
         - "filer"
         - "-master=seaweedfs-master:9333"
