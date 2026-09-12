@@ -6,7 +6,7 @@ metadata:
     app: headscale
 spec:
   revisionHistoryLimit: 3
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -29,7 +29,7 @@ spec:
                       - general
       containers:
         - name: headscale
-          image: docker.io/headscale/headscale:0.27.1
+          image: docker.io/headscale/headscale:0.28.0
           envFrom:
             - secretRef:
                 name: headscale-oidc
