@@ -33,7 +33,7 @@ spec:
                     values: [general]
       containers:
         - name: listen-brick
-          image: ghcr.io/john2143/listen-brick:1   # CI rewrites this tag
+          image: ghcr.io/john2143/listen-brick:2   # CI rewrites this tag
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
