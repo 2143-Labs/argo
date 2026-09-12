@@ -746,6 +746,20 @@ spec:
         namespaces:
           from: Same
 
+    - name: listen-2143-me-https
+      protocol: HTTPS
+      port: 8443
+      hostname: listen.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: 2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+
     - name: openbao-ts-2143-https
       protocol: HTTPS
       port: 8443
