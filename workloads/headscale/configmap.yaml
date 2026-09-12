@@ -20,10 +20,11 @@ data:
   policy.hujson: |
     {
       "tagOwners": {
-        "tag:vpin": ["john@2143.me"]
+        "tag:vpin": ["john@2143.me"],
+        "tag:pite": ["john@2143.me"]
       },
       "autoApprovers": {
-        "exitNode": ["john@2143.me"]
+        "exitNode": ["john@2143.me", "tag:pite"]
       },
       "acls": [
         // Preserve John's management access when vpin becomes a tagged service.
@@ -32,11 +33,17 @@ data:
           "src": ["john@2143.me"],
           "dst": ["tag:vpin:*"]
         },
+        // Preserve John's management access when pite becomes a tagged service.
+        {
+          "action": "accept",
+          "src": ["john@2143.me"],
+          "dst": ["tag:pite:*"]
+        },
         // Tagged VPN nodes can reach the whole tailnet (restores the
         // autogroup:self coverage that tagging removes from a member device).
         {
           "action": "accept",
-          "src": ["tag:vpin"],
+          "src": ["tag:vpin", "tag:pite"],
           "dst": ["*:*"]
         },
         // Users can only reach their own devices
