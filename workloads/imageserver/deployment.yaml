@@ -13,8 +13,6 @@ spec:
       labels:
         app: john2143-com
         servicegroup: "mine"
-      annotations:
-        linkerd.io/inject: disabled
     spec:
       volumes:
       - name: data-volume

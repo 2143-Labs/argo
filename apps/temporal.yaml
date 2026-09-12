@@ -16,9 +16,6 @@ spec:
       values: |
         fullnameOverride: "temporal"
         server:
-          podAnnotations:
-            linkerd.io/inject: disabled
-            config.linkerd.io/default-inbound-policy: all-authenticated
           config:
             persistence:
               defaultStore: default
@@ -68,9 +65,6 @@ spec:
                 metallb.io/loadBalancerIPs: "192.168.6.20"
           worker:
             enabled: true
-            podAnnotations:
-              linkerd.io/inject: disabled
-              config.linkerd.io/default-inbound-policy: all-authenticated
             resources:
               requests:
                 cpu: 100m
@@ -86,9 +80,6 @@ spec:
 
         web:
           enabled: true
-          podAnnotations:
-            linkerd.io/inject: disabled
-            config.linkerd.io/default-inbound-policy: all-authenticated
           additionalEnv:
             - name: TEMPORAL_TLS_ENABLED
               value: "false"

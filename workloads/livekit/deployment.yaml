@@ -18,8 +18,6 @@ spec:
   template:
     metadata:
       annotations:
-        linkerd.io/inject: disabled
-        sidecar.istio.io/inject: "false"
         checksum/config: 4733d2eaefe1882290963c8e2a41fa80a0b15dfc12caef7fb3a0fb91c450daec
       labels:
         app.kubernetes.io/name: livekit-server

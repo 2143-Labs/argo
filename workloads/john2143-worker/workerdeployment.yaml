@@ -16,9 +16,6 @@ spec:
   template:
     metadata:
       labels: {app: john2143-com-worker, app.kubernetes.io/part-of: john2143-com}
-      annotations:
-        linkerd.io/inject: disabled
-        config.linkerd.io/skip-outbound-ports: "7233"
     spec:
       serviceAccountName: john2143-worker
       affinity:
