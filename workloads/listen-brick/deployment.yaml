@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: listen-brick
+  namespace: default
+  labels:
+    app: listen-brick
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate            # SQLite + RWO volume: never two writers
+  selector:
+    matchLabels:
+      app: listen-brick
+  template:
+    metadata:
+      labels:
+        app: listen-brick
+    spec:
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values: [general]
+      containers:
+        - name: listen-brick
+          image: ghcr.io/john2143/listen-brick:1   # CI rewrites this tag
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 3070
+              name: http
+          env:
+            - name: PORT
+              value: "3070"
+            - name: DATABASE_PATH
+              value: /data/brick.db
+            - name: PUBLIC_BASE_URL
+              value: "https://listen.2143.me"
+            - name: ROOM_TTL_HOURS
+              value: "48"
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef: { name: listen-brick-secret, key: SESSION_SECRET }
+            - name: YOUTUBE_API_KEY
+              valueFrom:
+                secretKeyRef: { name: listen-brick-secret, key: YOUTUBE_API_KEY, optional: true }
+            - name: SPOTIFY_CLIENT_ID
+              valueFrom:
+                secretKeyRef: { name: listen-brick-secret, key: SPOTIFY_CLIENT_ID, optional: true }
+            - name: SPOTIFY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef: { name: listen-brick-secret, key: SPOTIFY_CLIENT_SECRET, optional: true }
+            - name: SPOTIFY_REDIRECT_URI
+              value: "https://listen.2143.me/auth/spotify/callback"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests: { cpu: "50m", memory: "256Mi" }
+            limits: { cpu: "1000m", memory: "1Gi" }
+          livenessProbe:
+            httpGet: { path: /api/session, port: *port }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 6
+          readinessProbe:
+            httpGet: { path: /api/session, port: *port }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: listen-brick-data

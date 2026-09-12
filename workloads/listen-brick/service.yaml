@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: listen-brick
+  namespace: default
+  labels:
+    app: listen-brick
+spec:
+  type: ClusterIP
+  selector:
+    app: listen-brick
+  ports:
+    - port: 80
+      targetPort: 3070
+      protocol: TCP
+      name: http
