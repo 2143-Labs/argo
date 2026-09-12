@@ -1,0 +1,10 @@
+apiVersion: longhorn.io/v1beta2
+kind: Snapshot
+metadata:
+  name: headscale-pre-028-20260912
+  namespace: longhorn-system
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  volume: pvc-d6926bd9-5fd6-4100-a601-85f675f90e23
+  createSnapshot: true
