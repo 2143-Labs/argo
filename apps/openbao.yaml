@@ -486,6 +486,17 @@ spec:
       namespace: openbao
       jqPathExpressions:
         - .spec.template.spec.containers[] | .env[]? | select(.name == "STAKATER_OPENBAO_SERVER_TLS_SECRET")
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting: parentRefs gain group/kind, backendRefs gain
+      # group/kind/weight - none present in the manifests. Matches, filters and
+      # hostnames remain authoritative.
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
   syncPolicy:
     automated:
       prune: true
