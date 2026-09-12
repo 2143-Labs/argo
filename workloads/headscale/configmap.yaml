@@ -19,7 +19,16 @@ data:
             derpport: 443
   policy.hujson: |
     {
+      "tagOwners": {
+        "tag:vpin": ["john@2143.me"]
+      },
       "acls": [
+        // Preserve John's management access when vpin becomes a tagged service.
+        {
+          "action": "accept",
+          "src": ["john@2143.me"],
+          "dst": ["tag:vpin:*"]
+        },
         // Users can only reach their own devices
         {
           "action": "accept",
