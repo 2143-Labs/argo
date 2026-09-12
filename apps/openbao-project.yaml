@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: openbao
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-options: Prune=confirm
+spec:
+  description: OpenBao secrets management (Raft HA, static auto-unseal)
+  sourceRepos:
+    - https://openbao.github.io/openbao-helm
+  destinations:
+    - namespace: openbao
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding

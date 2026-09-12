@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         app: headscale
+      annotations:
+        openbao-dns-revision: "1"
     spec:
       affinity:
         nodeAffinity:

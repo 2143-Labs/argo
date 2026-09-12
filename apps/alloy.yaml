@@ -239,6 +239,30 @@ spec:
                 }
               }
 
+
+              // OpenBao server metrics (HTTPS via internal ordinals, public CA)
+              prometheus.scrape "openbao" {
+                targets = [
+                  { __address__ = "openbao-0.openbao-internal.openbao.svc:8200" },
+                  { __address__ = "openbao-1.openbao-internal.openbao.svc:8200" },
+                  { __address__ = "openbao-2.openbao-internal.openbao.svc:8200" },
+                ]
+                job_name        = "openbao"
+                scheme          = "https"
+                metrics_path    = "/v1/sys/metrics"
+                params = {
+                  "format" = ["prometheus"]
+                }
+                scrape_interval = "30s"
+                tls_config {
+                  server_name = "openbao.ts.2143.me"
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
+              }
+
               // ── Traces: OTLP receiver → batch → Tempo ──
               otelcol.receiver.otlp "traces" {
                 grpc {

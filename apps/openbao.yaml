@@ -1,0 +1,499 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openbao
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=confirm
+spec:
+  project: openbao
+  source:
+    chart: openbao
+    repoURL: https://openbao.github.io/openbao-helm
+    targetRevision: 0.29.4
+    helm:
+      releaseName: openbao
+      skipTests: true
+      values: |
+        global:
+          tlsDisable: false
+
+        injector:
+          enabled: false
+
+        csi:
+          enabled: false
+
+        server:
+          enabled: true
+          image:
+            registry: quay.io
+            repository: openbao/openbao
+            tag: "2.6.2"
+          updateStrategyType: RollingUpdate
+          podManagementPolicy: Parallel
+          dev:
+            enabled: false
+          standalone:
+            enabled: false
+          ha:
+            enabled: true
+            replicas: 3
+            apiAddr: https://openbao.john2143.com
+            raft:
+              enabled: true
+              setNodeId: true
+              config: |
+                ui = true
+                disable_mlock = true
+
+                listener "tcp" {
+                  address = "[::]:8200"
+                  cluster_address = "[::]:8201"
+                  tls_disable = false
+                  tls_cert_file = "/openbao/tls/tls.crt"
+                  tls_key_file = "/openbao/tls/tls.key"
+                  tls_min_version = "tls12"
+                  telemetry {
+                    unauthenticated_metrics_access = true
+                  }
+                }
+
+                storage "raft" {
+                  path = "/openbao/data"
+                  retry_join {
+                    leader_api_addr = "https://openbao-0.openbao-internal.openbao.svc:8200"
+                    leader_tls_servername = "openbao.ts.2143.me"
+                  }
+                  retry_join {
+                    leader_api_addr = "https://openbao-1.openbao-internal.openbao.svc:8200"
+                    leader_tls_servername = "openbao.ts.2143.me"
+                  }
+                  retry_join {
+                    leader_api_addr = "https://openbao-2.openbao-internal.openbao.svc:8200"
+                    leader_tls_servername = "openbao.ts.2143.me"
+                  }
+                }
+
+                seal "static" {
+                  current_key_id = "seal-v1"
+                  current_key = "file:///openbao/seal/seal-v1"
+                }
+
+                service_registration "kubernetes" {}
+
+                telemetry {
+                  prometheus_retention_time = "60s"
+                  disable_hostname = true
+                }
+
+                audit "file" "to-stdout" {
+                  description = "Write audit information to standard output."
+                  options {
+                    file_path = "stdout"
+                  }
+                }
+            disruptionBudget:
+              enabled: true
+              maxUnavailable: 1
+          configAnnotation: true
+          persistentVolumeClaimRetentionPolicy:
+            whenDeleted: Retain
+            whenScaled: Retain
+          dataStorage:
+            enabled: true
+            size: 10Gi
+            storageClass: longhorn-3
+            accessMode: ReadWriteOnce
+            annotations:
+              argocd.argoproj.io/sync-options: Prune=false,Delete=false
+          auditStorage:
+            enabled: false
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          tolerations: []
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+          readinessProbe:
+            enabled: true
+            path: /v1/sys/health?standbyok=true
+            port: 8200
+          livenessProbe:
+            enabled: false
+          terminationGracePeriodSeconds: 60
+          postStart: []
+          extraEnvironmentVars:
+            BAO_TLS_SERVER_NAME: openbao.ts.2143.me
+          serviceAccount:
+            create: true
+            name: openbao
+            createSecret: false
+            serviceDiscovery:
+              enabled: true
+          authDelegator:
+            enabled: true
+          ingress:
+            enabled: false
+          networkPolicy:
+            enabled: false
+          volumes:
+            - name: openbao-seal
+              secret:
+                secretName: openbao-seal
+                defaultMode: 0440
+            - name: openbao-server-tls
+              secret:
+                secretName: openbao-server-tls
+                defaultMode: 0440
+          volumeMounts:
+            - name: openbao-seal
+              mountPath: /openbao/seal/seal-v1
+              subPath: seal-v1
+              readOnly: true
+            - name: openbao-server-tls
+              mountPath: /openbao/tls
+              readOnly: true
+          statefulSet:
+            annotations:
+              secret.reloader.stakater.com/reload: openbao-server-tls
+            securityContext:
+              pod:
+                runAsNonRoot: true
+                runAsUser: 100
+                runAsGroup: 1000
+                fsGroup: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              container:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+
+        ui:
+          enabled: false
+
+        serverTelemetry:
+          serviceMonitor:
+            enabled: false
+          prometheusRules:
+            enabled: false
+          grafanaDashboard:
+            enabled: false
+
+        snapshotAgent:
+          enabled: true
+          schedule: "15 * * * *"
+          concurrencyPolicy: Forbid
+          restartPolicy: OnFailure
+          serviceAccount:
+            create: true
+            name: openbao-snapshot
+          image:
+            repository: ghcr.io/openbao/openbao-snapshot-agent
+            tag: 0.4.4
+          s3CredentialsSecret: openbao-spaces
+          config:
+            s3Host: nyc3.digitaloceanspaces.com
+            s3Bucket: '"%(bucket)s.nyc3.digitaloceanspaces.com"'
+            s3Uri: s3://l8przprsd5yenr-bao-backups/raft/
+            s3ExpireDays: "30"
+            s3cmdExtraFlag: ""
+            baoAuthPath: kubernetes
+            baoRole: openbao-snapshot
+            baoNamespace: ""
+            baoAuthNamespace: ""
+            baoSecretPath: ""
+            tokenPath: /var/run/openbao-login/jwt
+          extraEnvironmentVars:
+            BAO_ADDR: https://openbao-active.openbao.svc:8200
+            BAO_TLS_SERVER_NAME: openbao.ts.2143.me
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 256Mi
+            limits:
+              memory: 512Mi
+              ephemeral-storage: 12Gi
+          extraVolumes:
+            - name: openbao-login
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      path: jwt
+                      expirationSeconds: 600
+                      audience: openbao-snapshot
+          extraVolumeMounts:
+            - name: openbao-login
+              mountPath: /var/run/openbao-login
+              readOnly: true
+
+        extraObjects:
+          # Backend TLS: cert-manager Certificate for the server's own listener.
+          - apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: openbao-server
+              namespace: openbao
+            spec:
+              secretName: openbao-server-tls
+              duration: 2160h
+              renewBefore: 720h
+              dnsNames:
+                - openbao.ts.2143.me
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+              privateKey:
+                algorithm: ECDSA
+                size: 256
+                rotationPolicy: Always
+
+          # Private UI/API path: LAN-only ipAllowList middleware (namespace-local copy).
+          - apiVersion: traefik.io/v1alpha1
+            kind: Middleware
+            metadata:
+              name: lan-only
+              namespace: openbao
+            spec:
+              ipAllowList:
+                sourceRange:
+                  - 10.0.0.0/8
+                  - 172.16.0.0/12
+                  - 192.168.0.0/16
+                  - 100.64.0.0/10
+                  - 127.0.0.1/32
+                  - ::1/128
+                  - fd00::/8
+                  - fe80::/10
+
+          # Private HTTPRoute: admin UI + API over the private listener.
+          - apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            metadata:
+              name: openbao
+              namespace: openbao
+            spec:
+              parentRefs:
+                - name: shared-gateway
+                  namespace: default
+                  sectionName: openbao-ts-2143-https
+              hostnames:
+                - openbao.ts.2143.me
+              rules:
+                - matches:
+                    - path:
+                        type: PathPrefix
+                        value: /
+                  filters:
+                    - type: ExtensionRef
+                      extensionRef:
+                        group: traefik.io
+                        kind: Middleware
+                        name: lan-only
+                  backendRefs:
+                    - name: openbao-active
+                      port: 8200
+
+          # Backend TLS re-encryption and validation for the active server Service.
+          - apiVersion: gateway.networking.k8s.io/v1
+            kind: BackendTLSPolicy
+            metadata:
+              name: openbao
+              namespace: openbao
+            spec:
+              targetRefs:
+                - group: ""
+                  kind: Service
+                  name: openbao-active
+              validation:
+                hostname: openbao.ts.2143.me
+                wellKnownCACertificates: System
+
+          # Server ingress NetworkPolicy (sole server policy; chart policy disabled).
+          - apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: openbao-server-ingress
+              namespace: openbao
+            spec:
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: openbao
+                  app.kubernetes.io/instance: openbao
+                  component: server
+              policyTypes:
+                - Ingress
+              ingress:
+                # Raft + API between server peers.
+                - from:
+                    - podSelector:
+                        matchLabels:
+                          app.kubernetes.io/name: openbao
+                          app.kubernetes.io/instance: openbao
+                          component: server
+                  ports:
+                    - protocol: TCP
+                      port: 8200
+                    - protocol: TCP
+                      port: 8201
+                # Snapshot agent reaches the active API.
+                - from:
+                    - podSelector:
+                        matchLabels:
+                          app.kubernetes.io/instance: openbao
+                          component: snapshot-agent
+                  ports:
+                    - protocol: TCP
+                      port: 8200
+                # Traefik gateway terminates TLS and re-encrypts to the server.
+                - from:
+                    - namespaceSelector:
+                        matchLabels:
+                          kubernetes.io/metadata.name: kube-system
+                      podSelector:
+                        matchLabels:
+                          app.kubernetes.io/name: traefik
+                  ports:
+                    - protocol: TCP
+                      port: 8200
+                # Observability (Alloy) scrapes metrics.
+                - from:
+                    - namespaceSelector:
+                        matchLabels:
+                          kubernetes.io/metadata.name: observability
+                  ports:
+                    - protocol: TCP
+                      port: 8200
+
+          # Public machine-API path: namespace-local copies of the shared
+          # pre-authentication middlewares (specs copied from the default ns).
+          - apiVersion: traefik.io/v1alpha1
+            kind: Middleware
+            metadata:
+              name: public-rate-limit
+              namespace: openbao
+            spec:
+              rateLimit:
+                average: 100
+                burst: 50
+                period: 1m
+                sourceCriterion:
+                  ipStrategy:
+                    excludedIPs:
+                      - 10.0.0.0/8
+                      - 172.16.0.0/12
+                      - 192.168.0.0/16
+                      - 100.64.0.0/10
+                      - 127.0.0.1/32
+                      - ::1/128
+                      - fd00::/8
+                      - fe80::/10
+
+          - apiVersion: traefik.io/v1alpha1
+            kind: Middleware
+            metadata:
+              name: public-inflight-limit
+              namespace: openbao
+            spec:
+              inFlightReq:
+                amount: 50
+                sourceCriterion:
+                  ipStrategy: {}
+
+          - apiVersion: traefik.io/v1alpha1
+            kind: Middleware
+            metadata:
+              name: crowdsec-bouncer-noappsec
+              namespace: openbao
+            spec:
+              plugin:
+                bouncer:
+                  clientTrustedIps:
+                    - 108.56.153.222/32
+                    - 10.0.0.0/8
+                    - 172.16.0.0/12
+                    - 192.168.0.0/16
+                    - 100.64.0.0/10
+                    - 127.0.0.1/32
+                    - ::1/128
+                    - fd00::/8
+                    - fe80::/10
+                  crowdsecAppsecEnabled: false
+                  crowdsecAppsecFailureBlock: false
+                  crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
+                  crowdsecAppsecUnreachableBlock: false
+                  crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
+                  crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
+                  crowdsecLapiScheme: http
+                  crowdsecMode: stream
+                  enabled: true
+
+          # Public machine API route: /v1/ only, no /ui/ on the public host.
+          - apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            metadata:
+              name: openbao-public-api
+              namespace: openbao
+            spec:
+              parentRefs:
+                - name: shared-gateway
+                  namespace: default
+                  sectionName: openbao-john2143-https
+              hostnames:
+                - openbao.john2143.com
+              rules:
+                - matches:
+                    - path:
+                        type: PathPrefix
+                        value: /v1/
+                  filters:
+                    - type: ExtensionRef
+                      extensionRef:
+                        group: traefik.io
+                        kind: Middleware
+                        name: public-rate-limit
+                    - type: ExtensionRef
+                      extensionRef:
+                        group: traefik.io
+                        kind: Middleware
+                        name: public-inflight-limit
+                    - type: ExtensionRef
+                      extensionRef:
+                        group: traefik.io
+                        kind: Middleware
+                        name: crowdsec-bouncer-noappsec
+                  backendRefs:
+                    - name: openbao-active
+                      port: 8200
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openbao
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: openbao
+      namespace: openbao
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | .env[]? | select(.name == "STAKATER_OPENBAO_SERVER_TLS_SECRET")
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    managedNamespaceMetadata:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false,Delete=false

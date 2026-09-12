@@ -150,6 +150,10 @@ data:
         - name: "unifi.ts.2143.me"
           type: "A"
           value: "192.168.6.11"
+        # openbao.ts.2143.me
+        - name: "openbao.ts.2143.me"
+          type: "A"
+          value: "192.168.6.11"
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
 
