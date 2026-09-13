@@ -28,7 +28,7 @@ spec:
                       - general
       containers:
         - name: unifi
-          image: lscr.io/linuxserver/unifi-network-application:10.6.101-ls145
+          image: lscr.io/linuxserver/unifi-network-application:10.4.57-ls136
           env:
             - name: TZ
               value: America/New_York
@@ -99,7 +99,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
         - name: mongodb
-          image: docker.io/mongo:8.0
+          image: docker.io/mongo:7.0
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               value: unifi
