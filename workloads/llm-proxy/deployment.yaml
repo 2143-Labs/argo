@@ -50,13 +50,19 @@ spec:
               value: "true"
             - name: CHATGPT_TOKEN_DIR
               value: /litellm/chatgpt
-            # Explicit env wins over envFrom: neutralises the stale DATABASE_URL
-            # bundled in litellm-secrets. CNPG owns this credential, not the bundle.
-            - name: DATABASE_URL
+            # CNPG's authoritative credential: this cluster defines a managed role
+            # with passwordSecret litellm-db-password, which is the secret CNPG
+            # itself reads. Do NOT use litellm-db-app here: its password is the
+            # initdb-generated one and no longer authenticates (verified
+            # 2026-09-13: FATAL password authentication failed for user
+            # "litellm", while litellm-db-password authenticates AUTH_OK).
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: litellm-db-app
-                  key: uri
+                  name: litellm-db-password
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://litellm:$(DB_PASSWORD)@litellm-db-rw:5432/litellm
           envFrom:
             - secretRef:
                 name: litellm-secrets
