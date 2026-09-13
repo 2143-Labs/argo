@@ -1,12 +1,12 @@
-# Vendored from https://raw.githubusercontent.com/argoproj/argo-cd/v3.3.14/manifests/install.yaml
-# Vendored: 2026-09-13   source sha256 74fe2e5b57b1ca652078c262e057b563efc4dcd317d734479185c2623177aea8
+# Vendored from https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.8/manifests/install.yaml
+# Vendored: 2026-09-13   source sha256 e223122b1bb3f6146e1229889d0ddfbc8bd45a86acc1d0df09a578fbaf0cf628
 #
 # ConfigMap/argocd-cm and ConfigMap/argocd-rbac-cm are intentionally REMOVED from this file:
 # they are owned by the Application apps/argocd.yaml (path workloads/argocd), which live-manages
 # argocd-cm, argocd-rbac-cm, the three HTTPRoutes and the lan-only Middleware. Two Applications
 # must never manage the same object, so this file must never re-add those two documents.
 #
-# This file is reconciled by apps/argocd-core.yaml (prune: false, selfHeal: false).
+# This file is reconciled by apps/argocd-core.yaml (automated sync, prune:false, selfHeal:false).
 # This is an auto-generated file. DO NOT EDIT
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -420,12 +420,12 @@ spec:
                               apply common labels to resource selectors or not
                             type: boolean
                           namePrefix:
-                            description: NamePrefix is a prefix appended to resources
-                              for Kustomize apps
+                            description: NamePrefix overrides the namePrefix in the
+                              kustomization.yaml for Kustomize apps
                             type: string
                           nameSuffix:
-                            description: NameSuffix is a suffix appended to resources
-                              for Kustomize apps
+                            description: NameSuffix overrides the nameSuffix in the
+                              kustomization.yaml for Kustomize apps
                             type: string
                           namespace:
                             description: Namespace sets the namespace that Kustomize
@@ -809,12 +809,12 @@ spec:
                                 to apply common labels to resource selectors or not
                               type: boolean
                             namePrefix:
-                              description: NamePrefix is a prefix appended to resources
-                                for Kustomize apps
+                              description: NamePrefix overrides the namePrefix in
+                                the kustomization.yaml for Kustomize apps
                               type: string
                             nameSuffix:
-                              description: NameSuffix is a suffix appended to resources
-                                for Kustomize apps
+                              description: NameSuffix overrides the nameSuffix in
+                                the kustomization.yaml for Kustomize apps
                               type: string
                             namespace:
                               description: Namespace sets the namespace that Kustomize
@@ -1308,11 +1308,11 @@ spec:
                           common labels to resource selectors or not
                         type: boolean
                       namePrefix:
-                        description: NamePrefix is a prefix appended to resources
+                        description: NamePrefix overrides the namePrefix in the kustomization.yaml
                           for Kustomize apps
                         type: string
                       nameSuffix:
-                        description: NameSuffix is a suffix appended to resources
+                        description: NameSuffix overrides the nameSuffix in the kustomization.yaml
                           for Kustomize apps
                         type: string
                       namespace:
@@ -1685,12 +1685,12 @@ spec:
                               apply common labels to resource selectors or not
                             type: boolean
                           namePrefix:
-                            description: NamePrefix is a prefix appended to resources
-                              for Kustomize apps
+                            description: NamePrefix overrides the namePrefix in the
+                              kustomization.yaml for Kustomize apps
                             type: string
                           nameSuffix:
-                            description: NameSuffix is a suffix appended to resources
-                              for Kustomize apps
+                            description: NameSuffix overrides the nameSuffix in the
+                              kustomization.yaml for Kustomize apps
                             type: string
                           namespace:
                             description: Namespace sets the namespace that Kustomize
@@ -2096,12 +2096,12 @@ spec:
                             common labels to resource selectors or not
                           type: boolean
                         namePrefix:
-                          description: NamePrefix is a prefix appended to resources
-                            for Kustomize apps
+                          description: NamePrefix overrides the namePrefix in the
+                            kustomization.yaml for Kustomize apps
                           type: string
                         nameSuffix:
-                          description: NameSuffix is a suffix appended to resources
-                            for Kustomize apps
+                          description: NameSuffix overrides the nameSuffix in the
+                            kustomization.yaml for Kustomize apps
                           type: string
                         namespace:
                           description: Namespace sets the namespace that Kustomize
@@ -2655,12 +2655,12 @@ spec:
                                 to apply common labels to resource selectors or not
                               type: boolean
                             namePrefix:
-                              description: NamePrefix is a prefix appended to resources
-                                for Kustomize apps
+                              description: NamePrefix overrides the namePrefix in
+                                the kustomization.yaml for Kustomize apps
                               type: string
                             nameSuffix:
-                              description: NameSuffix is a suffix appended to resources
-                                for Kustomize apps
+                              description: NameSuffix overrides the nameSuffix in
+                                the kustomization.yaml for Kustomize apps
                               type: string
                             namespace:
                               description: Namespace sets the namespace that Kustomize
@@ -3048,12 +3048,12 @@ spec:
                                   not
                                 type: boolean
                               namePrefix:
-                                description: NamePrefix is a prefix appended to resources
-                                  for Kustomize apps
+                                description: NamePrefix overrides the namePrefix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               nameSuffix:
-                                description: NameSuffix is a suffix appended to resources
-                                  for Kustomize apps
+                                description: NameSuffix overrides the nameSuffix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               namespace:
                                 description: Namespace sets the namespace that Kustomize
@@ -3200,6 +3200,7 @@ spec:
               observedAt:
                 description: |-
                   ObservedAt indicates when the application state was updated without querying latest git state
+
                   Deprecated: controller no longer updates ObservedAt field
                 format: date-time
                 type: string
@@ -3596,12 +3597,12 @@ spec:
                                       or not
                                     type: boolean
                                   namePrefix:
-                                    description: NamePrefix is a prefix appended to
-                                      resources for Kustomize apps
+                                    description: NamePrefix overrides the namePrefix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   nameSuffix:
-                                    description: NameSuffix is a suffix appended to
-                                      resources for Kustomize apps
+                                    description: NameSuffix overrides the nameSuffix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   namespace:
                                     description: Namespace sets the namespace that
@@ -4009,12 +4010,12 @@ spec:
                                         selectors or not
                                       type: boolean
                                     namePrefix:
-                                      description: NamePrefix is a prefix appended
-                                        to resources for Kustomize apps
+                                      description: NamePrefix overrides the namePrefix
+                                        in the kustomization.yaml for Kustomize apps
                                       type: string
                                     nameSuffix:
-                                      description: NameSuffix is a suffix appended
-                                        to resources for Kustomize apps
+                                      description: NameSuffix overrides the nameSuffix
+                                        in the kustomization.yaml for Kustomize apps
                                       type: string
                                     namespace:
                                       description: Namespace sets the namespace that
@@ -4539,12 +4540,12 @@ spec:
                                   not
                                 type: boolean
                               namePrefix:
-                                description: NamePrefix is a prefix appended to resources
-                                  for Kustomize apps
+                                description: NamePrefix overrides the namePrefix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               nameSuffix:
-                                description: NameSuffix is a suffix appended to resources
-                                  for Kustomize apps
+                                description: NameSuffix overrides the nameSuffix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               namespace:
                                 description: Namespace sets the namespace that Kustomize
@@ -4943,12 +4944,12 @@ spec:
                                     not
                                   type: boolean
                                 namePrefix:
-                                  description: NamePrefix is a prefix appended to
-                                    resources for Kustomize apps
+                                  description: NamePrefix overrides the namePrefix
+                                    in the kustomization.yaml for Kustomize apps
                                   type: string
                                 nameSuffix:
-                                  description: NameSuffix is a suffix appended to
-                                    resources for Kustomize apps
+                                  description: NameSuffix overrides the nameSuffix
+                                    in the kustomization.yaml for Kustomize apps
                                   type: string
                                 namespace:
                                   description: Namespace sets the namespace that Kustomize
@@ -5468,12 +5469,12 @@ spec:
                                       or not
                                     type: boolean
                                   namePrefix:
-                                    description: NamePrefix is a prefix appended to
-                                      resources for Kustomize apps
+                                    description: NamePrefix overrides the namePrefix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   nameSuffix:
-                                    description: NameSuffix is a suffix appended to
-                                      resources for Kustomize apps
+                                    description: NameSuffix overrides the nameSuffix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   namespace:
                                     description: Namespace sets the namespace that
@@ -5921,12 +5922,12 @@ spec:
                                       or not
                                     type: boolean
                                   namePrefix:
-                                    description: NamePrefix is a prefix appended to
-                                      resources for Kustomize apps
+                                    description: NamePrefix overrides the namePrefix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   nameSuffix:
-                                    description: NameSuffix is a suffix appended to
-                                      resources for Kustomize apps
+                                    description: NameSuffix overrides the nameSuffix
+                                      in the kustomization.yaml for Kustomize apps
                                     type: string
                                   namespace:
                                     description: Namespace sets the namespace that
@@ -6434,12 +6435,12 @@ spec:
                                   not
                                 type: boolean
                               namePrefix:
-                                description: NamePrefix is a prefix appended to resources
-                                  for Kustomize apps
+                                description: NamePrefix overrides the namePrefix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               nameSuffix:
-                                description: NameSuffix is a suffix appended to resources
-                                  for Kustomize apps
+                                description: NameSuffix overrides the nameSuffix in
+                                  the kustomization.yaml for Kustomize apps
                                 type: string
                               namespace:
                                 description: Namespace sets the namespace that Kustomize
@@ -6838,12 +6839,12 @@ spec:
                                     not
                                   type: boolean
                                 namePrefix:
-                                  description: NamePrefix is a prefix appended to
-                                    resources for Kustomize apps
+                                  description: NamePrefix overrides the namePrefix
+                                    in the kustomization.yaml for Kustomize apps
                                   type: string
                                 nameSuffix:
-                                  description: NameSuffix is a suffix appended to
-                                    resources for Kustomize apps
+                                  description: NameSuffix overrides the nameSuffix
+                                    in the kustomization.yaml for Kustomize apps
                                   type: string
                                 namespace:
                                   description: Namespace sets the namespace that Kustomize
@@ -30128,6 +30129,16 @@ spec:
                   - type
                   type: object
                 type: array
+              health:
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  status:
+                    type: string
+                type: object
               resources:
                 items:
                   properties:
@@ -31418,6 +31429,12 @@ spec:
       - args:
         - /usr/local/bin/argocd-applicationset-controller
         env:
+        - name: GRPC_ENABLE_TXT_SERVICE_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.grpc.enable.txt.service.config
+              name: argocd-cmd-params-cm
+              optional: true
         - name: ARGOCD_APPLICATIONSET_CONTROLLER_GLOBAL_PRESERVED_ANNOTATIONS
           valueFrom:
             configMapKeyRef:
@@ -31480,6 +31497,48 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: log.format.timestamp
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_QPS
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.client.qps
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_BURST
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.client.burst
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.client.max.idle.connections
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.tcp.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_KEEPALIVE
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.tcp.keepalive
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TLS_HANDSHAKE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.tls.handshake.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_IDLE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: applicationsetcontroller.k8s.tcp.idle.timeout
               name: argocd-cmd-params-cm
               optional: true
         - name: ARGOCD_APPLICATIONSET_CONTROLLER_DRY_RUN
@@ -31584,7 +31643,7 @@ spec:
               key: applicationsetcontroller.status.max.resources.count
               name: argocd-cmd-params-cm
               optional: true
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         name: argocd-applicationset-controller
         ports:
@@ -31707,7 +31766,13 @@ spec:
               key: dexserver.disable.tls
               name: argocd-cmd-params-cm
               optional: true
-        image: ghcr.io/dexidp/dex:v2.43.0
+        - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
+          valueFrom:
+            configMapKeyRef:
+              key: dexserver.connector.failure.continue
+              name: argocd-cmd-params-cm
+              optional: true
+        image: ghcr.io/dexidp/dex:v2.45.0
         imagePullPolicy: Always
         name: dex
         ports:
@@ -31721,6 +31786,7 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
           runAsNonRoot: true
+          runAsUser: 1001
           seccompProfile:
             type: RuntimeDefault
         volumeMounts:
@@ -31736,7 +31802,7 @@ spec:
         - -n
         - /usr/local/bin/argocd
         - /shared/argocd-dex
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         name: copyutil
         securityContext:
@@ -31808,6 +31874,12 @@ spec:
               key: notificationscontroller.log.level
               name: argocd-cmd-params-cm
               optional: true
+        - name: ARGOCD_NOTIFICATION_CONTROLLER_PROCESSORS_COUNT
+          valueFrom:
+            configMapKeyRef:
+              key: notificationscontroller.processors.count
+              name: argocd-cmd-params-cm
+              optional: true
         - name: ARGOCD_LOG_FORMAT_TIMESTAMP
           valueFrom:
             configMapKeyRef:
@@ -31832,7 +31904,7 @@ spec:
               key: notificationscontroller.repo.server.plaintext
               name: argocd-cmd-params-cm
               optional: true
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         livenessProbe:
           tcpSocket:
@@ -31934,7 +32006,7 @@ spec:
         - argocd
         - admin
         - redis-initial-password
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: IfNotPresent
         name: secret-init
         securityContext:
@@ -31997,6 +32069,12 @@ spec:
             secretKeyRef:
               key: auth
               name: argocd-redis
+        - name: GRPC_ENABLE_TXT_SERVICE_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              key: reposerver.grpc.enable.txt.service.config
+              name: argocd-cmd-params-cm
+              optional: true
         - name: ARGOCD_RECONCILIATION_TIMEOUT
           valueFrom:
             configMapKeyRef:
@@ -32225,13 +32303,19 @@ spec:
               key: reposerver.include.hidden.directories
               name: argocd-cmd-params-cm
               optional: true
+        - name: ARGOCD_HELM_USER_AGENT
+          valueFrom:
+            configMapKeyRef:
+              key: reposerver.helm.user.agent
+              name: argocd-cmd-params-cm
+              optional: true
         - name: HELM_CACHE_HOME
           value: /helm-working-dir
         - name: HELM_CONFIG_HOME
           value: /helm-working-dir
         - name: HELM_DATA_HOME
           value: /helm-working-dir
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -32286,7 +32370,7 @@ spec:
         command:
         - sh
         - -c
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         name: copyutil
         securityContext:
           allowPrivilegeEscalation: false
@@ -32383,6 +32467,12 @@ spec:
             secretKeyRef:
               key: auth
               name: argocd-redis
+        - name: GRPC_ENABLE_TXT_SERVICE_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              key: server.grpc.enable.txt.service.config
+              name: argocd-cmd-params-cm
+              optional: true
         - name: ARGOCD_SERVER_INSECURE
           valueFrom:
             configMapKeyRef:
@@ -32411,6 +32501,48 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: server.log.level
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_QPS
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.client.qps
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_BURST
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.client.burst
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.client.max.idle.connections
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.tcp.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_KEEPALIVE
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.tcp.keepalive
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TLS_HANDSHAKE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.tls.handshake.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_IDLE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: server.k8s.tcp.idle.timeout
               name: argocd-cmd-params-cm
               optional: true
         - name: ARGOCD_SERVER_REPO_SERVER
@@ -32665,7 +32797,7 @@ spec:
               key: server.sync.replace.allowed
               name: argocd-cmd-params-cm
               optional: true
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -32793,6 +32925,12 @@ spec:
             secretKeyRef:
               key: auth
               name: argocd-redis
+        - name: GRPC_ENABLE_TXT_SERVICE_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              key: controller.grpc.enable.txt.service.config
+              name: argocd-cmd-params-cm
+              optional: true
         - name: ARGOCD_CONTROLLER_REPLICAS
           value: "1"
         - name: ARGOCD_RECONCILIATION_TIMEOUT
@@ -32859,6 +32997,48 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: log.format.timestamp
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_QPS
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.client.qps
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_BURST
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.client.burst
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.client.max.idle.connections
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.tcp.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_KEEPALIVE
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.tcp.keepalive
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TLS_HANDSHAKE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.tls.handshake.timeout
+              name: argocd-cmd-params-cm
+              optional: true
+        - name: ARGOCD_K8S_TCP_IDLE_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              key: controller.k8s.tcp.idle.timeout
               name: argocd-cmd-params-cm
               optional: true
         - name: ARGOCD_APPLICATION_CONTROLLER_METRICS_CACHE_EXPIRATION
@@ -33049,7 +33229,7 @@ spec:
               optional: true
         - name: KUBECACHEDIR
           value: /tmp/kubecache
-        image: quay.io/argoproj/argocd:v3.3.14
+        image: quay.io/argoproj/argocd:v3.4.8
         imagePullPolicy: Always
         name: argocd-application-controller
         ports:
