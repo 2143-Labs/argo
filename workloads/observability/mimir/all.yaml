@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: mimir
-          image: grafana/mimir:2.14.2
+          image: grafana/mimir:3.2.1
           args:
             - "-target=all,alertmanager"
             - "-config.file=/etc/mimir/mimir.yaml"
