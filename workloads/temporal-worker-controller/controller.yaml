@@ -110,6 +110,7 @@ rules:
       - connections
       - temporalconnections
       - workerresourcetemplates
+      - clusterconnections
     verbs:
       - get
       - list
@@ -120,6 +121,7 @@ rules:
       - temporal.io
     resources:
       - connections/finalizers
+      - clusterconnections/finalizers
       - temporalconnections/finalizers
       - temporalworkerdeployments/finalizers
       - workerdeployments/finalizers
@@ -129,6 +131,7 @@ rules:
       - temporal.io
     resources:
       - temporalconnections/status
+      - clusterconnections/status
       - temporalworkerdeployments/status
       - workerdeployments/status
       - workerresourcetemplates/status
