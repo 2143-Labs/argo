@@ -3,3 +3,11 @@ kind: BGPAdvertisement
 metadata:
   name: bgp
   namespace: metallb-system
+spec:
+  # Keep the 1G Pi running Mullvad out of service and API VIP routing.
+  # The remaining speakers still advertise; pite's BGP peering stays intact.
+  nodeSelectors:
+    - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: NotIn
+          values: ["pite"]
