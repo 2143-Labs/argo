@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: temporal-worker-controller/templates/auth_proxy.yaml
@@ -19,7 +19,7 @@ metadata:
   labels:
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-metrics-reader
 rules:
@@ -35,7 +35,7 @@ metadata:
   labels:
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-proxy-role
 rules:
@@ -182,7 +182,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-connection-editor-role
 rules:
@@ -214,7 +214,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-connection-viewer-role
 rules:
@@ -242,7 +242,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-workerdeployment-editor-role
 rules:
@@ -274,7 +274,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-workerdeployment-viewer-role
 rules:
@@ -303,7 +303,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-temporalconnection-editor-role
 rules:
@@ -335,7 +335,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-temporalconnection-viewer-role
 rules:
@@ -363,7 +363,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-temporalworkerdeployment-editor-role
 rules:
@@ -395,7 +395,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-temporalworkerdeployment-viewer-role
 rules:
@@ -423,7 +423,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-workerresourcetemplate-editor-role
 rules:
@@ -455,7 +455,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-workerresourcetemplate-viewer-role
 rules:
@@ -481,7 +481,7 @@ metadata:
   labels:
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-proxy-rolebinding
 roleRef:
@@ -501,7 +501,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-temporal-system-manager-rolebinding
 roleRef:
@@ -522,7 +522,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-leader-election-role
   namespace: temporal-system
@@ -567,7 +567,7 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-leader-election-rolebinding
   namespace: temporal-system
@@ -587,7 +587,7 @@ metadata:
   labels:
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   name: twc-metrics-service
   namespace: temporal-system
@@ -612,7 +612,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   ports:
@@ -633,7 +633,7 @@ metadata:
     app.kubernetes.io/component: manager
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
@@ -649,7 +649,7 @@ spec:
         app.kubernetes.io/component: manager
         app.kubernetes.io/name: temporal-worker-controller
         app.kubernetes.io/instance: twc
-        app.kubernetes.io/version: "1.8.0"
+        app.kubernetes.io/version: "1.10.1"
         app.kubernetes.io/managed-by: Helm
     spec:
       affinity:
@@ -772,7 +772,7 @@ metadata:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
   annotations:
     # cert-manager injects the CA bundle from the named Certificate into this field automatically.
@@ -804,7 +804,7 @@ metadata:
     app.kubernetes.io/component: certificate
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   dnsNames:
@@ -828,7 +828,7 @@ metadata:
     app.kubernetes.io/component: certificate
     app.kubernetes.io/name: temporal-worker-controller
     app.kubernetes.io/instance: twc
-    app.kubernetes.io/version: "1.8.0"
+    app.kubernetes.io/version: "1.10.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   selfSigned: {}
