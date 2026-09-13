@@ -15,6 +15,15 @@ spec:
       releaseName: temporal
       values: |
         fullnameOverride: "temporal"
+        schema:
+          # The chart's default (useHelmHooks: true) renders a fixed-name
+          # `temporal-schema` Job with backoffLimit 100. ArgoCD applies it as a
+          # normal resource and Job pod templates are immutable, so any change
+          # to the schema job (e.g. rotated DB credentials) can never be
+          # applied and the app wedges forever. The chart documents
+          # useHelmHooks: false for non-Helm tooling; it names the Job
+          # per chart-version/revision instead.
+          useHelmHooks: false
         server:
           config:
             persistence:
