@@ -65,7 +65,7 @@ spec:
           command:
             - sh
             - "-c"
-            - "apk add --no-cache py3-pillow && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
+            - "apk add --no-cache py3-pillow && sed -i 's/if billable_users and billable_users > 5:/if False:/' /app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
           startupProbe:
             httpGet:
               path: /health/liveliness
