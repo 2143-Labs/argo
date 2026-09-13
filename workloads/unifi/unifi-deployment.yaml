@@ -28,7 +28,7 @@ spec:
                       - general
       containers:
         - name: unifi
-          image: lscr.io/linuxserver/unifi-network-application:10.4.57-ls136
+          image: lscr.io/linuxserver/unifi-network-application:10.6.101-ls145
           env:
             - name: TZ
               value: America/New_York

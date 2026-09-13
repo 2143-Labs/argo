@@ -10,7 +10,6 @@ data:
     use-auth-secret
     static-auth-secret=/etc/coturn/secrets/turn_secret
     no-tls
-    no-cli
     no-multicast-peers
     min-port=49152
     max-port=65535

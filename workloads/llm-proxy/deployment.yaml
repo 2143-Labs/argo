@@ -34,7 +34,7 @@ spec:
                       - general
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:v1.92.0
+          image: ghcr.io/berriai/litellm:v1.100.1
           ports:
             - containerPort: 4000
               protocol: TCP
@@ -84,14 +84,14 @@ spec:
             httpGet:
               path: /health/liveliness
               port: 4000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 90
             periodSeconds: 15
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health/readiness
               port: 4000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 70
             periodSeconds: 5
             failureThreshold: 2
       volumes:

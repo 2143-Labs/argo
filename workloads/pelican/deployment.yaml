@@ -38,7 +38,7 @@ spec:
                       - general
       containers:
         - name: panel
-          image: ghcr.io/pelican-dev/panel:v1.0.0-beta37
+          image: ghcr.io/pelican-dev/panel:v1.0.0-beta38
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
