@@ -10,7 +10,7 @@ spec:
   source:
     chart: longhorn
     repoURL: https://charts.longhorn.io
-    targetRevision: 1.11.1
+    targetRevision: 1.12.1
     helm:
       releaseName: longhorn
       values: |
@@ -97,6 +97,11 @@ spec:
           defaultClassReplicaCount: 3
         ingress:
           enabled: false
+        # 1.12.1 renders internal NetworkPolicies by default. k3s enforces
+        # NetworkPolicy (kube-router), and a mis-scoped policy here can fault
+        # volumes mid-upgrade. Keep the new restriction off; revisit separately.
+        networkPolicies:
+          restrictInternalTraffic: false
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system
