@@ -10,7 +10,7 @@ spec:
   source:
     chart: temporal
     repoURL: https://go.temporal.io/helm-charts
-    targetRevision: 1.5.0
+    targetRevision: 1.7.0
     helm:
       releaseName: temporal
       values: |
