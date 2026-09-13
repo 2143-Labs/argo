@@ -36,6 +36,19 @@ bao write auth/kubernetes/role/external-secrets \
 
 Once that exists, the remaining steps are mechanical and already designed: a `ClusterSecretStore` named `openbao` pointing at `http://openbao-eso.openbao.svc:8202` with `provider.openBao` and the `external-secrets` role, then one `ExternalSecret` per credential below, each with `target.name` set to the Secret name the workload already consumes so no Deployment changes are needed. **No `ExternalSecret` was committed, deliberately** — a store that cannot authenticate would leave the workloads referencing Secrets nothing creates, and the UniFi MongoDB Secret in particular does not exist today, so landing it early would break a running service.
 
+### Still plaintext in HEAD today
+
+Because the migration is blocked, **four files still carry literal credentials in the current tree** and remain exposed to anyone reading this public repo. They are listed here so the exposure is unambiguous and cannot be mistaken for "done":
+
+| File | Location | What is exposed |
+|---|---|---|
+| `workloads/unifi/unifi-deployment.yaml` | lines 45–46 (`MONGO_PASS`), 106–107 (`MONGO_INITDB_ROOT_PASSWORD`), 112–113 (`MONGO_PASS`, mongodb container) | the UniFi MongoDB password, three times; note `MONGO_INITDB_ROOT_PASSWORD` and `MONGO_PASS` are the **same** value |
+| `workloads/frigate/config-tpl.yaml` | ~659 (`model.path`, a `plus://…` key), ~662 (`mqtt.password`) | the Frigate+ licence key and the MQTT password |
+| `workloads/tuwunel/application.yaml` | ~66–69 (`extraEnv`) | the SeaweedFS S3 access key and secret key |
+| `workloads/openrct2/openrct2.yaml` | ~45–46 (`--password`) | the openrct2 server password |
+
+These are exactly the workstream-3.6 items that the blocker above prevents completing. Each one has a row in the rotation backlog below. **Until the OpenBao policy and role exist, the only correct action on these is rotation — they cannot be un-committed**, and deleting them from git without a working replacement would simply break the workloads.
+
 ## 2. Rotation backlog — values disclosed in a public repo
 
 Every entry below was committed in plaintext and must be considered public. Rotation is **not** performed by this change set: each one is service-affecting, and several need a third party. Ordered by exposure:
