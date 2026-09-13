@@ -115,3 +115,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      # The chart's temporal-schema Job is rendered from a helm.sh hook but
+      # applied by ArgoCD as a normal resource. Job pod templates are
+      # immutable, so a changed job spec (e.g. rotated DB credentials) can
+      # never be applied in place and wedges the whole app out of sync.
+      - Replace=true
