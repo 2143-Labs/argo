@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: master
-        image: chrislusf/seaweedfs:3.85
+        image: chrislusf/seaweedfs:4.46
         args:
         - "master"
         - "-port=9333"

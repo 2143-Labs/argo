@@ -17,7 +17,7 @@ spec:
           effect: NoSchedule
       containers:
       - name: filer
-        image: chrislusf/seaweedfs:3.85
+        image: chrislusf/seaweedfs:4.46
         env:
         # viper maps the key filer.options.max_file_name_length to this env var.
         # 0 disables the 255-byte entry-name cap: litellm's spend-log object names
