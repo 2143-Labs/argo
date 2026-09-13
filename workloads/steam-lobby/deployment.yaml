@@ -73,6 +73,17 @@ spec:
           value: "false"
         - name: PUBLIC_URL
           value: "https://pvp.john2143.com"
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # This cluster has no <cluster>-app secret (CNPG only made
+              # -ca/-replication/-server plus this hand-made password source).
+              # steam-lobby-db-password is the secret CNPG itself reads for the
+              # managed role, so it is the authoritative source here.
+              name: steam-lobby-db-password
+              key: password
+        - name: DATABASE_URL
+          value: postgres://lobby:$(DB_PASSWORD)@steam-lobby-db-rw.steam-lobby.svc.cluster.local:5432/lobby
         - name: CORS_ORIGINS
           value: "https://pvp.john2143.com"
         - name: JWT_TTL_S

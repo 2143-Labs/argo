@@ -49,6 +49,14 @@ spec:
                 name: pelican-config
             - secretRef:
                 name: pelican-env
+          env:
+            # Explicit env wins over envFrom. CNPG owns this credential: it
+            # generates the password for the managed role and can rotate it.
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pelican-db-app
+                  key: password
           volumeMounts:
             - mountPath: /pelican-data
               name: pelican-data

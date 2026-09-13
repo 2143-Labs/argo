@@ -50,6 +50,13 @@ spec:
               value: "true"
             - name: CHATGPT_TOKEN_DIR
               value: /litellm/chatgpt
+            # Explicit env wins over envFrom: neutralises the stale DATABASE_URL
+            # bundled in litellm-secrets. CNPG owns this credential, not the bundle.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-db-app
+                  key: uri
           envFrom:
             - secretRef:
                 name: litellm-secrets
