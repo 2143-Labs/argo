@@ -76,6 +76,8 @@ spec:
               value: https
             - name: UPLOAD_AUTH_REQUIRED
               value: "true"
+            - name: ADMIN_PANEL_ON_MAIN_ENDPOINT
+              value: "1"
             - name: TZ
               value: America/New_York
           volumeMounts:
