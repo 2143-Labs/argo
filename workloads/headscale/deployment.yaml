@@ -18,7 +18,7 @@ spec:
         app: headscale
       annotations:
         openbao-dns-revision: "1"
-        headscale-policy-revision: "vpin-20260912"
+        headscale-policy-revision: "vpn-endpoint-20260914"
     spec:
       affinity:
         nodeAffinity:
