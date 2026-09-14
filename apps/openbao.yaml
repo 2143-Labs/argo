@@ -402,6 +402,17 @@ spec:
                   ports:
                     - protocol: TCP
                       port: 8200
+                # External Secrets Operator reads application secrets over the
+                # plaintext in-cluster listener on 8202 (published only through the
+                # openbao-eso Service). Without this rule the ClusterSecretStore
+                # cannot even open a connection.
+                - from:
+                    - namespaceSelector:
+                        matchLabels:
+                          kubernetes.io/metadata.name: external-secrets
+                  ports:
+                    - protocol: TCP
+                      port: 8202
 
           # Public machine-API path: namespace-local copies of the shared
           # pre-authentication middlewares (specs copied from the default ns).
