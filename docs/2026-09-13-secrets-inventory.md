@@ -24,10 +24,12 @@ Landed and verified:
 The vault was initialised ~2026-09-12; its root token is held by the user. **One-time action required by the user** (run against the active pod, root token supplied out-of-band — never committed, never pasted into this repo):
 
 ```bash
-path "secret/data/*"     { capabilities = ["read"] }
-path "secret/metadata/*" { capabilities = ["read", "list"] }
-path "sys/mounts"        { capabilities = ["read", "list"] }
-path "sys/mounts/*"      { capabilities = ["read", "list"] }
+bao policy write eso-read - <<'EOF'
+path "consumers/data/*"     { capabilities = ["read"] }
+path "consumers/metadata/*" { capabilities = ["read", "list"] }
+path "sys/mounts"           { capabilities = ["read", "list"] }
+path "sys/mounts/*"         { capabilities = ["read", "list"] }
+EOF
 bao write auth/kubernetes/role/external-secrets \
   bound_service_account_names=external-secrets \
   bound_service_account_namespaces=external-secrets \
@@ -36,7 +38,24 @@ bao write auth/kubernetes/role/external-secrets \
 
 Once that exists, the remaining steps are mechanical and already designed: a `ClusterSecretStore` named `openbao` pointing at `http://openbao-eso.openbao.svc:8202` with `provider.openBao` and the `external-secrets` role, then one `ExternalSecret` per credential below, each with `target.name` set to the Secret name the workload already consumes so no Deployment changes are needed. **No `ExternalSecret` was committed, deliberately** — a store that cannot authenticate would leave the workloads referencing Secrets nothing creates, and the UniFi MongoDB Secret in particular does not exist today, so landing it early would break a running service.
 
-**Update 2026-09-14:** the `sys/mounts` lines were added to the policy above after live testing. ESO's OpenBao provider calls `GET /v1/sys/mounts/secret` during store validation, and the first `eso-read` policy (data/metadata only) got a 403 there even though reading data worked. The ClusterSecretStore is now in place and syncing; it will flip `Ready` once this extended policy is written by the operator.
+**Update 2026-09-14 (re-verified against the live vault):** the mount is
+`consumers`, **not** `secret`. OpenBao's own audit stream is the proof: it
+records 180 requests to mount `consumers/` — `consumers/data/hero-rehab/steam`
+and its `metadata/` siblings — and **zero** requests to a `secret/` mount, so no
+`secret/` engine exists and the policy above had to be written against
+`consumers` instead. The `sys/mounts` lines are still required, and for the same
+reason: ESO validates a store by calling `GET /v1/sys/mounts/<path>`, taken
+straight from the store's `path:` field. With the store set to `secret` that
+call 403'd, which is what held `ClusterSecretStore/openbao` at
+`Ready=False`/`InvalidProviderConfig`.
+
+The `external-secrets` auth role itself **already exists and authenticates**
+— logging in with a token minted for ServiceAccount
+`external-secrets/external-secrets` returns policies `default` and `eso-read`.
+Re-writing `eso-read` with the block above is the only remaining out-of-band
+action; the live copy still grants `secret/data/*` and denies `sys/mounts*`.
+Until it is re-written the store stays `InvalidProviderConfig`, so no
+`ExternalSecret` may be committed.
 
 ### Still plaintext in HEAD today
 
