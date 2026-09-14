@@ -21,10 +21,11 @@ data:
     {
       "tagOwners": {
         "tag:vpin": ["john@2143.me"],
-        "tag:pite": ["john@2143.me"]
+        "tag:pite": ["john@2143.me"],
+        "tag:vpn-endpoint": ["john@2143.me"]
       },
       "autoApprovers": {
-        "exitNode": ["john@2143.me", "tag:pite"]
+        "exitNode": ["john@2143.me", "tag:pite", "tag:vpn-endpoint"]
       },
       "acls": [
         // Preserve John's management access when vpin becomes a tagged service.
@@ -38,6 +39,12 @@ data:
           "action": "accept",
           "src": ["john@2143.me"],
           "dst": ["tag:pite:*"]
+        },
+        // Permit John to manage the dedicated tagged VPN endpoints.
+        {
+          "action": "accept",
+          "src": ["john@2143.me"],
+          "dst": ["tag:vpn-endpoint:*"]
         },
         // Tagged VPN nodes can reach the whole tailnet (restores the
         // autogroup:self coverage that tagging removes from a member device).
