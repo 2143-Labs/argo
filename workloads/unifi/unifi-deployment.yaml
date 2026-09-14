@@ -70,7 +70,7 @@ spec:
               memory: 512Mi
             limits:
               cpu: 2000m
-              memory: 2Gi
+              memory: 4Gi
           startupProbe:
             exec:
               command:
@@ -125,7 +125,7 @@ spec:
               memory: 256Mi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 2Gi
       volumes:
         - name: config
           persistentVolumeClaim:

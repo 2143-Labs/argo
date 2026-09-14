@@ -22,7 +22,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
       - name: volume
-        image: chrislusf/seaweedfs:3.85
+        image: chrislusf/seaweedfs:4.46
         args:
         - "volume"
         - "-mserver=seaweedfs-master:9333"

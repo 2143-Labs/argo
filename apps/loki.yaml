@@ -9,13 +9,13 @@ spec:
   project: default
   source:
     chart: loki
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: 6.28.0
+    repoURL: https://grafana-community.github.io/helm-charts
+    targetRevision: 18.13.0
     helm:
       releaseName: loki
       values: |
+        deploymentMode: SimpleScalable
         loki:
-          deploymentMode: SimpleScalable
           auth_enabled: false
           commonConfig:
             replication_factor: 2

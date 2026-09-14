@@ -251,7 +251,7 @@ spec:
                 scheme          = "https"
                 metrics_path    = "/v1/sys/metrics"
                 params = {
-                  "format" = ["prometheus"]
+                  "format" = ["prometheus"],
                 }
                 scrape_interval = "30s"
                 tls_config {

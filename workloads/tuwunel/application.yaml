@@ -14,7 +14,7 @@ spec:
       values: |
         image:
           repository: ghcr.io/matrix-construct/tuwunel
-          tag: v1.8.0
+          tag: v1.9.1
           pullPolicy: IfNotPresent
         server_name: "matrix.2143.me"
         database_path: "/var/lib/tuwunel"

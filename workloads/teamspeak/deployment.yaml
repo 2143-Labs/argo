@@ -25,7 +25,7 @@ spec:
           claimName: teamspeak-all-lh
       containers:
         - name: teamspeak
-          image: docker.io/teamspeak:3.13.7
+          image: docker.io/teamspeak:3.13.8
           #securityContext:
             #allowPrivilegeEscalation: false
             #capabilities:

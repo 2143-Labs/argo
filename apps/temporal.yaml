@@ -10,11 +10,20 @@ spec:
   source:
     chart: temporal
     repoURL: https://go.temporal.io/helm-charts
-    targetRevision: 1.5.0
+    targetRevision: 1.7.0
     helm:
       releaseName: temporal
       values: |
         fullnameOverride: "temporal"
+        schema:
+          # The chart's default (useHelmHooks: true) renders a fixed-name
+          # `temporal-schema` Job with backoffLimit 100. ArgoCD applies it as a
+          # normal resource and Job pod templates are immutable, so any change
+          # to the schema job (e.g. rotated DB credentials) can never be
+          # applied and the app wedges forever. The chart documents
+          # useHelmHooks: false for non-Helm tooling; it names the Job
+          # per chart-version/revision instead.
+          useHelmHooks: false
         server:
           config:
             persistence:
@@ -31,7 +40,7 @@ spec:
                     connectAddr: "temporal-db-rw:5432"
                     connectProtocol: "tcp"
                     user: temporal
-                    existingSecret: temporal-db-password
+                    existingSecret: temporal-db-app
                     secretKey: password
                     maxConns: 20
                     maxConnLifetime: "1h"
@@ -44,7 +53,7 @@ spec:
                     connectAddr: "temporal-db-rw:5432"
                     connectProtocol: "tcp"
                     user: temporal
-                    existingSecret: temporal-db-password
+                    existingSecret: temporal-db-app
                     secretKey: password
                     maxConns: 20
                     maxConnLifetime: "1h"
@@ -115,3 +124,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      # The chart's temporal-schema Job is rendered from a helm.sh hook but
+      # applied by ArgoCD as a normal resource. Job pod templates are
+      # immutable, so a changed job spec (e.g. rotated DB credentials) can
+      # never be applied in place and wedges the whole app out of sync.
+      - Replace=true

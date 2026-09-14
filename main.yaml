@@ -16,6 +16,7 @@ spec:
     - ghcr.io/magikid/modern-conduwuit-helm
     - https://github.com/actions/actions-runner-controller
     - https://grafana.github.io/helm-charts
+    - https://grafana-community.github.io/helm-charts
     - https://prometheus-community.github.io/helm-charts
     - https://haiwen.github.io/seafile-helm-chart/repo
     - https://charts.jetstack.io
@@ -26,6 +27,7 @@ spec:
     - https://charts.bitnami.com/bitnami
     - https://stakater.github.io/stakater-charts
     - https://metallb.github.io/metallb
+    - https://charts.external-secrets.io
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -58,6 +60,10 @@ spec:
       kind: '*'
     - group: scheduling.k8s.io
       kind: '*'
+    - group: external-secrets.io
+      kind: ClusterSecretStore
+    - group: external-secrets.io
+      kind: ClusterExternalSecret
 
 ---
 # ArgoCD Repository Secret

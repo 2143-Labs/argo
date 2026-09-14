@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-core
+  namespace: argocd
+  # No resources-finalizer here on purpose: deleting this Application must not
+  # cascade-delete Argo CD's own control plane.
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: bootstrap/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # Automated so version bumps deploy without a human click — but prune and
+    # selfHeal are deliberately OFF. This Application manages Argo CD's own control
+    # plane, and a bad render must never be able to delete argocd-server or the
+    # controller. Do not enable either without a separate, explicit decision.
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    # argocd-secret holds generated keys (server.secretkey, tls.crt/key, webhook
+    # secrets) that Argo CD and the API server write. Never fight over them.
+    - group: ""
+      kind: Secret
+      name: argocd-secret
+      jsonPointers:
+        - /data
+    # The webhook CA bundles are injected at runtime by Argo CD's cert controller.
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - '.webhooks[].clientConfig.caBundle'
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - '.webhooks[].clientConfig.caBundle'

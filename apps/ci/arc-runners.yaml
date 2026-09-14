@@ -16,7 +16,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/actions/actions-runner-controller
+    # ARC publishes its charts as OCI artifacts (see arc-controller.yaml).
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
     chart: gha-runner-scale-set
     targetRevision: 0.14.1
     helm:

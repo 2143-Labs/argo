@@ -23,6 +23,10 @@ metadata:
 spec:
   revisionHistoryLimit: 3
   replicas: 1
+  # RWO PVC + 1 replica: RollingUpdate deadlocks (new pod can never attach
+  # the volume while the old pod holds it). Matches the other RWO workloads.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: docker-registry
@@ -45,7 +49,7 @@ spec:
                       - general
       containers:
         - name: registry
-          image: registry:2.8.3
+          image: registry:3.1.1
           ports:
             - name: http
               containerPort: 5000

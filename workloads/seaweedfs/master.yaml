@@ -5,13 +5,14 @@ metadata:
   labels: {app: seaweedfs-master}
 spec:
   replicas: 1
+  strategy: {type: Recreate}
   selector: {matchLabels: {app: seaweedfs-master}}
   template:
     metadata: {labels: {app: seaweedfs-master}}
     spec:
       containers:
       - name: master
-        image: chrislusf/seaweedfs:3.85
+        image: chrislusf/seaweedfs:4.46
         args:
         - "master"
         - "-port=9333"

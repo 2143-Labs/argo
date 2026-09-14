@@ -10,14 +10,14 @@ spec:
   source:
     chart: beyla
     repoURL: https://grafana.github.io/helm-charts
-    targetRevision: 1.16.10
+    targetRevision: 1.16.11
     helm:
       releaseName: beyla
       values: |
         nodeSelector:
           beyla.enabled: "true"
         image:
-          tag: "3.33.0"
+          tag: "3.35.0"
         config:
           create: true
           data:

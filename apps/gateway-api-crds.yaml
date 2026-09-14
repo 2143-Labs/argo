@@ -12,7 +12,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/kubernetes-sigs/gateway-api.git
-    targetRevision: v1.5.1
+    targetRevision: v1.6.2
     path: config/crd/standard
   destination:
     server: https://kubernetes.default.svc
@@ -21,7 +21,8 @@ spec:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
       jsonPointers:
-        - /metadata/annotations
+        # Bundle-version annotations must advance with the CRD upgrade.
+        - /metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration
         - /status
     - group: admissionregistration.k8s.io
       kind: ValidatingAdmissionPolicy

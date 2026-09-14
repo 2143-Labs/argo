@@ -34,7 +34,7 @@ spec:
                       - general
       containers:
         - name: pihole
-          image: docker.io/pihole/pihole:2025.08.0
+          image: docker.io/pihole/pihole:2026.07.2
           env:
             - name: TZ
               value: America/Chicago

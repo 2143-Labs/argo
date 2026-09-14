@@ -61,6 +61,17 @@ spec:
                   }
                 }
 
+                # In-cluster-only plaintext listener for External Secrets Operator.
+                # OpenBao's serving cert has a single SAN (openbao.ts.2143.me) and
+                # ESO offers no TLS server-name override, so ESO cannot validate
+                # https://openbao.openbao.svc:8200. This port is published only via
+                # the openbao-eso ClusterIP Service (extraObjects below); nothing
+                # else listens on it.
+                listener "tcp" {
+                  address     = "[::]:8202"
+                  tls_disable = true
+                }
+
                 storage "raft" {
                   path = "/openbao/data"
                   retry_join {
@@ -319,6 +330,23 @@ spec:
                 hostname: openbao.ts.2143.me
                 wellKnownCACertificates: System
 
+          # In-cluster ClusterIP for ESO: publishes only the plaintext 8202
+          # listener, reachable nowhere outside the cluster network.
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: openbao-eso
+              namespace: openbao
+            spec:
+              type: ClusterIP
+              selector:
+                app.kubernetes.io/name: openbao
+                app.kubernetes.io/instance: openbao
+              ports:
+                - name: eso-http
+                  port: 8202
+                  targetPort: 8202
+
           # Server ingress NetworkPolicy (sole server policy; chart policy disabled).
           - apiVersion: networking.k8s.io/v1
             kind: NetworkPolicy
@@ -374,6 +402,17 @@ spec:
                   ports:
                     - protocol: TCP
                       port: 8200
+                # External Secrets Operator reads application secrets over the
+                # plaintext in-cluster listener on 8202 (published only through the
+                # openbao-eso Service). Without this rule the ClusterSecretStore
+                # cannot even open a connection.
+                - from:
+                    - namespaceSelector:
+                        matchLabels:
+                          kubernetes.io/metadata.name: external-secrets
+                  ports:
+                    - protocol: TCP
+                      port: 8202
 
           # Public machine-API path: namespace-local copies of the shared
           # pre-authentication middlewares (specs copied from the default ns).

@@ -44,7 +44,9 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mattermost-db-password
+                  # mattermost-db-password does not exist in the cluster; CNPG's
+                  # authoritative secret for the app role is mattermost-db-app.
+                  name: mattermost-db-app
                   key: password
             - name: MM_SQLSETTINGS_DRIVERNAME
               value: postgres
