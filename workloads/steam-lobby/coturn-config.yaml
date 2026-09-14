@@ -10,12 +10,13 @@ data:
     use-auth-secret
     # static-auth-secret is injected by the render-auth init container from the
     # mounted steam-lobby-turn Secret (static-auth-secret takes a literal value,
-    # Literal IP, not a hostname: the pod's resolver hangs on the IPv6
-    # nameserver (fd42:42:43::a) and coturn aborted with
-    # "error resolving 'turn.john2143.com' hostname: Try again" ->
-    # "-X : Wrong address format", leaving external-ip unset entirely.
-    # WAN IP is DHCP from the ISP; if it changes, update this and the DNS A record.
-    external-ip=108.56.153.222
+    # external-ip tracks the DNS record, never a literal: the WAN IP is DHCP,
+    # and turn.john2143.com is a CNAME to john2143.com, which home-pi refreshes
+    # with the current public IP (dotfiles/nixos/cluster/hosts/home-pi.nix).
+    # coturn resolves this ONCE at startup; on failure it logs "-X : Wrong
+    # address format" and silently drops the option (mainrelay.c), leaving it
+    # advertising the pod address. Hence the resolver pin in coturn-deployment.yaml.
+    external-ip=turn.john2143.com
     no-multicast-peers
     min-port=45000
     max-port=45063

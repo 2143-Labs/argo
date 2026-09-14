@@ -1,0 +1,139 @@
+# Keeps coturn's advertised relay address in step with the WAN IP.
+#
+# coturn resolves external-ip once at startup and has no config reload (SIGHUP
+# only rotates the logfile, SIGUSR2 only the TLS certs), so when the ISP
+# re-leases the WAN IP a running coturn keeps handing out the old relay address
+# until it is restarted. This CronJob restarts it when — and only when — the IP
+# has actually moved.
+#
+# The `turn.john2143.com` record is refreshed from home-pi on its own schedule
+# (dotfiles/nixos/cluster/hosts/home-pi.nix), so the job waits for the record to
+# agree with the live IP before restarting: restarting while the record still
+# holds the old address would resolve to that stale address and change nothing.
+#
+# State lives in the `coturn-wan-ip-state` ConfigMap, created by this job. It is
+# deliberately absent from git — ArgoCD only tracks/prunes resources carrying its
+# own tracking label, so the ConfigMap is left alone and this app stays declarative.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: coturn-wan-ip-watcher
+  namespace: steam-lobby
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: coturn-wan-ip-watcher
+  namespace: steam-lobby
+rules:
+  # delete = restart coturn (the Deployment recreates the pod, so nothing drifts
+  # from git, unlike `kubectl rollout restart`, which patches the pod template).
+  # watch = `kubectl rollout status` in the confirmation step below.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: coturn-wan-ip-watcher
+  namespace: steam-lobby
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: coturn-wan-ip-watcher
+subjects:
+  - kind: ServiceAccount
+    name: coturn-wan-ip-watcher
+    namespace: steam-lobby
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: coturn-wan-ip-watcher
+  namespace: steam-lobby
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: coturn-wan-ip-watcher
+          # Same resolver pin as the coturn pod: the IPv6 kube-dns ClusterIP
+          # (fd42:42:43::a) never answers, and a dead nameserver in resolv.conf
+          # breaks musl lookups for the external names below.
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            searches:
+              - steam-lobby.svc.cluster.local
+              - svc.cluster.local
+              - cluster.local
+            options:
+              - name: ndots
+                value: "5"
+          containers:
+            - name: watcher
+              image: docker.io/alpine/k8s:1.35.6   # kubectl client matching the k3s cluster version
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  apk add --no-cache curl bind-tools >/dev/null 2>&1
+                  NS=steam-lobby
+                  STATE=coturn-wan-ip-state
+
+                  # Live WAN IP — the same fallback chain as dotfiles' desec-dns.sh.
+                  LIVE=$(curl -4sf --connect-timeout 10 ifconfig.me 2>/dev/null \
+                      || curl -4sf --connect-timeout 10 icanhazip.com 2>/dev/null \
+                      || curl -4sf --connect-timeout 10 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | sed -n 's/^ip=//p')
+                  [ -n "$LIVE" ] || { echo "could not determine the public IP" >&2; exit 1; }
+
+                  # What coturn would resolve if it started right now (CNAME → IP, so take the last line).
+                  RECORD=$(dig +short A turn.john2143.com @10.43.0.10 | tail -1)
+                  [ -n "$RECORD" ] || { echo "turn.john2143.com did not resolve" >&2; exit 1; }
+
+                  SEEN=$(kubectl get cm "$STATE" -n "$NS" -o jsonpath='{.data.ip}' 2>/dev/null || true)
+                  echo "live=$LIVE record=$RECORD last-restarted-for=${SEEN:-<none>}"
+
+                  if [ "$RECORD" != "$LIVE" ]; then
+                    echo "record has not caught up with the live IP yet — leaving coturn alone"
+                    exit 0
+                  fi
+                  if [ "$SEEN" = "$LIVE" ]; then
+                    echo "coturn is already advertising $LIVE"
+                    exit 0
+                  fi
+
+                  kubectl delete pod -n "$NS" -l app=coturn --wait=false
+                  if kubectl rollout status deploy/coturn -n "$NS" --timeout=90s; then
+                    kubectl create configmap "$STATE" -n "$NS" --from-literal=ip="$LIVE" \
+                      --dry-run=client -o yaml | kubectl apply -f -
+                    echo "restarted coturn to advertise $LIVE"
+                  else
+                    # No state recorded, so the next run retries the restart.
+                    kubectl delete cm "$STATE" -n "$NS" --ignore-not-found
+                    echo "coturn did not come back ready after the restart" >&2
+                    exit 1
+                  fi
+              resources:
+                requests:
+                  memory: "32Mi"
+                  cpu: "10m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "200m"
