@@ -35,9 +35,10 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "create", "patch", "delete"]
+  # `kubectl rollout status` lists and watches both of these, not just gets.
   - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -120,13 +121,20 @@ spec:
                   fi
 
                   kubectl delete pod -n "$NS" -l app=coturn --wait=false
+
+                  # Record the IP *before* confirming the rollout. The state is what
+                  # stops the next run from restarting coturn again, so it must not
+                  # depend on the confirmation succeeding — a confirmation that hangs
+                  # or needs RBAC we don't have would otherwise restart coturn every
+                  # five minutes forever.
+                  kubectl create configmap "$STATE" -n "$NS" --from-literal=ip="$LIVE" \
+                    --dry-run=client -o yaml | kubectl apply -f -
+
                   if kubectl rollout status deploy/coturn -n "$NS" --timeout=90s; then
-                    kubectl create configmap "$STATE" -n "$NS" --from-literal=ip="$LIVE" \
-                      --dry-run=client -o yaml | kubectl apply -f -
                     echo "restarted coturn to advertise $LIVE"
                   else
-                    # No state recorded, so the next run retries the restart.
-                    kubectl delete cm "$STATE" -n "$NS" --ignore-not-found
+                    # State is recorded, so this failing is a signal to look at coturn,
+                    # not a reason to restart it again on the next tick.
                     echo "coturn did not come back ready after the restart" >&2
                     exit 1
                   fi
