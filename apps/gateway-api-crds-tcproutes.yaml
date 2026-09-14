@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-crds-tcproutes
+  namespace: argocd
+  annotations:
+    # Same wave as the standard-channel CRD install: the two Applications
+    # manage disjoint files, so ordering between them does not matter, but
+    # both must land before gateway/workload routes.
+    argocd.argoproj.io/sync-wave: "-5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kubernetes-sigs/gateway-api.git
+    targetRevision: v1.6.2
+    # The experimental channel is installed for exactly one file. Traefik
+    # 3.7.8 (k3s bundled) runs with
+    # --providers.kubernetesgateway.experimentalchannel=true, so it watches
+    # v1alpha2.TCPRoute. Gateway API v1.6.2 promoted TCPRoute into the
+    # standard channel but set v1alpha2 served=false there; only the
+    # experimental-channel CRD serves both v1 and v1alpha2.
+    #
+    # When that informer cannot sync, Traefik's Gateway provider never
+    # emits configuration at all: a freshly started replica has no routers
+    # and no TLS certificates, so it answers 404 and serves Traefik's
+    # default certificate for every hostname on the cluster. This was not
+    # theoretical -- it took out one of three replicas and roughly half of
+    # all connections to openbao.ts.2143.me until the CRD was patched.
+    #
+    # apps/gateway-api-crds.yaml excludes this file so the two
+    # Applications never fight over the same object.
+    path: config/crd/experimental
+    directory:
+      include: gateway.networking.k8s.io_tcproutes.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        # Bundle-version annotations must advance with the CRD upgrade.
+        - /metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration
+        - /status
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true

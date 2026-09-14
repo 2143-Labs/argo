@@ -14,6 +14,17 @@ spec:
     repoURL: https://github.com/kubernetes-sigs/gateway-api.git
     targetRevision: v1.6.2
     path: config/crd/standard
+    # TCPRoute moved into the standard channel in v1.6.2 with v1alpha2
+    # served=false. Traefik 3.7.8 (k3s bundled) runs with
+    # --providers.kubernetesgateway.experimentalchannel=true and watches
+    # v1alpha2.TCPRoute; when that informer can never sync, Traefik's entire
+    # Gateway provider stays dead -- no routers, no certificates, so every
+    # host falls back to Traefik's default cert. The experimental-channel
+    # CRD serves v1 *and* v1alpha2, so it is installed separately by
+    # apps/gateway-api-crds-tcproutes.yaml. Do not "tidy" this exclusion
+    # away: doing so re-breaks every newly started Traefik replica.
+    directory:
+      exclude: gateway.networking.k8s.io_tcproutes.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: default
