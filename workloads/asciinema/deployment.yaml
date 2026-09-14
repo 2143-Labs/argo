@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asciinema
+  namespace: default
+  labels:
+    app: asciinema
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: asciinema
+  template:
+    metadata:
+      labels:
+        app: asciinema
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values: [general]
+      containers:
+        - name: asciinema
+          image: ghcr.io/asciinema/asciinema-server@sha256:0474b2186be46b23f5e16dbd4319727dbb68f27a303705fbe632821bf524b313
+          imagePullPolicy: IfNotPresent
+          command:
+            - /sbin/tini
+            - --
+            - /bin/sh
+            - -c
+          args:
+            - |-
+              set -eu
+              key_file=/var/lib/asciinema/secret_key_base
+              if [ ! -s "$key_file" ]; then
+                umask 077
+                head -c 48 /dev/urandom | base64 > "$key_file.tmp"
+                mv "$key_file.tmp" "$key_file"
+              fi
+              export SECRET_KEY_BASE="$(cat "$key_file")"
+              exec /opt/app/bin/server
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: asciinema-db-app
+                  key: fqdn-uri
+            - name: URL_HOST
+              value: terminals.john2143.com
+            - name: URL_SCHEME
+              value: https
+            - name: UPLOAD_AUTH_REQUIRED
+              value: "true"
+            - name: TZ
+              value: America/New_York
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/asciinema
+            - name: cache
+              mountPath: /var/cache/asciinema
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: asciinema-data
+        - name: cache
+          emptyDir: {}

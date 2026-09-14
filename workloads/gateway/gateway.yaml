@@ -651,6 +651,19 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: terminals-john2143-https
+      protocol: HTTPS
+      port: 8443
+      hostname: terminals.john2143.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
 
     - name: mm-b-hero-rehab-https
       protocol: HTTPS

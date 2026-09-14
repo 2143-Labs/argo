@@ -27,6 +27,7 @@ spec:
     - mm.timestone.2143.me
     - mm.timestone.john2143.com
     - llm.2143.me
+    - terminals.john2143.com
   rules:
     - matches:
         - path:

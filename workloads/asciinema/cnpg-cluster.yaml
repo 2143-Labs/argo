@@ -1,0 +1,27 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: asciinema-db
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  storage:
+    size: 10Gi
+    storageClass: longhorn-cnpg
+  walStorage:
+    size: 4Gi
+    storageClass: longhorn-cnpg
+  bootstrap:
+    initdb:
+      database: asciinema
+      owner: asciinema
