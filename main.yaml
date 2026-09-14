@@ -60,6 +60,10 @@ spec:
       kind: '*'
     - group: scheduling.k8s.io
       kind: '*'
+    - group: external-secrets.io
+      kind: ClusterSecretStore
+    - group: external-secrets.io
+      kind: ClusterExternalSecret
 
 ---
 # ArgoCD Repository Secret
