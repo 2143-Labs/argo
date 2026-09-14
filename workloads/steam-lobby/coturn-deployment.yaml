@@ -16,6 +16,10 @@ spec:
     metadata:
       labels:
         app: coturn
+      annotations:
+        # coturn reads turnserver.conf once at startup, so a ConfigMap edit is
+        # inert without a rollout. Matches workloads/steam-lobby/deployment.yaml.
+        reloader.stakater.com/auto: "true"
     spec:
       initContainers:
         - name: render-auth
