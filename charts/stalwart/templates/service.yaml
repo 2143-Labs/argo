@@ -25,6 +25,7 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.service.type }}
+  externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
   selector:
