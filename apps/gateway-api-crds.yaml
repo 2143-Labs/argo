@@ -23,8 +23,13 @@ spec:
     # CRD serves v1 *and* v1alpha2, so it is installed separately by
     # apps/gateway-api-crds-tcproutes.yaml. Do not "tidy" this exclusion
     # away: doing so re-breaks every newly started Traefik replica.
+    # The safe-upgrades ValidatingAdmissionPolicy is excluded too: its rule
+    # denies UPDATEing a gateway.networking.k8s.io CRD from channel=standard
+    # to channel=experimental, which is exactly what the experimental
+    # tcproutes install does. Upstream's own denial message names uninstalling
+    # the policy as the procedure for installing experimental CRDs.
     directory:
-      exclude: gateway.networking.k8s.io_tcproutes.yaml
+      exclude: "{gateway.networking.k8s.io_tcproutes.yaml,gateway.networking.k8s.io_vap_safeupgrades.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: default
