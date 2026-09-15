@@ -24,6 +24,10 @@ spec:
       port: 50000
       protocol: UDP
       targetPort: rtc-udp
+    - name: turn-tls
+      port: 5349
+      protocol: TCP
+      targetPort: 5349
   selector:
     app.kubernetes.io/name: livekit-server
     app.kubernetes.io/instance: livekit-server

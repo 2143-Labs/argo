@@ -1,0 +1,20 @@
+# TLS certificate for LiveKit's embedded TURN server.
+#
+# LiveKit terminates TURN/TLS itself (turn.external_tls: false) and advertises
+# turns:turn.john2143.com:443?transport=tcp. The raw TLS stream is routed by SNI
+# through the shared gateway (`turn-john2143-passthrough`) to livekit-server:5349,
+# so this cert is presented by the pod, not by Traefik. The *.john2143.com
+# wildcard lives in namespace default and cannot be mounted into namespace
+# matrix, hence a dedicated Certificate.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: livekit-turn
+  namespace: matrix
+spec:
+  secretName: livekit-turn-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - turn.john2143.com

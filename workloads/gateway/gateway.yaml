@@ -584,6 +584,24 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: spire-server
+    # LiveKit's embedded TURN server always advertises
+    # turns:<domain>:443?transport=tcp (hardcoded in pkg/service/roommanager.go)
+    # and terminates TLS itself, so this listener passes the raw TLS stream
+    # through by SNI to livekit-server:5349. This is what lets voice/calls work
+    # for clients that cannot reach the cluster's UDP media ports — i.e. anyone
+    # off the LAN/tailnet.
+    - name: turn-john2143-passthrough
+      protocol: TLS
+      port: 8443
+      hostname: turn.john2143.com
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: matrix
     - name: element-chat-2143-https
       protocol: HTTPS
       port: 8443
