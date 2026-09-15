@@ -11,11 +11,10 @@ data:
     port: 7880
     redis: {}
     rtc:
-      port_range_end: 60000
-      port_range_start: 50001
       tcp_port: 7881
       udp_port: 50000
-      use_external_ip: true
+      use_external_ip: false
+      node_ip: 192.168.6.22
     turn:
       enabled: false
 

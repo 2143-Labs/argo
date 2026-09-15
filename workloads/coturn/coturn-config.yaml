@@ -11,6 +11,7 @@ data:
     static-auth-secret=/etc/coturn/secrets/turn_secret
     no-tls
     no-multicast-peers
+    external-ip=192.168.6.21
     min-port=49152
-    max-port=65535
+    max-port=49215
     verbose
