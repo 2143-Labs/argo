@@ -23,6 +23,7 @@
 | `9941843` | coturn's REST secret rendered into its config by a `render-auth` init container — see §4. |
 | `5c455be` | Public path plumbed: `Gateway` listener `turn-john2143-passthrough` (TLS passthrough on 8443, SNI `turn.john2143.com`, routes from namespace `matrix`), `TLSRoute/livekit-turn` → `livekit-server:5349`, the port added to that Service, and `Certificate/livekit-turn` (Let's Encrypt, DNS-01 via the existing deSEC webhook) — see §3. |
 | `8706af3` | LiveKit's embedded TURN enabled: `turn.enabled: true`, `domain: turn.john2143.com`, `tls_port: 5349`, `external_tls: false` with the cert mounted at `/etc/livekit/turn`, relay range 50001-50064. |
+| `a79e7fb` | `allow_restricted_peer_cidrs` for the pod CIDR and the SFU's `node_ip` — without it LiveKit denies the relay's private peer and no media is relayed (see §3). |
 
 Media now lives at `/data/db/media` on the existing 4 Gi `longhorn-3` volume, so it is covered by the same nightly Longhorn backup as the database.
 
@@ -43,13 +44,17 @@ off-LAN client ──TCP 443──> MikroTik dst-nat ──> MetalLB 192.168.6.1
 - LiveKit always advertises `turns:turn.john2143.com:443?transport=tcp` (that port is hardcoded in `pkg/service/roommanager.go:1069`), so the public 443 is the entire surface. **No router configuration and no inbound UDP are needed**, and a DHCP WAN-IP change cannot break it because nothing advertises the WAN address.
 - `turn.external_tls: false` makes LiveKit terminate TLS itself, which is why the gateway listener is a **TLS passthrough** (`turn-john2143-passthrough`) rather than an HTTPS one, and why `workloads/livekit/certificate.yaml` issues its own cert for the name — the `*.john2143.com` wildcard lives in namespace `default` and cannot be mounted into `matrix`. The same mechanism already carries `temporal-grpc.john2143.com`.
 - The embedded TURN is advertised to *every* participant in `JoinResponse.ICEServers`, but relay candidates have the lowest ICE priority, so LAN clients keep direct UDP.
+- **The relay's peer is this cluster's SFU, and LiveKit denies private peers by default** (`permissionHandler` in `pkg/service/turn.go` rejects loopback/link-local/multicast/private/unspecified unless allow-listed; upstream's `config-sample.yaml` documents `allow_restricted_peer_cidrs` for exactly this "SFU on a private network" case). Without it, allocations succeed but no media is ever relayed — a silent failure that only shows up during a call. Hence `allow_restricted_peer_cidrs: [10.42.0.0/16, 192.168.6.22/32]`: the pod CIDR (where the SFU's media sockets live) and the `node_ip` it advertises. Any TURN client has already presented a LiveKit credential, which the voice relay only mints for authenticated members of the Matrix room.
 - `workloads/coturn` stays LAN-only: it is the fallback the homeserver advertises through `turn_uris`, useful on-LAN, and needed for neither Heorot voice channels nor Element calls — both run on LiveKit, which `/.well-known/matrix/client` advertises as the `rtc_foci`.
 
-Verified:
+Verified against the live deployment:
 
-- From the LAN: STUN binding to `192.168.6.21:3478/UDP` → Binding Success through the VIP; a TURN client inside the cluster completed a full allocation (permissions, channel binds, 20/20 messages relayed, 0 lost).
-- `turn.john2143.com:443` and `192.168.6.11:443` both complete a TLS handshake presenting a valid Let's Encrypt cert for `turn.john2143.com`, and a TURN Allocate over that TLS session returns `Allocate Error Response 401` with `realm "livekit"` and a nonce — LiveKit's TURN server answering TURN on 443.
-- The public path was exercised through the WAN address `108.56.153.222` (hairpin from the LAN), the same router path an off-LAN client takes.
+- On-LAN: STUN binding to `192.168.6.21:3478/UDP` → Binding Success through the VIP; a TURN client inside the cluster completed a full allocation (permissions, channel binds, 20/20 messages relayed, 0 lost).
+- **Client-visible ICE servers** read out of a real `JoinResponse` (a relay-minted token connects to `wss://livekit.john2143.com/rtc`): `turns:turn.john2143.com:443?transport=tcp`, plus LiveKit's default public STUN servers.
+- **TLS**: `turn.john2143.com:443` and `192.168.6.11:443` both complete a handshake presenting a valid Let's Encrypt cert for `turn.john2143.com`; the public path was exercised through the WAN address `108.56.153.222` (hairpin from the LAN), the same router path an off-LAN client takes.
+- **Authenticated allocation over the public path**: a TURN `Allocate` over that TLS session, using the credential the server itself issues, returns `Allocate Success` with `XOR-RELAYED-ADDRESS 192.168.6.22:50003` (lifetime 600 s) — i.e. auth, relay-socket binding and the 50001-50064 range all work end to end. An unauthenticated `Allocate` returns the expected `401` with `realm "livekit"`, and validation failures return `400` (pion v5 answers every auth failure with 400).
+- **Credential path**: the relay's `LIVEKIT_API_KEY`/`SECRET` and the server's `keys.yaml` agree (a relay-minted JWT is accepted by the SFU), so tokens and TURN credentials are mutually valid.
+- Not yet proven: actual media delivery to a browser. That needs a real call, which is the last item in §7.
 
 ## 4. Two further defects that execution uncovered
 
