@@ -100,8 +100,6 @@ spec:
             failureThreshold: 3
         - name: mongodb
           image: docker.io/mongo:7.0
-          command: ["sh", "-c"]
-          args: ["docker-entrypoint.sh mongod --repair --dbpath /data/db; echo REPAIR_EXIT=$?; sleep 86400"]
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               value: unifi
