@@ -24,4 +24,12 @@ data:
       key_file: /etc/livekit/turn/tls.key
       relay_range_start: 50001
       relay_range_end: 50064
+      # The relay's peer is this cluster's own SFU, whose media sockets live on
+      # private addresses, and LiveKit denies private peers unless allow-listed.
+      # 10.42.0.0/16 = pod CIDR (the SFU's source address), 192.168.6.22/32 = the
+      # node_ip it advertises. Without this, TURN allocations succeed but no
+      # media is ever relayed.
+      allow_restricted_peer_cidrs:
+        - 10.42.0.0/16
+        - 192.168.6.22/32
 
