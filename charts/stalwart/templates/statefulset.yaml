@@ -6,6 +6,10 @@ metadata:
     {{- include "stalwart.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # The RocksDB datastore is single-writer: a surge pod cannot open it and
+  # crashloops on the LOCK file, so the rolling update never converges.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "stalwart.selectorLabels" . | nindent 6 }}
