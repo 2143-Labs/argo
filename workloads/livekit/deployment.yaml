@@ -61,6 +61,9 @@ spec:
             - name: rtc-tcp
               containerPort: 7881
               protocol: TCP
+            - name: turn-tls
+              containerPort: 5349
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /
@@ -80,8 +83,15 @@ spec:
             - name: keys-volume
               mountPath: keys.yaml
               subPath: keys.yaml
+            - name: turn-tls-volume
+              mountPath: /etc/livekit/turn
+              readOnly: true
       volumes:
         - name: keys-volume
           secret:
             secretName: livekit-keys
+            defaultMode: 0600
+        - name: turn-tls-volume
+          secret:
+            secretName: livekit-turn-tls
             defaultMode: 0600

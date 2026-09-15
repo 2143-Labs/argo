@@ -16,5 +16,12 @@ data:
       use_external_ip: false
       node_ip: 192.168.6.22
     turn:
-      enabled: false
+      enabled: true
+      domain: turn.john2143.com
+      tls_port: 5349
+      external_tls: false
+      cert_file: /etc/livekit/turn/tls.crt
+      key_file: /etc/livekit/turn/tls.key
+      relay_range_start: 50001
+      relay_range_end: 50064
 
