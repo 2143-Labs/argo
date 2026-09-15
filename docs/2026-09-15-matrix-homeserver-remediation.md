@@ -21,19 +21,35 @@
 | `0967dfa` | Voice brought up: `livekit-server`, `coturn` and `heorot-voice-relay` to `replicas: 1`; LiveKit's `rtc:` block switched from `use_external_ip: true` + a 50001-60000 ICE range to `use_external_ip: false` + `node_ip: 192.168.6.22`; coturn given `external-ip=192.168.6.21` and a 64-port relay window (49152-49215) published by its Service; the relay's hardcoded LiveKit ClusterIP replaced with `http://livekit-server.matrix.svc.cluster.local:7880`. |
 | `75f2cc0` | `argocd.argoproj.io/sync-options: Force=true,Replace=true` on the coturn Service — see §4. |
 | `9941843` | coturn's REST secret rendered into its config by a `render-auth` init container — see §4. |
+| `5c455be` | Public path plumbed: `Gateway` listener `turn-john2143-passthrough` (TLS passthrough on 8443, SNI `turn.john2143.com`, routes from namespace `matrix`), `TLSRoute/livekit-turn` → `livekit-server:5349`, the port added to that Service, and `Certificate/livekit-turn` (Let's Encrypt, DNS-01 via the existing deSEC webhook) — see §3. |
+| `8706af3` | LiveKit's embedded TURN enabled: `turn.enabled: true`, `domain: turn.john2143.com`, `tls_port: 5349`, `external_tls: false` with the cert mounted at `/etc/livekit/turn`, relay range 50001-50064. |
 
 Media now lives at `/data/db/media` on the existing 4 Gi `longhorn-3` volume, so it is covered by the same nightly Longhorn backup as the database.
 
-## 3. Media addressing: LAN first
+## 3. Media addressing: LAN direct, internet over TURN/TLS 443
 
-Every media address this work configures is a `192.168.6.x` MetalLB VIP:
+Two independent paths exist, and each client picks whichever works:
 
-- LiveKit: `node_ip: 192.168.6.22`, reachable on 7881/TCP and 50000/UDP.
-- TURN: `external-ip=192.168.6.21`, advertised to clients as `turn:192.168.6.21:3478` (UDP and TCP), with relay UDP 49152-49215 published by the `coturn` Service.
+**Direct (LAN and Tailscale).** Media uses the `192.168.6.x` MetalLB VIPs: LiveKit `node_ip: 192.168.6.22` on 7881/TCP + 50000/UDP, and TURN `external-ip=192.168.6.21` with relay UDP 49152-49215. Reachable on the home LAN, and on the tailnet via the existing `192.168.6.0/24` subnet route.
 
-This is deliberate: the MetalLB VIPs are reachable from the home LAN and, for Tailscale clients, covered by the existing `192.168.6.0/24` subnet route. **A client on the open internet cannot reach media** without router UDP port-forwards for 3478, 49152-49215 and 7881/50000 — router configuration that lives outside this repo. `turns.john2143.com` deliberately is not used in `turn_uris` because it resolves publicly to the WAN address.
+**Public (the open internet).** LiveKit's embedded TURN server is enabled (`turn:` in `workloads/livekit/configmap.yaml`) and serves TURN over TLS on the public port 443:
 
-Verified from the LAN workstation: a STUN binding request to `192.168.6.21:3478/UDP` gets a Binding Success response through the VIP, and a TURN client inside the cluster completed a full allocation (permissions, channel binds, 20/20 messages relayed, 0 lost).
+```
+off-LAN client ──TCP 443──> MikroTik dst-nat ──> MetalLB 192.168.6.11 (Traefik)
+  SNI turn.john2143.com ── TLSRoute passthrough ──> livekit-server:5349 (LiveKit terminates TLS)
+  TURN allocation ──> relay sockets on node_ip:50001-50064 ──> local SFU
+```
+
+- LiveKit always advertises `turns:turn.john2143.com:443?transport=tcp` (that port is hardcoded in `pkg/service/roommanager.go:1069`), so the public 443 is the entire surface. **No router configuration and no inbound UDP are needed**, and a DHCP WAN-IP change cannot break it because nothing advertises the WAN address.
+- `turn.external_tls: false` makes LiveKit terminate TLS itself, which is why the gateway listener is a **TLS passthrough** (`turn-john2143-passthrough`) rather than an HTTPS one, and why `workloads/livekit/certificate.yaml` issues its own cert for the name — the `*.john2143.com` wildcard lives in namespace `default` and cannot be mounted into `matrix`. The same mechanism already carries `temporal-grpc.john2143.com`.
+- The embedded TURN is advertised to *every* participant in `JoinResponse.ICEServers`, but relay candidates have the lowest ICE priority, so LAN clients keep direct UDP.
+- `workloads/coturn` stays LAN-only: it is the fallback the homeserver advertises through `turn_uris`, useful on-LAN, and needed for neither Heorot voice channels nor Element calls — both run on LiveKit, which `/.well-known/matrix/client` advertises as the `rtc_foci`.
+
+Verified:
+
+- From the LAN: STUN binding to `192.168.6.21:3478/UDP` → Binding Success through the VIP; a TURN client inside the cluster completed a full allocation (permissions, channel binds, 20/20 messages relayed, 0 lost).
+- `turn.john2143.com:443` and `192.168.6.11:443` both complete a TLS handshake presenting a valid Let's Encrypt cert for `turn.john2143.com`, and a TURN Allocate over that TLS session returns `Allocate Error Response 401` with `realm "livekit"` and a nonce — LiveKit's TURN server answering TURN on 443.
+- The public path was exercised through the WAN address `108.56.153.222` (hairpin from the LAN), the same router path an off-LAN client takes.
 
 ## 4. Two further defects that execution uncovered
 
@@ -47,7 +63,7 @@ Also worth knowing: removing `extraEnv` in `a8dd50d` changed the pod template, s
 
 - **Homeserver:** `ghcr.io/matrix-construct/tuwunel:v1.9.1`, serving `matrix.2143.me`. `/_matrix/client/versions` → 200, SSO redirect → 302, `/_matrix/client/v3/voip/turnServer` → 401 (configured; 404 would mean `turn_uris` is missing). Uploaded media grows the Longhorn volume; the image is distroless, so `/data/db/media` cannot be inspected with `kubectl exec`.
 - **chat.2143.me (heorot):** KEDA scale-to-zero. Cold start measured at 3.7 s (request → 200); warm responses ~46 ms; the Deployment returns to 0 after ~30 minutes idle (`cooldownPeriod: 1800`, `scaleDown.stabilizationWindowSeconds: 600`).
-- **Voice:** `livekit-server`, `coturn`, `heorot-voice-relay` all serve 1/1; `coturn` publishes 66 ports on `192.168.6.21`; `matrix.2143.me/voice/healthz` → 200. LiveKit is pinned at `v1.13.6` (v1.13.7 exists, published 2026-09-14, and is a separate unverified bump).
+- **Voice:** `livekit-server`, `coturn`, `heorot-voice-relay` all serve 1/1; `coturn` publishes 66 ports on `192.168.6.21`; `matrix.2143.me/voice/healthz` → 200. LiveKit is pinned at `v1.13.6` (v1.13.7 exists, published 2026-09-14, and is a separate unverified bump). LiveKit's TURN/TLS is reachable at `turn.john2143.com:443` for off-LAN clients; its cert renews through cert-manager, and the `reloader` annotation on the Deployment restarts the pod when the Secret rotates.
 - **Rotating the TURN secret** means updating the Secret and restarting coturn (`render-auth` reads the file at pod start) — Tuwunel picks the new value up on its next request.
 - **Restore point used for the upgrade:** Longhorn snapshot `nightly--4f5af78f-…` (2026-09-14T07:08:33Z) plus its nightly backup, on volume `pvc-2fb820a3-351e-443d-93d3-97392b431a19`. The upgrade rolled back to the same volume, unchanged.
 
@@ -57,4 +73,4 @@ Also worth knowing: removing `extraEnv` in `a8dd50d` changed the pod template, s
 
 ## 7. Left for a human
 
-Upload an image in Element (`https://element.john2143.com`, PocketID login) and place a call between two sessions — one on a LAN device, one over Tailscale — and confirm two-way audio. Both need a logged-in client, so neither could be driven from this session; every other check in this document was run against the live cluster.
+Two checks need a logged-in client and so could not be driven from this session: upload an image in Element (`https://element.john2143.com`, PocketID login) and confirm it renders, and place a call between two sessions confirming **two-way audio and a working screenshare**. Do at least one of those calls from a phone on cellular data (Wi-Fi off, Tailscale off) — that is the only way to prove the public path end to end, since every check in this document was run from inside the LAN.
