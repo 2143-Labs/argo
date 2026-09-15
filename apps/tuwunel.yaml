@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: tuwunel
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
@@ -14,7 +16,7 @@ spec:
       values: |
         image:
           repository: ghcr.io/matrix-construct/tuwunel
-          tag: v1.9.1
+          tag: v1.8.0
           pullPolicy: IfNotPresent
         server_name: "matrix.2143.me"
         database_path: "/var/lib/tuwunel"
@@ -97,6 +99,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
   ignoreDifferences:
     - group: apps
       kind: StatefulSet
@@ -105,5 +108,5 @@ spec:
         - /spec/template/spec/containers/0/volumeMounts
     - group: ""
       kind: PersistentVolumeClaim
-      jqPathExpressions:
-        - .spec.volumeName
+      jsonPointers:
+        - /spec/volumeName
