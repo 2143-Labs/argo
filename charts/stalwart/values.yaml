@@ -45,6 +45,9 @@ service:
     submission: 587
     imaps: 993
 
+tls:
+  certificateSecret: 2143-me-wildcard-tls
+
 ingress:
   enabled: false
 

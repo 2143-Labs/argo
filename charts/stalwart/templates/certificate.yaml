@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "stalwart.fullname" . }}-tls
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.tls.certificateSecret }}
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.2143.me"
+    - "2143.me"

@@ -15,6 +15,7 @@ spec:
         {{- include "stalwart.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        secret.reloader.stakater.com/reload: {{ .Values.tls.certificateSecret | quote }}
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -73,12 +74,19 @@ spec:
             - name: data
               mountPath: /var/lib/stalwart
             {{- end }}
+            - name: tls
+              mountPath: /etc/stalwart/tls
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
             name: {{ include "stalwart.fullname" . }}-config
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.certificateSecret }}
+            defaultMode: 0400
         {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
