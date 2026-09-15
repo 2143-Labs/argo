@@ -100,7 +100,6 @@ spec:
             failureThreshold: 3
         - name: mongodb
           image: docker.io/mongo:7.0
-          args: ["mongod", "--repair", "--dbpath", "/data/db"]
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               value: unifi
