@@ -16,6 +16,15 @@ spec:
       values: |
         podAnnotations:
           reloader.stakater.com/auto: "true"
+        # Let External Secrets own crowdsec-lapi-secrets instead of the chart
+        # generating it. Setting externalSecret.name makes the chart skip its own
+        # Secret (templates/lapi-secrets.yaml) and consume this one, so the
+        # credential lives in OpenBao and ESO renders it under the same name —
+        # no workload changes. Without this the chart and ESO both manage the
+        # Secret and the chart wins on every sync.
+        secrets:
+          externalSecret:
+            name: crowdsec-lapi-secrets
         agent:
           enabled: false
           hostVarLog: true
