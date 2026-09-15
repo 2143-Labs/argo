@@ -3,7 +3,13 @@
 **Date:** 2026-09-13
 **Context:** the credential workstream of the 2026-09-13 remediation. `github.com/2143-Labs/argo` is a **public** repository, so every value ever committed to it must be treated as disclosed.
 
-## 1. Where we got to — and the blocker
+## 1. Where we got to — migration complete
+
+**Status: complete (2026-09-15).** Every application Secret in §6 is served from
+OpenBao by External Secrets and rendered back under its original name, verified
+value-for-value against the live cluster. The blocker described below is
+resolved; that narrative is kept because the reasoning in it is what produced
+the correct policy.
 
 The target architecture was: application secrets live in OpenBao, External Secrets Operator (ESO) renders them as ordinary Kubernetes `Secret`s, and the Stakater Reloader rolls workloads when a value changes. PostgreSQL credentials deliberately stay with CloudNativePG (see §3).
 
@@ -59,7 +65,7 @@ Until it is re-written the store stays `InvalidProviderConfig`, so no
 
 ### Still plaintext in HEAD today
 
-Because the migration is blocked, **four files still carry literal credentials in the current tree** and remain exposed to anyone reading this public repo. They are listed here so the exposure is unambiguous and cannot be mistaken for "done":
+The migration into OpenBao is now done, but that does **not** un-disclose anything: **four files still carry literal credentials in the current tree** and remain exposed to anyone reading this public repo. They are listed here so the exposure is unambiguous and cannot be mistaken for "done":
 
 | File | Location | What is exposed |
 |---|---|---|
@@ -68,7 +74,7 @@ Because the migration is blocked, **four files still carry literal credentials i
 | `workloads/tuwunel/application.yaml` | ~66–69 (`extraEnv`) | the SeaweedFS S3 access key and secret key |
 | `workloads/openrct2/openrct2.yaml` | ~45–46 (`--password`) | the openrct2 server password |
 
-These are exactly the workstream-3.6 items that the blocker above prevents completing. Each one has a row in the rotation backlog below. **Until the OpenBao policy and role exist, the only correct action on these is rotation — they cannot be un-committed**, and deleting them from git without a working replacement would simply break the workloads.
+Each one has a row in the rotation backlog below. They cannot be un-committed, so **the only correct action on these is rotation** — deleting them from git without a working replacement would simply break the workloads.
 
 ## 2. Rotation backlog — values disclosed in a public repo
 
@@ -107,10 +113,133 @@ CNPG's own documented pattern for rotating these — ESO's `Password` generator 
 
 `workloads/llm-proxy/secret-litellm-db-password.yaml` is CNPG's password *source*, not an application secret, so it does not belong in OpenBao. It was **deleted from git and re-created out-of-band** with its existing value so that CNPG keeps working and ArgoCD's `prune: true` cannot remove it again. The Secret is now outside every Application's desired state.
 
-## 5. Left as plain Secrets (not migrated, with reasons)
+## 5. Deliberately left as plain Secrets
 
 - CNPG-managed: `litellm-db-{app,ca,replication,server,password}`, `pelican-db-*`, `mattermost-db-*`, `steam-lobby-db-*`, `temporal-db-*`. Owned by the operator; replacing them with OpenBao copies would break rotation.
 - Third-party TLS material managed by cert-manager: `2143-me-wildcard-tls`, `john2143-com-wildcard-tls`, `aross-studio-wildcard-tls`, `mm-*-tls`.
-- Out of scope for this pass, and candidates for a follow-up migration: `litellm-secrets`, `litellm-s3-creds`, `frigate-creds`, `frigate-genai-worker-creds`, `headscale-oidc`, `listen-brick-secret`, `minio-credentials`, `minio-creds`, `mongo-creds`, `mosquitto-credentials`, `oauth-creds`, `oauth2-proxy-cameras`, `oauth2-proxy-temporal`, `steam-lobby-secret`, `steam-lobby-turn`, `curseforge-api-key`, `openbao-spaces`.
+- OpenBao's own bootstrap Secrets: `openbao-seal` (the static auto-unseal key), `openbao-server-tls`, `openbao-spaces`.
+
+**Update 2026-09-15:** the "candidates for a follow-up migration" this section
+used to list — `litellm-secrets`, `litellm-s3-creds`, `frigate-creds`,
+`frigate-genai-worker-creds`, `headscale-oidc`, `listen-brick-secret`,
+`minio-credentials`, `minio-creds`, `mongo-creds`, `mosquitto-credentials`,
+`oauth-creds`, `oauth2-proxy-cameras`, `oauth2-proxy-temporal`,
+`steam-lobby-secret`, `steam-lobby-turn` — **are now migrated**; see §6 for the
+design and §6 "Known gaps" for the live Secrets still outside it.
 
 `openbao-spaces` holds the DigitalOcean Spaces credentials the snapshot agent uses; note that the agent can already read them from OpenBao itself via `BAO_SECRET_PATH`, which is the tidier arrangement if that path is ever populated.
+
+## 6. The OpenBao migration as built
+
+### Where the values live
+
+KV v2 mount **`consumers`** (not `secret` — no such engine exists; see the
+2026-09-14 note in §1). Keys are namespaced by consuming cluster and then mirror
+the Kubernetes identity so the two are trivially correlate:
+
+```
+consumers/data/john2143-com/<namespace>/<secret-name>
+```
+
+One ExternalSecret per Secret, under `workloads/secrets/`, owned by the single
+`secrets` Application (`apps/secrets.yaml`). One Application rather than
+per-workload apps matters because `seaweedfs-s3-creds` and `rustfs-credentials`
+exist in two namespaces each, and a per-app split would let one app's prune
+delete a Secret a neighbour still reads. Each ExternalSecret sets
+`target.name` to the name the workload already consumes, so **no Deployment
+reference changes were needed**.
+
+### The store
+
+`ClusterSecretStore/openbao` (`bootstrap/external-secrets/clustersecretstore.yaml`)
+uses ESO's dedicated **`openBao`** provider — a real provider type, distinct from
+the generic `vault` provider, and its auth field is `path`, not `mountPath`
+(that is the vault provider's spelling). It reaches OpenBao over the
+ClusterIP-only plaintext `openbao-eso:8202` listener, authenticating as
+ServiceAccount `external-secrets/external-secrets` via the `external-secrets`
+Kubernetes-auth role.
+
+### The policy, and the two non-obvious requirements
+
+`eso-read` is written once by the operator (OpenBao admin access does not exist
+in the cluster, so it is deliberately not GitOps-managed):
+
+```
+path "consumers/data/*"     { capabilities = ["read"] }
+path "consumers/metadata/*" { capabilities = ["read", "list"] }
+path "sys/mounts"           { capabilities = ["read", "list"] }
+path "sys/mounts/*"         { capabilities = ["read", "list"] }
+```
+
+- The `sys/mounts` lines are **required**: ESO validates a store by calling
+  `GET /v1/sys/mounts/<path>`. Without them the store sits at
+  `Ready=False`/`InvalidProviderConfig` even though reading data works, because
+  the validation call 403s.
+- The path prefix is the mount name as configured in the store's `path:` field.
+  While that field said `secret`, ESO was probing `sys/mounts/secret` and
+  failing — the mount defect and the policy defect had to be fixed together.
+
+### Adding a new secret
+
+1. Seed the value (never commit it, never pass it as a CLI argument):
+   `bao kv put -mount=consumers john2143-com/<ns>/<name> @file`. The `-mount=`
+   form is not optional decoration: the `kv` CLI appends `data/` itself, so
+   `bao kv put consumers/data/<key>` silently writes to
+   `consumers/data/data/<key>` — one level too deep, where ESO will never read it.
+2. Add `workloads/secrets/<ns>-<name>.yaml`, an `ExternalSecret` with
+   `target.name: <name>`, `creationPolicy: Owner`, and
+   `dataFrom.extract.key: john2143-com/<ns>/<name>`.
+3. Confirm the rendered Secret's keys match the source exactly before trusting
+   it. `creationPolicy: Owner` means ESO **replaces** the Secret, so a partial or
+   empty KV entry silently destroys keys the workload still needs.
+4. Add `reloader.stakater.com/auto: "true"` to the **pod template** of every
+   consumer, or a rotation will not roll the pod. Placement on the workload's
+   top-level `metadata.annotations` is inert — that was a live bug in
+   `listen-brick`.
+
+For a Helm-managed consumer, the annotation goes through the chart's
+`podAnnotations` values, not a file edit.
+
+### Deliberately excluded
+
+- **CNPG** database credentials (`*-db-app`, `*-db-ca`, `*-db-server`, …) and
+  their password sources — routing these through OpenBao forfeits CNPG's own
+  rotation.
+- **cert-manager** TLS output.
+- **OpenBao's own bootstrap** Secrets: `openbao-seal` (the static auto-unseal
+  key — the real trust boundary), `openbao-server-tls`, `openbao-spaces`.
+- **Chart-generated** Secrets whose lifecycle a Helm chart owns. `crowdsec-lapi-secrets`
+  was initially migrated and then reverted in ownership: the chart was
+  generating it, so both the chart and ESO managed one Secret and the chart won
+  every sync. It is now handed over cleanly via
+  `secrets.externalSecret.name: crowdsec-lapi-secrets`, which makes the chart
+  skip `templates/lapi-secrets.yaml` and consume the ESO-rendered Secret. No
+  exclusion was needed once the chart's own handover mechanism was used.
+- `steam-lobby-pr-*` preview namespaces (ephemeral, dev-mode auth).
+
+### Known gaps and follow-ups
+
+- **`tuwunel-conduwuit` cannot auto-reload.** Its chart
+  (`ghcr.io/magikid/modern-conduwuit-helm`, `conduwuit` 2.1.0) exposes no
+  `podAnnotations` value, so there is nowhere to put the Reloader annotation.
+  Rotation of `tuwunel-turn` requires a manual `kubectl rollout restart` until
+  the chart supports it.
+- **Every rotation rolls twice.** Reloader writes
+  `reloader.stakater.com/last-reloaded-from` onto the pod template, ArgoCD
+  selfHeal sees a diff against git and reverts it, and the revert is itself a
+  template change. Verified: one Secret change produced two new ReplicaSets.
+  Harmless but wasteful; the fix is an `ignoreDifferences` entry for that
+  annotation across the workload apps.
+- **Rotation backlog (§2) is still outstanding.** The migration changed where
+  values are read from; it did not un-disclose anything already committed to
+  this public repository.
+- **Scope gap.** The migration set covers the Secrets the workstream had
+  enumerated. Live application Secrets still outside it include
+  `default/curseforge-api-key`, `default/s3-creds`, `default/rustfs-credentials`,
+  `default/seafile-admin`, `default/seafile-oidc`,
+  `observability/{grafana,grafana-oidc,rustfs-credentials}`,
+  `matrix/au2143me-oidc`, `stalwart/stalwart-stalwart-env`,
+  `authentik/authentik-secrets` and `kube-system/crowdsec-bouncer-key`.
+- **`refreshInterval: 1h`.** ESO does recreate a deleted rendered Secret
+  promptly (verified), but a value change in OpenBao reaches the workload only
+  after the next refresh.
