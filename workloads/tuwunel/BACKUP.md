@@ -13,10 +13,11 @@
     kubectl label pvc -n matrix tuwunel-conduwuit-data recurring-job.longhorn.io/default=enabled --overwrite
     ```
 
-### Media (SeaweedFS)
-- Media is stored in the `tuwunel-media` S3 bucket at `files.john2143.com`
-- SeaweedFS has its own replication/backup strategy (managed separately)
-- No additional backup needed from the Matrix side
+### Media
+- Media is stored on the **same** Longhorn volume as the database, under `/data/db/media`
+- Covered by the same daily `nightly-backup` RecurringJob as the RocksDB data
+- The `tuwunel-media` S3 bucket at `files.john2143.com` is no longer used by the homeserver
+- Background: `docs/2026-09-15-matrix-homeserver-remediation.md`
 
 ### Configuration (ArgoCD GitOps)
 - All Kubernetes manifests and Helm values are in `2143-Labs/argo` repo
@@ -32,7 +33,7 @@ The signing key is stored in the RocksDB database on the Longhorn PVC.
 
 ### Longhorn Snapshot Recovery
 1. Open Longhorn UI (longhorn.ts.2143.me)
-2. Navigate to Volume → `pvc-8f90af86-480f-46af-8067-18228b3539c4`
+2. Navigate to Volume → `pvc-2fb820a3-351e-443d-93d3-97392b431a19`
 3. Select the snapshot/backup to restore
 4. Click "Restore to new volume"
 5. Create a new PVC from the restored volume
