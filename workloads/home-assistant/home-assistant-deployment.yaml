@@ -33,6 +33,7 @@ spec:
       containers:
         - name: home-assistant
           image: ghcr.io/home-assistant/home-assistant:stable
+          imagePullPolicy: Always
           securityContext:
             privileged: true
           ports:
