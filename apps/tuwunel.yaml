@@ -29,32 +29,16 @@ spec:
             allow_federation: false
             allow_encryption: true
             allow_room_creation: true
-            max_concurrent_requests: 256
 
-            storage_provider:
-              seaweedfs:
-                s3:
-                  endpoint: "https://files.john2143.com"
-                  bucket: "tuwunel-media"
-                  region: "us-east-1"
+            turn_uris:
+              - "turn:192.168.6.21:3478?transport=udp"
+              - "turn:192.168.6.21:3478?transport=tcp"
+            turn_secret_file: "/etc/tuwunel/secrets/turn/turn_secret"
 
-            matrix_rtc:
-              enabled: true
-              focus: "livekit"
-              livekit_server: "https://livekit.john2143.com"
-
-            turn:
-              enabled: true
-              uris:
-                - "turn:turns.john2143.com:3478?transport=udp"
-              turn_secret_file: "/etc/tuwunel/secrets/turn/turn_secret"
-
-            federation:
-              whitelist:
-                - "*.2143.me"
             well_known:
               client: "https://matrix.2143.me"
               livekit_url: "https://livekit.john2143.com"
+
             identity_provider:
               - brand: "PocketID"
                 client_id: "dee01da6-5f13-4f11-9626-3dfef252c385"
@@ -63,12 +47,6 @@ spec:
                 callback_url: "https://matrix.2143.me/_matrix/client/unstable/login/sso/callback/dee01da6-5f13-4f11-9626-3dfef252c385"
                 default: true
                 registration: true
-
-        extraEnv:
-          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__ACCESS_KEY
-            value: "john"
-          - name: TUWUNEL_GLOBAL__STORAGE_PROVIDER__SEAWEEDFS__S3__SECRET_KEY
-            value: "*XSjJP83VxDM"
 
         persistence:
           data:
