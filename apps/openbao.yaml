@@ -67,8 +67,13 @@ spec:
                 # https://openbao.openbao.svc:8200. This port is published only via
                 # the openbao-eso ClusterIP Service (extraObjects below); nothing
                 # else listens on it.
+                #
+                # Bound to 8210 rather than 8202: the chart unconditionally declares
+                # 8202 as its replication port (`https-rep`), so binding here would
+                # both squat on the port replication needs and label a plaintext
+                # listener as TLS. The port is declared honestly via extraPorts.
                 listener "tcp" {
-                  address     = "[::]:8202"
+                  address     = "[::]:8210"
                   tls_disable = true
                 }
 
@@ -141,6 +146,16 @@ spec:
           postStart: []
           extraEnvironmentVars:
             BAO_TLS_SERVER_NAME: openbao.ts.2143.me
+          # The plaintext ESO listener above is not one of the chart's own ports, so
+          # declare it explicitly. `server.extraPorts` is appended verbatim to the
+          # server StatefulSet's *container* ports, so the shape is containerPort —
+          # the `port`/`targetPort` form belongs to `server.service.extraPorts` and
+          # renders invalid here. `eso-http` rather than `http` so the name cannot
+          # collide with the chart's https/https-internal/https-rep entries.
+          extraPorts:
+            - name: eso-http
+              containerPort: 8210
+              protocol: TCP
           serviceAccount:
             create: true
             name: openbao
@@ -330,7 +345,7 @@ spec:
                 hostname: openbao.ts.2143.me
                 wellKnownCACertificates: System
 
-          # In-cluster ClusterIP for ESO: publishes only the plaintext 8202
+          # In-cluster ClusterIP for ESO: publishes only the plaintext 8210
           # listener, reachable nowhere outside the cluster network.
           - apiVersion: v1
             kind: Service
@@ -344,8 +359,8 @@ spec:
                 app.kubernetes.io/instance: openbao
               ports:
                 - name: eso-http
-                  port: 8202
-                  targetPort: 8202
+                  port: 8210
+                  targetPort: 8210
 
           # Server ingress NetworkPolicy (sole server policy; chart policy disabled).
           - apiVersion: networking.k8s.io/v1
@@ -403,7 +418,7 @@ spec:
                     - protocol: TCP
                       port: 8200
                 # External Secrets Operator reads application secrets over the
-                # plaintext in-cluster listener on 8202 (published only through the
+                # plaintext in-cluster listener on 8210 (published only through the
                 # openbao-eso Service). Without this rule the ClusterSecretStore
                 # cannot even open a connection.
                 - from:
@@ -412,7 +427,7 @@ spec:
                           kubernetes.io/metadata.name: external-secrets
                   ports:
                     - protocol: TCP
-                      port: 8202
+                      port: 8210
 
           # Public machine-API path: namespace-local copies of the shared
           # pre-authentication middlewares (specs copied from the default ns).

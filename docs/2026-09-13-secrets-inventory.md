@@ -16,7 +16,7 @@ The target architecture was: application secrets live in OpenBao, External Secre
 Landed and verified:
 
 - **ESO 2.10.0 installed** (`apps/external-secrets.yaml`, namespace `external-secrets`, all three pods Running).
-- **OpenBao given an in-cluster listener** — a second `listener "tcp"` on `[::]:8202` with `tls_disable = true`, published only through the extraObjects ClusterIP Service `openbao-eso` (`apps/openbao.yaml`). Endpoints verified present, port confirmed listening.
+- **OpenBao given an in-cluster listener** — a second `listener "tcp"` with `tls_disable = true`, published only through the extraObjects ClusterIP Service `openbao-eso` (`apps/openbao.yaml`). Endpoints verified present, port confirmed listening. **Since 2026-09-15 that listener binds `[::]:8210`** (it was `8202`, which the chart reserves for replication — see §6).
 - **Chart repo allowlisted** in both `apps/default-project.yaml` (the copy the cluster reconciles) and `main.yaml`.
 
 **Blocked: no administrative credential for OpenBao exists in this environment.** Creating the policy and auth role that ESO needs is impossible without one. What was checked and ruled out:
@@ -42,7 +42,7 @@ bao write auth/kubernetes/role/external-secrets \
   policies=eso-read ttl=1h
 ```
 
-Once that exists, the remaining steps are mechanical and already designed: a `ClusterSecretStore` named `openbao` pointing at `http://openbao-eso.openbao.svc:8202` with `provider.openBao` and the `external-secrets` role, then one `ExternalSecret` per credential below, each with `target.name` set to the Secret name the workload already consumes so no Deployment changes are needed. **No `ExternalSecret` was committed, deliberately** — a store that cannot authenticate would leave the workloads referencing Secrets nothing creates, and the UniFi MongoDB Secret in particular does not exist today, so landing it early would break a running service.
+Once that exists, the remaining steps are mechanical and already designed: a `ClusterSecretStore` named `openbao` pointing at `http://openbao-eso.openbao.svc:8210` with `provider.openBao` and the `external-secrets` role, then one `ExternalSecret` per credential below, each with `target.name` set to the Secret name the workload already consumes so no Deployment changes are needed. **No `ExternalSecret` was committed, deliberately** — a store that cannot authenticate would leave the workloads referencing Secrets nothing creates, and the UniFi MongoDB Secret in particular does not exist today, so landing it early would break a running service.
 
 **Update 2026-09-14 (re-verified against the live vault):** the mount is
 `consumers`, **not** `secret`. OpenBao's own audit stream is the proof: it
@@ -155,9 +155,15 @@ reference changes were needed**.
 uses ESO's dedicated **`openBao`** provider — a real provider type, distinct from
 the generic `vault` provider, and its auth field is `path`, not `mountPath`
 (that is the vault provider's spelling). It reaches OpenBao over the
-ClusterIP-only plaintext `openbao-eso:8202` listener, authenticating as
+ClusterIP-only plaintext `openbao-eso:8210` listener, authenticating as
 ServiceAccount `external-secrets/external-secrets` via the `external-secrets`
 Kubernetes-auth role.
+
+The listener is on **8210**, not 8202: the chart unconditionally declares 8202 as
+its replication port (`https-rep`), so a plaintext ESO listener bound there would
+both squat on the port replication needs and be mislabelled as TLS. 8210 is
+declared explicitly through the chart's `server.extraPorts` (which appends to the
+server StatefulSet's *container* ports, so the entry is `containerPort`-shaped).
 
 ### The policy, and the two non-obvious requirements
 
