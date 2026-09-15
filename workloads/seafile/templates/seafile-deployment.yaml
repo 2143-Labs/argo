@@ -11,6 +11,8 @@ spec:
       app: seafile
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: seafile
     spec:

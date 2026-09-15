@@ -14,6 +14,8 @@ spec:
       app: mosquitto
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: mosquitto
     spec:

@@ -17,6 +17,8 @@ spec:
       app.kubernetes.io/instance: heorot-voice-relay
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app.kubernetes.io/name: heorot-voice-relay
         app.kubernetes.io/instance: heorot-voice-relay

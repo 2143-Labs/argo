@@ -9,6 +9,8 @@ spec:
   selector: {matchLabels: {app: frigate-genai-mqtt}}
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels: {app: frigate-genai-mqtt, app.kubernetes.io/part-of: frigate-genai}
     spec:
       serviceAccountName: frigate-genai

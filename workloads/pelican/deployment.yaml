@@ -20,6 +20,8 @@ spec:
       app: pelican
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: pelican
     spec:

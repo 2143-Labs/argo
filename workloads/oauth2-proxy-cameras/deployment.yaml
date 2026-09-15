@@ -17,6 +17,8 @@ spec:
       app: oauth2-proxy-cameras
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: oauth2-proxy-cameras
     spec:

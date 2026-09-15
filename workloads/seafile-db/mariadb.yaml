@@ -24,6 +24,8 @@ spec:
       app: seafile-mariadb
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: seafile-mariadb
     spec:

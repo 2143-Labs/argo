@@ -14,6 +14,8 @@ spec:
     helm:
       releaseName: crowdsec
       values: |
+        podAnnotations:
+          reloader.stakater.com/auto: "true"
         agent:
           enabled: false
           hostVarLog: true

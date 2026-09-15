@@ -15,6 +15,8 @@ spec:
     deleteDelay: 1h
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels: {app: frigate-genai-ffmpeg, app.kubernetes.io/part-of: frigate-genai}
     spec:
       serviceAccountName: frigate-genai

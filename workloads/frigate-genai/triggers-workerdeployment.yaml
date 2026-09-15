@@ -17,6 +17,7 @@ spec:
     metadata:
       labels: {app: frigate-genai-triggers, app.kubernetes.io/part-of: frigate-genai}
       annotations:
+        reloader.stakater.com/auto: "true"
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"

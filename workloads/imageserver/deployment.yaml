@@ -10,6 +10,8 @@ spec:
       app: john2143-com
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: john2143-com
         servicegroup: "mine"

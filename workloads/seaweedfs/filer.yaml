@@ -8,7 +8,10 @@ spec:
   strategy: {type: Recreate}
   selector: {matchLabels: {app: seaweedfs-filer}}
   template:
-    metadata: {labels: {app: seaweedfs-filer}}
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels: {app: seaweedfs-filer}
     spec:
       tolerations:
         - key: wifi

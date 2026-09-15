@@ -19,6 +19,7 @@ spec:
     metadata:
       annotations:
         checksum/config: 4733d2eaefe1882290963c8e2a41fa80a0b15dfc12caef7fb3a0fb91c450daec
+        reloader.stakater.com/auto: "true"
       labels:
         app.kubernetes.io/name: livekit-server
         app.kubernetes.io/instance: livekit-server

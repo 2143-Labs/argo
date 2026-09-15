@@ -11,6 +11,8 @@ spec:
     matchLabels: {app: frigate}
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels: {app: frigate}
     spec:
       initContainers:

@@ -14,6 +14,8 @@ spec:
       app: coturn
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: coturn
     spec:

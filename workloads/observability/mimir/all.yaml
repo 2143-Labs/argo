@@ -11,6 +11,8 @@ spec:
       app: mimir
   template:
     metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
       labels:
         app: mimir
     spec:

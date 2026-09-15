@@ -54,6 +54,8 @@ spec:
           chunksCache:
             allocatedMemory: 4096
         write:
+          podAnnotations:
+            reloader.stakater.com/auto: "true"
           replicas: 2
           persistence:
             storageClass: longhorn-1
@@ -83,6 +85,8 @@ spec:
                   app.kubernetes.io/component: write
                   app.kubernetes.io/instance: loki
         read:
+          podAnnotations:
+            reloader.stakater.com/auto: "true"
           replicas: 2
           extraArgs:
             - "-config.expand-env=true"
@@ -109,6 +113,8 @@ spec:
                   app.kubernetes.io/component: read
                   app.kubernetes.io/instance: loki
         backend:
+          podAnnotations:
+            reloader.stakater.com/auto: "true"
           replicas: 2
           persistence:
             storageClass: longhorn

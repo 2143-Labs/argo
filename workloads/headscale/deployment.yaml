@@ -19,6 +19,7 @@ spec:
       annotations:
         openbao-dns-revision: "1"
         headscale-policy-revision: "vpn-endpoint-20260914"
+        reloader.stakater.com/auto: "true"
     spec:
       affinity:
         nodeAffinity:
