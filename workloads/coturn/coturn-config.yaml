@@ -8,7 +8,9 @@ data:
     listening-port=3478
     realm=turns.john2143.com
     use-auth-secret
-    static-auth-secret=/etc/coturn/secrets/turn_secret
+    # static-auth-secret is appended by the render-auth init container:
+    # the option takes a literal string, not a path, so a mounted Secret
+    # cannot be referenced here (the path would become the secret itself).
     no-tls
     no-multicast-peers
     external-ip=192.168.6.21
