@@ -4,6 +4,7 @@ metadata:
   name: coturn
   namespace: matrix
   annotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
     metallb.io/loadBalancerIPs: "192.168.6.21,fd00:6::21"
 spec:
   ipFamilyPolicy: PreferDualStack
