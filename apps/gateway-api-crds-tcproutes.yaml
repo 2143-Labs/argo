@@ -14,7 +14,13 @@ spec:
   project: default
   source:
     repoURL: https://github.com/kubernetes-sigs/gateway-api.git
-    targetRevision: v1.6.2
+    # Pinned to the v1.6.2 commit SHA rather than the tag: ArgoCD auto-sync
+    # refuses to retry a FAILED sync attempt to an unchanged source spec
+    # (the created Application's operation result records the tag value),
+    # so the initial install was stuck. The SHA and the tag resolve to the
+    # same commit; changing the targetRevision string resets that guard.
+    # Bump this SHA together with the tag in apps/gateway-api-crds.yaml.
+    targetRevision: ca6c2a65454737236fb7a937bd9b17e42b07e9de
     # The experimental channel is installed for exactly one file. Traefik
     # 3.7.8 (k3s bundled) runs with
     # --providers.kubernetesgateway.experimentalchannel=true, so it watches
