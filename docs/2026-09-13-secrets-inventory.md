@@ -187,24 +187,9 @@ path "sys/mounts/*"         { capabilities = ["read", "list"] }
 
 ### Adding a new secret
 
-1. Seed the value (never commit it, never pass it as a CLI argument):
-   `bao kv put -mount=consumers john2143-com/<ns>/<name> @file`. The `-mount=`
-   form is not optional decoration: the `kv` CLI appends `data/` itself, so
-   `bao kv put consumers/data/<key>` silently writes to
-   `consumers/data/data/<key>` — one level too deep, where ESO will never read it.
-2. Add `workloads/secrets/<ns>-<name>.yaml`, an `ExternalSecret` with
-   `target.name: <name>`, `creationPolicy: Owner`, and
-   `dataFrom.extract.key: john2143-com/<ns>/<name>`.
-3. Confirm the rendered Secret's keys match the source exactly before trusting
-   it. `creationPolicy: Owner` means ESO **replaces** the Secret, so a partial or
-   empty KV entry silently destroys keys the workload still needs.
-4. Add `reloader.stakater.com/auto: "true"` to the **pod template** of every
-   consumer, or a rotation will not roll the pod. Placement on the workload's
-   top-level `metadata.annotations` is inert — that was a live bug in
-   `listen-brick`.
-
-For a Helm-managed consumer, the annotation goes through the chart's
-`podAnnotations` values, not a file edit.
+The full recipe lives in [`adding-a-secret.md`](adding-a-secret.md): seeding the
+value with the `-mount=` form, the `ExternalSecret` shape, the parity check
+before trusting a rendered Secret, and where the Reloader annotation goes.
 
 ### Deliberately excluded
 
