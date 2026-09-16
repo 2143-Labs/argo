@@ -36,6 +36,12 @@ spec:
             value: "1"
           - name: net.ipv6.conf.all.forwarding
             value: "1"
+      # Gluetun's DNS answers the cluster search-path variants slowly (~4s each),
+      # so ndots:1 makes names like net.john2143.com resolve absolute-first.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

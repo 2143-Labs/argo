@@ -224,6 +224,8 @@ validate_manifest() {
     $d.spec.template.spec.serviceAccountName == ("vpn-endpoint-" + $name) and
     $d.spec.template.spec.automountServiceAccountToken == false and
     ($d.spec.template.spec.hostNetwork // false) == false and
+    $d.spec.template.spec.dnsConfig.options == [{"name":"ndots","value":"1"}] and
+    ($d.spec.template.spec.dnsConfig.searches? == null) and
     common_labels($d; $name; $country) and
     common_labels($d.spec.template; $name; $country) and
     $d.spec.template.metadata.annotations["reloader.stakater.com/auto"] == "true" and
