@@ -231,24 +231,26 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   `observability/{grafana,grafana-oidc,rustfs-credentials}`,
   `matrix/au2143me-oidc`, `stalwart/stalwart-stalwart-env`,
   `authentik/authentik-secrets` and `kube-system/crowdsec-bouncer-key`.
-- **`refreshInterval: 2m`.** ESO does recreate a deleted rendered Secret
+- **`refreshInterval: 10m`.** ESO does recreate a deleted rendered Secret
   promptly (verified), and a changed value now reaches the rendered Secret
-  within about two minutes. It reaches the *workload* only once the Pod
+  within about ten minutes. It reaches the *workload* only once the Pod
   restarts (§7), which Reloader does for the annotated workloads.
-- **`refreshInterval: 2m` costs ~144 MiB/day of audit log.** Every OpenBao
+- **Audit volume scales linearly with the refresh interval.** Every OpenBao
   request is audited unconditionally — the audit device has no sampling, no
-  path filter and no exclusions — so the 2m interval writes roughly 107k
-  request/response records a day. Measured 2026-09-16 across all three pods:
-  91 logins and 57 reads per 4 minutes, i.e. **1.60 logins per read**. Most of
-  that volume is *authentication*, not data.
+  path filter and no exclusions — so the interval alone sets the log volume.
+  Measured 2026-09-16 across all three pods at `2m`: 91 logins and 57 reads per
+  4 minutes, i.e. **1.60 logins per read**, writing ~144 MiB/day. Most of that
+  is *authentication*, not data.
   `--enable-vault-token-cache` was tried on the ESO controller to remove the
-  redundant logins and **does not help** (91 → 99 logins per 4 min, no
-  material change). The flag is wired into the Vault provider path and does
-  not engage for `provider.openBao`; the commit was reverted. The only real
-  lever is the refresh interval, which scales the volume linearly. Note the
-  audit device writes to stdout (`apps/openbao.yaml`, `file_path = "stdout"`)
-  with `auditStorage.enabled: false`, so this lands in the pod log and is
-  shipped by Alloy.
+  redundant logins and **does not help** (91 → 99 logins per 4 min, no material
+  change). The flag is wired into the Vault provider path and does not engage
+  for `provider.openBao`; that commit was reverted. With the logins
+  unavoidable, **`10m` was chosen** (~29 MiB/day, a 5x cut from `2m`, still far
+  ahead of the original `1h`), on the reasoning that a short interval only buys
+  anything when a rotation must be live within minutes.
+  The audit device writes to stdout (`apps/openbao.yaml`,
+  `file_path = "stdout"`) with `auditStorage.enabled = false`, so this lands in
+  the pod log and is shipped by Alloy.
 
 ## 7. Why the rendered Secrets stay in the cluster
 
@@ -280,7 +282,7 @@ lifecycle is:
 
 ```
 OpenBao                       source of truth, encrypted by OpenBao's own barrier
-  -> ESO                      fetches on refreshInterval (2m), writes a Secret
+  -> ESO                      fetches on refreshInterval (10m), writes a Secret
   -> Secret                   a durable object in the cluster datastore
   -> kubelet                  injects env vars at container start,
                               or mounts the Secret as a tmpfs volume
