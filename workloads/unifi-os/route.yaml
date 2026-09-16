@@ -2,6 +2,10 @@
 # (*.ts.2143.me, via Gateway listener unifi-ts-2143-https) and re-encrypts to the
 # UniFi OS Server console on the VM at 192.168.5.30:11443. backendtlspolicy.yaml
 # pins the console's self-signed cert as the trust anchor for that hop.
+#
+# matches, filters and backendRefs must all live in ONE rule. Splitting the
+# filter into its own rule (as this route previously did) makes Traefik build a
+# backendless router that matches every request and answers 503.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -14,12 +18,16 @@ spec:
   hostnames:
     - unifi.ts.2143.me
   rules:
-    - filters:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
             kind: Middleware
             name: lan-only
-    - backendRefs:
+      backendRefs:
         - name: unifi-os
           port: 11443
