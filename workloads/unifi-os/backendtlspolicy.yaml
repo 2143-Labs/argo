@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: unifi-os-tls
+  namespace: default
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: unifi-os
+  validation:
+    hostname: unifi.local
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: unifi-os-ca
