@@ -246,13 +246,12 @@ validate_manifest() {
 
   assert_jq "${json}" '
     deployment($name) as $d |
-    [$d.spec.template.spec.initContainers[].name] == ["enroll","gluetun","enable-forwarding"] and
+    [$d.spec.template.spec.initContainers[].name] == ["enroll","gluetun"] and
     [$d.spec.template.spec.containers[].name] == ["tailscale"] and
     init($d; "gluetun").restartPolicy == "Always" and
     all(($d.spec.template.spec.initContainers + $d.spec.template.spec.containers)[];
       (.image | type == "string" and length > 0 and test("^[^[:space:]]+(@sha256:[0-9a-f]{64}|:sha-[0-9a-f]{40})$"))) and
-    init($d; "enroll").image == object("Job"; ($name + "-deregister")).spec.template.spec.containers[0].image and
-    init($d; "gluetun").image == init($d; "enable-forwarding").image
+    init($d; "enroll").image == object("Job"; ($name + "-deregister")).spec.template.spec.containers[0].image
   ' 'container order, restartable Gluetun init, or digest-pinned images are incorrect' --arg name "${name}"
 
   assert_jq "${json}" '
@@ -355,17 +354,17 @@ validate_manifest() {
       .securityContext.capabilities.drop == ["ALL"] and
       (.securityContext.privileged // false) == false) and
     init($d; "gluetun").securityContext.capabilities.add == ["NET_ADMIN"] and
-    init($d; "enable-forwarding").securityContext.capabilities.add == ["NET_ADMIN"] and
     container($d; "tailscale").securityContext.capabilities.add == ["NET_ADMIN"] and
     $d.spec.template.spec.securityContext.seccompProfile.type == "RuntimeDefault" and
-    (commandtext(init($d; "enable-forwarding")) | contains("net.ipv4.ip_forward=1")) and
-    (commandtext(init($d; "enable-forwarding")) | contains("net.ipv6.conf.all.forwarding=1"))
+    $d.spec.template.spec.securityContext.sysctls == [
+      {"name":"net.ipv4.ip_forward","value":"1"},
+      {"name":"net.ipv6.conf.all.forwarding","value":"1"}
+    ]
   ' 'container capabilities, privilege boundaries, seccomp, or forwarding checks are incorrect' --arg name "${name}"
 
   assert_jq "${json}" '
     deployment($name) as $d |
     init($d; "enroll").resources == {"requests":{"cpu":"50m","memory":"64Mi"},"limits":{"cpu":"250m","memory":"128Mi"}} and
-    init($d; "enable-forwarding").resources == {"requests":{"cpu":"50m","memory":"64Mi"},"limits":{"cpu":"250m","memory":"128Mi"}} and
     init($d; "gluetun").resources == {"requests":{"cpu":"50m","memory":"128Mi"},"limits":{"cpu":"1","memory":"512Mi"}} and
     container($d; "tailscale").resources == {"requests":{"cpu":"50m","memory":"128Mi"},"limits":{"cpu":"2","memory":"512Mi"}}
   ' 'container resource requests and limits must remain bounded' --arg name "${name}"

@@ -31,6 +31,11 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+        sysctls:
+          - name: net.ipv4.ip_forward
+            value: "1"
+          - name: net.ipv6.conf.all.forwarding
+            value: "1"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -144,35 +149,6 @@ spec:
               readOnly: true
             - name: tun
               mountPath: /dev/net/tun
-        - name: enable-forwarding
-          image: {{ .Values.images.gluetun }}
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/sh
-            - -ec
-          args:
-            - |
-              sysctl -w net.ipv4.ip_forward=1
-              test "$(sysctl -n net.ipv4.ip_forward)" = 1
-              sysctl -w net.ipv6.conf.all.forwarding=1
-              test "$(sysctl -n net.ipv6.conf.all.forwarding)" = 1
-          securityContext:
-            runAsUser: 0
-            runAsGroup: 0
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 128Mi
       containers:
         - name: tailscale
           image: {{ .Values.images.tailscale }}
