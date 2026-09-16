@@ -245,9 +245,11 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   redundant logins and **does not help** (91 → 99 logins per 4 min, no material
   change). The flag is wired into the Vault provider path and does not engage
   for `provider.openBao`; that commit was reverted. With the logins
-  unavoidable, **`10m` was chosen** (~29 MiB/day, a 5x cut from `2m`, still far
-  ahead of the original `1h`), on the reasoning that a short interval only buys
-  anything when a rotation must be live within minutes.
+  unavoidable, **`10m` was chosen** and then measured: 51 logins and 31 reads
+  per 10-minute cycle, **34.6 MiB/day — a 76% cut** from `2m`, and far ahead of
+  the original `1h`. The reduction is below the full 5x the interval implies
+  because a baseline of non-ESO audit traffic does not shrink with it. A short
+  interval only buys anything when a rotation must be live within minutes.
   The audit device writes to stdout (`apps/openbao.yaml`,
   `file_path = "stdout"`) with `auditStorage.enabled = false`, so this lands in
   the pod log and is shipped by Alloy.
