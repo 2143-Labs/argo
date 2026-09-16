@@ -7,14 +7,21 @@
 # bump left 29 migrations unapplied and every spend/budget/config DB write
 # failing until this Job fixed it.
 #
-# ArgoCD runs it as a PreSync hook, so the schema is migrated BEFORE the new
-# Deployment rolls out. On a sync with nothing pending, `prisma migrate deploy`
-# is a fast no-op ("No pending migrations to apply").
-#
 # Verified 2026-09-16: image v1.100.1 ships 161 migrations, the DB had 132
 # applied. All pending migrations are additive (ADD COLUMN / CREATE TABLE /
 # CREATE INDEX / FK), so this is safe against a live proxy and stays
 # backwards-compatible if the image is ever rolled back.
+#
+# WHY THIS IS NOT AN ARGOCD HOOK: hooks are excluded from the app's diff, so a
+# hook-only commit leaves the Application "Synced" and auto-sync never fires an
+# operation — the hook would sit unexecuted forever (observed: revision
+# 079eecf showed Synced with no new operationState and no Job). A plain,
+# diff-visible Job is what makes auto-sync create it.
+#
+# Bump this Job's image together with deployment.yaml's image on every litellm
+# upgrade: the image is what changes the Job's spec, which is what makes Argo
+# replace it and re-run the migration. A finished Job whose spec still matches
+# is left alone, so this does not re-run on every sync.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -24,8 +31,11 @@ metadata:
   labels:
     app: litellm-migrate
   annotations:
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    # Migrate before the Deployment is applied (sync-wave 0) on version bumps.
+    argocd.argoproj.io/sync-wave: "-1"
+    # A Job's pod template is immutable; without this, bumping the image fails
+    # the sync with "field is immutable" instead of re-running the migration.
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   backoffLimit: 1
   activeDeadlineSeconds: 1200
