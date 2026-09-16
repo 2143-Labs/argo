@@ -17,6 +17,8 @@ spec:
     metadata:
       labels:
         app: asciinema
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -80,6 +82,30 @@ spec:
               value: "1"
             - name: TZ
               value: America/New_York
+            # SES SMTP submission on port 2587, which is SES's STARTTLS port.
+            # 25 and 587 are silently dropped by the home gateway, and 465 is
+            # implicit TLS - unreachable from here because Swoosh requires
+            # `ssl: true` for that and runtime.exs never sets it.
+            - name: SMTP_HOST
+              value: email-smtp.us-east-1.amazonaws.com
+            - name: SMTP_PORT
+              value: "2587"
+            - name: SMTP_TLS
+              value: always
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-home
+                  key: USER
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-home
+                  key: PASS
+            # Must match a sender identity verified in SES. Unset would default
+            # to hello@$URL_HOST, i.e. this same address.
+            - name: MAIL_FROM_ADDRESS
+              value: hello@terminals.john2143.com
           volumeMounts:
             - name: data
               mountPath: /var/lib/asciinema
