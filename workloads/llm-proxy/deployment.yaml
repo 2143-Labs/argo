@@ -46,8 +46,27 @@ spec:
               value: "true"
             - name: PYTHONPATH
               value: "/usr/lib/python3.13/site-packages"
+            # Migrations run at startup on purpose. They were disabled on
+            # 2026-09-07 (commit 03cff79) because the boot-time migrate was slow
+            # enough that the liveness probe killed the pod in a loop; the
+            # startupProbe below (600s grace) is what actually fixed that, and it
+            # is still in place.
+            #
+            # Keeping them disabled is what broke 2026-09-13..16: the v1.92.0 ->
+            # v1.100.1 bump left 29 migrations unapplied, so every spend, budget
+            # and DB-backed config write failed silently for 3 days until the
+            # schema was migrated by hand. The image is the only thing that
+            # carries the schema version, so the schema has to move with it —
+            # including when the image-bump bot updates this file.
+            # `false` (not deletion) so it also overrides any inherited value.
             - name: DISABLE_SCHEMA_UPDATE
-              value: "true"
+              value: "false"
+            # Default per-Prisma-command timeout is 60s; a 29-migration catch-up
+            # (with DDL on LiteLLM_SpendLogs, ~509k rows) can exceed it, and a
+            # prisma process killed mid-migration leaves a failed migration in
+            # the ledger that blocks every later boot.
+            - name: LITELLM_PRISMA_COMMAND_TIMEOUT
+              value: "900"
             - name: CHATGPT_TOKEN_DIR
               value: /litellm/chatgpt
             # CNPG's authoritative credential: this cluster defines a managed role
@@ -78,7 +97,13 @@ spec:
           command:
             - sh
             - "-c"
-            - "apk add --no-cache py3-pillow && sed -i 's/if billable_users and billable_users > 5:/if False:/' /app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
+            # --use_v2_migration_resolver avoids the v1 resolver's diff-and-force
+            # recovery, which the vendor warns thrashes schemas when two versions
+            # contend for one DB during a rolling deploy.
+            # --enforce_prisma_migration_check makes a failed migration exit
+            # non-zero; without it LiteLLM logs a warning and starts anyway,
+            # which is how the drift above went unnoticed.
+            - "apk add --no-cache py3-pillow && sed -i 's/if billable_users and billable_users > 5:/if False:/' /app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0 --use_v2_migration_resolver --enforce_prisma_migration_check"
           startupProbe:
             httpGet:
               path: /health/liveliness
