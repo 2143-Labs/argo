@@ -234,3 +234,73 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
 - **`refreshInterval: 1h`.** ESO does recreate a deleted rendered Secret
   promptly (verified), but a value change in OpenBao reaches the workload only
   after the next refresh.
+
+## 7. Why the rendered Secrets stay in the cluster
+
+The migration changed where a value is **read from**, not whether a Kubernetes
+Secret exists. ESO fetches each entry from OpenBao and renders it back into a
+Secret carrying the *same name* the workload already consumed, which is why no
+Deployment, StatefulSet or DaemonSet reference had to change. **28**
+ExternalSecrets are live, and ESO has created **28** Secrets from them; the
+cluster holds 138 Secrets in total.
+
+Removing the rendered Secrets is therefore neither done nor wanted:
+
+- **Deleting one is futile.** Every ExternalSecret runs the default
+  `creationPolicy: Owner`, so ESO owns the rendered Secret and recreates it on
+  the next reconcile (see §6 "Known gaps").
+- **Deleting one is harmful.** Consumers read these as environment variables —
+  `secretKeyRef` and `envFrom` across 25 workload manifests (for example
+  `workloads/frigate/deployment.yaml`, `workloads/llm-proxy/deployment.yaml`,
+  `workloads/headscale/deployment.yaml`), with a minority mounting them as
+  files (`livekit-keys`, `tuwunel-turn`). A missing Secret means
+  `CreateContainerConfigError` and the Pod does not start. Switching
+  `crowdsec-lapi-secrets` to ESO ownership already produced exactly that outage
+  for about four minutes until a forced resync cleared it.
+
+### Where the value actually lives
+
+"Loaded at runtime, in memory only" is not a mode Kubernetes or k3s offers. The
+lifecycle is:
+
+```
+OpenBao                       source of truth, encrypted by OpenBao's own barrier
+  -> ESO                      fetches on refreshInterval (1h), writes a Secret
+  -> Secret                   a durable object in the cluster datastore
+  -> kubelet                  injects env vars at container start,
+                              or mounts the Secret as a tmpfs volume
+  -> application              reads it
+```
+
+Two consequences follow. An environment-variable consumer only ever sees a new
+value after its Pod restarts — which is precisely what the Reloader annotations
+are for (§6). And the value persists in the datastore for the object's entire
+lifetime regardless of what any container does with it; the process has a copy,
+it is not the only copy.
+
+### Secrets are not encrypted at rest in the datastore
+
+Verified 2026-09-16 against the live cluster — k3s `v1.35.8+k3s1`, datastore
+**etcd** (`/var/lib/rancher/k3s/server/db/etcd`):
+
+```
+$ sudo k3s secrets-encrypt status
+Encryption Status: Disabled, no configuration file found
+```
+
+There is no `encryption-config.json` in `/var/lib/rancher/k3s/server/cred/`.
+Every Secret in the cluster — the 28 ESO-rendered application credentials
+included — is therefore stored in etcd base64-encoded only. Base64 is an
+encoding, not encryption: anyone who can read the etcd data files, or obtain a
+credential permitted to read Secrets, reads them in the clear.
+
+This is the residual exposure the migration did not change and structurally
+cannot: it is a property of the datastore, not of where a credential was
+authored. What would close it is k3s's own secrets encryption at rest
+(`k3s secrets-encrypt enable`, which requires a control-plane restart). That is
+a node-level change outside this repository's GitOps and has not been made.
+
+If a credential genuinely must never persist inside the cluster, the answer is
+not deletion — the workload has to stop consuming a Kubernetes Secret at all
+(for example via OpenBao's agent injector or CSI driver). That is a different
+delivery architecture, not a cleanup of this one.
