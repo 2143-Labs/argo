@@ -231,9 +231,10 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   `observability/{grafana,grafana-oidc,rustfs-credentials}`,
   `matrix/au2143me-oidc`, `stalwart/stalwart-stalwart-env`,
   `authentik/authentik-secrets` and `kube-system/crowdsec-bouncer-key`.
-- **`refreshInterval: 1h`.** ESO does recreate a deleted rendered Secret
-  promptly (verified), but a value change in OpenBao reaches the workload only
-  after the next refresh.
+- **`refreshInterval: 2m`.** ESO does recreate a deleted rendered Secret
+  promptly (verified), and a changed value now reaches the rendered Secret
+  within about two minutes. It reaches the *workload* only once the Pod
+  restarts (§7), which Reloader does for the annotated workloads.
 
 ## 7. Why the rendered Secrets stay in the cluster
 
@@ -265,7 +266,7 @@ lifecycle is:
 
 ```
 OpenBao                       source of truth, encrypted by OpenBao's own barrier
-  -> ESO                      fetches on refreshInterval (1h), writes a Secret
+  -> ESO                      fetches on refreshInterval (2m), writes a Secret
   -> Secret                   a durable object in the cluster datastore
   -> kubelet                  injects env vars at container start,
                               or mounts the Secret as a tmpfs volume

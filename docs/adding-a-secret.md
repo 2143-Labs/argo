@@ -74,7 +74,7 @@ metadata:
   name: <name>
   namespace: <ns>
 spec:
-  refreshInterval: 1h
+  refreshInterval: 2m
   secretStoreRef:
     name: openbao
     kind: ClusterSecretStore
@@ -134,5 +134,6 @@ rather than editing a rendered file.
 See `2026-09-13-secrets-inventory.md` §6 for the design record: the store and
 policy as built, what is deliberately *not* in OpenBao (CNPG credentials,
 cert-manager TLS, OpenBao's own bootstrap secrets), and the known gaps —
-including that `refreshInterval: 1h` means a rotation reaches the workload only
-on the next refresh, and that every rotation currently rolls a workload twice.
+including that `refreshInterval: 2m` means a changed value reaches the rendered
+Secret within about two minutes and the workload on the next Pod restart, and
+that every rotation currently rolls a workload twice.
