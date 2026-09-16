@@ -31,11 +31,10 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
-        sysctls:
-          - name: net.ipv4.ip_forward
-            value: "1"
-          - name: net.ipv6.conf.all.forwarding
-            value: "1"
+        # No forwarded-packet sysctls are declared: a live probe shows every pod
+        # netns in this cluster already has net.ipv4.ip_forward=1, and requesting
+        # them anyway pins the endpoint to nodes whose kubelet allowlists them
+        # (arch/closet/nas reject the pod outright as SysctlForbidden).
       # Gluetun's DNS answers the cluster search-path variants slowly (~4s each),
       # so ndots:1 makes names like net.john2143.com resolve absolute-first.
       dnsConfig:
@@ -181,7 +180,7 @@ spec:
             - name: TS_AUTHKEY
               value: file:/etc/tailscale/auth_key
             - name: TS_EXTRA_ARGS
-              value: --login-server=https://net.john2143.com --advertise-exit-node --advertise-tags=tag:vpn-endpoint --accept-routes=false
+              value: --login-server=https://net.john2143.com --advertise-exit-node --accept-routes=false
           readinessProbe:
             exec:
               command:

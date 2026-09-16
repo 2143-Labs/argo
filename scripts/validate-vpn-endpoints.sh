@@ -323,14 +323,14 @@ validate_manifest() {
       "TS_BOOT_TIMEOUT":"180s",
       "TS_HOSTNAME":$hostname,
       "TS_AUTHKEY":"file:/etc/tailscale/auth_key",
-      "TS_EXTRA_ARGS":"--login-server=https://net.john2143.com --advertise-exit-node --advertise-tags=tag:vpn-endpoint --accept-routes=false"
+      "TS_EXTRA_ARGS":"--login-server=https://net.john2143.com --advertise-exit-node --accept-routes=false"
     } and
     container($d; "tailscale").readinessProbe.exec.command == ["wget","-qO-","http://127.0.0.1:9002/healthz"] and
     has_mount(container($d; "tailscale"); "tailscale-auth-secret"; "/etc/tailscale"; true) and
     has_mount(container($d; "tailscale"); "tailscale-state"; "/var/lib/tailscale"; false) and
     ((container($d; "tailscale").volumeMounts | map(.mountPath) | unique | length) == (container($d; "tailscale").volumeMounts | length)) and
     all(container($d; "tailscale").volumeMounts[]; .name != "runtime-secrets")
-  ' 'Tailscale must use the reusable file key, durable state, single endpoint tag, and exact health settings' \
+  ' 'Tailscale must use the reusable file key, durable state, and exact health settings; the endpoint tag must come from the preauth key (headscale rejects a client-requested tag when the key already carries it)' \
     --arg name "${name}" --arg hostname "${hostname}"
 
   assert_jq "${json}" '
@@ -358,10 +358,7 @@ validate_manifest() {
     init($d; "gluetun").securityContext.capabilities.add == ["NET_ADMIN"] and
     container($d; "tailscale").securityContext.capabilities.add == ["NET_ADMIN"] and
     $d.spec.template.spec.securityContext.seccompProfile.type == "RuntimeDefault" and
-    $d.spec.template.spec.securityContext.sysctls == [
-      {"name":"net.ipv4.ip_forward","value":"1"},
-      {"name":"net.ipv6.conf.all.forwarding","value":"1"}
-    ]
+    (($d.spec.template.spec.securityContext | has("sysctls")) | not)
   ' 'container capabilities, privilege boundaries, seccomp, or forwarding checks are incorrect' --arg name "${name}"
 
   assert_jq "${json}" '
