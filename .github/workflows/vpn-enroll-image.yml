@@ -43,11 +43,3 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-
-      - name: Make package public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >-
-          gh api --method PATCH
-          /orgs/${{ github.repository_owner }}/packages/container/vpn-enroll
-          -f visibility=public
