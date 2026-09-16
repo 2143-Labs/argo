@@ -1,0 +1,174 @@
+# These are ordinary release resources, not hooks: Helm keeps them available while
+# the pre-delete Job runs, then removes them with the rest of the release.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.name }}-deregister
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.name }}-deregister
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/scale
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - {{ .Values.name }}-identity
+    verbs:
+      - get
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.name }}-identity-writer
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+rules:
+  # Kubernetes cannot resourceName-scope create authorization. The enroll init
+  # container receives a projected, init-only token for this ServiceAccount.
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - {{ .Values.name }}-identity
+    verbs:
+      - get
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.name }}-identity-writer
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+subjects:
+  - kind: ServiceAccount
+    name: vpn-endpoint-{{ .Values.name }}
+    namespace: vpn-endpoints
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.name }}-identity-writer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.name }}-deregister
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.name }}-deregister
+    namespace: vpn-endpoints
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.name }}-deregister
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.name }}-deregister-headscale
+  namespace: default
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.name }}-deregister-headscale
+  namespace: default
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.name }}-deregister
+    namespace: vpn-endpoints
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.name }}-deregister-headscale

@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vpn-endpoints
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - name: vpn-de
+            country: Germany
+            hostname: vpn-de
+            pvcName: vpn-de-state
+            replicas: 1
+            mullvadRotationNonce: 0
+  template:
+    metadata:
+      name: "vpn-endpoint-{{.name}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+        - pre-delete-finalizer.argocd.argoproj.io
+        - pre-delete-finalizer.argocd.argoproj.io/cleanup
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/vpn-endpoints
+        helm:
+          releaseName: "{{.name}}"
+          parameters:
+            - { name: name, value: "{{.name}}" }
+            - { name: country, value: "{{.country}}" }
+            - { name: hostname, value: "{{.hostname}}" }
+            - { name: pvcName, value: "{{.pvcName}}" }
+            - { name: replicas, value: "{{.replicas}}" }
+            - { name: mullvadRotationNonce, value: "{{.mullvadRotationNonce}}" }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: vpn-endpoints
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

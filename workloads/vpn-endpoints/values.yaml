@@ -1,0 +1,14 @@
+name: vpn-de
+country: Germany
+hostname: vpn-de
+pvcName: vpn-de-state
+replicas: 1
+mullvadRotationNonce: 0
+
+images:
+  # Built from the enrollment helper seed merged as dad97b2.
+  vpnEnroll: ghcr.io/2143-labs/vpn-enroll:sha-dad97b2bcb23b3f30b69525af171d23cb893ec7f
+  # Gluetun 3.41.3, Linux/amd64 child manifest.
+  gluetun: ghcr.io/qdm12/gluetun@sha256:1baa76576dea1dfbafbd62bb635daf40fd87171f63273c2fdfe630418783011e
+  # Tailscale v1.102.3 Linux/amd64; v1.102.4 is not published.
+  tailscale: docker.io/tailscale/tailscale@sha256:51fec4863144d6ba0a22504cfb455d020ee0307d0c04eb48f5afee63390bdba0
