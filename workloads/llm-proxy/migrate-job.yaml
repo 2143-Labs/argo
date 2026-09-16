@@ -1,0 +1,80 @@
+# One-shot Prisma schema migration for the LiteLLM proxy.
+#
+# Why this exists: the Deployment runs with DISABLE_SCHEMA_UPDATE=true
+# (deployment.yaml), so the proxy never applies the Prisma migrations that ship
+# inside the litellm image. An image bump therefore moves the code ahead of the
+# DB schema with nothing to close the gap — 2026-09-13's v1.92.0 -> v1.100.1
+# bump left 29 migrations unapplied and every spend/budget/config DB write
+# failing until this Job fixed it.
+#
+# ArgoCD runs it as a PreSync hook, so the schema is migrated BEFORE the new
+# Deployment rolls out. On a sync with nothing pending, `prisma migrate deploy`
+# is a fast no-op ("No pending migrations to apply").
+#
+# Verified 2026-09-16: image v1.100.1 ships 161 migrations, the DB had 132
+# applied. All pending migrations are additive (ADD COLUMN / CREATE TABLE /
+# CREATE INDEX / FK), so this is safe against a live proxy and stays
+# backwards-compatible if the image is ever rolled back.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: litellm-prisma-migrate
+  # NOT `app: litellm` — the litellm Service selects that label and would
+  # otherwise add this short-lived pod as a dead endpoint.
+  labels:
+    app: litellm-migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app: litellm-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/berriai/litellm:v1.100.1
+          # Deliberately no --config: the migration path is driven entirely by
+          # DATABASE_URL, so this needs no provider keys, no configmap mount and
+          # no ChatGPT token volume.
+          command:
+            - sh
+            - "-c"
+            # --skip_server_startup           run DB setup, then exit
+            # --use_v2_migration_resolver     skip the diff-and-force recovery
+            #   path the vendor warns thrashes schemas
+            # --enforce_prisma_migration_check  exit non-zero if setup fails
+            #   (without it, LiteLLM logs a warning and exits 0 — a silent no-op)
+            - >-
+              exec litellm --skip_server_startup
+              --use_v2_migration_resolver
+              --enforce_prisma_migration_check
+          env:
+            # Must be explicit: it wins over anything inherited, and a `true`
+            # here would turn this Job into a silent no-op.
+            - name: DISABLE_SCHEMA_UPDATE
+              value: "false"
+            # The default per-Prisma-command timeout is 60s. The first run has to
+            # apply 29 migrations, including DDL on LiteLLM_SpendLogs (~509k
+            # rows); killing prisma mid-migration leaves a failed migration in
+            # the ledger.
+            - name: LITELLM_PRISMA_COMMAND_TIMEOUT
+              value: "900"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-db-password
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://litellm:$(DB_PASSWORD)@litellm-db-rw:5432/litellm
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
