@@ -35,6 +35,8 @@ rules:
     verbs:
       - get
       - update
+      # kubectl scale PATCHes the scale subresource.
+      - patch
   - apiGroups:
       - ""
     resources:

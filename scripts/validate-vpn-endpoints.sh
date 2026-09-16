@@ -446,7 +446,7 @@ validate_manifest() {
     $local.metadata.namespace == "vpn-endpoints" and
     $headscale.metadata.namespace == "default" and
     capability($local; "apps"; "deployments"; ["get"]) and
-    capability($local; "apps"; "deployments/scale"; ["get","update"]) and
+    any($local.rules[]; .apiGroups == ["apps"] and .resources == ["deployments/scale"] and (.verbs | sort) == (["get","update","patch"] | sort)) and
     capability($local; ""; "pods"; ["get","list","watch"]) and
     capability($local; ""; "persistentvolumeclaims"; ["get","list","delete"]) and
     any($local.rules[]; . as $rule | $rule.apiGroups == [""] and $rule.resources == ["configmaps"] and ($rule.resourceNames | index($name + "-identity")) != null and all(["get","delete"][]; . as $verb | ($rule.verbs | index($verb)) != null)) and
