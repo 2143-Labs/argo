@@ -33,10 +33,20 @@ metadata:
   annotations:
     # Migrate before the Deployment is applied (sync-wave 0) on version bumps.
     argocd.argoproj.io/sync-wave: "-1"
-    # A Job's pod template is immutable; without this, bumping the image fails
-    # the sync with "field is immutable" instead of re-running the migration.
-    argocd.argoproj.io/sync-options: Replace=true
+    # A Job's spec.template is immutable, so bumping the image is not a patch:
+    # Replace makes Argo CD send a full manifest, Force lets it delete and
+    # re-create the Job when that update hits an immutable field. Without
+    # Force the sync fails with "spec.template: field is immutable" and the
+    # migration never re-runs.
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
 spec:
+  # Declared explicitly because the Replace path sends a full manifest and the
+  # API server rejects a Job whose spec.selector is absent ("spec.selector:
+  # Required value ... field is immutable"). The normal create path would have
+  # defaulted this to a controller-uid selector.
+  selector:
+    matchLabels:
+      app: litellm-migrate
   backoffLimit: 1
   activeDeadlineSeconds: 1200
   template:
