@@ -154,6 +154,7 @@ data:
 
     logging.getLogger("LiteLLM").addFilter(_DropDeepSeekReasoningPlaceholderNoise())
     print(
-        f"litellm-logfilter: installed on logger 'LiteLLM' (dropping {_NOISE!r})",
+        "litellm-logfilter: installed on logger 'LiteLLM' "
+        "(suppressing the per-message DeepSeek placeholder warning)",
         file=sys.stderr,
     )
