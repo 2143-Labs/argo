@@ -4,7 +4,10 @@ replicaCount: 1
 
 image:
   repository: stalwartlabs/stalwart
-  tag: "v0.16"
+  # Pinned: Application.oauthClientId (needed to send the Pocket ID client id
+  # during SSO) exists only from 0.16.19; the floating v0.16 tag had left the
+  # cluster on 0.16.17.
+  tag: "v0.16.22"
   pullPolicy: IfNotPresent
 
 # Public hostname — required for OIDC redirect URIs behind reverse proxy
