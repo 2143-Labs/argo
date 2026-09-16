@@ -5,6 +5,6 @@
     "hostname": "vpn-de",
     "pvcName": "vpn-de-state",
     "replicas": 1,
-    "mullvadRotationNonce": 0
+    "mullvadRotationNonce": 1
   }
 ]
