@@ -235,6 +235,20 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   promptly (verified), and a changed value now reaches the rendered Secret
   within about two minutes. It reaches the *workload* only once the Pod
   restarts (§7), which Reloader does for the annotated workloads.
+- **`refreshInterval: 2m` costs ~144 MiB/day of audit log.** Every OpenBao
+  request is audited unconditionally — the audit device has no sampling, no
+  path filter and no exclusions — so the 2m interval writes roughly 107k
+  request/response records a day. Measured 2026-09-16 across all three pods:
+  91 logins and 57 reads per 4 minutes, i.e. **1.60 logins per read**. Most of
+  that volume is *authentication*, not data.
+  `--enable-vault-token-cache` was tried on the ESO controller to remove the
+  redundant logins and **does not help** (91 → 99 logins per 4 min, no
+  material change). The flag is wired into the Vault provider path and does
+  not engage for `provider.openBao`; the commit was reverted. The only real
+  lever is the refresh interval, which scales the volume linearly. Note the
+  audit device writes to stdout (`apps/openbao.yaml`, `file_path = "stdout"`)
+  with `auditStorage.enabled: false`, so this lands in the pod log and is
+  shipped by Alloy.
 
 ## 7. Why the rendered Secrets stay in the cluster
 
