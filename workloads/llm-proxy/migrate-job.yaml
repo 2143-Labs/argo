@@ -81,10 +81,13 @@ spec:
                   key: password
             - name: DATABASE_URL
               value: postgresql://litellm:$(DB_PASSWORD)@litellm-db-rw:5432/litellm
+          # The LiteLLM CLI imports the whole proxy stack before it reaches the
+          # Prisma step; 1Gi OOMKilled it mid-startup (2026-09-16). Match the
+          # Deployment's 4Gi ceiling.
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 1Gi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 4Gi
