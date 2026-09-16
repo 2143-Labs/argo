@@ -158,6 +158,41 @@ spec:
         - name: tailscale
           image: {{ .Values.images.tailscale }}
           imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              # Three fixes are required for this pod to work as a Tailscale exit
+              # node behind Gluetun, all verified live with an isolated tailnet
+              # client (egress through the endpoint reported mullvad_exit_ip=true).
+              #
+              # 1. The pinned tailscale image symlinks iptables/ip6tables to the
+              #    *legacy* backend. This kernel has no legacy tables ("can't
+              #    initialize iptables table `filter'"), so tailscaled failed to
+              #    install ts-forward/ts-postrouting and forwarded nothing. Point
+              #    the tools at the nft backend the same image ships.
+              ln -sf /usr/sbin/iptables-nft /usr/sbin/iptables
+              ln -sf /usr/sbin/ip6tables-nft /usr/sbin/ip6tables
+              # 2. Gluetun routes every unmarked packet through its fwmark table,
+              #    whose default route points back into the tunnel. Replies to a
+              #    forwarded flow were therefore routed into tun0 and dropped by
+              #    FORWARD's default-drop policy, so nothing ever came back. Pin
+              #    tailnet destinations to Tailscale's table first. Bounded wait
+              #    for Gluetun's routing keeps this independent of start order.
+              i=0
+              while [ "$i" -lt 90 ] && ! ip rule show | grep -q '0xca6c'; do
+                i=$((i + 1))
+                sleep 2
+              done
+              ip rule add to 100.64.0.0/10 lookup 52 priority 97 2>/dev/null || true
+              ip -6 rule add to fd7a:115c:a1e0::/48 lookup 52 priority 97 2>/dev/null || true
+              # 3. The path is VPN-in-VPN (1280 inside 1320), so large TCP segments
+              #    black-holed: ICMP and handshakes worked, transfers stalled.
+              iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN \
+                -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null ||
+                iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN \
+                  -j TCPMSS --clamp-mss-to-pmtu
+              exec /usr/local/bin/containerboot
           env:
             - name: TS_USERSPACE
               value: "false"
