@@ -335,6 +335,19 @@ validate_manifest() {
 
   assert_jq "${json}" '
     deployment($name) as $d |
+    container($d; "tailscale").command[0] == "/bin/sh" and
+    container($d; "tailscale").command[1] == "-ec" and
+    (container($d; "tailscale").command[2]
+      | contains("iptables-nft")
+        and contains("ip -6 rule add to fd7a:115c:a1e0::/48 lookup 52 priority 97")
+        and contains("ip rule add to 100.64.0.0/10 lookup 52 priority 97")
+        and contains("TCPMSS --clamp-mss-to-pmtu")
+        and contains("exec /usr/local/bin/containerboot")) and
+    container($d; "tailscale").args == null
+  ' 'Tailscale must run a startup wrapper that repairs the nft backend, routes tailnet replies, clamps MSS, then execs containerboot' --arg name "${name}"
+
+  assert_jq "${json}" '
+    deployment($name) as $d |
     ($d.spec.template.spec.volumes | first(.[] | select(.name == "account-secret"))) as $account |
     ($d.spec.template.spec.volumes | first(.[] | select(.name == "tailscale-auth-secret"))) as $auth |
     ($d.spec.template.spec.volumes | first(.[] | select(.name == "runtime-secrets"))) as $runtime |
