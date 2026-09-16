@@ -110,3 +110,50 @@ data:
         host: litellm-redis
         port: "6379"
         ttl: 3600
+  # Injected onto PYTHONPATH at container start as `sitecustomize`, so every
+  # Python interpreter in the pod — the litellm proxy included — imports this
+  # module at startup, before litellm configures logging.
+  #
+  # Why: litellm's DeepSeek handler injects a single-space `reasoning_content`
+  # placeholder for every replayed assistant message that has none, and warns
+  # once per message per request
+  # (litellm/llms/deepseek/chat/transformation.py :: _fill_reasoning_content,
+  # called from transform_request). Agent histories are long and ~40% of turns
+  # are tool-call turns where DeepSeek thinking is off, so the same messages
+  # re-warn on every request: measured 2026-09-16, 5101 of 6115 proxy log lines
+  # in one hour (83%) were this one message, which buried real warnings.
+  # Upstream bug, open: BerriAI/litellm#37629; fix in PR #37728 (aggregate to
+  # one warning per request) is unmerged and not in the pinned image
+  # ghcr.io/berriai/litellm:v1.100.1.
+  #
+  # Scope: drops ONLY that one message, from litellm's `LiteLLM` logger. The
+  # placeholder substitution is untouched, so DeepSeek receives exactly the
+  # same request bytes as before, and every other litellm log line still
+  # prints. The aggregate message PR #37728 will emit has different wording
+  # ("...injected single-space reasoning_content placeholders into N assistant
+  # messages in this request"), so it is deliberately NOT matched and will log
+  # normally.
+  #
+  # REMOVAL TRIGGER: once the litellm image carries the #37728 fix, delete this
+  # key together with the /etc/litellm-pyfilter mount and the PYTHONPATH prefix
+  # in deployment.yaml, and bump the image.
+  sitecustomize.py: |
+    import logging
+    import sys
+
+    _NOISE = "DeepSeek thinking mode: assistant message is missing"
+
+    class _DropDeepSeekReasoningPlaceholderNoise(logging.Filter):
+        """Drop litellm's per-message DeepSeek placeholder warning (#37629)."""
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            try:
+                return _NOISE not in record.getMessage()
+            except Exception:
+                return True  # never swallow a record we cannot inspect
+
+    logging.getLogger("LiteLLM").addFilter(_DropDeepSeekReasoningPlaceholderNoise())
+    print(
+        f"litellm-logfilter: installed on logger 'LiteLLM' (dropping {_NOISE!r})",
+        file=sys.stderr,
+    )

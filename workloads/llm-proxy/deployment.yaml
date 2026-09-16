@@ -44,8 +44,12 @@ spec:
               value: "https://llm.2143.me"
             - name: AUTO_REDIRECT_UI_LOGIN_TO_SSO
               value: "true"
+            # The litellm-logfilter ConfigMap key is imported as
+            # `sitecustomize` at interpreter startup (see the /etc/litellm-pyfilter
+            # mount below). Remove this prefix, that mount and the ConfigMap key
+            # once the litellm image carries upstream PR #37728.
             - name: PYTHONPATH
-              value: "/usr/lib/python3.13/site-packages"
+              value: "/etc/litellm-pyfilter:/usr/lib/python3.13/site-packages"
             # Migrations run at startup on purpose. They were disabled on
             # 2026-09-07 (commit 03cff79) because the boot-time migrate was slow
             # enough that the liveness probe killed the pod in a loop; the
@@ -94,6 +98,9 @@ spec:
               readOnly: true
             - name: chatgpt-auth
               mountPath: /litellm/chatgpt
+            - name: config
+              mountPath: /etc/litellm-pyfilter
+              readOnly: true
           command:
             - sh
             - "-c"
