@@ -1,0 +1,18 @@
+# Traefik dials the UniFi OS Server console on its Proxmox VM directly.
+# No proxy pod — this Slice is the only source of backends for Service unifi-os.
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: unifi-os
+  namespace: default
+  labels:
+    kubernetes.io/service-name: unifi-os
+addressType: IPv4
+endpoints:
+  - addresses:
+      - "192.168.5.30"
+    conditions:
+      ready: true
+ports:
+  - port: 11443
+    name: https

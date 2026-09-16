@@ -1,0 +1,26 @@
+# unifi.ts.2143.me — traefik terminates TLS with the cert-manager wildcard cert
+# (*.ts.2143.me, via Gateway listener unifi-ts-2143-https) and re-encrypts to the
+# UniFi OS Server console on the VM at 192.168.5.30:11443. See traefikservice.yaml
+# for why that hop skips backend certificate validation.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: unifi-os-ts-2143
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: unifi-ts-2143-https
+  hostnames:
+    - unifi.ts.2143.me
+  rules:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
+    - backendRefs:
+        - group: traefik.io
+          kind: TraefikService
+          name: unifi-os

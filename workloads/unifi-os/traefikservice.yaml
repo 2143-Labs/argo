@@ -1,0 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: TraefikService
+metadata:
+  name: unifi-os
+  namespace: default
+spec:
+  weighted:
+    services:
+      - name: unifi-os
+        kind: Service
+        port: 11443
+        serversTransport: unifi-os-insecure
+        weight: 1
