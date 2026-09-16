@@ -1,0 +1,294 @@
+{{- if or (not (kindIs "string" .Values.name)) (gt (len .Values.name) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" .Values.name)) }}
+{{- fail "name must be a DNS label" }}
+{{- end }}
+{{- if or (not (kindIs "string" .Values.hostname)) (gt (len .Values.hostname) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" .Values.hostname)) }}
+{{- fail "hostname must be a DNS label" }}
+{{- end }}
+{{- $replicasKind := kindOf .Values.replicas }}
+{{- if or (not (has $replicasKind (list "int" "int64" "float64"))) (not (regexMatch "^(0|1)$" (printf "%v" .Values.replicas))) }}
+{{- fail "replicas must be the number 0 or 1" }}
+{{- end }}
+{{- $rotationKind := kindOf .Values.mullvadRotationNonce }}
+{{- if or (not (has $rotationKind (list "int" "int64" "float64"))) (not (regexMatch "^[0-9]+$" (printf "%v" .Values.mullvadRotationNonce))) }}
+{{- fail "mullvadRotationNonce must be a nonnegative integer" }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpn-endpoint-{{ .Values.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+data:
+  hostname: {{ .Values.hostname | quote }}
+  rotation-nonce: {{ .Values.mullvadRotationNonce | quote }}
+  enroll.sh: |
+    set -eu
+
+    STATE=/var/lib/vpn-endpoint/mullvad.json
+    STATE_NEW=/var/lib/vpn-endpoint/mullvad.json.new
+    TOKEN_FILE=/run/secrets/mullvad-token
+    AUTH_HEADER_FILE=/run/secrets/mullvad-authorization
+    WG_PRIVATE_TMP=/run/secrets/wireguard-private.new
+    WG_PUBLIC_FILE=/run/secrets/wireguard-public
+    DEVICES_FILE=/run/secrets/mullvad-devices.json
+    RESPONSE_FILE=/run/secrets/mullvad-response.json
+    RUNTIME_PRIVATE=/run/secrets/wireguard_private_key
+    RUNTIME_ADDRESSES=/run/secrets/wireguard_addresses
+
+    cleanup() {
+      rm -f "$TOKEN_FILE" "$AUTH_HEADER_FILE" "$WG_PRIVATE_TMP" "$WG_PUBLIC_FILE" "$DEVICES_FILE" "$RESPONSE_FILE"
+    }
+    trap cleanup EXIT HUP INT TERM
+    umask 077
+
+    mint_token() {
+      if ! jq -Rs 'gsub("[\\r\\n]+$"; "") | {account_number: .}' /etc/mullvad-account/account_number \
+        | curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- \
+          https://api.mullvad.net/auth/v1/token \
+        | jq -er '.access_token // .accessToken | select(type == "string" and length > 0)' \
+          > "$TOKEN_FILE"; then
+        echo 'mullvad token exchange failed' >&2
+        exit 1
+      fi
+      {
+        printf '%s' 'Authorization: Bearer '
+        cat "$TOKEN_FILE"
+        printf '\n'
+      } > "$AUTH_HEADER_FILE"
+    }
+
+    generate_keypair() {
+      wg genkey > "$WG_PRIVATE_TMP"
+      wg pubkey < "$WG_PRIVATE_TMP" > "$WG_PUBLIC_FILE"
+      test -s "$WG_PRIVATE_TMP"
+      test -s "$WG_PUBLIC_FILE"
+    }
+
+    write_state() {
+      id="$1"
+      name="$2"
+      ipv4="$3"
+      ipv6="$4"
+      jq -n \
+        --arg id "$id" \
+        --arg name "$name" \
+        --rawfile private_key "$WG_PRIVATE_TMP" \
+        --arg addresses "$ipv4,$ipv6" \
+        --arg nonce "$ROTATE" \
+        '{
+          device_id: $id,
+          device_name: $name,
+          wireguard_private_key: ($private_key | rtrimstr("\n")),
+          wireguard_addresses: $addresses,
+          rotation_nonce: $nonce
+        }' > "$STATE_NEW"
+      mv "$STATE_NEW" "$STATE"
+    }
+
+    publish_identity() {
+      id="$(jq -er '.device_id | select(type == "string" and length > 0)' "$STATE")"
+      name="$(jq -er '.device_name | select(type == "string" and length > 0)' "$STATE")"
+      kubectl create configmap "$HOSTNAME-identity" \
+        --from-literal="device_id=$id" \
+        --from-literal="device_name=$name" \
+        --dry-run=client -o yaml \
+        | kubectl apply -f - >/dev/null
+    }
+
+    restore_runtime_files() {
+      jq -er '.wireguard_private_key | select(type == "string" and length > 0)' "$STATE" > "$RUNTIME_PRIVATE"
+      jq -er '.wireguard_addresses | select(type == "string" and length > 0)' "$STATE" > "$RUNTIME_ADDRESSES"
+      chmod 0600 "$RUNTIME_PRIVATE" "$RUNTIME_ADDRESSES"
+    }
+
+    HOSTNAME="$(cat /etc/vpn-endpoint/hostname)"
+    ROTATE="$(cat /etc/vpn-endpoint/rotation-nonce)"
+    test -n "$HOSTNAME"
+
+    if [ -f "$STATE" ]; then
+      CURRENT_ROTATION="$(jq -er '.rotation_nonce | tostring' "$STATE")"
+      if [ "$CURRENT_ROTATION" != "$ROTATE" ]; then
+        ID="$(jq -er '.device_id | select(type == "string" and length > 0)' "$STATE")"
+        NAME="$(jq -er '.device_name | select(type == "string" and length > 0)' "$STATE")"
+        mint_token
+        generate_keypair
+        if ! jq -n --rawfile public_key "$WG_PUBLIC_FILE" \
+          '{pubkey: ($public_key | rtrimstr("\n"))}' \
+          | curl -fsS -X PUT -H @"$AUTH_HEADER_FILE" -H 'Content-Type: application/json' \
+            --data-binary @- "https://api.mullvad.net/accounts/v1/devices/$ID/pubkey" \
+            > "$RESPONSE_FILE"; then
+          echo 'in-place Mullvad key rotation failed' >&2
+          exit 1
+        fi
+        IPV4="$(jq -er '.ipv4_address | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+        IPV6="$(jq -er '.ipv6_address | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+        write_state "$ID" "$NAME" "$IPV4" "$IPV6"
+      fi
+      restore_runtime_files
+      publish_identity
+      exit 0
+    fi
+
+    mint_token
+    if ! curl -fsS -H @"$AUTH_HEADER_FILE" \
+      https://api.mullvad.net/accounts/v1/devices > "$DEVICES_FILE"; then
+      echo 'failed to list Mullvad devices' >&2
+      exit 1
+    fi
+    DEVICE_COUNT="$(jq -er 'if type == "array" then length else error("device list is not an array") end' "$DEVICES_FILE")"
+    if [ "$DEVICE_COUNT" -ge 5 ]; then
+      echo "Mullvad slot cap reached ($DEVICE_COUNT/5); current device ledger:" >&2
+      jq -c '.' "$DEVICES_FILE" >&2
+      exit 1
+    fi
+
+    generate_keypair
+    if ! jq -n --rawfile public_key "$WG_PUBLIC_FILE" \
+      '{pubkey: ($public_key | rtrimstr("\n")), hijack_dns: false}' \
+      | curl -fsS -X POST -H @"$AUTH_HEADER_FILE" -H 'Content-Type: application/json' \
+        --data-binary @- https://api.mullvad.net/accounts/v1/devices \
+        > "$RESPONSE_FILE"; then
+      echo 'Mullvad device creation failed' >&2
+      exit 1
+    fi
+    ID="$(jq -er '.id | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+    NAME="$(jq -er '.name | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+    IPV4="$(jq -er '.ipv4_address | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+    IPV6="$(jq -er '.ipv6_address | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
+    write_state "$ID" "$NAME" "$IPV4" "$IPV6"
+    restore_runtime_files
+    publish_identity
+
+  deregister.sh: |
+    set -eu
+
+    ENDPOINT={{ .Values.name | quote }}
+    PVC_NAME={{ .Values.pvcName | quote }}
+    IDENTITY_CONFIGMAP="$ENDPOINT-identity"
+    TOKEN_FILE=/run/secrets/mullvad-token
+    AUTH_HEADER_FILE=/run/secrets/mullvad-authorization
+    NODES_FILE=/run/secrets/headscale-nodes.json
+
+    cleanup() {
+      rm -f "$TOKEN_FILE" "$AUTH_HEADER_FILE" "$NODES_FILE"
+    }
+    trap cleanup EXIT HUP INT TERM
+    umask 077
+
+    mint_token() {
+      if ! jq -Rs 'gsub("[\\r\\n]+$"; "") | {account_number: .}' /etc/mullvad-account/account_number \
+        | curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- \
+          https://api.mullvad.net/auth/v1/token \
+        | jq -er '.access_token // .accessToken | select(type == "string" and length > 0)' \
+          > "$TOKEN_FILE"; then
+        echo 'mullvad token exchange failed during deregistration' >&2
+        exit 1
+      fi
+      {
+        printf '%s' 'Authorization: Bearer '
+        cat "$TOKEN_FILE"
+        printf '\n'
+      } > "$AUTH_HEADER_FILE"
+    }
+
+    kubectl scale "deployment/$ENDPOINT" --replicas=0 || true
+    PODS_STOPPED=false
+    for attempt in $(seq 1 36); do
+      POD_COUNT="$(kubectl get pods \
+        -l "app.kubernetes.io/name=$ENDPOINT,app.kubernetes.io/part-of=vpn-endpoints" \
+        -o json | jq -er '[.items[] | select(any(.metadata.ownerReferences[]?; .kind == "ReplicaSet"))] | length')"
+      if [ "$POD_COUNT" -eq 0 ]; then
+        PODS_STOPPED=true
+        break
+      fi
+      sleep 5
+    done
+    if [ "$PODS_STOPPED" != true ]; then
+      echo "timed out waiting for endpoint pods to stop" >&2
+      exit 1
+    fi
+
+    DEVICE_ID="$(kubectl get configmap "$IDENTITY_CONFIGMAP" \
+      -o jsonpath='{.data.device_id}' 2>/dev/null || true)"
+    if [ -n "$DEVICE_ID" ]; then
+      mint_token
+      set +e
+      HTTP_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
+        -H @"$AUTH_HEADER_FILE" \
+        "https://api.mullvad.net/accounts/v1/devices/$DEVICE_ID")"
+      CURL_STATUS=$?
+      set -e
+      if [ "$CURL_STATUS" -ne 0 ]; then
+        echo 'Mullvad device deletion request failed' >&2
+        exit 1
+      fi
+      case "$HTTP_STATUS" in
+        204|404) ;;
+        *)
+          echo "Mullvad device deletion returned HTTP $HTTP_STATUS" >&2
+          exit 1
+          ;;
+      esac
+    fi
+
+    HEADSCALE_POD="$(kubectl get pods -n default -l app=headscale -o json \
+      | jq -er '[.items[] | select(.status.phase == "Running") | .metadata.name] | first // error("no running Headscale pod")')"
+    if ! kubectl exec -n default "pod/$HEADSCALE_POD" -- \
+      headscale nodes list -o json > "$NODES_FILE"; then
+      echo 'failed to list Headscale nodes' >&2
+      exit 1
+    fi
+    NODE_ID="$(jq -r --arg name "$ENDPOINT" \
+      '[.[] | select(.given_name == $name) | .id] | first // empty' "$NODES_FILE")"
+    if [ -n "$NODE_ID" ]; then
+      kubectl exec -n default "pod/$HEADSCALE_POD" -- \
+        headscale nodes delete -i "$NODE_ID" --force
+    fi
+
+    PVC_DELETED=false
+    for attempt in 1 2 3 4 5; do
+      if kubectl delete pvc "$PVC_NAME" --ignore-not-found=true --wait=false; then
+        PVC_DELETED=true
+        break
+      fi
+      sleep 10
+    done
+    if [ "$PVC_DELETED" != true ]; then
+      echo "failed to request deletion of PVC $PVC_NAME after 5 attempts" >&2
+      exit 1
+    fi
+
+    kubectl delete configmap "$IDENTITY_CONFIGMAP" --ignore-not-found=true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvcName }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+    recurring-job.longhorn.io/default: enabled
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-3
+  resources:
+    requests:
+      storage: 1Gi

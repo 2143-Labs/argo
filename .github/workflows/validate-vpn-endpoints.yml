@@ -1,0 +1,49 @@
+name: Validate VPN endpoints
+
+on:
+  pull_request:
+    paths:
+      - apps/vpn-endpoints.yaml
+      - workloads/vpn-endpoints/**
+      - workloads/secrets/vpn-endpoints-mullvad-account.yaml
+      - workloads/secrets/vpn-endpoints-tailscale-bootstrap.yaml
+      - scripts/validate-vpn-endpoints.sh
+      - scripts/vpn-endpoints-expected.json
+      - .github/workflows/vpn-enroll-image.yml
+      - flake.nix
+      - flake.lock
+      - .github/workflows/validate-vpn-endpoints.yml
+  push:
+    paths:
+      - apps/vpn-endpoints.yaml
+      - workloads/vpn-endpoints/**
+      - workloads/secrets/vpn-endpoints-mullvad-account.yaml
+      - workloads/secrets/vpn-endpoints-tailscale-bootstrap.yaml
+      - scripts/validate-vpn-endpoints.sh
+      - scripts/vpn-endpoints-expected.json
+      - .github/workflows/vpn-enroll-image.yml
+      - flake.nix
+      - flake.lock
+      - .github/workflows/validate-vpn-endpoints.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-vpn-endpoints-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Render and validate chart
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Validate VPN endpoints
+        run: nix develop -c ./scripts/validate-vpn-endpoints.sh

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-endpoints
+description: PVC-backed, self-enrolling Mullvad exit node
+version: 0.1.0
+type: application

@@ -1,0 +1,79 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.name }}-deregister
+  namespace: vpn-endpoints
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/part-of: vpn-endpoints
+    vpn.2143.me/endpoint: {{ .Values.name }}
+    vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.name }}
+        app.kubernetes.io/part-of: vpn-endpoints
+        vpn.2143.me/endpoint: {{ .Values.name }}
+        vpn.2143.me/country: {{ .Values.country | lower | replace " " "-" | quote }}
+    spec:
+      serviceAccountName: {{ .Values.name }}-deregister
+      automountServiceAccountToken: true
+      restartPolicy: Never
+      hostNetwork: false
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: deregister
+          image: {{ .Values.images.vpnEnroll }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - exec /bin/sh /etc/vpn-endpoint/deregister.sh
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsUser: 0
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: account-secret
+              mountPath: /etc/mullvad-account
+              readOnly: true
+            - name: config
+              mountPath: /etc/vpn-endpoint
+              readOnly: true
+            - name: runtime-secrets
+              mountPath: /run/secrets
+      volumes:
+        - name: account-secret
+          secret:
+            secretName: mullvad-account
+            defaultMode: 0400
+        - name: config
+          configMap:
+            name: {{ .Values.name }}
+            defaultMode: 0444
+        - name: runtime-secrets
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
