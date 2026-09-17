@@ -51,11 +51,13 @@ data:
           "src": ["john@2143.me"],
           "dst": ["tag:vpn-endpoint:*"]
         },
-        // Tagged VPN nodes can reach the whole tailnet (restores the
-        // autogroup:self coverage that tagging removes from a member device).
+        // vpin is the shared VPN/build node and needs full tailnet reach (the
+        // attic cache on nas:8280 and other tailnet hosts). pite is deliberately
+        // NOT included: it is John's own node, so the john@2143.me management
+        // rule above is the only grant that touches it.
         {
           "action": "accept",
-          "src": ["tag:vpin", "tag:pite"],
+          "src": ["tag:vpin"],
           "dst": ["*:*"]
         },
         // Users can only reach their own devices

@@ -18,7 +18,7 @@ spec:
         app: headscale
       annotations:
         openbao-dns-revision: "1"
-        headscale-policy-revision: "home-users-20260917"
+        headscale-policy-revision: "pite-private-20260917"
         reloader.stakater.com/auto: "true"
     spec:
       affinity:
