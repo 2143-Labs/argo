@@ -162,7 +162,7 @@ spec:
             - /bin/sh
             - -ec
             - |
-              # Three fixes are required for this pod to work as a Tailscale exit
+              # Four fixes are required for this pod to work as a Tailscale exit
               # node behind Gluetun, all verified live with an isolated tailnet
               # client (egress through the endpoint reported mullvad_exit_ip=true).
               #
@@ -192,6 +192,13 @@ spec:
                 -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null ||
                 iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN \
                   -j TCPMSS --clamp-mss-to-pmtu
+              # 4. Enroll publishes the tailnet identity derived from the endpoint
+              #    country and Mullvad-assigned device name into the pod runtime
+              #    volume, so it overrides the static slug before registration.
+              if [ -s /run/secrets/tailnet-node-name ]; then
+                TS_HOSTNAME="$(cat /run/secrets/tailnet-node-name)"
+                export TS_HOSTNAME
+              fi
               exec /usr/local/bin/containerboot
           env:
             - name: TS_USERSPACE
@@ -241,6 +248,9 @@ spec:
               cpu: "2"
               memory: 512Mi
           volumeMounts:
+            - name: runtime-secrets
+              mountPath: /run/secrets
+              readOnly: true
             - name: tailscale-state
               mountPath: /var/lib/tailscale
             - name: tailscale-auth-secret

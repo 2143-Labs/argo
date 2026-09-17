@@ -9,11 +9,11 @@ spec:
   generators:
     - list:
         elements:
-          - name: vpn-de
+          - name: de-mullvad
             country: Germany
-            hostname: vpn-de
-            pvcName: vpn-de-state
-            replicas: 0
+            hostname: de-mullvad
+            pvcName: de-mullvad-state
+            replicas: 1
             mullvadRotationNonce: 1
   template:
     metadata:

@@ -94,9 +94,11 @@ validate_application_set() {
     ($generators | length) == 1 and
     ($generators[0] | keys) == ["list"] and
     ($generators[0].list | keys) == ["elements"] and
+    ($generators[0].list.elements | map(.name) | length) == ($generators[0].list.elements | map(.name) | unique | length) and
+    ($generators[0].list.elements | map(.pvcName) | length) == ($generators[0].list.elements | map(.pvcName) | unique | length) and
     all($generators[0].list.elements[];
       (keys | sort) == (["country","hostname","mullvadRotationNonce","name","pvcName","replicas"] | sort) and
-      (.name | type == "string" and test("^vpn-[a-z]{2}$")) and
+      (.name | type == "string" and test("^[a-z]{2}-mullvad(-[2-9][0-9]*)?$")) and
       (.country | type == "string" and length > 0) and
       .hostname == .name and
       .pvcName == (.name + "-state") and
@@ -104,7 +106,7 @@ validate_application_set() {
       (.mullvadRotationNonce | type == "number") and
       (has("bootstrap") | not) and
       (has("tags") | not))
-  ' 'ApplicationSet elements violate endpoint identity, state, or single-tag invariants'
+  ' 'ApplicationSet elements violate endpoint identity, unique state, or single-tag invariants'
 
   jq -S 'sort_by(.name)' "${EXPECTED_ELEMENTS}" >"${expected_sorted}"
   jq -S '.spec.generators[0].list.elements | sort_by(.name)' "${json}" >"${actual_sorted}"
@@ -166,8 +168,11 @@ validate_scripts() {
     '/pubkey' \
     'mullvad.json' \
     'wg genkey' \
-    'hijack_dns'; do
-    grep -Fq "${literal}" "${enroll_script}" || fail "enroll.sh is missing required lifecycle operation: ${literal}"
+    'hijack_dns' \
+    'tailnet-node-name' \
+    '-mullvad-' \
+    'node_name='; do
+    grep -Fq -- "${literal}" "${enroll_script}" || fail "enroll.sh is missing required lifecycle operation: ${literal}"
   done
   grep -Fq '/var/lib/vpn-endpoint/mullvad.json.new' "${enroll_script}" || fail 'enroll.sh must write Mullvad state atomically through mullvad.json.new'
   grep -Fq 'umask 077' "${enroll_script}" || fail 'enroll.sh must protect persisted Mullvad state with umask 077'
@@ -181,6 +186,7 @@ validate_scripts() {
     'kubectl scale' \
     'accounts/v1/devices' \
     'headscale nodes delete' \
+    'node_name' \
     'kubectl delete pvc'; do
     grep -Fq "${literal}" "${deregister_script}" || fail "deregister.sh is missing required teardown operation: ${literal}"
   done
@@ -329,8 +335,8 @@ validate_manifest() {
     has_mount(container($d; "tailscale"); "tailscale-auth-secret"; "/etc/tailscale"; true) and
     has_mount(container($d; "tailscale"); "tailscale-state"; "/var/lib/tailscale"; false) and
     ((container($d; "tailscale").volumeMounts | map(.mountPath) | unique | length) == (container($d; "tailscale").volumeMounts | length)) and
-    all(container($d; "tailscale").volumeMounts[]; .name != "runtime-secrets")
-  ' 'Tailscale must use the reusable file key, durable state, and exact health settings; the endpoint tag must come from the preauth key (headscale rejects a client-requested tag when the key already carries it)' \
+    has_mount(container($d; "tailscale"); "runtime-secrets"; "/run/secrets"; true)
+  ' 'Tailscale must use the reusable file key, durable state, read-only runtime secrets, and exact health settings; the endpoint tag must come from the preauth key (headscale rejects a client-requested tag when the key already carries it)' \
     --arg name "${name}" --arg hostname "${hostname}"
 
   assert_jq "${json}" '
@@ -342,9 +348,10 @@ validate_manifest() {
         and contains("ip -6 rule add to fd7a:115c:a1e0::/48 lookup 52 priority 97")
         and contains("ip rule add to 100.64.0.0/10 lookup 52 priority 97")
         and contains("TCPMSS --clamp-mss-to-pmtu")
+        and contains("tailnet-node-name")
         and contains("exec /usr/local/bin/containerboot")) and
     container($d; "tailscale").args == null
-  ' 'Tailscale must run a startup wrapper that repairs the nft backend, routes tailnet replies, clamps MSS, then execs containerboot' --arg name "${name}"
+  ' 'Tailscale must run a startup wrapper that repairs the nft backend, routes tailnet replies, clamps MSS, exports the derived identity, then execs containerboot' --arg name "${name}"
 
   assert_jq "${json}" '
     deployment($name) as $d |
@@ -475,10 +482,10 @@ validate_manifest() {
 
 validate_application_set
 
-readonly NAME='vpn-de'
+readonly NAME='de-mullvad'
 readonly COUNTRY='Germany'
-readonly HOSTNAME='vpn-de'
-readonly PVC_NAME='vpn-de-state'
+readonly HOSTNAME='de-mullvad'
+readonly PVC_NAME='de-mullvad-state'
 readonly ROTATION_NONCE='7'
 
 for replicas in 0 1; do
