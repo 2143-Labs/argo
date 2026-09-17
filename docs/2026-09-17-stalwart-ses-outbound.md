@@ -180,10 +180,13 @@ than a configuration error. **Expect it to clear on SES's next check** (the reco
 - **Mail that looks missing is usually in Junk.** Messages injected unauthenticated from
   `test@example.com` score as spam and are filed to Junk (`message-ingest.spam`,
   `mailboxId = [2]`). Check every mailbox before concluding delivery failed.
-- **Where the logs are.** A pre-existing `Log` tracer writes to
-  `/var/log/stalwart/stalwart.log` *inside the pod*, not to stdout — which is why
-  `kubectl logs` is empty. To watch delivery live, create a stdout sink and reload (§4's
-  `ReloadSettings`):
+- **Nothing is logged anywhere in the default configuration.** The pre-existing `Log` tracer
+  (`x:Tracer/get`, id `iunqkacwaiab`) points at `/var/log/stalwart`, a directory that does
+  **not** exist in the container, so it writes nothing — and `kubectl logs` is empty for the
+  same reason there is no stdout sink. Verifying anything was therefore impossible until a
+  tracer was added. Fixing this properly (the pod runs as uid 2000 and cannot create
+  `/var/log/...`) is a separate change worth making. To watch delivery live, add a stdout
+  sink and reload (§4's `ReloadSettings`):
 
   ```json
   {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:Tracer/set",{"create":{"t1":{"@type":"Stdout","enable":true,"level":"debug","ansi":false,"buffered":false,"multiline":true}}},"t"]]}
