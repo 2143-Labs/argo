@@ -19,6 +19,11 @@ data:
             derpport: 443
   policy.hujson: |
     {
+      "groups": {
+        // People John knows in person. Starts with John only — read the warning on
+        // the group:home ACL rule before adding anyone.
+        "group:home": ["john@2143.me"]
+      },
       "tagOwners": {
         "tag:vpin": ["john@2143.me"],
         "tag:pite": ["john@2143.me"],
@@ -70,6 +75,19 @@ data:
           "action": "accept",
           "src": ["john@2143.me"],
           "dst": ["192.168.5.0/24:*", "192.168.6.0/24:*"]
+        },
+        // Home users: friends and family John knows in person.
+        //
+        // WARNING: 192.168.6.11:443 fronts EVERY *.ts.2143.me host, including the
+        // admin UIs (ArgoCD, OpenBao, Longhorn, UniFi). Traefik's lan-only
+        // middleware admits the whole tailnet (100.64.0.0/10) and cannot tell John
+        // apart from another member, so ANY member added here reaches all 12 hosts.
+        // Do not add members until the admin hosts are split onto their own VIP or
+        // gated by identity auth.
+        {
+          "action": "accept",
+          "src": ["group:home"],
+          "dst": ["192.168.6.0/24:*"]
         }
       ]
     }
