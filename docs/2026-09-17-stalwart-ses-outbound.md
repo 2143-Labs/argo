@@ -148,35 +148,36 @@ INFO  Message delivered (delivery.delivered)        code = 250
 INFO  Delivery completed
 ```
 
-**How the MAIL FROM problem was actually solved.** The `554 MAIL FROM domain not verified` from
-earlier attempts **did not clear with time** — it persisted for hours while the MX and SPF
-records were published and resolving from independent resolvers. The cause is the *custom MAIL
-FROM domain* configured on the **domain** identity `m.2143.me`: SES still judges
-`bounce.m.2143.me`'s DNS invalid and rejects every message whose envelope sender falls under it.
+**Root cause of the `554`.** The `554 MAIL FROM domain not verified` did **not** clear with
+time — it persisted for hours while the MX and SPF records were published and resolving from
+independent resolvers. The cause was the *custom MAIL FROM domain* configured on the **domain**
+identity `m.2143.me`: SES judged `bounce.m.2143.me`'s DNS invalid and rejected every message
+whose envelope sender fell under it.
 
-The working fix is per-address: verifying `John2143@m.2143.me` as an SES **`EmailAddress`
-identity**. AWS mails a confirmation link to the address (that message arrives in the mailbox
-under test, which is itself a useful inbound check). An address-level identity has no custom
-MAIL FROM domain, so its sends skip that check entirely:
+An interim workaround confirmed the rest of the chain was sound: verifying
+`John2143@m.2143.me` as an SES **`EmailAddress` identity** produced a sender with no custom MAIL
+FROM domain, which SES accepted. That also exercised the confirmation-link flow, which arrives
+correctly in the mailbox.
+
+**Fixed properly.** Setting the `m.2143.me` identity's MAIL FROM behavior back to the **default
+MAIL FROM domain** in the SES console resolved it at the source, for every address in the domain.
+Both spellings are now accepted, and a submission through Stalwart with a deliberately lowercase
+envelope sender delivered:
 
 ```
-MAIL FROM John2143@m.2143.me   ->  250 Ok                      <- exact casing, accepted
-MAIL FROM john2143@m.2143.me   ->  554 MAIL FROM domain not verified
+MAIL FROM john2143@m.2143.me   ->  250 Ok        <- was 554 before the fix
+MAIL FROM John2143@m.2143.me   ->  250 Ok
+Stalwart: delivery.mail-from 250 / delivery.rcpt-to 250 / Message delivered 250
 ```
 
-**Casing is load-bearing.** The lowercase spelling of the same address still falls under the
-broken domain rule and is rejected. Anything that rewrites the envelope sender to lowercase will
-therefore fail. The durable fix is AWS-side and covers every address in the domain: repair the
-custom MAIL FROM domain on the `m.2143.me` identity, or set its behavior-on-MX-failure to *use
-the default MAIL FROM domain*, in the SES console.
+No casing constraint remains, so nothing in the mail path depends on how a client spells the
+sender.
 
 ## Outstanding
 
 - **SES production access.** In the sandbox only the mailbox simulator and already-verified
   addresses accept mail, so arbitrary recipients are still rejected. This is the last gate before
   the server can mail anyone.
-- **The custom MAIL FROM domain on `m.2143.me` is broken as far as SES is concerned** (above).
-  Until it is fixed, sends must use the exact verified casing of an address identity.
 - **`stalwart/stalwart-stalwart-env` is still a plain cluster Secret** outside OpenBao, as
   recorded in `docs/2026-09-13-secrets-inventory.md` §6. That gap predates this change and
   is deliberately not addressed here.
