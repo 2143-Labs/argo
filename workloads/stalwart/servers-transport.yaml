@@ -1,7 +1,0 @@
-apiVersion: traefik.io/v1alpha1
-kind: ServersTransport
-metadata:
-  name: stalwart-insecure
-  namespace: stalwart
-spec:
-  insecureSkipVerify: true

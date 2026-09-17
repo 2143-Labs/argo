@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-stalwart-stalwart-0
+  namespace: stalwart
+  labels:
+    # Longhorn runs RecurringJob/nightly-backup (groups: [default], task: backup,
+    # retain 30, cron 0 3 * * *) against every volume in this group. The label is
+    # the functional spelling on a PVC; the volume this claim created already
+    # carries recurring-job-group.longhorn.io/default, so declaring it here keeps
+    # backup coverage if the volume is ever rebuilt from Git.
+    recurring-job-group.longhorn.io/default: enabled
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-3
+  # Bound to an existing Longhorn volume since 2026-06. Immutable once bound, so
+  # it is declared explicitly: without it a recreated claim would bind elsewhere
+  # and the mailbox would come up empty.
+  volumeName: pvc-acd281cd-6246-4523-9e61-c3a60798fd81
+  resources:
+    requests:
+      storage: 20Gi

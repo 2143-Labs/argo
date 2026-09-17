@@ -33,6 +33,10 @@ config:
   "@type": RocksDb
   path: /var/lib/stalwart
 
+# Only `enabled` is read by the chart (templates/statefulset.yaml). accessMode,
+# storageClass and size are inert: the claim already exists, is bound to a
+# specific 20Gi longhorn-3 volume, and is declared in workloads/stalwart/pvc.yaml
+# so that a rebuilt namespace reproduces it instead of binding a fresh empty one.
 persistence:
   enabled: true
   accessMode: ReadWriteOnce

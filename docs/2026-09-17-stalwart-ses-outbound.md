@@ -189,7 +189,7 @@ sender.
   own account (`d333333`) is a *different, empty* account from the mailbox account. Queried
   as `d333333`, `Mailbox/get` returns all-zero counts and `Identity/set` rejects every
   address with `E-mail address not configured for this account`, because that account has no
-  addresses at all. Use the registry id — **`h`** — as `accountId` for `Email/set`,
+  addresses at all. Use the registry id — **`k`** — as `accountId` for `Email/set`,
   `EmailSubmission/set`, `Identity/set` and `Mailbox/get`. Getting this wrong cost hours and
   produced a phantom "server cannot send or receive" defect.
 - **Mail that looks missing is usually in Junk.** Messages injected unauthenticated from
@@ -211,10 +211,11 @@ sender.
   `x:Tracer/set` with `{"destroy":["jfch0mneabac"]}`.
 - **A submission identity exists** for the account (id `c`, `John2143@m.2143.me`). JMAP
   submission requires one, and it could not be created until the lowercase alias existed (see
-  the mixed-case section below). Nothing has mail clients sending yet:
-  `MtaStageAuth.mustMatchSender` means SMTP submission must authenticate as this account, and
-  the account is SSO-only, so an app password is still needed before a client such as the
-  iPhone can send.
+  the mixed-case section below). `MtaStageAuth.mustMatchSender` means SMTP submission must
+  authenticate as this account, and the account is SSO-only, so a client needs an app
+  password rather than an account password. That gap was closed on 2026-09-17 — app password
+  `iphone` ("iPhone Mail") exists on account `k`, and IMAPS login and SMTP submission were
+  both verified with it. See the mail-stack audit section at the end of this document.
 
 ## Mixed-case identities: how they actually work
 
@@ -269,3 +270,83 @@ The address list is unique on the canonical form, so the lowercase alias **requi
 lowercase account already holds that address** — the two cannot coexist. That is why the original
 `john2143` account had to be retired for `John2143` to become functional.
 
+## Mail-stack audit (2026-09-17): bans, allow-list, client access
+
+**Ban policy — current values, to be reproduced after a datastore restore.** On the
+`x:Security` singleton the four ban *periods* are `86400000` ms (24 h) and the rates are
+`abuseBanRate {35, 86400000}`, `authBanRate {100, 86400000}`, `loiterBanRate {150, 86400000}`
+and `scanBanRate {30, 86400000}`. A `null` period does **not** mean "ban disabled" — it means
+the ban never expires (`expires_at.unwrap_or(u64::MAX)`). That distinction is the whole
+June–September outage class: 40 never-expiring `portScanning` records had accumulated, 26 of
+them covering the cluster pod CIDR `10.42.0.0/16`, and Stalwart tests the ban list per
+connection before the TLS handshake on every listener — so when the CNI handed a pod a
+recycled address (`10.42.0.39`, `10.42.6.1`) the mail server refused its own cluster. All 40
+were destroyed on 2026-09-17; the 8 correctly-expiring scanner bans were left in place. Note
+the real boundary: the newest permanent record is 2026-09-14 and the oldest correctly
+expiring one is 2026-09-16, so the period fix took effect that week — not on 2026-08-11 as
+an earlier note in this file assumed.
+
+**Allow-list — `x:AllowedIp/get`, eight ranges, each with `expiresAt: null`.** `10.0.0.0/8`
+(LAN plus pod CIDR `10.42.0.0/16` and service CIDR `10.43.0.0/16`), `172.16.0.0/12`,
+`192.168.0.0/16`, `100.64.0.0/10`, `127.0.0.1`, `::1`, `fd00::/8`, `fe80::/10` — the same
+trust set as the cluster's `lan-only` middleware. The allow-list is a hard veto:
+`is_ip_blocked()` ends in `&& !is_ip_allowed(ip)`, so none of these ranges can be banned
+again. `AllowedIp.address` accepts CIDRs, so a wider range is one record.
+
+**`x:Http.useXForwarded` is now `false`.** With it `true` — and this version has no
+trusted-proxy list for HTTP — the HTTP layer took the client address from whatever
+`X-Forwarded-For` the caller sent, and that address decided both `is_ip_blocked` and
+`block_ip`. Any client could therefore evade its own ban, or have a *permanent* ban written
+against an arbitrary address. Accepted trade-off: Stalwart's own anonymous rate limit now
+buckets by Traefik's pod address. Real-client policy still lives in the CrowdSec bouncer and
+the rate-limit middlewares in `workloads/stalwart/security-middlewares.yaml`, which see true
+client IPs because the mail Service uses `externalTrafficPolicy: Local`. Do not re-enable the
+flag on its own.
+
+**Catch-all.** `Domain.catchAllAddress` stays `all@m.2143.me`, and account `k` now carries
+aliases at index `0` = `john2143` (lowercase canonical form), `1` = `all` (catch-all
+destination) and `2` = `dmarc` (DMARC aggregate reports). `aliases` is a `List<EmailAlias>`
+keyed by **numeric index** and a write replaces the whole map, so every future edit must
+re-send all three indices. Consequences, recorded so neither is read as a fault later:
+`RCPT TO` is accepted for any `<anything>@m.2143.me` and delivered to this mailbox, and
+`reportAddressUri` is `mailto:postmaster`, so `postmaster@m.2143.me` lands there too.
+
+**Reload discipline.** `x:Http`, `x:Security` and `x:MtaStageAuth` are settings singletons
+patched at id `"singleton"` and take effect only after
+`x:Action/set {"@type":"ReloadSettings"}`; `x:BlockedIp` and `x:AllowedIp` are registry
+objects and need `{"@type":"ReloadBlockedIps"}`. A write without its reload changes nothing
+in the running process.
+
+**Client access, verified 2026-09-17.** App password `iphone` ("iPhone Mail") on account `k`
+with `permissions: {"@type":"Inherit"}` and no IP restriction. The pre-existing password
+`home thunderirda` (id `b`, expires 2027-11-26) was left untouched — it predates this work
+and was not created here. Verified: IMAPS `a LOGIN "John2143@m.2143.me" <app password>` →
+`OK`; SMTP `AUTH PLAIN` → `235`, `MAIL FROM` → `250`, `RCPT TO` → `250`. A message addressed
+to `nobody-here@m.2143.me` was accepted *and delivered* (to Junk, correctly — it came from an
+unauthenticated sender), where before the alias existed it was accepted and then bounced.
+Client settings: IMAP `m.2143.me:993` SSL/TLS, SMTP `m.2143.me:587` STARTTLS. Do not use
+`imap.m.2143.me` or `smtp.m.2143.me` — the `*.2143.me` certificate matches one label only.
+
+**Obstacle for a client on the home LAN (found 2026-09-17).** The LAN resolver answers
+`m.2143.me` → `192.168.6.11`, which is the *web* load balancer and serves only 443; the mail
+Service is `192.168.6.13` and serves 25/587/993. A mail client on the home network therefore
+cannot reach IMAP or submission under the name `m.2143.me`, and the public address is not
+hairpinned for those ports from inside. This cannot be fixed by changing the LAN answer while
+the same name also serves the SPA — it resolves once the webmail routing plan moves the SPA
+to `stalwart.ts.2143.me` and `m.2143.me` is mail-only.
+
+**Observability caveat.** The mail pod runs on node `arch`. At 2026-09-17T19:09:56Z log
+collection from that node stopped for **every** pod on it: `kubectl logs` times out for all of
+them while pods on `closet` and `nas` answer in under a second, and nothing from `arch` has
+reached Loki since. It is a kubelet log-path defect on that node, not a mail defect — the
+server itself kept serving throughout (JMAP and SMTP both answered afterwards). Consequences
+until it is fixed: `kubectl logs` is unusable for this pod, and the `stalwart-ip-blocked`
+alert rule below cannot fire because its only source is those log lines. The remedy is a
+kubelet restart on `arch`.
+
+**Still outstanding, all operator work outside this cluster's configuration.**
+SES production access for `us-east-1`; Easy DKIM on the verified `m.2143.me` identity; DMARC
+reporting (`_dmarc.m.2143.me` → `v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me`) plus the SRV
+and TLS-RPT records set out in the audit plan; and asciinema's sender identity
+`hello@terminals.john2143.com`, which is not an SES-verified identity, so its mail is
+rejected at SES regardless of sandbox status.
