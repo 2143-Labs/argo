@@ -63,6 +63,13 @@ spec:
           dashboards:
             enabled: true
             label: grafana_dashboard
+          # Alert rules are committed as ConfigMaps labelled grafana_alert
+          # (workloads/observability/grafana-dashboards/alert-rules.yaml). The chart
+          # enables the dashboard sidecar by default but not this one, so without it
+          # those ConfigMaps are inert and the rules exist only in the UI.
+          alerts:
+            enabled: true
+            label: grafana_alert
 
         envFromSecrets:
           - name: grafana-oidc
