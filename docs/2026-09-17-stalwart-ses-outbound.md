@@ -136,48 +136,84 @@ refusal was a single node, not a consistent block. Note that testing from the LA
 misleading here: the router does not hairpin port 25, so LAN tests against the public IP
 time out even though the path works from the internet.
 
-**Not verified end to end through Stalwart.** See below.
+**Verified end to end through Stalwart, up to SES's own DNS check.** A message submitted via
+JMAP (`EmailSubmission/set`, account `h`, identity `b`) was routed by Stalwart to the relay
+and handed to SES. The tracer output for that attempt:
+
+```
+queueName = "remote"
+to = ["success@simulator.amazonses.com"]
+hostname = "email-smtp.us-east-1.amazonaws.com"     <- the `ses` route was selected
+DEBUG SMTP EHLO command / SMTP authentication / SMTP MAIL FROM command / SMTP RCPT TO command
+INFO  Message rejected by remote server (delivery.message-rejected)
+        code = 554
+        details = "MAIL FROM domain not verified: DNS setup for MAIL FROM domain is invalid."
+```
+
+Route selection, implicit TLS, SMTP AUTH and the whole envelope exchange against SES work.
+The only failure left is SES's own validation of the `bounce.m.2143.me` MAIL FROM domain. That
+MX was published about fifty minutes before this attempt and both records are confirmed
+present by an independent resolver (MX `10 feedback-smtp.us-east-1.amazonses.com`, TXT
+`v=spf1 include:amazonses.com ~all`), so this is SES reading a cached view of the zone rather
+than a configuration error. **Expect it to clear on SES's next check** (the record TTL is
+3600). Watch the `m.2143.me` identity's MAIL FROM domain status in the SES console.
 
 ## Outstanding
 
 - **SES production access.** Until AWS grants it, only the mailbox simulator
   (`success@simulator.amazonses.com`) accepts mail; real recipients are rejected.
-- **SES MAIL FROM re-verification** (the 554 above) — self-clearing, see above.
+- **SES MAIL FROM domain validation** — the 554 above, self-clearing.
 - **`stalwart/stalwart-stalwart-env` is still a plain cluster Secret** outside OpenBao, as
   recorded in `docs/2026-09-13-secrets-inventory.md` §6. That gap predates this change and
   is deliberately not addressed here.
-- **A mixed-case account address breaks sending and local delivery** — unrelated to SES,
-  found while verifying this change. See the next section; it is the reason the relay could
-  not be exercised end to end.
 
-## The mixed-case account blocker (not an SES problem)
+## Operating notes, learned the hard way
 
-The only account is `John2143@m.2143.me` (`x:Account/get` → `id h`, `name John2143`). Stalwart
-canonicalises addresses to **lowercase** in every path that compares them against the
-account's stored address list, but the stored list keeps the account name's original case.
-The result is that a mixed-case account fails three separate checks:
+- **Never address account-scoped JMAP methods with the session's encoded account id.**
+  Authenticating as administrator with `$STALWART_RECOVERY_ADMIN` produces a session whose
+  own account (`d333333`) is a *different, empty* account from the mailbox account. Queried
+  as `d333333`, `Mailbox/get` returns all-zero counts and `Identity/set` rejects every
+  address with `E-mail address not configured for this account`, because that account has no
+  addresses at all. Use the registry id — **`h`** — as `accountId` for `Email/set`,
+  `EmailSubmission/set`, `Identity/set` and `Mailbox/get`. Getting this wrong cost hours and
+  produced a phantom "server cannot send or receive" defect.
+- **Mail that looks missing is usually in Junk.** Messages injected unauthenticated from
+  `test@example.com` score as spam and are filed to Junk (`message-ingest.spam`,
+  `mailboxId = [2]`). Check every mailbox before concluding delivery failed.
+- **Where the logs are.** A pre-existing `Log` tracer writes to
+  `/var/log/stalwart/stalwart.log` *inside the pod*, not to stdout — which is why
+  `kubectl logs` is empty. To watch delivery live, create a stdout sink and reload (§4's
+  `ReloadSettings`):
 
-| Path | Behaviour |
-|---|---|
-| `mustMatchSender` (SMTP submission) | MAIL FROM is lowercased (`address_lcase`) and compared against the account's raw addresses; mismatch → `501 You are not allowed to send from this address` |
-| JMAP `Identity/set` | the submitted address is lowercased by `sanitize_email` and compared against the raw addresses; mismatch → `invalidProperties: E-mail address not configured for this account` |
-| Local delivery | the recipient is lowercased before lookup, then matched case-sensitively against the account's addresses; mismatch → `Mailbox not found` (permanent failure, DSN to the sender) |
+  ```json
+  {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:Tracer/set",{"create":{"t1":{"@type":"Stdout","enable":true,"level":"debug","ansi":false,"buffered":false,"multiline":true}}},"t"]]}
+  ```
 
-Evidence: `Identity/set` is rejected for **both** `John2143@…` and `john2143@…`; and two test
-messages injected into the SMTP listener for `John2143@m.2143.me` and `john2143@m.2143.me`
-were both accepted (`250`) and then delivered **nowhere** — no mailbox gained a message and
-the queue stayed empty.
+  Delete it when done (`x:Tracer/set` with `{"destroy":["<id>"]}`); at `debug` it produced
+  roughly 350 lines per minute under test load.
+- **A submission identity now exists** for the account (id `b`, `john2143@m.2143.me`), which
+  JMAP submission requires. Nothing has mail clients sending yet: `MtaStageAuth.mustMatchSender`
+  means SMTP submission must authenticate as this account, and the account is SSO-only, so an
+  app password is still needed before a client such as the iPhone can send.
 
-Consequence: the account can currently neither send nor receive. Mail to `m.2143.me`
-reaching the server is accepted and then fails at delivery. This is a **pre-existing**
-configuration defect, independent of the SES relay.
+## Account names are canonicalised to lowercase
 
-Two fixes, both account-level:
+Stalwart treats lowercase as the canonical form of an address: `to_canonical_address()`
+lowercases both parts, the SMTP path lowercases `MAIL FROM`/`RCPT TO` before indexing, and
+`sanitize_email` lowercases a submitted identity. The Account object's `name` is written
+through `StringValidator::EmailLocalPart` (the `Property::Name` patch arm in the registry
+schema), which applies `sanitize_email_local` as a **replace** — so Stalwart itself lowercases
+account names on write, on create as well as on update.
 
-1. **Add a lowercase alias** (`john2143@m.2143.me`) to the account. Aliases are indexed for
-   the email lookup and included in the account's address list, so this satisfies all three
-   checks while leaving the primary address — and SSO login — exactly as they are. Least
-   invasive.
-2. **Rename the account** to `john2143`. Makes the canonical form and the stored form
-   identical, but changes the account's primary address and has to be reconciled with Pocket
-   ID, where the identity may still assert the mixed-case address.
+Consequences worth knowing:
+
+- **Every new account is canonicalised automatically.** Creating a user named `CaseProbe`
+  while `caseprobe` exists fails with `primaryKeyViolation` on `email` — the candidate name is
+  lowercased before the uniqueness check. `CaseProbe@m.2143.me` and `caseprobe@m.2143.me` are
+  the same mailbox by construction, for every user, with no per-account work.
+- **The existing account was normalised** so that the stored form matches the canonical form
+  that every comparison uses: `John2143` was written back through the validator and is now
+  stored as `john2143@m.2143.me`. Mail addressed in any case still reaches it. Reverting is
+  the same one-property patch with any capitalisation you prefer, but Stalwart will store the
+  lowercase form regardless.
+
