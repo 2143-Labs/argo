@@ -136,33 +136,47 @@ refusal was a single node, not a consistent block. Note that testing from the LA
 misleading here: the router does not hairpin port 25, so LAN tests against the public IP
 time out even though the path works from the internet.
 
-**Verified end to end through Stalwart, up to SES's own DNS check.** A message submitted via
-JMAP (`EmailSubmission/set`, account `h`, identity `b`) was routed by Stalwart to the relay
-and handed to SES. The tracer output for that attempt:
+**Verified end to end: Stalwart → SES, accepted.** A message submitted via JMAP
+(`EmailSubmission/set`, account `k`, identity `c`) was routed by Stalwart to the relay and SES
+accepted it. Tracer output:
 
 ```
 queueName = "remote"
-to = ["success@simulator.amazonses.com"]
 hostname = "email-smtp.us-east-1.amazonaws.com"     <- the `ses` route was selected
-DEBUG SMTP EHLO command / SMTP authentication / SMTP MAIL FROM command / SMTP RCPT TO command
-INFO  Message rejected by remote server (delivery.message-rejected)
-        code = 554
-        details = "MAIL FROM domain not verified: DNS setup for MAIL FROM domain is invalid."
+DEBUG SMTP EHLO / authentication / MAIL FROM (code 250) / RCPT TO (code 250)
+INFO  Message delivered (delivery.delivered)        code = 250
+INFO  Delivery completed
 ```
 
-Route selection, implicit TLS, SMTP AUTH and the whole envelope exchange against SES work.
-The only failure left is SES's own validation of the `bounce.m.2143.me` MAIL FROM domain. That
-MX was published about fifty minutes before this attempt and both records are confirmed
-present by an independent resolver (MX `10 feedback-smtp.us-east-1.amazonses.com`, TXT
-`v=spf1 include:amazonses.com ~all`), so this is SES reading a cached view of the zone rather
-than a configuration error. **Expect it to clear on SES's next check** (the record TTL is
-3600). Watch the `m.2143.me` identity's MAIL FROM domain status in the SES console.
+**How the MAIL FROM problem was actually solved.** The `554 MAIL FROM domain not verified` from
+earlier attempts **did not clear with time** — it persisted for hours while the MX and SPF
+records were published and resolving from independent resolvers. The cause is the *custom MAIL
+FROM domain* configured on the **domain** identity `m.2143.me`: SES still judges
+`bounce.m.2143.me`'s DNS invalid and rejects every message whose envelope sender falls under it.
+
+The working fix is per-address: verifying `John2143@m.2143.me` as an SES **`EmailAddress`
+identity**. AWS mails a confirmation link to the address (that message arrives in the mailbox
+under test, which is itself a useful inbound check). An address-level identity has no custom
+MAIL FROM domain, so its sends skip that check entirely:
+
+```
+MAIL FROM John2143@m.2143.me   ->  250 Ok                      <- exact casing, accepted
+MAIL FROM john2143@m.2143.me   ->  554 MAIL FROM domain not verified
+```
+
+**Casing is load-bearing.** The lowercase spelling of the same address still falls under the
+broken domain rule and is rejected. Anything that rewrites the envelope sender to lowercase will
+therefore fail. The durable fix is AWS-side and covers every address in the domain: repair the
+custom MAIL FROM domain on the `m.2143.me` identity, or set its behavior-on-MX-failure to *use
+the default MAIL FROM domain*, in the SES console.
 
 ## Outstanding
 
-- **SES production access.** Until AWS grants it, only the mailbox simulator
-  (`success@simulator.amazonses.com`) accepts mail; real recipients are rejected.
-- **SES MAIL FROM domain validation** — the 554 above, self-clearing.
+- **SES production access.** In the sandbox only the mailbox simulator and already-verified
+  addresses accept mail, so arbitrary recipients are still rejected. This is the last gate before
+  the server can mail anyone.
+- **The custom MAIL FROM domain on `m.2143.me` is broken as far as SES is concerned** (above).
+  Until it is fixed, sends must use the exact verified casing of an address identity.
 - **`stalwart/stalwart-stalwart-env` is still a plain cluster Secret** outside OpenBao, as
   recorded in `docs/2026-09-13-secrets-inventory.md` §6. That gap predates this change and
   is deliberately not addressed here.
