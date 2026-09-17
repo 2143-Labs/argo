@@ -47,6 +47,7 @@ data:
     RESPONSE_FILE=/run/secrets/mullvad-response.json
     RUNTIME_PRIVATE=/run/secrets/wireguard_private_key
     RUNTIME_ADDRESSES=/run/secrets/wireguard_addresses
+    NODE_NAME_FILE=/run/secrets/tailnet-node-name
 
     cleanup() {
       rm -f "$TOKEN_FILE" "$AUTH_HEADER_FILE" "$WG_PRIVATE_TMP" "$WG_PUBLIC_FILE" "$DEVICES_FILE" "$RESPONSE_FILE"
@@ -101,9 +102,12 @@ data:
     publish_identity() {
       id="$(jq -er '.device_id | select(type == "string" and length > 0)' "$STATE")"
       name="$(jq -er '.device_name | select(type == "string" and length > 0)' "$STATE")"
+      node_name_value="$(cat "$NODE_NAME_FILE")"
+      test -n "$node_name_value"
       kubectl create configmap "$HOSTNAME-identity" \
         --from-literal="device_id=$id" \
         --from-literal="device_name=$name" \
+        --from-literal="node_name=$node_name_value" \
         --dry-run=client -o yaml \
         | kubectl apply -f - >/dev/null
     }
@@ -114,15 +118,29 @@ data:
       chmod 0600 "$RUNTIME_PRIVATE" "$RUNTIME_ADDRESSES"
     }
 
+    node_name() {
+      printf '%s' "$1" \
+        | tr '[:upper:]' '[:lower:]' \
+        | tr -cs 'a-z0-9' '-' \
+        | sed -e 's/^-*//' -e 's/-*$//' \
+        | cut -c1-63
+    }
+
+    write_node_name() {
+      node_name "$CC-mullvad-$1" > "$NODE_NAME_FILE"
+      test -s "$NODE_NAME_FILE"
+    }
+
     HOSTNAME="$(cat /etc/vpn-endpoint/hostname)"
+    CC="${HOSTNAME%%-*}"
     ROTATE="$(cat /etc/vpn-endpoint/rotation-nonce)"
     test -n "$HOSTNAME"
-
+    test -n "$CC"
     if [ -f "$STATE" ]; then
+      ID="$(jq -er '.device_id | select(type == "string" and length > 0)' "$STATE")"
+      NAME="$(jq -er '.device_name | select(type == "string" and length > 0)' "$STATE")"
       CURRENT_ROTATION="$(jq -er '.rotation_nonce | tostring' "$STATE")"
       if [ "$CURRENT_ROTATION" != "$ROTATE" ]; then
-        ID="$(jq -er '.device_id | select(type == "string" and length > 0)' "$STATE")"
-        NAME="$(jq -er '.device_name | select(type == "string" and length > 0)' "$STATE")"
         mint_token
         generate_keypair
         if ! jq -n --rawfile public_key "$WG_PUBLIC_FILE" \
@@ -138,6 +156,7 @@ data:
         write_state "$ID" "$NAME" "$IPV4" "$IPV6"
       fi
       restore_runtime_files
+      write_node_name "$NAME"
       publish_identity
       exit 0
     fi
@@ -170,6 +189,7 @@ data:
     IPV6="$(jq -er '.ipv6_address | select(type == "string" and length > 0)' "$RESPONSE_FILE")"
     write_state "$ID" "$NAME" "$IPV4" "$IPV6"
     restore_runtime_files
+    write_node_name "$NAME"
     publish_identity
 
   deregister.sh: |
@@ -221,8 +241,10 @@ data:
       exit 1
     fi
 
-    DEVICE_ID="$(kubectl get configmap "$IDENTITY_CONFIGMAP" \
-      -o jsonpath='{.data.device_id}' 2>/dev/null || true)"
+    IDENTITY_JSON="$(kubectl get configmap "$IDENTITY_CONFIGMAP" -o json 2>/dev/null || true)"
+    DEVICE_ID="$(printf '%s' "$IDENTITY_JSON" | jq -r '.data.device_id // empty' 2>/dev/null || true)"
+    NODE_NAME="$(printf '%s' "$IDENTITY_JSON" | jq -r '.data.node_name // empty' 2>/dev/null || true)"
+    test -n "$NODE_NAME" || NODE_NAME="$ENDPOINT"
     if [ -n "$DEVICE_ID" ]; then
       mint_token
       set +e
@@ -251,7 +273,7 @@ data:
       echo 'failed to list Headscale nodes' >&2
       exit 1
     fi
-    NODE_ID="$(jq -r --arg name "$ENDPOINT" \
+    NODE_ID="$(jq -r --arg name "$NODE_NAME" \
       '[.[] | select(.given_name == $name) | .id] | first // empty' "$NODES_FILE")"
     if [ -n "$NODE_ID" ]; then
       kubectl exec -n default "pod/$HEADSCALE_POD" -- \
