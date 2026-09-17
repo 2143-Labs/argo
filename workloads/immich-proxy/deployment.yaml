@@ -15,13 +15,6 @@ spec:
       labels:
         app: immich-proxy
     spec:
-      # nas.ts.2143.me is Tailscale MagicDNS; pods cannot resolve it directly.
-      # The node is on the tailnet, so routing to 100.64.0.14 works from pods,
-      # but we still need to pin the name -> IP for the proxy's outbound call.
-      hostAliases:
-        - ip: "100.64.0.14"
-          hostnames:
-            - "nas.ts.2143.me"
       volumes:
         - name: tmp
           emptyDir:
@@ -65,7 +58,7 @@ spec:
               name: http
           env:
             - name: IMMICH_URL
-              value: http://nas.ts.2143.me:2283
+              value: http://immich.ts.2143.me
             - name: PUBLIC_BASE_URL
               value: https://images.2143.me
           volumeMounts:
