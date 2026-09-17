@@ -13,7 +13,7 @@ spec:
             country: Germany
             hostname: vpn-de
             pvcName: vpn-de-state
-            replicas: 1
+            replicas: 0
             mullvadRotationNonce: 1
   template:
     metadata:
