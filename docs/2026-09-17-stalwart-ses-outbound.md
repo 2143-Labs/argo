@@ -194,29 +194,63 @@ than a configuration error. **Expect it to clear on SES's next check** (the reco
 
   The inert `Log` tracer is left exactly as found. Removing the stdout sink entirely is
   `x:Tracer/set` with `{"destroy":["jfch0mneabac"]}`.
-- **A submission identity now exists** for the account (id `b`, `john2143@m.2143.me`), which
-  JMAP submission requires. Nothing has mail clients sending yet: `MtaStageAuth.mustMatchSender`
-  means SMTP submission must authenticate as this account, and the account is SSO-only, so an
-  app password is still needed before a client such as the iPhone can send.
+- **A submission identity exists** for the account (id `c`, `John2143@m.2143.me`). JMAP
+  submission requires one, and it could not be created until the lowercase alias existed (see
+  the mixed-case section below). Nothing has mail clients sending yet:
+  `MtaStageAuth.mustMatchSender` means SMTP submission must authenticate as this account, and
+  the account is SSO-only, so an app password is still needed before a client such as the
+  iPhone can send.
 
-## Account names are canonicalised to lowercase
+## Mixed-case identities: how they actually work
 
-Stalwart treats lowercase as the canonical form of an address: `to_canonical_address()`
-lowercases both parts, the SMTP path lowercases `MAIL FROM`/`RCPT TO` before indexing, and
-`sanitize_email` lowercases a submitted identity. The Account object's `name` is written
-through `StringValidator::EmailLocalPart` (the `Property::Name` patch arm in the registry
-schema), which applies `sanitize_email_local` as a **replace** — so Stalwart itself lowercases
-account names on write, on create as well as on update.
+Stalwart's canonical form for an address is lowercase: `to_canonical_address()` lowercases both
+parts, the SMTP path lowercases `MAIL FROM`/`RCPT TO` before indexing, and `sanitize_email`
+lowercases a submitted identity. Every **admin-managed** write therefore forces lowercase —
+verified by experiment on 2026-09-17:
 
-Consequences worth knowing:
+| Attempt | Result |
+|---|---|
+| Create an account named `CaseProbe` | rejected: `primaryKeyViolation` against `caseprobe` (lowercased before the uniqueness check) |
+| Send the rename `John2143` | stored as `john2143` |
+| Add the alias `John2143` | stored as `john2143` |
 
-- **Every new account is canonicalised automatically.** Creating a user named `CaseProbe`
-  while `caseprobe` exists fails with `primaryKeyViolation` on `email` — the candidate name is
-  lowercased before the uniqueness check. `CaseProbe@m.2143.me` and `caseprobe@m.2143.me` are
-  the same mailbox by construction, for every user, with no per-account work.
-- **The existing account was normalised** so that the stored form matches the canonical form
-  that every comparison uses: `John2143` was written back through the validator and is now
-  stored as `john2143@m.2143.me`. Mail addressed in any case still reaches it. Reverting is
-  the same one-property patch with any capitalisation you prefer, but Stalwart will store the
-  lowercase form regardless.
+**Only the OIDC directory can create a mixed-case account.** It writes the claim value straight
+through, bypassing the validator — which is how `John2143@m.2143.me` exists at all. The same
+path creates an account automatically whenever a login's `claimUsername` matches nothing, given
+`claimUsername: preferred_username` and `usernameDomain: m.2143.me` on directory object
+`iuukp10iaaqa`.
+
+That combination is a trap: a mixed-case claim can never match a lowercase account, so **every
+login mints a fresh duplicate account**. It happened twice on 2026-09-17 (accounts `j`, then `k`)
+after a lowercase `john2143` account was created beside the original `John2143`.
+
+A mixed-case account also **cannot create a JMAP identity**: `Identity/set` compares the
+sanitised (lowercase) address against the account's raw address list and fails with
+`E-mail address not configured for this account`. Without an identity there is no sending from
+any JMAP client, and the same raw comparison drives `MtaStageAuth.mustMatchSender`.
+
+### The recipe for a mixed-case user
+
+1. **Let them log in first.** Do not pre-create the account — Portal/JMAP creation is forced
+   lowercase and will not match the claim, which is what produces duplicates. The login creates
+   `<Claim>@m.2143.me` with the claim's exact casing.
+2. **Add the lowercase form as an alias:**
+
+   ```json
+   {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:Account/set",{"update":{"<account id>":{"aliases":{"0":{"enabled":true,"name":"<lowercase form>","domainId":"<domain id>"}}}}},"u"]]}
+   ```
+
+   `aliases` is a `List<EmailAlias>` keyed by **numeric index** — a name-keyed object is
+   rejected with `Invalid key for object property`. With the lowercase form present, identity
+   creation and `mustMatchSender` both pass, and mail addressed in any case reaches the account.
+3. **Grant the role they need.** Directory accounts arrive as plain `User`; the Portal's
+   administrative pages require `Admin`.
+4. **Never rename that account afterwards.** A rename is lowercased, which breaks the SSO match
+   and makes the next login mint a duplicate — exactly what happened on 2026-09-17. The fix was
+   to delete the lowercase account, keep the directory-created mixed-case one, and put the
+   lowercase form beside it as an alias.
+
+The address list is unique on the canonical form, so the lowercase alias **requires that no
+lowercase account already holds that address** — the two cannot coexist. That is why the original
+`john2143` account had to be retired for `John2143` to become functional.
 
