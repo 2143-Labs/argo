@@ -180,20 +180,20 @@ than a configuration error. **Expect it to clear on SES's next check** (the reco
 - **Mail that looks missing is usually in Junk.** Messages injected unauthenticated from
   `test@example.com` score as spam and are filed to Junk (`message-ingest.spam`,
   `mailboxId = [2]`). Check every mailbox before concluding delivery failed.
-- **Nothing is logged anywhere in the default configuration.** The pre-existing `Log` tracer
+- **Logging: a stdout sink was added on 2026-09-17.** The pre-existing `Log` tracer
   (`x:Tracer/get`, id `iunqkacwaiab`) points at `/var/log/stalwart`, a directory that does
-  **not** exist in the container, so it writes nothing — and `kubectl logs` is empty for the
-  same reason there is no stdout sink. Verifying anything was therefore impossible until a
-  tracer was added. Fixing this properly (the pod runs as uid 2000 and cannot create
-  `/var/log/...`) is a separate change worth making. To watch delivery live, add a stdout
-  sink and reload (§4's `ReloadSettings`):
+  **not** exist in the container, so it produces nothing — which is why the server had no
+  output at all and `kubectl logs` was empty. A `Stdout` tracer at `info` now sends the same
+  events to stdout, which is what made this change diagnosable. To chase something, raise it
+  to `debug` and put it back afterwards (at `debug` it produced roughly 350 lines per minute
+  under test load):
 
   ```json
-  {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:Tracer/set",{"create":{"t1":{"@type":"Stdout","enable":true,"level":"debug","ansi":false,"buffered":false,"multiline":true}}},"t"]]}
+  {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:Tracer/set",{"update":{"jfch0mneabac":{"level":"debug"}}},"t"]]}
   ```
 
-  Delete it when done (`x:Tracer/set` with `{"destroy":["<id>"]}`); at `debug` it produced
-  roughly 350 lines per minute under test load.
+  The inert `Log` tracer is left exactly as found. Removing the stdout sink entirely is
+  `x:Tracer/set` with `{"destroy":["jfch0mneabac"]}`.
 - **A submission identity now exists** for the account (id `b`, `john2143@m.2143.me`), which
   JMAP submission requires. Nothing has mail clients sending yet: `MtaStageAuth.mustMatchSender`
   means SMTP submission must authenticate as this account, and the account is SSO-only, so an
