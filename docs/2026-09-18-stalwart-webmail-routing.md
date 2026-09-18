@@ -90,6 +90,15 @@ any other Pocket ID client from obtaining JMAP access):
 x:Directory/set  {"update":{"iuukp10iaaqa":{"requireAudience":"0fa8f57e-dc4a-45bf-bda0-540552f0caaf"}}}
 ```
 
+Either way, `x:Directory/set` only *stores* the value — the running server keeps
+validating with the config it loaded at startup until you send `ReloadSettings`
+(the same action step 1 uses for CORS). Reading it back with `x:Directory/get`
+proves the stored value and nothing else: `requireAudience` read back as `null`
+while Stalwart still rejected Bulwark's tokens with `JWT validation failed:
+InvalidAudience` (`crates/directory/src/core/dispatch.rs`), and every webmail
+login failed at `/api/auth/token` with `401` until the reload landed. Reload the
+settings, then verify by *using* the thing — a read-back is not proof.
+
 Bulwark's client is `bulwark-webmail` at Pocket ID, confidential, with **one
 redirect URI per UI locale** (`https://mail.ts.2143.me/<locale>/auth/callback`,
 24 of them): Bulwark's callback path always contains the locale segment, so
