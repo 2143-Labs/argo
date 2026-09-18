@@ -97,18 +97,22 @@ spec:
             # SES then answers 530 Authentication required, not 535.
             - name: SMTP_AUTH
               value: always
+            # SES SMTP credential, shared with the Stalwart relay. Extracted into
+            # this namespace separately - a Secret does not cross namespaces.
             - name: SMTP_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: smtp-home
-                  key: USER
+                  name: ses-smtp
+                  key: SES_SMTP_USER
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: smtp-home
-                  key: PASS
-            # Must match a sender identity verified in SES. Unset would default
-            # to hello@$URL_HOST, i.e. this same address.
+                  name: ses-smtp
+                  key: SES_SMTP_PASS
+            # Sending is authorised by the SES domain identity for the apex
+            # `john2143.com`, which covers every subdomain - so this address
+            # needs no identity of its own. SES signs d=john2143.com and relaxed
+            # DMARC alignment accepts a subdomain From for it.
             - name: MAIL_FROM_ADDRESS
               value: hello@terminals.john2143.com
           volumeMounts:
