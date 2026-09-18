@@ -345,8 +345,67 @@ alert rule below cannot fire because its only source is those log lines. The rem
 kubelet restart on `arch`.
 
 **Still outstanding, all operator work outside this cluster's configuration.**
-SES production access for `us-east-1`; Easy DKIM on the verified `m.2143.me` identity; DMARC
-reporting (`_dmarc.m.2143.me` → `v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me`) plus the SRV
-and TLS-RPT records set out in the audit plan; and asciinema's sender identity
-`hello@terminals.john2143.com`, which is not an SES-verified identity, so its mail is
-rejected at SES regardless of sandbox status.
+SES production access for `us-east-1`, and Easy DKIM on the verified `m.2143.me` identity;
+DMARC reporting (`_dmarc.m.2143.me` → `v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me`) plus the
+SRV and TLS-RPT records set out in the audit plan. Sender identities other than `m.2143.me`
+are handled by the next section rather than one at a time.
+
+## Sending from any subdomain of `john2143.com` (and routing its subdomain mail here)
+
+`john2143.com` keeps its **apex** mailbox at Google: `MX john2143.com` is the five
+`*.aspmx.l.google.com` hosts and stays exactly as it is. The goal is the opposite problem —
+services that send as `<service>.john2143.com` (asciinema already does, as
+`hello@terminals.john2143.com`) should not each need their own verification and DKIM records.
+
+**A single apex verification is the fix.** AWS documents that verifying a *domain* identity
+lets you send from any address under that domain **and its subdomains** for ordinary sending;
+only "advanced" sending (configuration sets, delegate sending) requires verifying the
+individual address. SES signs those messages with `d=john2143.com`, and DMARC alignment is
+*relaxed* by default, so a `john2143.com` signature satisfies the policy for a
+`terminals.john2143.com` From address. One identity, one set of three DKIM CNAMEs, every
+current and future subdomain — no per-service record anywhere.
+
+### DNS at deSEC (`john2143.com` zone)
+
+```
+john2143.com.              MX  1  aspmx.l.google.com.        # apex unchanged (plus the four alternates)
+john2143.com.              TXT "v=spf1 include:_spf.google.com include:amazonses.com ~all"
+_dmarc.john2143.com.       TXT "v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me"
+*.john2143.com.            A   108.56.153.222               # replaces the wildcard CNAME
+*.john2143.com.            MX  10 m.2143.me
+<three tokens>.john2143.com. CNAME <token>.dkim.amazonses.com. # issued by the SES console
+
+- **The wildcard CNAME has to go.** Every subdomain of `john2143.com` currently resolves
+  through a wildcard `CNAME john2143.com`, which is why subdomain mail today follows the apex
+  to Google. A CNAME cannot coexist with an MX at the same name (RFC 1034 §3.6.2, RFC 2181
+  §10.1), and per RFC 1912 §5.3 a wildcard MX applies *only to names not otherwise present in
+  DNS* — which, with the CNAME in place, is no names at all. Replacing the CNAME with a
+  wildcard `A` keeps every existing web subdomain working (they resolve to the same address
+  they already land on) and lets the wildcard MX take effect.
+- **No wildcard `TXT`.** It is tempting to publish `*.john2143.com TXT "v=spf1 …"` for
+  subdomain SPF, but a wildcard TXT also answers single-label lookups such as
+  `_dmarc.john2143.com` and `_acme-challenge.john2143.com`. SPF alignment for these sends
+  depends on the identity's `MAIL FROM` domain — SES's default is a subdomain of
+  `amazonses.com`, which does not align with `john2143.com`, and a custom `MAIL FROM` domain
+  would need its own MX and SPF records. DMARC passes on DKIM either way. The apex SPF above
+  is worth publishing regardless, because `john2143.com` currently has no SPF record at all.
+- **DMARC covers the subdomains for free.** A receiver looking up `_dmarc.terminals.john2143.com`,
+  finding nothing, falls back to the organizational domain's policy at `_dmarc.john2143.com`.
+
+### Accepting mail for those subdomains
+
+The wildcard MX points every subdomain's mail at this server, but Stalwart resolves recipient
+domains by **exact name** — `DomainCache` is an exact-name lookup backed by a negative cache
+(`crates/common/src/cache/principals.rs:48`, `crates/common/src/cache/mod.rs:60`), and there is
+no wildcard or suffix form. So a subdomain must exist as a `Domain` object before its mail
+arrives; anything unregistered is refused at `RCPT TO` with a clean `550`, which is also why
+the wildcard MX does not turn this server into a backscatter source.
+
+Order matters: register the subdomain **before** the wildcard MX is published, otherwise its
+mail bounces during the gap. One `x:Domain/set` create per subdomain, with
+`catchAllAddress` pointing at an existing local address (`all@m.2143.me` exists for this), and
+`dkimManagement: {"@type":"Manual"}` left alone because SES is the only signer. To also *submit*
+as that address through this server, add it as an alias on the account — `MtaStageAuth`
+`mustMatchSender` compares the envelope sender against the authenticated account's addresses,
+so an unaliased `<service>.john2143.com` address can only send directly to SES, not through
+here.
