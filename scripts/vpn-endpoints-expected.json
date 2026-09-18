@@ -6,5 +6,29 @@
     "pvcName": "de-mullvad-state",
     "replicas": 1,
     "mullvadRotationNonce": 1
+  },
+  {
+    "name": "ee-mullvad",
+    "country": "Estonia",
+    "hostname": "ee-mullvad",
+    "pvcName": "ee-mullvad-state",
+    "replicas": 1,
+    "mullvadRotationNonce": 1
+  },
+  {
+    "name": "jp-mullvad",
+    "country": "Japan",
+    "hostname": "jp-mullvad",
+    "pvcName": "jp-mullvad-state",
+    "replicas": 1,
+    "mullvadRotationNonce": 1
+  },
+  {
+    "name": "za-mullvad",
+    "country": "South Africa",
+    "hostname": "za-mullvad",
+    "pvcName": "za-mullvad-state",
+    "replicas": 1,
+    "mullvadRotationNonce": 1
   }
 ]
