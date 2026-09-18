@@ -1,0 +1,133 @@
+# Bulwark webmail. Authenticates by OIDC against Pocket ID (client
+# `bulwark-webmail`), not with a mail password: the mail account is
+# OIDC-provisioned and has no local password, and OAUTH_ONLY removes the
+# password form entirely.
+#
+# HOSTNAME must be explicit: Kubernetes injects HOSTNAME as the pod name, which
+# Bulwark would otherwise use as its bind address. strategy: Recreate is required
+# because the RWO volume cannot be mounted by two pods at once. optional: true on
+# the secret keyrefs means an out-of-order first sync cannot wedge the pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulwark
+  namespace: default
+  labels:
+    app: bulwark
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bulwark
+  template:
+    metadata:
+      labels:
+        app: bulwark
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: bulwark
+          image: ghcr.io/bulwarkmail/webmail:1.9.2
+          env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: JMAP_SERVER_URL
+              value: "https://stalwart.ts.2143.me"
+            - name: APP_NAME
+              value: "2143 Mail"
+            - name: STALWART_FEATURES
+              value: "true"
+            # Pins the reported version so Bulwark never probes the JMAP Server
+            # header through Traefik — the only known server-side call.
+            - name: STALWART_VERSION
+              value: "0.16.22"
+            - name: OAUTH_ENABLED
+              value: "true"
+            - name: OAUTH_ONLY
+              value: "true"
+            - name: OAUTH_ISSUER_URL
+              value: "https://au.2143.me"
+            # au.2143.me resolves to a private address from inside the cluster.
+            - name: OAUTH_ALLOW_PRIVATE_ENDPOINTS
+              value: "true"
+            - name: OAUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: bulwark-session
+                  key: OAUTH_CLIENT_ID
+                  optional: true
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bulwark-session
+                  key: OAUTH_CLIENT_SECRET
+                  optional: true
+            - name: SETTINGS_SYNC_ENABLED
+              value: "true"
+            - name: BULWARK_TELEMETRY
+              value: "off"
+            - name: BULWARK_UPDATE_CHECK
+              value: "off"
+            - name: TRUSTED_PROXY_DEPTH
+              value: "1"
+            - name: LOG_FORMAT
+              value: "json"
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bulwark-session
+                  key: SESSION_SECRET
+                  optional: true
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bulwark-data

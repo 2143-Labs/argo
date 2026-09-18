@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bulwark-data
+  namespace: default
+  # Functional Longhorn group label: this is the spelling the recurring-job
+  # controller actually selects on, so the claim inherits the default backup
+  # schedule. Prune=false/Delete=false keeps Argo from removing a live volume.
+  labels:
+    recurring-job-group.longhorn.io/default: enabled
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  # One volume covers all four Bulwark data directories, because all of them
+  # default under /app/data: settings, admin, admin-state, telemetry.
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-3
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,20 @@
+# Deliberately a v4-only ClusterIP: no ipFamilyPolicy field. A dual-stack
+# Service emits an IPv6 EndpointSlice, Traefik then round-robins the pod's v6
+# address, and Bulwark binds IPv4 only — the documented result is intermittent
+# ~50% gateway 502s (docs/adding-a-workload.md, the frigate-http pattern).
+apiVersion: v1
+kind: Service
+metadata:
+  name: bulwark
+  namespace: default
+  labels:
+    app: bulwark
+spec:
+  type: ClusterIP
+  selector:
+    app: bulwark
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
