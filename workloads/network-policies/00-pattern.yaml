@@ -80,12 +80,29 @@
 #   3. 10.42.0.0/16              - pod network. Egress policy is evaluated
 #                                  against the post-DNAT destination, so a
 #                                  ClusterIP destination actually appears here.
-#   4. 10.43.0.0/16              - service CIDR, for paths that are evaluated
-#                                  pre-DNAT.
+#   4. 10.43.0.0/16              - service CIDR. Belt and braces: a ClusterIP
+#                                  destination normally appears post-DNAT as a
+#                                  pod IP (rule 3), so this only matters for
+#                                  paths evaluated pre-DNAT.
 #   5. 192.168.6.0/24            - MetalLB service VIPs.
 #   6. 0.0.0.0/0 except RFC1918/ULA - internet, for ACME, S3, OIDC, LLM APIs.
-#   plus, only where proven, narrow extra ipBlocks (see observability.yaml for
-#   the kubelet scrape case).
+#   7. 192.168.5.0/24 on 6443    - the kube-apiserver's endpoints. REQUIRED in
+#                                  every namespace. The `kubernetes` Service is
+#                                  a ClusterIP, but egress policy is evaluated
+#                                  AFTER kube-proxy DNAT and the apiserver's
+#                                  endpoints are control-plane node IPs on
+#                                  6443, outside the pod CIDR - so rule 3 and
+#                                  rule 4 do not reach it. Denied, every *new*
+#                                  API connection is refused while established
+#                                  watches keep working, so it presents as a
+#                                  random late failure. First symptom seen:
+#                                  observability/loki-sc-rules crash-looping
+#                                  about `10.43.0.1:443` connection refused.
+#   plus, only where proven, narrow extra ipBlocks on a single port. The other
+#   one in use is 192.168.5.0/24 on 10250 for Alloy's kubelet/cAdvisor scrape
+#   (see observability.yaml). Prefer a port-restricted /24 over enumerating node
+#   IPs: it survives a node being added and still keeps the LAN's real services
+#   (router API, NAS SMB, SSH) out of reach.
 #
 # ipBlock rules are IPv4-only and NetworkPolicy is per-family, so an absent
 # IPv6 rule is a deny. That is acceptable today because no IPv6 pod traffic

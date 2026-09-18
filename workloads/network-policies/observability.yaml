@@ -21,14 +21,20 @@
 #     access beyond what they already had; it is recorded here so nobody thinks
 #     the VIP is pod-isolated.
 #
-# Egress beyond the B1 baseline, and why it is unavoidable:
-#   * 192.168.5.0/24 on 10250 only - Alloy's kubelet and cAdvisor scrape jobs
-#     use discovery.kubernetes role=node, which yields <node internalIP>:10250.
-#     Those destinations are RFC1918 and would otherwise be denied, silently
-#     stopping node and container metrics. The rule is restricted to port 10250
-#     because that is the only port these jobs use, which keeps the rest of the
-#     LAN (router API, NAS SMB, SSH) out of reach. Enumerating the six node IPs
-#     instead would break silently whenever a node is added.
+# Egress beyond the B1 baseline, and why it is unavoidable. Both entries are
+# 192.168.5.0/24 restricted to a single port, because that is all the cluster
+# needs from the LAN:
+#   * 10250 - Alloy's kubelet and cAdvisor scrape jobs use
+#     discovery.kubernetes role=node, which yields <node internalIP>:10250.
+#     Denied, this silently stops node and container metrics.
+#   * 6443 - the kube-apiserver's endpoints. The `kubernetes` Service is a
+#     ClusterIP, but egress policy is evaluated AFTER kube-proxy DNAT and the
+#     apiserver's endpoints are control-plane node IPs on 6443, which are
+#     outside the pod CIDR. Denied, every *new* API connection is refused while
+#     established watches keep working - the first symptom was this namespace's
+#     loki-sc-rules sidecar crash-looping.
+# Restricting to ports rather than enumerating node IPs keeps the rest of the
+# LAN (router API, NAS SMB, SSH) out of reach and survives a node being added.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -131,6 +137,13 @@ spec:
             cidr: 192.168.5.0/24
       ports:
         - port: 10250
+          protocol: TCP
+    # kube-apiserver endpoints (post-DNAT destination of the kubernetes Service).
+    - to:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+      ports:
+        - port: 6443
           protocol: TCP
     - to:
         - ipBlock:

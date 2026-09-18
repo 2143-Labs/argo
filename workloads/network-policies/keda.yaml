@@ -113,6 +113,19 @@ spec:
     - to:
         - ipBlock:
             cidr: 192.168.6.0/24
+    # kube-apiserver endpoints. The `kubernetes` Service is a ClusterIP, but
+    # egress policy is evaluated AFTER kube-proxy DNAT, and the apiserver's
+    # endpoints are control-plane node IPs on 6443 - outside the pod CIDR - so
+    # the 10.43.0.0/16 rule above is not enough on its own. Without this rule
+    # every *new* API connection is refused (kube-router rejects), while
+    # established watches keep working, which makes the failure look random:
+    # the first symptom was observability/loki-sc-rules crash-looping.
+    - to:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+      ports:
+        - port: 6443
+          protocol: TCP
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0

@@ -106,6 +106,15 @@ spec:
     - to:
         - ipBlock:
             cidr: 192.168.6.0/24
+    # kube-apiserver endpoints - see keda.yaml for the full explanation. Egress
+    # policy is evaluated after DNAT, so the ClusterIP rule alone does not reach
+    # the apiserver (its endpoints are node IPs on 6443).
+    - to:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+      ports:
+        - port: 6443
+          protocol: TCP
     # CrowdSec hub and Central API live on the internet.
     - to:
         - ipBlock:
