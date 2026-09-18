@@ -97,9 +97,14 @@ registering only `en` works until a browser picks a different one. Its
 `SESSION_SECRET`, `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` live in OpenBao at
 `consumers/data/john2143-com/default/bulwark-session` and are rendered by
 `workloads/secrets/default-bulwark-session.yaml`. The Deployment carries
-`reloader.stakater.com/auto` so a rotation actually reaches the container —
-without it a first-seeded Secret never arrives, and the login silently cannot
-work even though vault and Secret are both correct.
+`reloader.stakater.com/auto` on the pod template, as `docs/adding-a-secret.md`
+requires. Know what it does not cover, though: Reloader does roll workloads for
+ConfigMap *changes* (observed: a `headscale-config` edit rolled headscale, and it
+acted on other Secrets in this namespace), but it did **not** roll this
+Deployment when the Secret was first created. A first seed is a create, not a
+change, so it needs one `kubectl rollout restart deploy/bulwark` — without it the
+pod keeps its empty env and the login silently cannot work even though vault and
+Secret are both correct.
 
 ## `m.2143.me` answers from the mail LB now
 
