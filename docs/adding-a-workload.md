@@ -181,10 +181,10 @@ Notes:
 | factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.28–.200` (`.201–.254` reserved headroom); v6
-`fd00:6::11`, `::20`, `::28`, `::29`, `::31–::ff`. Never reuse an in-use
-address; a collision surfaces as `AllocationFailed: address also in use by
-<ns>/<svc>`.
+**Free:** v4 `192.168.6.29–.200` (`.201–.254` reserved headroom; `factorio-game`
+owns `.28`); v6 `fd00:6::11`, `::20`, `::29`, `::31–::ff` (`::28` is factorio's,
+`::30` is unifi-inform's). Never reuse an in-use address; a collision surfaces as
+`AllocationFailed: address also in use by <ns>/<svc>`.
 
 ### Rules of thumb
 

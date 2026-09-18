@@ -14,7 +14,7 @@ VIP stays v4-only. avahi is untouched on every node.
 ## What changed (in order)
 
 1. **Pool** — `workloads/metallb/ipaddresspool.yaml`: the `services` pool now
-   serves `192.168.6.10-192.168.6.50` **and** `fd00:6::10-fd00:6::50`
+   serves `192.168.6.10-192.168.6.200` **and** `fd00:6::10-fd00:6::ff`
    (one pool, both families). `control-plane-vip` unchanged (v4-only,
    `autoAssign: false`).
 2. **BGPPeer** — `workloads/metallb/bgppeer.yaml`: added
@@ -85,9 +85,10 @@ Notes:
   chart or add a post-sync patch; do not hand-edit the deployed Service
   (ArgoCD `temporal` app owns it).
 - `fd00:6::11` (traefik's twin slot) and `::20` (temporal's twin slot) are free;
-  `::28`–`::50` are free for future pins. `.26/::26` (frigate) and `.27/::27`
-  (pihole-dns) were allocated 2026-08-13 — the authoritative allocation table
-  now lives in `adding-a-workload.md` §5.
+  `::29` and `::31`–`::ff` are free for future pins (`::28` is factorio's,
+  `::30` is unifi-inform's). `.26/::26` (frigate) and `.27/::27` (pihole-dns)
+  were allocated 2026-08-13 — the authoritative allocation table now lives in
+  `adding-a-workload.md` §5.
 
 ## Router state (post-change)
 
