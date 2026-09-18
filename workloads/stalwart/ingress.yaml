@@ -7,30 +7,23 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: m-2143-https
+      sectionName: stalwart-ts-2143-https
   hostnames:
-    - m.2143.me
+    - stalwart.ts.2143.me
   rules:
     - matches:
         - path:
             type: PathPrefix
             value: /
+      # The host is tailnet/LAN-only now, so the three public filters
+      # (public-rate-limit, public-inflight-limit, crowdsec-bouncer) are replaced
+      # by lan-only. Do not keep both.
       filters:
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
+            name: lan-only
       backendRefs:
         - name: stalwart-stalwart-web
           port: 8080

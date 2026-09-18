@@ -10,8 +10,12 @@ image:
   tag: "v0.16.22"
   pullPolicy: IfNotPresent
 
-# Public hostname — required for OIDC redirect URIs behind reverse proxy
-hostname: m.2143.me
+# Web UI host, used only to build STALWART_PUBLIC_URL (templates/statefulset.yaml).
+# It drives every JMAP URL the server hands to clients — apiUrl, downloadUrl,
+# uploadUrl, eventSourceUrl and the WebSocket URL — so it must be the origin the
+# browser actually reaches. It is NOT the mail domain: mail identities keep
+# usernameDomain m.2143.me in RocksDB.
+hostname: stalwart.ts.2143.me
 
 # Recovery admin — bootstrap credential for first sign-in.
 # Set via external secret (stalwart-env) in the stalwart namespace.
