@@ -29,6 +29,21 @@ spec:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: /steam/joinlobby
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer-noappsec
       backendRefs:
         - name: steam-lobby
           namespace: steam-lobby
