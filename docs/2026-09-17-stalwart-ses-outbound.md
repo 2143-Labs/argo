@@ -409,3 +409,37 @@ as that address through this server, add it as an alias on the account — `MtaS
 `mustMatchSender` compares the envelope sender against the authenticated account's addresses,
 so an unaliased `<service>.john2143.com` address can only send directly to SES, not through
 here.
+
+### Current state of `john2143.com`, measured 2026-09-18, and how to roll back
+
+The zone is at deSEC (`NS ns1.desec.io`, `ns2.desec.org`) and **DNSSEC-signed** (DS
+`31144 13 2 666A1E17…` published at the parent, DNSKEY present), so deSEC re-signs
+automatically when records change. Everything below was read from public resolvers, which is
+all that matters for how the world routes this domain:
+
+```
+john2143.com.        A     108.56.153.222            # no AAAA, no TXT (no SPF), no CAA
+john2143.com.        MX  1  aspmx.l.google.com. + the four alternates
+*.john2143.com.      CNAME john2143.com.             # the only wildcard record
+google._domainkey.john2143.com.  (nothing)           # Google DKIM is NOT published
+_dmarc.john2143.com.             (nothing)           # no DMARC
+_acme-challenge.john2143.com.    (nothing)           # cert-manager writes these per-order
+```
+
+Two consequences worth acting on for the personal mailbox, independent of any wildcard work:
+
+- Because `*.john2143.com` is a CNAME to the apex, **every** subdomain name currently
+  resolves through it — including `google._domainkey.john2143.com` and
+  `_dmarc.john2143.com`. Neither is published, so mail sent from `@john2143.com` today carries
+  **no SPF, no DKIM and no DMARC**. Enabling DKIM in the Google Workspace console (which
+  publishes a `google._domainkey` TXT here) plus the apex SPF and DMARC records above is the
+  single highest-value fix for that mailbox, and none of it changes how mail is routed.
+- `_acme-challenge.john2143.com` currently resolves to the apex through the same CNAME. That
+  is harmless because an exact-name record always beats a wildcard, which is why cert-manager
+  can still write challenge TXTs there — but it is the clearest illustration of the rule that
+  governs the wildcard MX change: **a wildcard only applies to names that do not otherwise
+  exist.**
+
+To roll back the wildcard change, restore that one line —
+`*.john2143.com.  CNAME  john2143.com.` — and delete the wildcard `A` and `MX`. No other
+record in this plan touches the apex, so nothing else needs undoing.
