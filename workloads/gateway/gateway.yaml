@@ -390,22 +390,6 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: argocd
-    - name: m-2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: m.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: 2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: stalwart
     - name: status-2143-https
       protocol: HTTPS
       port: 8443
