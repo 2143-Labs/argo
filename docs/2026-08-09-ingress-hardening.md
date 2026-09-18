@@ -1,6 +1,6 @@
 # Ingress hardening: request telemetry + rate limiting + CrowdSec WAF (2026-08-09)
 
-**Status: COMPLETE and verified.** Public web surfaces now have request-level telemetry (traefik JSON access logs → Loki), per-IP rate limiting, a per-IP in-flight cap, and a CrowdSec WAF (LAPI + agent + AppSec + traefik plugin bouncer) that bans abusive IPs with 403 and blocks known exploits inline. All 15 protected routes carry the 3-filter chain (`public-rate-limit` → `public-inflight-limit` → `crowdsec-bouncer`); the 10 internal `*.ts.2143.me` routes remain LAN-only via the pre-existing `lan-only` middleware.
+**Status: COMPLETE and verified.** Public web surfaces have request-level telemetry (traefik JSON access logs → Loki), per-IP rate limiting, a per-IP in-flight cap, and a CrowdSec WAF (LAPI + agent + AppSec + traefik plugin bouncer) that bans abusive IPs with 403 and blocks known exploits inline. The 15 routes listed in §3 carry the full 3-filter chain; the routes added in the 2026-09-18 pass (§7) carry either the full chain or the bouncer alone. The 10 internal `*.ts.2143.me` routes remain LAN-only via the pre-existing `lan-only` middleware.
 
 ## 1. Commits (pushed, in order)
 
@@ -23,8 +23,8 @@
 - **Traefik 3.7.4** (rancher mirror — chart 40.1.3 caps the proxy version; the 3.7.10 upgrade was investigated and ruled out: the k3s-pinned chart validates against `traefik.io/proxy-max-version: v3.7.4`, so upgrading would require a k3s upgrade).
 - **JSON access logs** (`logs.access.enabled` + `format: json`, header fields dropped) → shipped to Loki by alloy (relabels with `namespace`/`pod`/`container`). Query: `{namespace="kube-system", container="traefik"} | json` → `ClientHost` (real client IPs, preserved by `externalTrafficPolicy: Local`).
 - **Alloy scrape clustering**: all 7 `prometheus.scrape` blocks now `clustering { enabled = true }` — each target scraped by exactly one DaemonSet pod. Mimir `err-mimir-sample-out-of-order` drops went to 0.
-- **CrowdSec** (chart 0.24.0): `crowdsec-lapi` (8080), `crowdsec-appsec` (7422, AppSec WAF with CRS virtual patching), `crowdsec-agent` DaemonSet reading traefik pod logs (`/var/log/containers/traefik-*.log`, program `traefik`). Collections: `crowdsecurity/traefik`, `crowdsecurity/appsec-virtual-patching`, `crowdsecurity/appsec-crs`. Bouncer key stored as the `crowdsec-bouncer-key` Secret in `kube-system` (never committed — the argo repo is public).
-- **Bouncer**: `maxlerebourg/crowdsec-bouncer-traefik-plugin` **v1.7.1** loaded via `experimental.plugins` in the traefik HelmChartConfig; key file mounted at `/etc/traefik/secrets/crowdsec-bouncer-key`. Note: chart 40.1.3 has no pod-volume hook, so the secret volume is a live `kubectl patch` on the Deployment — it must be re-applied if the chart re-renders.
+- **CrowdSec** (chart 0.24.0): `crowdsec-lapi` (8080), `crowdsec-appsec` (7422, AppSec WAF with CRS virtual patching), `crowdsec-agent` DaemonSet reading traefik pod logs (`/var/log/containers/traefik-*.log`, program `traefik`). Collections: `crowdsecurity/appsec-virtual-patching`, `crowdsecurity/appsec-crs`, plus `crowdsecurity/traefik` — but see §7: the Traefik collection was **not** actually installed in the standalone agent until 2026-09-18, so until then every access-log line was ingested and discarded and no log-based scenario could fire. Bouncer key stored as the `crowdsec-bouncer-key` Secret in `kube-system` (never committed — the argo repo is public).
+- **Bouncer**: `maxlerebourg/crowdsec-bouncer-traefik-plugin` **v1.7.1** loaded via `experimental.plugins` in the traefik HelmChartConfig; key file mounted at `/etc/traefik/secrets/crowdsec-bouncer-key`. All of it is declarative: the plugin config lives in the HelmChartConfig in `dotfiles/nixos/closet-configuration.nix` (lines ~180-189), the key volume is part of that same HelmChartConfig render, and the Secret itself is created by the k3s bootstrap at `dotfiles/nixos/cluster/modules/k3s-common.nix:326`. There is no post-render `kubectl patch` to re-apply: a chart re-render reproduces the same volume.
 - **Middlewares** (one copy per namespace — Gateway API `ExtensionRef` resolves only in the route's namespace):
   - `public-rate-limit` — 100 req/min avg, 50 burst, per source IP; LAN+tailnet ranges exempt (`excludedIPs`).
   - `public-inflight-limit` — 50 concurrent requests per IP (slowloris/connection-exhaustion cap → 429).
@@ -52,7 +52,7 @@ All three filters attached to the route's `filters:` list (order: rate-limit →
 | `pocket-id/ingress.yaml` | au.2143.me | pocket-id |
 | `stalwart/ingress.yaml` | m.2143.me | stalwart |
 
-**Deliberate exclusions** (no filters): `argocd/ingress.yaml` (`argocd-webhook` — GitHub IPs must never be banned), `gateway/livekit-route.yaml`, `headscale/ingress.yaml` (net.john2143.com), `gateway/tuwunel-route.yaml` (chat.2143.me — voice relay), `steam-lobby/ingress.yaml` (pvp), `docker-registry/route.yaml`, `webserver/ingress.yaml` (rots.2143.me), all `*.ts.2143.me` internal routes (already LAN-only), `gateway/john2143-http-to-https.yaml` (port-80 redirect).
+**Deliberate exclusions** (no filters) are protocol-level only, because these routes cannot be rate-limited or banned as HTTP: `argocd/ingress.yaml` (`argocd-webhook` — GitHub IPs must never be banned), `gateway/livekit-route.yaml` (LiveKit signalling), `headscale/ingress.yaml` (net.john2143.com), `docker-registry/route.yaml` (OCI clients), the `/voice` rule inside `gateway/matrix-route.yaml` (voice relay), the TURN/TLS passthrough listener (not HTTP), the mTLS gRPC routes (Temporal), all `*.ts.2143.me` internal routes (already LAN-only via `lan-only`), and `gateway/john2143-http-to-https.yaml` (port-80 redirect). Everything else — including `chat.2143.me`, factorio, pelican, rots/prod.rots, pvp and the steam-lobby joinlobby API — is filtered; see §7.
 
 ## 4. Protecting a NEW public route
 
@@ -88,3 +88,38 @@ For a machine/API surface (S3, upload endpoints, webhooks that aren't GitHub), u
 - The bouncer secret volume is a live deployment patch (chart 40.1.3 has no pod-volume hook) — re-apply `kubectl patch` after any traefik helm re-render.
 - GitHub webhook delivery (argo-webhook.john2143.com) remains broken at the router — unaffected by this work.
 - `Gateway/shared-gateway` shows a persistent ArgoCD OutOfSync drift (controller-owned status) — pre-existing, cosmetic.
+
+## 7. Update 2026-09-18 — detection actually switched on
+
+The 2026-09-17 network review found that this work looked complete but was not detecting anything: the standalone agent had **no Traefik collection**, so the JSON access logs it read were parsed by generic CRI/docker parsers and dropped, and `cscli metrics` showed an empty scenario table. AppSec (inline, in its own namespace) was the only thing working.
+
+What changed:
+
+| Change | File |
+|---|---|
+| `COLLECTIONS=crowdsecurity/traefik` on the standalone agent (the image's own `prepare_hub` installs it) | `workloads/crowdsec-agent/agent-daemonset.yaml` |
+| Acquisition switches from inotify to `poll_without_inotify: true` / `force_inotify: false` — the log file is a rotating symlink inotify cannot follow, which logged a warning on every agent | `workloads/crowdsec-agent/agent-config.yaml` |
+| Filters attached to the routes that had none: `chat.2143.me` (full chain), factorio and pelican (bouncer), the steam-lobby joinlobby API (rate limit + in-flight + `crowdsec-bouncer-noappsec`), rots/prod.rots and pvp (full chain) | `workloads/gateway/tuwunel-route.yaml`, `workloads/factorio/ingress.yaml`, `workloads/pelican/ingress.yaml`, `workloads/steam-lobby/mm-route.yaml`, `workloads/webserver/ingress.yaml`, `workloads/steam-lobby/ingress.yaml` |
+
+Verified: a 40-request 404 sweep from an external host produced a **`crowdsecurity/http-probing` alert and a ban** in `cscli alerts list` / `cscli decisions list`, and the bouncer began returning 403 mid-sweep. That scenario only fires from the log-based path, so it is the evidence that the parser is now live — the 50 pre-existing alerts were all AppSec/vpatch, none log-based. (Note: an IP banned this way stays blocked until the bouncer's 60-second decision-stream sync picks up the deletion, so `cscli decisions delete` is not instant.)
+
+### Pruning stale bouncer/machine records — and the rule that makes it safe
+
+Records accumulate because every Traefik replica and every agent pod restart registers a new one: this pass started at 46 bouncers and 75 machines against 3 Traefik pods and ~6 live identities.
+
+**The safe predicate is `auto_created`, not age alone.** CrowdSec records `auto_created=true` for the per-replica registrations that appear on their own, and `auto_created=false` for the records an operator created with `cscli bouncers add -k <key>` — the latter carries the key that Traefik is configured with, and it is the anchor all the auto-created records hang off. Deleting the anchor (which a pure age filter does, since its `last_pull` can be weeks old) stops the LAPI authenticating the plugin entirely. That happened during this pass and was fixed by re-adding the record with the key from the `crowdsec-bouncer-key` Secret; it is why any automated prune must exclude `auto_created=false`.
+
+Machines have no such field, but agents heartbeat frequently, so a 7-day `last_heartbeat`/`last_push` filter is safe there — verified by pruning 37 stale machines with every live agent, the LAPI and AppSec untouched.
+
+The prune itself needs LAPI admin access, which exists only inside the `crowdsec-lapi` pod (`/etc/crowdsec/local_api_credentials.yaml` is not exposed as a Secret, and the agents run with `DISABLE_LOCAL_API=true` so they cannot administer anything). It was therefore run by hand, once:
+
+```bash
+kubectl -n crowdsec exec -i deploy/crowdsec-lapi -- sh -s <<'EOF'
+cscli bouncers list -o json | yq -r '.[] | select(.auto_created == true) | select((.last_pull // "") < "2026-09-11T00:00:00Z") | .name' \
+  | while read -r n; do cscli bouncers delete "$n"; done
+cscli machines list -o json | yq -r '.[] | select(((.last_heartbeat // "") < "2026-09-11T00:00:00Z") and ((.last_push // "") < "2026-09-11T00:00:00Z")) | .machineId' \
+  | while read -r n; do cscli machines delete "$n"; done
+EOF
+```
+
+There is no scheduled version of this yet, on purpose: the plan called for a daily CronJob authenticating with `crowdsec-lapi-secrets`, but that Secret holds only `csLapiSecret` and `registrationToken` (usable to *register*, not to administer), the image has no `jq`, and none of the images already on the nodes contain `kubectl`. Automating it needs either an admin credential exposed to a job or a `pods/exec` grant plus a new image — a decision for the owner, not a side effect of this pass.
