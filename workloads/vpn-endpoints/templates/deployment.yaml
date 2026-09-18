@@ -107,6 +107,25 @@ spec:
           image: {{ .Values.images.gluetun }}
           imagePullPolicy: IfNotPresent
           restartPolicy: Always
+          # Gluetun reads exactly one server database, /gluetun/servers.json, and
+          # the pinned image ships it hardcoded and dated 2025-10-03. Mullvad has
+          # since renumbered Estonia's relays (ee-tll-wg-001/002/003 ->
+          # ee-tll-wg-101/102/103), so ee-mullvad dialed retired addresses
+          # forever: Gluetun picks a server at random, WireGuard fails silently,
+          # and the healthcheck restarts the VPN in a loop. Its own updater cannot
+          # repair that at startup (UPDATER_PERIOD=0 never runs, and any other
+          # value first fires a whole period later, once a tunnel already exists),
+          # so refresh the list here, before Gluetun starts. Best effort: a failed
+          # refresh leaves the existing file behind, i.e. the previous behaviour.
+          # -minratio is required because the default guard demands 0.8 of the
+          # loaded count (675 Mullvad servers) while Mullvad publishes 534.
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              /gluetun-entrypoint update -enduser -minratio 0.5 -providers mullvad ||
+                echo "server list refresh failed; keeping the existing list"
+              exec /gluetun-entrypoint
           env:
             - name: VPN_SERVICE_PROVIDER
               value: mullvad
