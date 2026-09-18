@@ -26,6 +26,13 @@ spec:
     metadata:
       labels:
         app: bulwark
+      # Rotations in OpenBao replace Secret/bulwark-session, and ESO's
+      # refreshInterval means that happens on its own schedule. Without this
+      # annotation the Secret changes but the pod keeps the values it started
+      # with — which is how a first-seeded secret silently never reaches the
+      # container. On the pod template, not on the Deployment.
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       securityContext:
         runAsNonRoot: true
