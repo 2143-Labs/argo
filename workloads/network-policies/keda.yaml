@@ -4,16 +4,19 @@
 # EndpointSlices and the keda-http-addon values):
 #   * kube-system/traefik -> 8080 - the HTTPRoute into
 #     keda-add-ons-http-interceptor-proxy. This is the only ingress path to the
-#     interceptor, so it is the one that must not break.
+#     interceptor, so it is the one that must not break. Traefik has a pod IP,
+#     so the source is its pod, not a node.
 #   * observability/alloy -> all ports - scrapes keda-operator,
 #     keda-operator-metrics-apiserver, keda-admission-webhooks and the add-on
 #     metrics endpoints. Any port, because scrape targets move with the chart.
 #   * same namespace - interceptor -> external scaler (9090/2223),
 #     controller -> external scaler/metrics, operator -> metrics apiserver.
-#   * node IPs (192.168.5.0/24) - kube-apiserver dialing the aggregated
-#     metrics API and the admission webhook, and node-SNAT'd NodePort traffic.
-# No Service in this namespace is exposed on a LoadBalancer IP, so nothing
-# arrives here from the internet.
+#   * cluster SNAT gateways - see the block below and 00-pattern.yaml. This
+#     covers the kube-apiserver dialing the aggregated metrics API and the
+#     admission webhook (both are Service destinations, so kube-proxy
+#     masquerades them) and NodePort traffic.
+# No Service in this namespace is exposed on a LoadBalancer IP, so no
+# internet-facing client arrives here.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -36,12 +39,28 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-    # Probes, cross-node control-plane traffic and node-SNAT'd NodePort/LB
-    # traffic. See 00-pattern.yaml for why this is needed and why kubelet
-    # probes alone would work without it.
+    # Cluster SNAT sources: per node, flannel.1 (10.42.<n>.0/32, cross-node) and
+    # cni0 (10.42.<n>.1/32, same-node) - 0=closet 1=office 2=pite 3=nas
+    # 4=big 6=arch. Anything that reaches a pod through kube-proxy - a
+    # LoadBalancer IP, a NodePort, or a control-plane process dialing a Service
+    # - is masqueraded to one of these, never to a 192.168.5.x address. Probes
+    # and same-node traffic are handled by kube-router's own
+    # "src-type LOCAL" accept and need no rule here.
+    # Regenerate with: kubectl get nodes -o json | jq -r
+    #   '.items[].spec.podCIDR' and replace .0/24 with .0/32 and .1/32.
     - from:
-        - ipBlock:
-            cidr: 192.168.5.0/24
+        - ipBlock: {cidr: 10.42.0.0/32}
+        - ipBlock: {cidr: 10.42.0.1/32}
+        - ipBlock: {cidr: 10.42.1.0/32}
+        - ipBlock: {cidr: 10.42.1.1/32}
+        - ipBlock: {cidr: 10.42.2.0/32}
+        - ipBlock: {cidr: 10.42.2.1/32}
+        - ipBlock: {cidr: 10.42.3.0/32}
+        - ipBlock: {cidr: 10.42.3.1/32}
+        - ipBlock: {cidr: 10.42.4.0/32}
+        - ipBlock: {cidr: 10.42.4.1/32}
+        - ipBlock: {cidr: 10.42.6.0/32}
+        - ipBlock: {cidr: 10.42.6.1/32}
     - from:
         - podSelector: {}
     # Traefik -> HTTP interceptor proxy.

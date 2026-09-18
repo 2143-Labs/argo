@@ -6,18 +6,42 @@
 #
 # Background: before this app the only NetworkPolicies in the cluster were the
 # seven shipped by the ArgoCD install and one on openbao. Every other namespace
-# was default-allow in both directions. NetworkPolicy *is* enforced here: the
-# k3s built-in controller (kube-router derived) installs KUBE-NWPLCY-* /
-# KUBE-POD-FW-* iptables chains, keyed on pod IPs. Two consequences worth
-# knowing:
-#   * hostNetwork pods are keyed on the node IP, which the controller never
-#     lists as a pod IP, so they are effectively exempt (verified: no node IP
-#     appears as a source in any KUBE-POD-FW chain);
-#   * traffic originated by the node itself (kubelet probes, kube-apiserver
-#     dialing a pod on its own node) is host-originated and does not traverse
-#     the FORWARD path where these chains attach. The 192.168.5.0/24 ipBlock
-#     rule exists for the *forwarded* cases: cross-node SNAT of LoadBalancer and
-#     NodePort traffic, and a control-plane node dialing a pod on another node.
+# was default-allow in both directions. NetworkPolicy *is* enforced here: the k3s
+# built-in controller (kube-router derived) installs KUBE-NWPLCY-* /
+# KUBE-POD-FW-* iptables chains keyed on pod IPs. Four consequences shape the
+# template and were verified against live state on 2026-09-18:
+#
+#   1. hostNetwork pods are keyed on the node IP, which the controller never
+#      lists as a pod IP, so they are effectively exempt (no node IP appears as
+#      a source in any KUBE-POD-FW chain).
+#   2. kube-router adds a "source is the pod's local node" accept to every
+#      pod it polices, so kubelet probes and same-node traffic need no rule.
+#   3. Policy *ports* are the destination pod's container ports, not the Service
+#      ports: grafana's Service publishes 80 while the container listens on 3000.
+#   4. The important one: anything that reaches a pod through kube-proxy is
+#      masqueraded, and the masquerade address is the pod network gateway, NOT
+#      a LAN address. Per node, flannel.1 carries cross-node traffic
+#      (10.42.<n>.0/32) and cni0 carries same-node traffic (10.42.<n>.1/32).
+#      Verified by conntrack on the destination node: a connection from the
+#      office node to a pod on closet arrives as src=10.42.1.0, office's
+#      flannel.1 address.
+#
+#      This covers LoadBalancer IPs, NodePorts, and control-plane processes
+#      dialing a Service (the apiserver reaching keda's aggregated metrics API,
+#      for example). Do NOT write a 192.168.5.0/24 ingress rule expecting it to
+#      carry LoadBalancer traffic - an earlier revision of this pattern did, and
+#      it silently denied mimir-lb and loki-push-lb while looking correct.
+#
+#      Two further consequences are worth stating plainly:
+#        * The masquerade is applied to the LoadBalancer path
+#          (KUBE-EXT-* -> KUBE-MARK-MASQ) without regard for the client, so a
+#          pod that reaches a VIP is anonymised exactly like an internet client.
+#          Allowing the node gateways therefore allows anything that can reach
+#          the VIP. Only the ports you actually list are exposed that way.
+#        * A Service with externalTrafficPolicy: Local is the exception - it
+#          preserves the real client address, so it needs explicit source rules
+#          (a world rule for stalwart's mail ports, for example) and gets no
+#          benefit from the gateway list.
 #
 # ---------------------------------------------------------------------------
 # Per-namespace template
@@ -27,26 +51,26 @@
 # that a namespace is never half-policed:
 #
 #   default-deny-ingress : podSelector {} + policyTypes [Ingress]
-#   allow-ingress        : the four common sources below, plus that namespace's
-#                          own Traefik ports
+#   allow-ingress        : the common sources below plus that namespace's own
+#                          Traefik ports
 #   egress-baseline      : the B1 egress tier below
 #
-# Common ingress sources, all four required:
-#   1. ipBlock 192.168.5.0/24
-#        - kubelet health probes and the control-plane dialing pods on other
-#          nodes (see note above), and
-#        - with externalTrafficPolicy: Cluster, kube-proxy marks traffic to a
-#          LoadBalancer IP for masquerade (KUBE-EXT-* chains in the nat table),
-#          so a real internet or LAN client arrives at the pod with a *node* IP
-#          as its source. This rule is what carries NodePort/LoadBalancer
-#          traffic. Any Service using externalTrafficPolicy: Local is the
-#          exception: its source is the real client IP and it needs an explicit
-#          world rule instead (see workloads/network-policies/stalwart.yaml).
+# Common ingress sources:
+#   1. The cluster SNAT gateways, one ipBlock per node for both addresses
+#      (10.42.<n>.0/32 and 10.42.<n>.1/32). Currently 0=closet 1=office 2=pite
+#      3=nas 4=big 6=arch.
+#      MAINTENANCE: this list must be regenerated when the node set changes, or
+#      LB/NodePort access to the covered namespaces breaks silently with a
+#      "connection refused" from the node that used to be listed:
+#        kubectl get nodes -o json | jq -r '.items[].spec.podCIDR'
+#      and turn each 10.42.<n>.0/24 into 10.42.<n>.0/32 plus 10.42.<n>.1/32.
 #   2. podSelector {} - same namespace.
 #   3. namespaceSelector kube-system + podSelector traefik, with that
-#      namespace's published backend ports. Traefik is *not* hostNetwork (it
-#      has a pod IP), so its traffic arrives from its pod, not a node.
+#      namespace's backend container ports. Traefik is not hostNetwork, so its
+#      traffic arrives from its pod and this rule is what keeps HTTP routing up.
 #   4. namespaceSelector observability - Alloy scrapes these pods by name.
+#   Add anything else only with evidence (a config that points at the namespace,
+#   an EndpointSlice consumer, a controller), and keep the port list exact.
 #
 # Egress (tier B1) is deliberately coarse: it stops a compromised workload from
 # reaching arbitrary LAN hosts, which is the realistic lateral-movement path,
@@ -60,7 +84,7 @@
 #                                  pre-DNAT.
 #   5. 192.168.6.0/24            - MetalLB service VIPs.
 #   6. 0.0.0.0/0 except RFC1918/ULA - internet, for ACME, S3, OIDC, LLM APIs.
-#   plus, only where proven: narrow extra ipBlocks (see observability.yaml for
+#   plus, only where proven, narrow extra ipBlocks (see observability.yaml for
 #   the kubelet scrape case).
 #
 # ipBlock rules are IPv4-only and NetworkPolicy is per-family, so an absent
@@ -68,7 +92,8 @@
 # exists (0 conntrack entries for fd42:42:42::/56 or fd00:6::/64 across the
 # cluster) and the selector-based rules above are family-agnostic. If IPv6 pod
 # traffic is ever introduced, mirror the ipBlocks: fd42:42:42::/56 pod network,
-# fd00:1::/64 node ULA, fd00:6::/64 service VIPs.
+# fd00:1::/64 node ULA, fd00:6::/64 service VIPs, and per-node gateways
+# fd42:42:42:<n>::/64.
 #
 # ---------------------------------------------------------------------------
 # Safety gate (do not skip this)

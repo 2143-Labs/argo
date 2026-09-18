@@ -4,15 +4,17 @@
 #   * kube-system/traefik -> 8080 (LAPI) and 7422 (AppSec). Verified from the
 #     live middleware values in workloads/gateway/security-middlewares.yaml:
 #     crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080 and
-#     crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422.
+#     crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422. Traefik
+#     has a pod IP, so the source here is its pod.
 #   * crowdsec-agent DaemonSet -> crowdsec-service:8080 (same namespace). The
 #     agents are not hostNetwork, so the same-namespace rule carries them.
 #   * observability/alloy -> 6060 - scrapes the LAPI, AppSec and agent services.
-#   * node IPs (192.168.5.0/24) - probes and node-SNAT'd traffic only; no
-#     LoadBalancer or NodePort Service exists in this namespace.
+#   * cluster SNAT gateways - see the block below and 00-pattern.yaml. Only
+#     needed for paths that go through kube-proxy; this namespace has no
+#     LoadBalancer or NodePort Service, so nothing external arrives here today.
 #
-# Note that the bouncer and AppSec plugin are configured fail-open
-# (crowdsecAppsecFailureBlock: false, crowdsecAppsecUnreachableBlock: false and
+# The bouncer and AppSec plugin are configured fail-open
+# (crowdsecAppsecFailureBlock: false, crowdsecAppsecUnreachableBlock: false,
 # crowdsecMode: stream), so a mistake here degrades protection rather than
 # blocking user traffic. That is a property of this namespace's clients, not a
 # reason to be sloppy: the LAPI port is the one Traefik must reach.
@@ -38,9 +40,20 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
+    # Cluster SNAT sources - see keda.yaml for the full explanation.
     - from:
-        - ipBlock:
-            cidr: 192.168.5.0/24
+        - ipBlock: {cidr: 10.42.0.0/32}
+        - ipBlock: {cidr: 10.42.0.1/32}
+        - ipBlock: {cidr: 10.42.1.0/32}
+        - ipBlock: {cidr: 10.42.1.1/32}
+        - ipBlock: {cidr: 10.42.2.0/32}
+        - ipBlock: {cidr: 10.42.2.1/32}
+        - ipBlock: {cidr: 10.42.3.0/32}
+        - ipBlock: {cidr: 10.42.3.1/32}
+        - ipBlock: {cidr: 10.42.4.0/32}
+        - ipBlock: {cidr: 10.42.4.1/32}
+        - ipBlock: {cidr: 10.42.6.0/32}
+        - ipBlock: {cidr: 10.42.6.1/32}
     - from:
         - podSelector: {}
     # Traefik -> LAPI (bouncer) and AppSec (plugin).

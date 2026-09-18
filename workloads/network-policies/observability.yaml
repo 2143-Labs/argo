@@ -1,18 +1,25 @@
 # observability - default-deny ingress + B1 egress baseline. Wave 1.
 #
 # Sources accounted for (audited 2026-09-18):
-#   * kube-system/traefik -> 80 (grafana HTTPRoute), and 4317/4318 for the OTLP
-#     receiver on Alloy. Traefik's tracing exporter in the closet
-#     HelmChartConfig points at alloy.observability.svc:4317.
+#   * kube-system/traefik -> 3000 (grafana) and 4317/4318 (Alloy's OTLP
+#     receiver; Traefik's tracing exporter in the closet HelmChartConfig points
+#     at alloy.observability.svc:4317). Traefik has a pod IP, so the source is
+#     its pod, not a node.
 #   * observability/beyla -> alloy:4318, and Alloy -> tempo:4317 - both inside
 #     this namespace, so the same-namespace rule carries them.
 #   * same namespace - Alloy -> loki-gateway/mimir/tempo, loki-canary ->
 #     loki-gateway, grafana -> all three datasources, and the Loki/Mimir
 #     memberlist gossip (7946) between their own pods.
-#   * node IPs (192.168.5.0/24) - probes, and this namespace's own
-#     LoadBalancer traffic: mimir-lb (192.168.6.23:8080) and loki-push-lb
-#     (192.168.6.24:3100) both use externalTrafficPolicy: Cluster, so a LAN or
-#     tunnel client is masqueraded to a node IP before it reaches the pod.
+#   * cluster SNAT gateways - mimir-lb (192.168.6.23:8080) and loki-push-lb
+#     (192.168.6.24:3100), plus their NodePorts 30674/30108. Both use
+#     externalTrafficPolicy: Cluster, so kube-proxy masquerades every client -
+#     a LAN host, a cluster node, even another pod reaching the VIP - to the
+#     receiving node's flannel.1 (cross-node) or cni0 (same-node) address.
+#     That means the real client address is not visible here at all, and the
+#     allowance below is effectively "anything that can reach the VIP". Both
+#     endpoints are unauthenticated LAN-facing ports, so this does not widen
+#     access beyond what they already had; it is recorded here so nobody thinks
+#     the VIP is pod-isolated.
 #
 # Egress beyond the B1 baseline, and why it is unavoidable:
 #   * 192.168.5.0/24 on 10250 only - Alloy's kubelet and cAdvisor scrape jobs
@@ -44,9 +51,21 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
+    # Cluster SNAT sources - see keda.yaml for the full explanation. Here this
+    # is what carries mimir-lb and loki-push-lb.
     - from:
-        - ipBlock:
-            cidr: 192.168.5.0/24
+        - ipBlock: {cidr: 10.42.0.0/32}
+        - ipBlock: {cidr: 10.42.0.1/32}
+        - ipBlock: {cidr: 10.42.1.0/32}
+        - ipBlock: {cidr: 10.42.1.1/32}
+        - ipBlock: {cidr: 10.42.2.0/32}
+        - ipBlock: {cidr: 10.42.2.1/32}
+        - ipBlock: {cidr: 10.42.3.0/32}
+        - ipBlock: {cidr: 10.42.3.1/32}
+        - ipBlock: {cidr: 10.42.4.0/32}
+        - ipBlock: {cidr: 10.42.4.1/32}
+        - ipBlock: {cidr: 10.42.6.0/32}
+        - ipBlock: {cidr: 10.42.6.1/32}
     - from:
         - podSelector: {}
     # Traefik -> grafana, and Traefik's OTLP trace export -> alloy.
