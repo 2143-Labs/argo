@@ -1,0 +1,123 @@
+# observability - default-deny ingress + B1 egress baseline. Wave 1.
+#
+# Sources accounted for (audited 2026-09-18):
+#   * kube-system/traefik -> 80 (grafana HTTPRoute), and 4317/4318 for the OTLP
+#     receiver on Alloy. Traefik's tracing exporter in the closet
+#     HelmChartConfig points at alloy.observability.svc:4317.
+#   * observability/beyla -> alloy:4318, and Alloy -> tempo:4317 - both inside
+#     this namespace, so the same-namespace rule carries them.
+#   * same namespace - Alloy -> loki-gateway/mimir/tempo, loki-canary ->
+#     loki-gateway, grafana -> all three datasources, and the Loki/Mimir
+#     memberlist gossip (7946) between their own pods.
+#   * node IPs (192.168.5.0/24) - probes, and this namespace's own
+#     LoadBalancer traffic: mimir-lb (192.168.6.23:8080) and loki-push-lb
+#     (192.168.6.24:3100) both use externalTrafficPolicy: Cluster, so a LAN or
+#     tunnel client is masqueraded to a node IP before it reaches the pod.
+#
+# Egress beyond the B1 baseline, and why it is unavoidable:
+#   * 192.168.5.0/24 on 10250 only - Alloy's kubelet and cAdvisor scrape jobs
+#     use discovery.kubernetes role=node, which yields <node internalIP>:10250.
+#     Those destinations are RFC1918 and would otherwise be denied, silently
+#     stopping node and container metrics. The rule is restricted to port 10250
+#     because that is the only port these jobs use, which keeps the rest of the
+#     LAN (router API, NAS SMB, SSH) out of reach. Enumerating the six node IPs
+#     instead would break silently whenever a node is added.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: observability
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress
+  namespace: observability
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+    - from:
+        - podSelector: {}
+    # Traefik -> grafana, and Traefik's OTLP trace export -> alloy.
+    # NOTE: policy ports are the *container* ports on the destination pod, not
+    # the Service ports. Grafana's Service publishes 80 but its container
+    # listens on 3000 (EndpointSlice grafana-l8hzr shows 3000) and Traefik dials
+    # the pod endpoint directly, so 3000 is what has to be allowed here.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 3000
+          protocol: TCP
+        - port: 4317
+          protocol: TCP
+        - port: 4318
+          protocol: TCP
+    # Alloy scrapes itself, and any future collector running in its own
+    # namespace, so no port restriction here.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-baseline
+  namespace: observability
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector: {}
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.0/16
+    - to:
+        - ipBlock:
+            cidr: 192.168.6.0/24
+    # Kubelet/cAdvisor scrape targets (<node internalIP>:10250).
+    - to:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+      ports:
+        - port: 10250
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16

@@ -1,0 +1,104 @@
+# crowdsec - default-deny ingress + B1 egress baseline. Wave 1.
+#
+# Sources accounted for (audited 2026-09-18):
+#   * kube-system/traefik -> 8080 (LAPI) and 7422 (AppSec). Verified from the
+#     live middleware values in workloads/gateway/security-middlewares.yaml:
+#     crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080 and
+#     crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422.
+#   * crowdsec-agent DaemonSet -> crowdsec-service:8080 (same namespace). The
+#     agents are not hostNetwork, so the same-namespace rule carries them.
+#   * observability/alloy -> 6060 - scrapes the LAPI, AppSec and agent services.
+#   * node IPs (192.168.5.0/24) - probes and node-SNAT'd traffic only; no
+#     LoadBalancer or NodePort Service exists in this namespace.
+#
+# Note that the bouncer and AppSec plugin are configured fail-open
+# (crowdsecAppsecFailureBlock: false, crowdsecAppsecUnreachableBlock: false and
+# crowdsecMode: stream), so a mistake here degrades protection rather than
+# blocking user traffic. That is a property of this namespace's clients, not a
+# reason to be sloppy: the LAPI port is the one Traefik must reach.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: crowdsec
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress
+  namespace: crowdsec
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+    - from:
+        - podSelector: {}
+    # Traefik -> LAPI (bouncer) and AppSec (plugin).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+        - port: 7422
+          protocol: TCP
+    # Alloy metric scraping (6060 on all three ClusterIP services).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-baseline
+  namespace: crowdsec
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector: {}
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.0/16
+    - to:
+        - ipBlock:
+            cidr: 192.168.6.0/24
+    # CrowdSec hub and Central API live on the internet.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16

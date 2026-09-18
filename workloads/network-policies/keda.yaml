@@ -1,0 +1,104 @@
+# keda - default-deny ingress + B1 egress baseline. Wave 1.
+#
+# Sources accounted for (audited 2026-09-18 against live Services, HTTPRoutes,
+# EndpointSlices and the keda-http-addon values):
+#   * kube-system/traefik -> 8080 - the HTTPRoute into
+#     keda-add-ons-http-interceptor-proxy. This is the only ingress path to the
+#     interceptor, so it is the one that must not break.
+#   * observability/alloy -> all ports - scrapes keda-operator,
+#     keda-operator-metrics-apiserver, keda-admission-webhooks and the add-on
+#     metrics endpoints. Any port, because scrape targets move with the chart.
+#   * same namespace - interceptor -> external scaler (9090/2223),
+#     controller -> external scaler/metrics, operator -> metrics apiserver.
+#   * node IPs (192.168.5.0/24) - kube-apiserver dialing the aggregated
+#     metrics API and the admission webhook, and node-SNAT'd NodePort traffic.
+# No Service in this namespace is exposed on a LoadBalancer IP, so nothing
+# arrives here from the internet.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: keda
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress
+  namespace: keda
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    # Probes, cross-node control-plane traffic and node-SNAT'd NodePort/LB
+    # traffic. See 00-pattern.yaml for why this is needed and why kubelet
+    # probes alone would work without it.
+    - from:
+        - ipBlock:
+            cidr: 192.168.5.0/24
+    - from:
+        - podSelector: {}
+    # Traefik -> HTTP interceptor proxy.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+    # Alloy metric scraping.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-baseline
+  namespace: keda
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector: {}
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.0/16
+    # MetalLB service VIPs; the interceptor's scale targets are reached through
+    # these and through the ClusterIP range above.
+    - to:
+        - ipBlock:
+            cidr: 192.168.6.0/24
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16
