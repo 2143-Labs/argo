@@ -8,8 +8,8 @@ data:
     ---
     filenames:
       - /var/log/containers/traefik-*_kube-system_*.log
-    force_inotify: true
-    poll_without_inotify: false
+    poll_without_inotify: true
+    force_inotify: false
     labels:
       type: containerd
       program: traefik

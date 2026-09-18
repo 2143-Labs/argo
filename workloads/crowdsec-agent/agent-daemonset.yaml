@@ -39,6 +39,8 @@ spec:
           value: "true"
         - name: LOCAL_API_URL
           value: http://crowdsec-service.crowdsec:8080
+        - name: COLLECTIONS
+          value: "crowdsecurity/traefik"
         ports:
         - containerPort: 6060
           name: metrics
