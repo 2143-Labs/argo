@@ -70,13 +70,27 @@ the pre-rotation key is dead. Router public key
 > removed. The rule was probably never deleted rather than re-added — the
 > `--format InboundRules` output is one long line and is easy to mis-read.
 >
-> Remediation is a single DO firewall edit, which is shared infrastructure and
-> was deliberately left to the owner:
-> `doctl compute firewall remove-rules 2c0a7567-3422-4705-a4f9-73bffa8a52ee
-> --inbound-rules "protocol:tcp,ports:32040,address:0.0.0.0/0,address:::/0"`.
-> Re-check with `nc -vz 161.35.58.72 32040` afterwards (it should time out) and
-> confirm nothing in the DO cluster depended on the NodePort: in-cluster traffic
-> does not traverse the cloud firewall, so nothing should.
+> The firewall is **DOKS-owned and derived from Service types**. It is attached
+> by tag `k8s:91133a65-2174-48e5-93a2-26338a61807f` (with a pending droplet
+> change), and every `type: NodePort` Service in the cluster has its nodePort
+> opened to `0.0.0.0/0`. Verified 2026-09-18: `30478` (`derp-server-stun`),
+> `30901` (`tor-middle`) and `32040` (`mongo-nodeport`) are open, while none of
+> the five LoadBalancer nodePorts is. So this is a consequence of the Service
+> type, not a stale hand-made rule.
+>
+> Editing the rule does **not** work: `doctl compute firewall remove-rules`
+> exits 0, prints nothing and changes nothing (no exact match, so it sends
+> nothing), and `doctl compute firewall update` would have to supply the whole
+> object and resets anything omitted — including the tag membership that
+> attaches the firewall to the cluster's droplets. Do not run `update` here.
+>
+> Close it by removing the *reason* it is open: route the DO service CIDR
+> (`10.245.0.0/16`) over the WireGuard tunnel, point `worker-uri` at the `mongo`
+> ClusterIP (`10.245.190.99:27017`) instead of `10.99.0.2:32040`, then delete
+> `mongo-nodeport`. The 32040 rule disappears on its own once nothing asks for
+> it. Re-check with `nc -vz 161.35.58.72 32040` (should time out) and confirm the
+> worker reconnects over the ClusterIP; `10.99.0.2:32040` is expected to stop
+> answering after the NodePort is deleted, because that NodePort *was* the path.
 
 What *is* in place: the `ddns-mongo` Flux resource was pruned, the deSEC
 `mongo/A` record was deleted (note the wildcard still resolves
