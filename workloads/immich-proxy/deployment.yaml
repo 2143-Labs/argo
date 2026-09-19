@@ -20,22 +20,10 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 64Mi
-      tolerations:
-        - key: pi
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
-              preference:
-                matchExpressions:
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - pi-arm
-            - weight: 50
               preference:
                 matchExpressions:
                   - key: workload-type
@@ -58,7 +46,7 @@ spec:
               name: http
           env:
             - name: IMMICH_URL
-              value: http://immich.ts.2143.me
+              value: http://immich.default.svc.cluster.local
             - name: PUBLIC_BASE_URL
               value: https://images.2143.me
           volumeMounts:
