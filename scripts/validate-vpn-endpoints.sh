@@ -25,16 +25,18 @@ trap 'rm -rf "${work_dir}"' EXIT
 render() {
   local name="$1"
   local country="$2"
-  local hostname="$3"
-  local pvc_name="$4"
-  local replicas="$5"
-  local rotation_nonce="$6"
-  local output="$7"
+  local city="$3"
+  local hostname="$4"
+  local pvc_name="$5"
+  local replicas="$6"
+  local rotation_nonce="$7"
+  local output="$8"
 
   helm template "${name}" "${CHART_DIR}" \
     --namespace vpn-endpoints \
     --set-string "name=${name}" \
     --set-string "country=${country}" \
+    --set-string "city=${city}" \
     --set-string "hostname=${hostname}" \
     --set-string "pvcName=${pvc_name}" \
     --set "replicas=${replicas}" \
@@ -97,7 +99,8 @@ validate_application_set() {
     ($generators[0].list.elements | map(.name) | length) == ($generators[0].list.elements | map(.name) | unique | length) and
     ($generators[0].list.elements | map(.pvcName) | length) == ($generators[0].list.elements | map(.pvcName) | unique | length) and
     all($generators[0].list.elements[];
-      (keys | sort) == (["country","hostname","mullvadRotationNonce","name","pvcName","replicas"] | sort) and
+      (keys | sort) == (["city","country","hostname","mullvadRotationNonce","name","pvcName","replicas"] | sort) and
+      (.city | type == "string" and test("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")) and
       (.name | type == "string" and test("^[a-z]{2}-mullvad(-[2-9][0-9]*)?$")) and
       (.country | type == "string" and length > 0) and
       .hostname == .name and
@@ -134,12 +137,13 @@ validate_application_set() {
     .spec.template.spec.source.helm.parameters == [
       {"name":"name","value":"{{.name}}"},
       {"name":"country","value":"{{.country}}"},
+      {"name":"city","value":"{{.city}}"},
       {"name":"hostname","value":"{{.hostname}}"},
       {"name":"pvcName","value":"{{.pvcName}}"},
       {"name":"replicas","value":"{{.replicas}}"},
       {"name":"mullvadRotationNonce","value":"{{.mullvadRotationNonce}}"}
     ]
-  ' 'Helm parameters must be exactly the six approved endpoint values in canonical order'
+  ' 'Helm parameters must be exactly the seven approved endpoint values in canonical order'
 }
 
 validate_scripts() {
@@ -170,7 +174,7 @@ validate_scripts() {
     'wg genkey' \
     'hijack_dns' \
     'tailnet-node-name' \
-    '-mullvad-' \
+    'mullvad-$CC-$CITY-' \
     'node_name='; do
     grep -Fq -- "${literal}" "${enroll_script}" || fail "enroll.sh is missing required lifecycle operation: ${literal}"
   done
@@ -197,10 +201,11 @@ validate_manifest() {
   local json="$1"
   local name="$2"
   local country="$3"
-  local hostname="$4"
-  local pvc_name="$5"
-  local replicas="$6"
-  local rotation_nonce="$7"
+  local city="$4"
+  local hostname="$5"
+  local pvc_name="$6"
+  local replicas="$7"
+  local rotation_nonce="$8"
   local country_slug
   country_slug="$(printf '%s' "${country}" | tr '[:upper:] ' '[:lower:]-')"
 
@@ -264,12 +269,13 @@ validate_manifest() {
 
   assert_jq "${json}" '
     configmap($name) as $cm |
-    ($cm.data | keys | sort) == (["deregister.sh","enroll.sh","hostname","rotation-nonce"] | sort) and
+    ($cm.data | keys | sort) == (["city","deregister.sh","enroll.sh","hostname","rotation-nonce"] | sort) and
     $cm.data.hostname == $hostname and
+    $cm.data.city == $city and
     $cm.data["rotation-nonce"] == $nonce and
     common_labels($cm; $name; $country)
-  ' 'ConfigMap must contain exactly both lifecycle scripts, hostname, and rotation nonce' \
-    --arg name "${name}" --arg country "${country_slug}" --arg hostname "${hostname}" --arg nonce "${rotation_nonce}"
+  ' 'ConfigMap must contain exactly both lifecycle scripts, hostname, city, and rotation nonce' \
+    --arg name "${name}" --arg country "${country_slug}" --arg hostname "${hostname}" --arg city "${city}" --arg nonce "${rotation_nonce}"
 
   assert_jq "${json}" '
     deployment($name) as $d |
@@ -484,6 +490,7 @@ validate_application_set
 
 readonly NAME='de-mullvad'
 readonly COUNTRY='Germany'
+readonly CITY='dusseldorf'
 readonly HOSTNAME='de-mullvad'
 readonly PVC_NAME='de-mullvad-state'
 readonly ROTATION_NONCE='7'
@@ -493,11 +500,11 @@ for replicas in 0 1; do
   second_render="${work_dir}/replicas-${replicas}-second.yaml"
   json="${work_dir}/replicas-${replicas}.json"
 
-  render "${NAME}" "${COUNTRY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}" "${first_render}"
-  render "${NAME}" "${COUNTRY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}" "${second_render}"
+  render "${NAME}" "${COUNTRY}" "${CITY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}" "${first_render}"
+  render "${NAME}" "${COUNTRY}" "${CITY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}" "${second_render}"
   cmp -s "${first_render}" "${second_render}" || fail "render is nondeterministic for replicas=${replicas}"
   yq eval-all -o=json -I=0 '[.]' "${first_render}" >"${json}"
-  validate_manifest "${json}" "${NAME}" "${COUNTRY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}"
+  validate_manifest "${json}" "${NAME}" "${COUNTRY}" "${CITY}" "${HOSTNAME}" "${PVC_NAME}" "${replicas}" "${ROTATION_NONCE}"
 done
 
 printf 'vpn-endpoints validation passed (two replica states, two byte-identical renders each)\n'

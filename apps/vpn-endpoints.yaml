@@ -11,24 +11,28 @@ spec:
         elements:
           - name: de-mullvad
             country: Germany
+            city: dusseldorf
             hostname: de-mullvad
             pvcName: de-mullvad-state
             replicas: 1
             mullvadRotationNonce: 1
           - name: ee-mullvad
             country: Estonia
+            city: tallinn
             hostname: ee-mullvad
             pvcName: ee-mullvad-state
             replicas: 1
             mullvadRotationNonce: 1
           - name: jp-mullvad
             country: Japan
+            city: tokyo
             hostname: jp-mullvad
             pvcName: jp-mullvad-state
             replicas: 1
             mullvadRotationNonce: 1
           - name: za-mullvad
             country: South Africa
+            city: johannesburg
             hostname: za-mullvad
             pvcName: za-mullvad-state
             replicas: 1
@@ -51,6 +55,7 @@ spec:
           parameters:
             - { name: name, value: "{{.name}}" }
             - { name: country, value: "{{.country}}" }
+            - { name: city, value: "{{.city}}" }
             - { name: hostname, value: "{{.hostname}}" }
             - { name: pvcName, value: "{{.pvcName}}" }
             - { name: replicas, value: "{{.replicas}}" }
