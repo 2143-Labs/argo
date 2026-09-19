@@ -1,6 +1,7 @@
 name: vpn-de
 country: Germany
 hostname: vpn-de
+city: dusseldorf
 pvcName: vpn-de-state
 replicas: 1
 mullvadRotationNonce: 0
