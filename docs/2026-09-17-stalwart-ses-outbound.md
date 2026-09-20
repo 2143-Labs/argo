@@ -6,6 +6,17 @@ image `v0.16.22`) able to deliver mail to remote domains, by relaying all remote
 messages through Amazon SES in `us-east-1`. Inbound is untouched: the MX record stays at
 home and mail is still received directly.
 
+> **Superseded 2026-09-20 — see [`2026-09-20-stalwart-tem-outbound.md`](2026-09-20-stalwart-tem-outbound.md).**
+> SES never left its sandbox and never delivered real mail, so every outbound path moved
+> to Scaleway TEM. The `ses` MtaRoute has been **destroyed**, the outbound strategy now
+> routes to `tem`, and the pod's `SES_SMTP_*` environment variables are gone. The SES
+> credential, its vault entry and its DNS records are still in place, because the
+> replacement's credential does not authenticate yet — the newer document records that
+> failure in full, together with the route and strategy JSON that exists only in RocksDB.
+> Read this document for the mechanics of the OpenBao → ESO → Reloader path and the JMAP
+> reload discipline, which carried over unchanged; its SES-specific routing, credential
+> and MAIL FROM sections no longer describe the running system.
+
 ## Why this was needed
 
 The home ISP blocks outbound TCP **25 and 587**, so Stalwart's default direct-to-MX route
