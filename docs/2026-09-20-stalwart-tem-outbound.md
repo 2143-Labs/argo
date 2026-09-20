@@ -2,9 +2,10 @@
 
 **Date:** 2026-09-20
 **Supersedes:** `2026-09-17-stalwart-ses-outbound.md`
-**Status:** implemented and partially verified — **the relay credential does not
-authenticate; outbound relay is down until it is replaced** (see
-[Blocker](#blocker-the-tem-credential-does-not-authenticate)).
+**Status:** implemented and **verified end to end**. Stalwart's relay and
+asciinema's own submission both deliver through Scaleway TEM, and both mail
+paths score 10/10 with SPF, DKIM and DMARC passing. What remains is outside the
+cluster: the OpenBao entry and the AWS SMTP credential, both listed at the end.
 
 **Scope:** move every outbound path off Amazon SES and onto Scaleway
 Transactional Email (TEM) in `fr-par`. Two senders are involved: Stalwart's own
@@ -157,14 +158,12 @@ which is why nothing else from SES was touched at this point. The strategy write
 survived the failed reload in the registry and took effect on the next
 successful one.
 
-### 5. DNS — deliberately **not** changed yet
+### 5. DNS: every SES record removed
 
-The plan's DNS edits (drop the three SES DKIM CNAMEs, the `bounce.m` TXT and
-MX, and `include:amazonses.com` from both SPF records) are gated on verification
-passing. It has not, so they are untouched, and `m.2143.me`'s SPF still carries
-both `include:amazonses.com` and `include:_spf.tem.scaleway.com`. TEM's own
-records — the `78d3b111-…._domainkey.m` TXT and `_spf.tem.scaleway.com` — exist
-and were left alone.
+Run after the relay was verified, across both zones. TEM's own records were left
+alone and are confirmed still present. The full table, the two records the
+plan's list did not mention, and the two-independent-method check are under
+[DNS edits](#8-the-dns-edits-landed-on-both-authoritative-servers).
 
 ## Verification
 
@@ -200,10 +199,14 @@ and were left alone.
   250 SIZE 104857600
   ```
 
-### Blocker: the TEM credential does not authenticate
+### The credential gap, and how it was resolved
 
-The submission stops at `AUTH`, so `MAIL FROM`/`RCPT TO` were never reached and
-**no** `554 MAIL FROM domain not verified` could be observed either way:
+The relay was dead on arrival, for a reason that had nothing to do with the
+route, the username or the password's value. Recorded in full because two
+separate red herrings cost real time and both will look plausible again.
+
+**Symptom.** Submission stopped at `AUTH`, so `MAIL FROM`/`RCPT TO` were never
+reached and no `554 MAIL FROM domain not verified` could be observed either way:
 
 ```
 334 VXNlcm5hbWU6
@@ -211,119 +214,180 @@ The submission stops at `AUTH`, so `MAIL FROM`/`RCPT TO` were never reached and
 535 5.7.8 Permission denied
 ```
 
-All three plausible pairings of the vault's values were tried from inside the
-pod, with credentials injected over stdin and never printed. The server's replies
-are specific and between them they pin the mapping down:
+**Red herring 1 — the username.** Every well-formed project UUID returns the
+identical `535 Permission denied`, while a non-UUID such as `P1335383` is
+rejected earlier with `Invalid credentials`. The relay checks the password's
+permission as soon as the username is UUID-shaped, so **no amount of username
+guessing distinguishes the correct project ID from an arbitrary UUID** while the
+permission is missing. Two different UUIDs were tried; the reply was
+byte-identical each time. The project ID was in the vault all along.
 
-| username | password | reply |
-|---|---|---|
-| `TEM_USERNAME` | `API_SECRET_KEY` | `535 5.7.8 Permission denied` |
-| `TEM_USERNAME` | `API_ACCESS_KEY_ID` | `535 5.7.8 Authentication is denied. Please use the Secret Key instead of the Access Key` |
-| `API_ACCESS_KEY_ID` | `API_SECRET_KEY` | `535 5.7.8 Invalid credentials` |
+**Red herring 2 — a DKIM-selector collision.** The project ID,
+`78d3b111-0472-42fe-bf80-ca1d2c57b2b6`, is also character-for-character the
+published TEM DKIM selector (`78d3b111-…._domainkey.m.2143.me`). This was briefly
+written up here as "the DKIM name was copied into the vault instead of the
+project ID", and that was wrong; the operator confirms the string is the project
+ID. The collision is worth knowing about precisely because it makes a valid
+credential look like a copy-paste error.
 
-The second row is the useful one: the relay recognised the *username* as a valid
-SMTP user and rejected only the password's **type**, so `TEM_USERNAME` is the
-right field for the username and `API_SECRET_KEY` is the right field for the
-password. The first row is therefore the documented configuration, and it is
-refused for a reason other than the shape of the credential.
-
-What the API key itself can and cannot do, measured with the same key:
-
-- `POST /transactional-email/v1alpha1/regions/fr-par/emails` with a **valid**
-  body returns `permissions_denied` on `email_api` `create`, and does so for
-  *every* `project_id` — including random UUIDs. That is the same action SMTP
-  submission performs, which is why the relay answers `535 Permission denied`.
-  (An earlier probe with an empty `{}` body returned argument-validation errors
-  instead; Scaleway validates arguments *before* authorising, so that result
-  said nothing about permissions and was briefly read as evidence that sending
-  was allowed.)
-- `GET …/regions/fr-par/domains` returns `{"total_count":0,"domains":[]}` —
-  **no domains** — and returns the same empty result for any `project_id`
-  supplied, including random UUIDs, so the endpoint does not enforce scope and
-  this is not by itself proof of the wrong project.
-- `GET /iam/v1alpha1/api-keys/<access key>` →
-  `insufficient permissions`; `account/v3/projects` needs an
-  `organization_id` the key cannot obtain. The key is not an IAM
-  administrator, so its own project and policy cannot be read from here.
-
-**Root cause: the API key's policy lacks the TEM *send* permission.** Scaleway
-gates sending behind two separate permission sets —
+**Root cause.** The API key's IAM policy did not grant the TEM *send* permission.
+Scaleway splits sending across two permission sets —
 `TransactionalEmailEmailApiCreate` for the REST `email_api:create` action and
-**`TransactionalEmailEmailSmtpCreate`** for the SMTP relay. A policy holding
-only read/domain permission authenticates cleanly and then refuses the send,
-which is exactly the observed combination: reads succeed, `email_api:create` is
-denied, and the relay answers `535 Permission denied` rather than
-`Invalid credentials`.
-
-**The username is correct — a DKIM-selector collision made it look wrong.** The
-pod's `TEM_SMTP_USER` is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6`, and the published
-TEM DKIM record is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6._domainkey.m.2143.me` —
-the *same string*. That coincidence was briefly read here as "the DKIM selector
-was copied into the vault instead of the project ID" and written down as a second
-defect. **It is not one.** The operator confirms
-`78d3b111-0472-42fe-bf80-ca1d2c57b2b6` *is* the project ID, so `TEM_USERNAME` is
-right and needs no change; the organisation ID is
-`7a28b6c4-792f-47fe-a1f6-28a18e0dd6b6`. The collision is still worth recording,
-because it is exactly what makes a valid credential look like a copy-paste error.
-
-The username does have to be a project UUID before the relay looks at the
-password at all: a well-formed UUID proceeds to the permission check and returns
-`535 … Permission denied`, while a non-UUID such as `P1335383` is rejected
-earlier with `Invalid credentials`. **Both the correct project ID and an
-arbitrary UUID therefore produce the identical reply** — the answer was gated on
-the password's permissions the whole time, and no amount of username guessing
-can distinguish them until that is fixed.
-
-**The only outstanding defect is the missing send permission**, confirmed against
-Scaleway's own API with the project ID now known:
+**`TransactionalEmailEmailSmtpCreate`** for the SMTP relay — so a policy with
+only read/domain permission authenticates cleanly and then refuses to send.
+Measured against Scaleway's API with the correct project ID:
 
 ```
-POST …/regions/fr-par/emails   {project_id: 78d3b111-…}   ->  permissions_denied
-                                                              (email_api:create)
+POST …/regions/fr-par/emails  {project_id: 78d3b111-…}
+  -> permissions_denied   (resource: email_api, action: create)
 ```
 
-**To fix** (Scaleway console, IAM): attach a policy granting
-**`TransactionalEmailEmailSmtpCreate`** — and `TransactionalEmailEmailApiCreate`
-if the REST path is also wanted — to the principal that owns the API key, with
-its scope set to project `78d3b111-0472-42fe-bf80-ca1d2c57b2b6`. Read permission
-alone authenticates and then refuses to send, which is the whole of the observed
-behaviour.
+One probe contradicted this and was itself the mistake: an empty `{}` body
+returns argument-validation errors, because Scaleway validates arguments *before*
+authorising. Only a well-formed body exposes the denial.
 
-**The vault entry also needs the new key.** The key previously in
-`john2143-com/stalwart/scaleway-tem-smtp` no longer authenticates at all —
-`denied_authentication` on a plain `GET /domains`, where it previously
-authenticated — so it has been revoked or rotated and the vault is stale
-regardless of the permission question. Update `API_ACCESS_KEY_ID` and
-`API_SECRET_KEY` (and leave `TEM_USERNAME` and `TEM_SMTP_SERVER` as they are),
-after which ESO propagates within 10 minutes and Reloader rolls both consumers.
+**Resolution.** Attaching the policy to the principal that owns the API key was
+enough, and it applied to **every** key that principal holds — including the one
+already in OpenBao. No vault change was needed after all: the stored credential
+authenticated immediately afterwards, over both the SMTP relay and the REST API.
+The route's literal `authUsername` was already correct and needed no write. The
+project ID is confirmed independently by the domain object itself, which reports
+`"project_id":"78d3b111-0472-42fe-bf80-ca1d2c57b2b6"` for `m.2143.me`.
 
-**No route change is needed.** The project ID is unchanged, so the `tem` route's
-literal `authUsername` already holds the correct value; only the password moves,
-and that is an environment reference (`TEM_SMTP_PASS`), not a stored secret. Had
-the project ID changed, the fix would have been this JMAP write plus the 4.3
-reload:
+**A `535` from this relay means "this key is not allowed to send"** — not a wrong
+password and not a wrong username. Ask for the permission first.
 
-```json
-{"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:MtaRoute/set",{"update":{"jfrumaziaaaa":{"authUsername":"<new Project ID>"}}},"r"]]}
+### 4 and 6: the relay leg, and a real message through it
+
+**The submission leg works, encrypted.** From inside the pod, against
+`smtp.tem.scaleway.com:587`:
+
+```
+STARTTLS negotiated, chain verified for CN=smtp.tem.scaleway.com
+EHLO relay-check  ->  250-…  250-AUTH PLAIN LOGIN …  250 SIZE 104857600
+AUTH LOGIN        ->  334 VXNlcm5hbWU6
+                      334 UGFzc3dvcmQ6
+                  ->  235 2.0.0 Authentication succeeded
+MAIL FROM:<terminals@m.2143.me>
+                  ->  250 2.0.0 Roger, accepting mail from <terminals@m.2143.me>
+RCPT TO:<…>       ->  250 2.0.0 I'll make sure <…> gets this
+QUIT              ->  221 2.0.0 Bye
 ```
 
-The SMTP leg can be retested at any time without touching the vault, by
-authenticating with a candidate pair directly from inside the pod.
+Two things only this proves: TLS is negotiated *before* credentials are offered
+(`AUTH` is advertised only in the post-TLS `EHLO` — measured on 587, so the
+second `EHLO` is expected), and there is **no** `554 MAIL FROM domain not
+verified`, the failure mode that would otherwise surface only as silently
+dropped mail.
 
-### Not yet run
+**A real message then went through the whole chain.** Submitted off-site via
+JMAP (`EmailSubmission/set`, account `k`, identity `d`); Stalwart's own trace
+shows the route selection, the encryption and the delivery:
 
-These are downstream of the blocker and are deliberately deferred rather than
-half-done:
+```
+queue.authenticated-message-queued  from = "john2143@m.2143.me"
+delivery.domain-delivery-start      domain = "srv1.mail-tester.com"
+delivery.connect                    hostname = "smtp.tem.scaleway.com", remotePort = 587
+delivery.start-tls                  version = "TLSv1_3", details = "TLS13_AES_128_GCM_SHA256"
+delivery.delivered                  code = 250, "OK: queued as 009b94de-…"
+delivery.completed
+```
 
-- the app's end-to-end send (asciinema registration mail → `DKIM: PASS`
-  `d=m.2143.me`, `DMARC: PASS`, SPF expected *unaligned* because TEM stamps its
-  own envelope domain — an unaligned SPF is **not** a failure);
-- a user-submitted message through the submission port to an external address;
-- inbound reachability from an **external** vantage (never from the LAN — the
-  router does not hairpin port 25, so LAN tests time out on a healthy path);
-- retiring SES: deleting the two `ses-smtp` ExternalSecrets, the vault entry,
-  the AWS credential, the three DKIM CNAMEs, `bounce.m`, and
-  `include:amazonses.com` from both SPF records.
+### 5: the app sends end to end, and the mail authenticates
+
+Both senders were driven against a live receiving service, and both scored
+**10/10 with "You're properly authenticated"** — that service's verdict that
+SPF, DKIM and DMARC all pass for the message it actually received:
+
+| Sender | Path exercised | Result |
+|---|---|---|
+| Stalwart relay | JMAP submission → `tem` route → TEM | 10/10, properly authenticated |
+| asciinema | its own Swoosh/gen_smtp config → `smtp.tem.scaleway.com:587` | 10/10, properly authenticated |
+
+asciinema was driven through its own shipped tool, `bin/send-test-email <addr>`
+(`Asciinema.Emails.send_email(:test, …)`), so the test used the real Swoosh path
+with the real container environment — `SMTP_HOST=smtp.tem.scaleway.com`,
+`SMTP_PORT=587`, `SMTP_TLS=always`, `SMTP_AUTH=always`,
+`From: terminals@m.2143.me` — rather than a simulation of it.
+
+This substitutes a third-party authentication service for the plan's "check
+Show original in Gmail": the same claim (DKIM and DMARC both pass), asserted by
+an independent receiver rather than read off one mailbox. DKIM passes as
+`d=m.2143.me`, the only signature available on this path — Stalwart's
+`dkimManagement` stays `Manual` and TEM is the sole signer — and
+`_dmarc.m.2143.me` is published as
+`"v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me"`. An *unaligned* SPF is expected
+and is not a failure: TEM stamps its own envelope domain.
+
+### 7: inbound is unaffected
+
+Probed from third-party nodes, not from the LAN — the router does not hairpin
+port 25, so LAN tests time out on a healthy path:
+
+| Port | Result |
+|---|---|
+| 25 (SMTP) | connected from 4/4 probe nodes |
+| 993 (IMAPS) | connected from 4/4 probe nodes |
+
+### 8: the DNS edits landed on both authoritative servers
+
+Neither zone carries an SES record any more. Verified two independent ways: by
+`dig` against **both** nameservers, and by sweeping every rrset in both zones
+through the deSEC API for the string `amazonses` — 0 of 39 rrsets in `2143.me`
+and 0 of 10 in `john2143.com`.
+
+| Zone | Record | Action |
+|---|---|---|
+| `2143.me` | `m` TXT | → `"v=spf1 mx include:_spf.tem.scaleway.com -all"` |
+| `2143.me` | 3 × `<selector>._domainkey.m` CNAME | deleted |
+| `2143.me` | `bounce.m` TXT and `bounce.m` MX | deleted |
+| `2143.me` | `bounce.m.2143.me` MX | deleted (stray — see below) |
+| `john2143.com` | apex TXT | → `"v=spf1 include:_spf.google.com ~all"` |
+| `john2143.com` | 3 × `<selector>._domainkey` CNAME | deleted (not in the plan) |
+
+`mx` is kept in the `m.2143.me` SPF deliberately: it authorises the mail host
+itself and costs nothing, so a stray non-relayed send still passes. TEM's own
+`78d3b111-…._domainkey.m` TXT and the `_spf.tem.scaleway.com` include are
+confirmed still present on both nameservers.
+
+**Two things the plan's list missed, removed anyway**, because the stated end
+state is "no SES records left behind in DNS":
+
+- **`john2143.com` carried three SES DKIM CNAMEs of its own** —
+  `pltthyjasanpywgxxmaid3jshnr2apaq`, `gj3eqxsm4x4lvjqehypk3gwnnala6smk`,
+  `cd4toduppdscd34tpr6a4tjij6ctgvez` — from the `john2143.com` SES domain
+  identity described in the superseded document. Dead once SES is retired.
+- **A stray `bounce.m.2143.me` MX rrset.** The superseded document records
+  adding that name with a trailing dot, which deSEC stored as that literal
+  subname, so the record landed *beside* `bounce.m` rather than over it. Both
+  are gone.
+
+**A false alarm worth recording, because it looks exactly like a survivor.**
+Querying the deleted stray still returns
+`bounce.m.2143.me.2143.me. CNAME 2143.me.` That is not a surviving record:
+`2143.me` carries a wildcard `* CNAME 2143.me.`, and any nonexistent name in the
+zone answers identically (`does-not-exist-xyz.2143.me` included). The name is
+genuinely absent; the wildcard is answering.
+
+**Two operational notes.** The deSEC token in `/dev/shm/desec.conf` is
+**read-write**, not read-only as the plan assumed — the edits went through it.
+And deSEC's API reports a change before the nameservers serve it: an early
+DELETE batch reported success while three records were still listed, which is
+why every write here is verified by an independent read afterwards rather than
+by the status of the write itself.
+
+### What this deliberately leaves untouched
+
+- **`john@john2143.com`** (Google Workspace): the five `aspmx` MX hosts,
+  `_dmarc`, and `gmail._domainkey` are untouched, and the SPF keeps
+  `include:_spf.google.com`. Receiving and Workspace sending are both unaffected;
+  the only change is that SES lost authorisation to send as the domain.
+- **`john@2143.me`** (Proton): the `2143.me` apex is untouched entirely — MX
+  `mail.protonmail.ch`, SPF `include:_spf.protonmail.ch` and the
+  `protonmail-verification` TXT are byte-identical. Everything changed here lives
+  under `m.2143.me`, `bounce.m.2143.me` or `._domainkey.m.2143.me`.
+- **`m.2143.me` MX** stays `19 m.2143.me.`, so receiving for the mail domain is
+  unchanged.
 
 ## State left behind
 
@@ -334,14 +398,24 @@ half-done:
 | outbound strategy `route` | `'tem'` |
 | `Secret/tem-smtp` (stalwart, default) | exists, four keys |
 | `SES_SMTP_*` env on the pod | removed |
-| SES ExternalSecrets, vault entry, AWS credential | **untouched** |
-| SES DNS records, `include:amazonses.com` | **untouched** |
+| SES ExternalSecrets (git) | deleted; ArgoCD pruned `Secret/ses-smtp` from both namespaces |
+| OpenBao `john2143-com/stalwart/ses-smtp` | **still present** — needs an admin token, see below |
+| AWS SES SMTP credential | **still live** — needs AWS access, see below |
+| SES DNS records | removed from both zones and confirmed on both nameservers |
 
-Because the `ses` route is gone and its credential is unused, **rollback to SES
-is no longer a single strategy write**. Outbound relay is non-functional until
-the credential above is replaced — which is no regression in practice, since SES
-delivered nothing real, but it does mean every relayed message now fails
-authentication and will be retried and eventually bounced.
+### Two steps that need credentials this environment does not hold
+
+- **Delete the OpenBao entry** `consumers/data/john2143-com/stalwart/ses-smtp`.
+  `eso-read` is deliberately read-only and the vault's root token is held by the
+  operator, so this is not a GitOps action. Nothing consumes it any more, so it
+  is inert until then — but it is a live SES credential sitting in the vault.
+- **Revoke the SES SMTP credential in AWS.** It is on the rotation backlog and
+  is worthless once SES is gone, so revoking is the point of the exercise. No
+  AWS CLI or credentials exist in this environment.
+
+Rollback to SES is no longer a single strategy write — the `ses` route is gone
+and its credential is unused — which is deliberate: SES is sandboxed, refused,
+and not worth keeping a live credential for. Rollback from here is forward.
 
 ## Notes on method
 
