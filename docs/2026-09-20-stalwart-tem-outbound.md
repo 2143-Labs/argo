@@ -255,42 +255,60 @@ which is exactly the observed combination: reads succeed, `email_api:create` is
 denied, and the relay answers `535 Permission denied` rather than
 `Invalid credentials`.
 
-**A second, independent defect: `TEM_USERNAME` is not a project ID.** The pod's
-`TEM_SMTP_USER` is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6` — the **DKIM selector**
-from the published `78d3b111-….m.2143.me` TXT record, not the Scaleway **Project
-ID** that TEM documents as the SMTP username. Whoever populated the vault copied
-the DKIM record's name. This is why the wrong username was not obvious from the
-transcript: a well-formed UUID is accepted as plausible and the exchange
-proceeds to the password/permission check (`535 … Permission denied`), while a
-non-UUID such as `P1335383` is rejected earlier with `Invalid credentials`. Two
-different UUIDs therefore produce an identical reply even though only one of
-them can be the project.
+**The username is correct — a DKIM-selector collision made it look wrong.** The
+pod's `TEM_SMTP_USER` is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6`, and the published
+TEM DKIM record is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6._domainkey.m.2143.me` —
+the *same string*. That coincidence was briefly read here as "the DKIM selector
+was copied into the vault instead of the project ID" and written down as a second
+defect. **It is not one.** The operator confirms
+`78d3b111-0472-42fe-bf80-ca1d2c57b2b6` *is* the project ID, so `TEM_USERNAME` is
+right and needs no change; the organisation ID is
+`7a28b6c4-792f-47fe-a1f6-28a18e0dd6b6`. The collision is still worth recording,
+because it is exactly what makes a valid credential look like a copy-paste error.
 
-**To fix**, both are Scaleway console actions:
+The username does have to be a project UUID before the relay looks at the
+password at all: a well-formed UUID proceeds to the permission check and returns
+`535 … Permission denied`, while a non-UUID such as `P1335383` is rejected
+earlier with `Invalid credentials`. **Both the correct project ID and an
+arbitrary UUID therefore produce the identical reply** — the answer was gated on
+the password's permissions the whole time, and no amount of username guessing
+can distinguish them until that is fixed.
 
-1. Attach an IAM policy granting **`TransactionalEmailEmailSmtpCreate`** (plus
-   `TransactionalEmailEmailApiCreate` if the REST path is wanted) to the
-   principal that owns the API key, scoped to the Project that holds the
-   verified `m.2143.me` domain. Read permission alone is not enough.
-2. Set `TEM_USERNAME` to that Project's **ID** — the project the policy is
-   scoped to, and the one whose Domain Overview page lists `m.2143.me`.
+**The only outstanding defect is the missing send permission**, confirmed against
+Scaleway's own API with the project ID now known:
 
-Then update the vault entry `john2143-com/stalwart/scaleway-tem-smtp` with the
-corrected `TEM_USERNAME`, `API_ACCESS_KEY_ID` and `API_SECRET_KEY` — ESO
-propagates it within 10 minutes and Reloader rolls both consumers. The relay
-cannot be verified end to end until both are done, but the SMTP leg can be
-retested first, without touching the vault, by authenticating with a candidate
-pair directly from inside the pod.
+```
+POST …/regions/fr-par/emails   {project_id: 78d3b111-…}   ->  permissions_denied
+                                                              (email_api:create)
+```
 
-**If the Project ID changes, the route must be updated too.** `authUsername` is
-stored literally, so the new ID is a JMAP write plus a reload:
+**To fix** (Scaleway console, IAM): attach a policy granting
+**`TransactionalEmailEmailSmtpCreate`** — and `TransactionalEmailEmailApiCreate`
+if the REST path is also wanted — to the principal that owns the API key, with
+its scope set to project `78d3b111-0472-42fe-bf80-ca1d2c57b2b6`. Read permission
+alone authenticates and then refuses to send, which is the whole of the observed
+behaviour.
+
+**The vault entry also needs the new key.** The key previously in
+`john2143-com/stalwart/scaleway-tem-smtp` no longer authenticates at all —
+`denied_authentication` on a plain `GET /domains`, where it previously
+authenticated — so it has been revoked or rotated and the vault is stale
+regardless of the permission question. Update `API_ACCESS_KEY_ID` and
+`API_SECRET_KEY` (and leave `TEM_USERNAME` and `TEM_SMTP_SERVER` as they are),
+after which ESO propagates within 10 minutes and Reloader rolls both consumers.
+
+**No route change is needed.** The project ID is unchanged, so the `tem` route's
+literal `authUsername` already holds the correct value; only the password moves,
+and that is an environment reference (`TEM_SMTP_PASS`), not a stored secret. Had
+the project ID changed, the fix would have been this JMAP write plus the 4.3
+reload:
 
 ```json
 {"using":["urn:ietf:params:jmap:core","urn:stalwart:jmap"],"methodCalls":[["x:MtaRoute/set",{"update":{"jfrumaziaaaa":{"authUsername":"<new Project ID>"}}},"r"]]}
 ```
 
-…followed by the 4.3 reload. If only the secret key changes, no route write is
-needed at all. Nothing else in this change depends on the credential.
+The SMTP leg can be retested at any time without touching the vault, by
+authenticating with a candidate pair directly from inside the pod.
 
 ### Not yet run
 
