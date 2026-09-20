@@ -229,8 +229,14 @@ refused for a reason other than the shape of the credential.
 
 What the API key itself can and cannot do, measured with the same key:
 
-- `POST /transactional-email/v1alpha1/regions/fr-par/emails` returns
-  **argument validation errors**, not `permissions_denied`.
+- `POST /transactional-email/v1alpha1/regions/fr-par/emails` with a **valid**
+  body returns `permissions_denied` on `email_api` `create`, and does so for
+  *every* `project_id` — including random UUIDs. That is the same action SMTP
+  submission performs, which is why the relay answers `535 Permission denied`.
+  (An earlier probe with an empty `{}` body returned argument-validation errors
+  instead; Scaleway validates arguments *before* authorising, so that result
+  said nothing about permissions and was briefly read as evidence that sending
+  was allowed.)
 - `GET …/regions/fr-par/domains` returns `{"total_count":0,"domains":[]}` —
   **no domains** — and returns the same empty result for any `project_id`
   supplied, including random UUIDs, so the endpoint does not enforce scope and
@@ -240,23 +246,41 @@ What the API key itself can and cannot do, measured with the same key:
   `organization_id` the key cannot obtain. The key is not an IAM
   administrator, so its own project and policy cannot be read from here.
 
-**Conclusion: the credential in `john2143-com/stalwart/scaleway-tem-smtp` is not
-accepted by TEM's SMTP relay, and the cause is not resolvable from inside the
-cluster.** The two candidate causes, both of which are Scaleway console actions:
+**Root cause: the API key's policy lacks the TEM *send* permission.** Scaleway
+gates sending behind two separate permission sets —
+`TransactionalEmailEmailApiCreate` for the REST `email_api:create` action and
+**`TransactionalEmailEmailSmtpCreate`** for the SMTP relay. A policy holding
+only read/domain permission authenticates cleanly and then refuses the send,
+which is exactly the observed combination: reads succeed, `email_api:create` is
+denied, and the relay answers `535 Permission denied` rather than
+`Invalid credentials`.
 
-1. **The API key belongs to a different project than the one in the username.**
-   Scaleway's model is an IAM application + policy granting TEM permissions *in
-   the project whose ID is the username*. The key's project shows no TEM domain,
-   yet the `m.2143.me` DKIM TXT proves a domain is verified somewhere.
-2. **The key's policy lacks the TEM permission needed to send** (read-only, or
-   domain-scoped rather than email-scoped).
+**A second, independent defect: `TEM_USERNAME` is not a project ID.** The pod's
+`TEM_SMTP_USER` is `78d3b111-0472-42fe-bf80-ca1d2c57b2b6` — the **DKIM selector**
+from the published `78d3b111-….m.2143.me` TXT record, not the Scaleway **Project
+ID** that TEM documents as the SMTP username. Whoever populated the vault copied
+the DKIM record's name. This is why the wrong username was not obvious from the
+transcript: a well-formed UUID is accepted as plausible and the exchange
+proceeds to the password/permission check (`535 … Permission denied`), while a
+non-UUID such as `P1335383` is rejected earlier with `Invalid credentials`. Two
+different UUIDs therefore produce an identical reply even though only one of
+them can be the project.
 
-**To fix:** confirm in the console (Domains & Web Hosting → Transactional Email
-→ Domain Overview) the **Project ID of the project that holds the verified
-`m.2143.me` domain**, and use an API key created in *that* project whose policy
-grants the TEM email permission. Then update the vault entry
-`john2143-com/stalwart/scaleway-tem-smtp` — ESO propagates it within 10 minutes,
-and Reloader rolls both consumers.
+**To fix**, both are Scaleway console actions:
+
+1. Attach an IAM policy granting **`TransactionalEmailEmailSmtpCreate`** (plus
+   `TransactionalEmailEmailApiCreate` if the REST path is wanted) to the
+   principal that owns the API key, scoped to the Project that holds the
+   verified `m.2143.me` domain. Read permission alone is not enough.
+2. Set `TEM_USERNAME` to that Project's **ID** — the project the policy is
+   scoped to, and the one whose Domain Overview page lists `m.2143.me`.
+
+Then update the vault entry `john2143-com/stalwart/scaleway-tem-smtp` with the
+corrected `TEM_USERNAME`, `API_ACCESS_KEY_ID` and `API_SECRET_KEY` — ESO
+propagates it within 10 minutes and Reloader rolls both consumers. The relay
+cannot be verified end to end until both are done, but the SMTP leg can be
+retested first, without touching the vault, by authenticating with a candidate
+pair directly from inside the pod.
 
 **If the Project ID changes, the route must be updated too.** `authUsername` is
 stored literally, so the new ID is a JMAP write plus a reload:
