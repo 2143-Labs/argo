@@ -42,17 +42,25 @@ spec:
             {{- end }}
             - name: STALWART_PUBLIC_URL
               value: "https://{{ .Values.hostname }}"
-            - name: SES_SMTP_USER
+            # Scaleway TEM relay credential. The vault's key names are opaque:
+            # TEM_USERNAME is the SMTP username and API_SECRET_KEY is the SMTP
+            # password.
+            #
+            # optional: true is deliberate: it stops an ESO/ArgoCD sync-ordering
+            # race from wedging the container in CreateContainerConfigError,
+            # which would take inbound mail down with it. A missing variable
+            # surfaces later as an explicit Stalwart config error instead.
+            - name: TEM_SMTP_USER
               valueFrom:
                 secretKeyRef:
-                  name: ses-smtp
-                  key: SES_SMTP_USER
+                  name: tem-smtp
+                  key: TEM_USERNAME
                   optional: true
-            - name: SES_SMTP_PASS
+            - name: TEM_SMTP_PASS
               valueFrom:
                 secretKeyRef:
-                  name: ses-smtp
-                  key: SES_SMTP_PASS
+                  name: tem-smtp
+                  key: API_SECRET_KEY
                   optional: true
           envFrom:
             - secretRef:
