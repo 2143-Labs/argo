@@ -24,3 +24,12 @@ data:
     OAUTH_PROVIDER = "pocketid"
     OAUTH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID", "MISSING")
     OAUTH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET", "MISSING")
+
+    
+    # SSO-only: a non-staff user who has signed in through Pocket ID may not
+    # authenticate with a local password. seahub 13.0's is_force_user_sso()
+    # (seahub/utils/auth.py) matches SocialAuthUser.provider against
+    # OAUTH_PROVIDER_DOMAIN -- NOT OAUTH_PROVIDER -- so both keys are required.
+    # Setting only DISABLE_ADFS_USER_PWD_LOGIN silently has no effect.
+    DISABLE_ADFS_USER_PWD_LOGIN = True
+    OAUTH_PROVIDER_DOMAIN = "pocketid"
