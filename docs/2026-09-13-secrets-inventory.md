@@ -88,6 +88,7 @@ Every entry below was committed in plaintext and must be considered public. Rota
 | Tuwunel / SeaweedFS S3 keys | `workloads/tuwunel/application.yaml` (`extraEnv`) | Rotate the access key in SeaweedFS; `ACCESS_KEY`/`SECRET_KEY` both exposed. |
 | openrct2 server password | `workloads/openrct2/openrct2.yaml` (CLI arg) | Change in the openrct2 server config (workload runs at `replicas: 0`). |
 | litellm DB password | `workloads/llm-proxy/secret-litellm-db-password.yaml` (`stringData`) | Already **removed from tracking** — see §4. The value itself is unchanged and still disclosed in git history; rotate with `ALTER ROLE litellm PASSWORD '<new>'`, after which CNPG re-syncs `litellm-db-app`. |
+| Seafile MariaDB root + app password | `apps/seafile.yaml` (Secret manifest) — `c6308e6`, `1f233da`, `8341b0e` | **Done 2026-09-20.** Was the literal `changeme-root` / `changeme-seafile`, live as `Secret/default/seafile-secret`. Rotated at all three `mysql.user` rows (`root@%`, `root@localhost`, `seafile@%`) and moved to OpenBao `consumers/data/john2143-com/default/seafile-secret`; both placeholders now return `ERROR 1045`. Note the app user cannot alter itself — the statements were run as root. See `2026-09-20-seafile-credential-rotation-and-sso-only.md`. |
 
 `git log -p --follow -- <path>` recovers the exposure history for each file; the paths above are the authoritative list.
 
@@ -227,7 +228,11 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
 - **Scope gap.** The migration set covers the Secrets the workstream had
   enumerated. Live application Secrets still outside it include
   `default/curseforge-api-key`, `default/s3-creds`, `default/rustfs-credentials`,
-  `default/seafile-admin`, `default/seafile-oidc`,
+  `default/seafile-admin` (`default/seafile-oidc` was **deleted on 2026-09-20** —
+  its two values were byte-identical duplicates of `seafile-secret`'s and nothing
+  referenced it; `seafile-admin` was kept because its `SEAFILE_ADMIN_PASSWORD`
+  genuinely differs and may be the only copy of the live admin credential — see
+  `2026-09-20-seafile-credential-rotation-and-sso-only.md`),
   `observability/{grafana,grafana-oidc,rustfs-credentials}`,
   `matrix/au2143me-oidc`, `stalwart/stalwart-stalwart-env`,
   `authentik/authentik-secrets` and `kube-system/crowdsec-bouncer-key`.
