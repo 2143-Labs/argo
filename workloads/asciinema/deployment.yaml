@@ -82,39 +82,42 @@ spec:
               value: "1"
             - name: TZ
               value: America/New_York
-            # SES SMTP submission on port 2587, which is SES's STARTTLS port.
-            # 25 and 587 are silently dropped by the home gateway, and 465 is
-            # implicit TLS - unreachable from here because Swoosh requires
-            # `ssl: true` for that and runtime.exs never sets it.
+            # Scaleway TEM submission on port 587, the STARTTLS port. The
+            # implicit-TLS ports 465 and 2465 both time out from the home
+            # network; 587 is reachable, so 587 + STARTTLS is the encrypted
+            # path. The previous note here claimed 587 was dropped - measured
+            # twice from this network, it is open.
             - name: SMTP_HOST
-              value: email-smtp.us-east-1.amazonaws.com
+              value: smtp.tem.scaleway.com
             - name: SMTP_PORT
-              value: "2587"
+              value: "587"
             - name: SMTP_TLS
               value: always
             # runtime.exs only forwards `auth` to Swoosh when SMTP_AUTH is set,
             # and with it unset gen_smtp never offers the credential at all -
-            # SES then answers 530 Authentication required, not 535.
+            # the server then answers 530 Authentication required, not 535.
             - name: SMTP_AUTH
               value: always
-            # SES SMTP credential, shared with the Stalwart relay. Extracted into
+            # TEM credential, shared with the Stalwart relay. Extracted into
             # this namespace separately - a Secret does not cross namespaces.
+            # TEM_USERNAME is the SMTP username and API_SECRET_KEY is the SMTP
+            # password; those key names are Scaleway's, not ours.
             - name: SMTP_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: ses-smtp
-                  key: SES_SMTP_USER
+                  name: tem-smtp
+                  key: TEM_USERNAME
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: ses-smtp
-                  key: SES_SMTP_PASS
-            # Sending is authorised by the SES domain identity for the apex
-            # `john2143.com`, which covers every subdomain - so this address
-            # needs no identity of its own. SES signs d=john2143.com and relaxed
-            # DMARC alignment accepts a subdomain From for it.
+                  name: tem-smtp
+                  key: API_SECRET_KEY
+            # TEM only accepts senders at domains it has verified, and
+            # john2143.com carries no TEM records - so the From moves to
+            # m.2143.me, which is verified. Replies still reach the same place:
+            # m.2143.me has a catch-all.
             - name: MAIL_FROM_ADDRESS
-              value: hello@terminals.john2143.com
+              value: terminals@m.2143.me
           volumeMounts:
             - name: data
               mountPath: /var/lib/asciinema
