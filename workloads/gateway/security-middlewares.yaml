@@ -4,6 +4,12 @@
 # RemoteAddr — do NOT add ipStrategy/forwardedHeaders. excludedIPs exempts
 # LAN + tailnet (same ranges as the lan-only allowlist) from the rate limit so
 # home devices are never throttled.
+#
+# Two tiers. Use public-* for ordinary pages, where a few dozen requests per
+# minute per client is generous. Use content-* for routes whose page views fan
+# out to many sub-resource requests - a Seafile folder view fires ~280 thumbnail
+# GETs in about a second, which the public burst of 50 rejects outright. The
+# content-* values are the public ones x50.
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -35,6 +41,39 @@ metadata:
 spec:
   inFlightReq:
     amount: 50
+    sourceCriterion:
+      ipStrategy: {}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: content-rate-limit
+  namespace: default
+spec:
+  rateLimit:
+    average: 5000
+    period: 1m
+    burst: 2500
+    sourceCriterion:
+      ipStrategy:
+        excludedIPs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+          - 100.64.0.0/10
+          - 127.0.0.1/32
+          - ::1/128
+          - fd00::/8
+          - fe80::/10
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: content-inflight-limit
+  namespace: default
+spec:
+  inFlightReq:
+    amount: 2500
     sourceCriterion:
       ipStrategy: {}
 ---

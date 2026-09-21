@@ -19,12 +19,12 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: public-rate-limit
+            name: content-rate-limit
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: public-inflight-limit
+            name: content-inflight-limit
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
