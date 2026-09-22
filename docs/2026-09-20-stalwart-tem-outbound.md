@@ -22,10 +22,21 @@ unused credential attached. TEM replaces it end to end.
 
 Two measured constraints shape the design:
 
-- **Only 587 is reachable.** `smtp.tem.scaleway.com` answers on 25, 587 and
-  2587 from this network; the implicit-TLS ports **465 and 2465 both time
-  out**. The encrypted submission path is therefore **587 + STARTTLS**. This
-  is the opposite of the SES situation, whose reachable port was 465.
+- **587 + STARTTLS is the path in use.** `smtp.tem.scaleway.com` answers on
+  25, 587, 2587, 465 and 2465 from this network.
+
+  **Corrected 2026-09-21.** This bullet previously stated that the implicit-TLS
+  ports "465 and 2465 both time out" and concluded "**Only 587 is reachable**".
+  That was a **probe artifact, not a blocked port**: both accept TCP and
+  complete an implicit-TLS handshake returning
+  `220 smtp.tem.scaleway.com ESMTP Service Ready`, from the workstation *and*
+  from the cluster. A *plaintext* probe against an implicit-TLS port hangs —
+  the server waits for a TLS ClientHello and never volunteers a banner
+  (measured side by side: 587 greets in the clear in 0.21 s, 465 stays silent
+  indefinitely and then answers normally once TLS is spoken). The note below
+  was the clue that went unread: the SES predecessor's reachable port was 465,
+  so it was reachable then too. StartTLS on 587 still stands as the chosen
+  path; it was simply not forced by a blocked port.
 - **TEM only accepts senders at verified domains.** `john2143.com` carries no
   TEM records, so asciinema's `From` moves to `terminals@m.2143.me`.
   `m.2143.me` has a catch-all, so replies still reach the same mailbox.
