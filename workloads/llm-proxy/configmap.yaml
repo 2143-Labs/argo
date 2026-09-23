@@ -40,6 +40,54 @@ data:
         litellm_params:
           model: "anthropic/*"
           api_key: "os.environ/ANTHROPIC_API_KEY"
+      # Claude Code on the Claude Max subscription — OAuth passthrough, per
+      # docs.litellm.ai/docs/tutorials/claude_code_max_subscription.
+      #
+      # Header flow (all verified against the pinned image ghcr.io/berriai/litellm:v1.100.1):
+      #   Claude Code sends  Authorization: Bearer sk-ant-oat...   (subscription token)
+      #                 and  x-litellm-api-key: Bearer sk-...      (proxy key)
+      #   * user_api_key_auth prefers `x-litellm-api-key` over Authorization
+      #     (SpecialHeaders.custom_litellm_api_key, proxy/_types.py:4229;
+      #      get_api_key() branch order, proxy/auth/user_api_key_auth.py:657).
+      #   * clean_headers keeps the OAuth Authorization because litellm did NOT
+      #     authenticate with it (proxy/litellm_pre_call_utils.py:911).
+      #   * add_provider_specific_headers_to_request scopes it to the anthropic
+      #     provider only (proxy/litellm_pre_call_utils.py:3151, called at :1863).
+      #   * optionally_handle_anthropic_oauth rewrites it to
+      #     `Authorization: Bearer <token>`, adds
+      #     `anthropic-beta: oauth-2025-04-20` and
+      #     `anthropic-dangerous-direct-browser-access: true`
+      #     (llms/anthropic/common_utils.py:92).
+      # Do NOT set general_settings.forward_client_headers_to_llm_api for this —
+      # it is not needed (the OAuth path above is unconditional) and it would
+      # forward every client `x-*` header upstream.
+      #
+      # Two patterns because Claude Code appends a literal `[1m]` to the model id
+      # for 1M-context models (verified in claude-code 2.1.280: picker values
+      # `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`). The longer pattern wins the
+      # specificity sort in PatternMatchRouter
+      # (litellm/router_utils/pattern_match_deployments.py:36) and its capture
+      # group replaces the `*` in litellm_params.model, so the suffix is stripped:
+      #   claude-opus-4-8[1m] -> anthropic/claude-opus-4-8
+      #   claude-opus-5-5    -> anthropic/claude-opus-5-5
+      #
+      # Deliberately NO `api_key`: when the client sends an `sk-ant-oat*`
+      # Authorization header, optionally_handle_anthropic_oauth
+      # (llms/anthropic/common_utils.py:92) takes THAT token and strips any
+      # api_key from the request, so the subscription pays.
+      #
+      # Be aware of the fallback: with no client OAuth token, litellm resolves
+      # the credential from the environment instead
+      # (AnthropicModelInfo.get_api_key = `api_key or
+      # get_secret_str("ANTHROPIC_API_KEY")`, common_utils.py:805-808), i.e. the
+      # pod's platform key. That keeps API-key clients working on these names;
+      # Assumptions §2 has the fail-closed variant if you would rather error.
+      - model_name: "claude-*[1m]"
+        litellm_params:
+          model: "anthropic/claude-*"
+      - model_name: "claude-*"
+        litellm_params:
+          model: "anthropic/claude-*"
       # OpenAI
       - model_name: "openai/*"
         litellm_params:
