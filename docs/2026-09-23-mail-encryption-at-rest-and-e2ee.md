@@ -426,6 +426,35 @@ Verified against a running instance by cutting the JMAP path underneath it: two
 consecutive scheduled refreshes logged `keeping previous tree` and the key kept serving
 byte-identically (`sha256` unchanged, still `200`).
 
+### What stays up to date on its own, and what does not
+
+The tree is rebuilt wholesale every five minutes and the serving path is a pure cache
+lookup, so **nothing has to be re-run when a user onboards**. Picked up automatically,
+within one refresh plus at most five minutes of HTTP caching:
+
+- a **new user account** that has a server-side key and at-rest armed;
+- a **new alias**, and a new address on an existing account — the address list comes from
+  `x:Account/get`, not from a hardcoded map;
+- a **key rotation** or a re-imported key on the same address (newest `createdAt` wins);
+- **removal**: an account that disappears, or loses its key/arming, stops being published
+  at the next refresh.
+
+Two things are *not* automatic, and both are per-user rather than per-service:
+
+- **A key that only exists in someone's browser is invisible.** The published key comes
+  from the Stalwart registry, so the user has to complete onboarding step 2 (the plugin's
+  set-server-side-encryption action) for their address to appear. A user who generated a
+  keypair but never armed it is counted under `unarmed` in the refresh log and is
+  deliberately skipped — publishing for an un-onboarded account would advertise a key the
+  account does not use.
+- **An account with no key at all** is logged as `keyless` and skipped, so the failure is
+  visible in the pod log rather than silent.
+
+To force it immediately rather than wait out the interval:
+`kubectl -n stalwart rollout restart deploy/wkd` (the first refresh runs at startup). The
+refresh log line carries `entries`, `published`, `unarmed`, `keyless`, `collisions` and
+`misattributed`, which is the whole health picture in one line.
+
 ### The credential
 
 `Secret/wkd-jmap` in namespace `stalwart`, key `WKD_JMAP_PASSWORD`: a dedicated **app
@@ -435,6 +464,7 @@ credential can do this and nothing else:
 ```json
 {"@type": "Replace", "permissions": {
   "authenticate": true,
+  "impersonate": true,
   "sysAccountGet": true,
   "sysAccountQuery": true,
   "sysDomainGet": true,
@@ -443,7 +473,7 @@ credential can do this and nothing else:
 }}
 ```
 
-**Two corrections against the first draft of this design**, both found by running it
+**Three corrections against the first draft of this design**, each found by running it
 rather than by reading it:
 
 - **`authenticate` is required, or the credential cannot open a JMAP session at all.**
@@ -453,10 +483,28 @@ rather than by reading it:
 - **`sysDomainGet` is required** to turn a `domainId` into a domain name — without it the
   service cannot tell `m.2143.me` from `terminals.john2143.com`, the second hosted domain
   on this instance, and cannot build an address at all.
+- **`impersonate` is required for the service to keep working for more than one user.**
+  Registry Get authorises with `assert_is_member` (`crates/jmap/src/api/request.rs:370`),
+  and membership is *the token's own account plus the groups that account belongs to*
+  (`crates/common/src/auth/access_token.rs:476`). Measured with the credential as it
+  stood: `x:PublicKey/get` for its own account `k` → `200`; for group `m` (which `k` is a
+  member of) → `200`; for any other account → `403 You are not an owner of account …`. A
+  second user account is neither, so without `impersonate` the **first second user would
+  fail the whole refresh** and freeze the tree at today's content. It is not optional
+  decoration, and it is the reason the service is single-credential rather than
+  per-account.
 
-What it *cannot* do, checked rather than assumed: `Email/query`, `x:AppPassword/get`, and
-`x:Account/query` for the admin's own account (`d333333`) all return `forbidden`. It
-cannot read mail.
+`impersonate` also switches off the per-account filter for registry reads —
+`registry/get.rs`: `is_account_filtered` is false when the token has that permission — so
+the service no longer trusts the server to scope a query. Every fetched key object is
+published only if its `accountId` is absent or names the account that was asked for, and a
+key object id seen under two different accounts is refused and logged. That guard is the
+piece that makes a wide credential safe; it is exercised in the verification section.
+
+What it *cannot* do, checked with `impersonate` in place rather than assumed:
+`Email/query`, `x:AppPassword/get`, `x:AccountSettings/get` and `x:PublicKey/set` all
+return `forbidden` — no mail, no credentials, no settings, no writes. Its reach is
+read-only account, domain and public-key metadata, which is exactly what the tree needs.
 
 The credential was created with `x:AppPassword/set` as account `k` (it appears as `d` in
 `x:AppPassword/get`) rather than through the admin UI, because that is reproducible and
@@ -532,6 +580,23 @@ Both are `false` in the live config, so no send is blocked on either ground. Not
 guard as written keys off the *sender's own* default key, not the recipient's — either
 way, the bootstrap cannot deadlock here.
 
+**6. The ownership guard refuses a key that is not the account's.** `impersonate` lifts the
+server-side account filter, so this was tested directly against a stub JMAP endpoint
+serving three users: `k` with its own key, a synthetic second user `bob` with his own key,
+and `carol` whose reply hands back *k's* key labelled with `accountId: k`. Result — `bob`'s
+address served his key, `carol`'s address `404`s, and the refresh logged
+`skipping key attributed to another account` with `misattributed: 1`. A mis-attributed key
+cannot therefore be published under the wrong person's address.
+
+**7. The foreign-account read is exercised against the real server.** A throwaway public
+key was planted on a *foreign* account through the admin credential, then queried with the
+WKD credential: with `impersonate`, that query returns the foreign account's key for that
+account id, and `[]` for accounts that hold no keys, where without it the request is
+refused with `You are not an owner of account …`. The probe key was destroyed immediately
+afterwards, leaving only account `k`'s two objects. This covers the mechanism for a
+second *user* (the stub above covers the per-user address assembly), but the instance has
+only one user account today, so no second real mailbox has onboarded yet.
+
 **Not verifiable from this document, and left as such:** that a composed message actually
 leaves encrypted and that a colleague's client auto-imports the sender's key. Both need
 two onboarded accounts and a logged-in webmail session; see the procedure in *How mail to
@@ -575,6 +640,14 @@ a colleague bootstraps* above. No external client has been pointed at this WKD y
   `2143.me` addresses, so that record actively suppresses WKD for the Proton-hosted
   domain. Deleting it is a one-line DNS change, independent of everything here;
   publishing WKD for `2143.me` at all is separate work.
+- **The WKD credential is deliberately broad in one dimension.** `impersonate` plus the
+  `sys*` read permissions let it read account, domain and public-key metadata for every
+  account, because a narrower credential provably cannot enumerate a second user's keys
+  and would freeze the tree instead. It still cannot read mail, app passwords, account
+  settings or write anything (checked), and the service treats every key as untrusted
+  until its ownership is confirmed. The alternative — the recovery admin, which the
+  design allowed as a fallback — is strictly wider, so this is the narrower of the two
+  workable options rather than a convenience.
 
 **Permanent limits, stated so they are not mistaken for gaps to close later:**
 
