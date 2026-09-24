@@ -51,14 +51,28 @@ data:
           "src": ["john@2143.me"],
           "dst": ["tag:vpn-endpoint:*"]
         },
-        // vpin is the shared VPN/build node and needs full tailnet reach (the
-        // attic cache on nas:8280 and other tailnet hosts). pite is deliberately
-        // NOT included: it is John's own node, so the john@2143.me management
-        // rule above is the only grant that touches it.
+        // pite is the monitoring host: its Prometheus (job=home-nodes and
+        // job=smartctl) scrapes node_exporter :9100 and smartctl :9633 on secu and
+        // vpin, and it is an aarch64 remote builder that pulls from the attic
+        // cache. pite is tagged, so it has no implicit autogroup:self coverage —
+        // with no rule naming tag:pite as a src it cannot open any tailnet
+        // connection at all, which silently took 3 scrape targets down on
+        // 2026-09-17 and left alertmanager unable to notify. Broad reach is
+        // deliberate; pite is an internet-exposed k3s node, so the blast radius of
+        // a compromise there is the whole tailnet.
+        {
+          "action": "accept",
+          "src": ["tag:pite"],
+          "dst": ["*:*"]
+        },
+        // vpin is purely an exit node. Its one remaining tailnet need is the attic
+        // cache: nix.settings.substituters in dotfiles nixos/modules/attic.nix is
+        // http://nas:8280/2143nix and MagicDNS resolves "nas" to this tailnet
+        // address. Nothing else on vpin needs tailnet egress.
         {
           "action": "accept",
           "src": ["tag:vpin"],
-          "dst": ["*:*"]
+          "dst": ["100.64.0.14:8280"]
         },
         // Users can only reach their own devices
         {
