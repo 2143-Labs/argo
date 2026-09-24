@@ -287,6 +287,12 @@ message and confirm over JMAP that `Email/get` reports `multipart/encrypted` wit
 
 ### How mail to a colleague bootstraps with no key server
 
+> **Superseded for outbound policy on 2026-09-24.** `alwaysSendPubKey` is now **off**,
+> because the `application/pgp-keys` part it adds is refused by TEM. The mechanism below
+> still describes what the plugin can do, and it stays the fallback if this instance ever
+> moves to a relay without a MIME allow-list, but discovery now runs through WKD — see
+> *Outbound policy* below.
+
 No key distribution mechanism exists in Stalwart, and none is needed for the first
 message. With `alwaysSendPubKey` on (default `true`) the sender's public key rides along
 as `${from.addr}_publickey.asc` (`Content-Type: application/pgp-keys`) on every message
@@ -339,6 +345,60 @@ Run on 2026-09-24 — one user account, protected; the two groups carry no key:
   l  Group  support      at-rest=Disabled  key=None        -> n/a (group)
   k  User   John2143     at-rest=Aes256    key=jgf0kscuahqa -> OK
 ```
+
+### Outbound policy, decided 2026-09-24: encrypted internally, plaintext outbound
+
+Scaleway TEM refuses the MIME types OpenPGP requires, so **no crypto MIME can leave this
+instance as mail** (the constraint and its measurements are in
+[`2026-09-20-stalwart-tem-outbound.md`](2026-09-20-stalwart-tem-outbound.md)). The decision
+that follows: mail between `m.2143.me` users stays encrypted, everything else leaves in the
+clear. It needs no relay change — it is entirely a client configuration.
+
+The plugin has no notion of "internal" or "external", so the policy is assembled out of the
+two things it does have: the rule that it encrypts only when **every** recipient holds a key
+(`if (encrypt && nonPgpRecipients.length === 0)`), and WKD, which supplies keys for our own
+domain and for almost nothing else.
+
+| Setting (per user, browser-side) | Value | Why |
+|---|---|---|
+| `defaultEncrypt` | **`true`** | encryption stays armed — this is what makes internal mail encrypted with no user thought |
+| `defaultSign` | **`false`** | the signature part is `application/pgp-signature`, which TEM refuses; signing becomes a per-message choice, and only for internal recipients |
+| `alwaysSendPubKey` | **`false`** | the `_publickey.asc` part is `application/pgp-keys`, also refused; WKD takes over this bootstrap role |
+| `encryptDrafts` | **`false`** | otherwise every attachment is encrypted and retyped `application/octet-stream`, and any attachment bounces |
+| `tryToFetchMissingKeys` | **`true`** | required — the WKD lookup that finds a colleague's key lives inside this guard |
+| `autoImportSignerCerts` | leave `true` | only consulted for signed mail, which is now opt-in |
+
+Plus one housekeeping step: **remove any imported external correspondent's key.** The
+failed sends to `john@2143.me` are explained by exactly that — a manually imported key made
+the plugin encrypt to a Proton address, which TEM then refused. `keys.openpgp.org` does
+**not** hold that key (`/vks/v1/by-email/john@2143.me` → `404`) and `2143.me` publishes no
+WKD, so once deleted it cannot reappear on its own.
+
+**How internal encryption happens with no user action:** each user completes the two
+onboarding actions, the key lands in Stalwart's registry, the WKD publisher serves it within
+five minutes, and a colleague's plugin finds it at compose time and encrypts. No attachment
+bootstrap, no manual exchange, no external key server.
+
+#### What "enforce" can and cannot mean here
+
+- **It can be automatic**, which is what the table buys: nothing per message, and internal
+  mail is encrypted whenever the recipient has an armed, WKD-published key.
+- **It cannot be a server-applied policy.** Neither `configSchema` (admin) nor
+  `settingsSchema` (user) offers "require encryption for these recipients", and
+  `forceEncryption` does **not** do that job: its whole effect is
+  `if (forceEncryption === true && !getDefaultKeyRecord()) return false`, blocking the send
+  when the *sender* has no key. It says nothing about recipients.
+- **It cannot be audited from the store.** Stalwart's Sieve has no MIME test (checked — the
+  implementation has none), and a message that arrived E2E-encrypted is stored in the same
+  shape as one that arrived in cleartext and was wrapped by at-rest encryption: both are
+  `multipart/encrypted; protocol="application/pgp-encrypted"`. No query answers "was this
+  internal message encrypted in transit".
+- **The residual hole is a colleague who has not onboarded** — mail to them leaves in
+  cleartext, silently. The available counters are the standing audit above (an account
+  reading `at-rest=Disabled` has no key, so nothing can be encrypted to it) and running that
+  audit on a schedule instead of by hand.
+- **The external failure mode is loud, not silent**: if someone imports an external
+  correspondent's key, the send bounces at TEM rather than leaking, and it self-reports.
 
 ### The four per-user distribution settings have no admin control
 
