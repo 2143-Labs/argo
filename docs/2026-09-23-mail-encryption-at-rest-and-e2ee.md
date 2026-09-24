@@ -8,7 +8,9 @@ absent; the crypto plugin is installed instance-wide and configured; and the
 account's public key is registered server-side with `encryptionAtRest` armed
 against it, so the encrypted mail is readable in the webmail again. What remains
 is **per user**: every account still has to run the two onboarding actions below,
-and nothing alerts an account that skips the second one.
+and nothing alerts an account that skips the second one. On top of that, a **WKD
+publisher** now serves the same public keys at `https://m.2143.me` so external
+correspondents can find them before writing, and the webmail runs Bulwark `v1.10.0`.
 **Scope:** automatic PGP/S/MIME encryption plus encryption at rest for
 `John2143@m.2143.me` on Stalwart v0.16.22, for **mail from here on only**.
 Existing mail is deliberately left plaintext; see *Existing mail* below.
@@ -353,6 +355,188 @@ Do **not** make this uniform by pointing every account's `encryptionAtRest.publi
 one shared key: that discards the isolation `PublicKey.accountId` exists to provide, and
 one compromised key then reads every mailbox.
 
+## Web Key Directory for `m.2143.me`
+
+Everything above works with **no key server** — keys travel as message attachments. WKD
+adds the one thing attachments cannot: an external correspondent (GnuPG, Thunderbird,
+Proton) can fetch your key *before* writing the first message. It changes nothing about
+the intra-domain guarantee, and Stalwart itself still ships no WKD code — this is a
+separate read-only service that only consumes Stalwart's public-key registry.
+
+### Why the direct method, and why `openpgpkey.m.2143.me` stays absent
+
+Bulwark resolves recipient keys on compose through `crypto.getPublicKeyFromWKD()`, and
+only falls back to `keys.openpgp.org`. That host API is mapped to `crypto:full` rather
+than to the allowlist-gated `http:*` permissions and fetches `https://<domain>/…`
+directly, so a self-hosted WKD needs **no change to the plugin**, while a self-hosted
+*keyserver* would need a new entry in the plugin's `httpOrigins`.
+
+Bulwark only ever takes the **direct method**: it requests
+`/.well-known/openpgpkey/hu/<hash>?l=`, omitting the `/<domain>/` segment the spec
+requires for the advanced method (which lives on `openpgpkey.<domain>`). So the WKD is
+served on `m.2143.me` itself, and **`openpgpkey.m.2143.me` must not be created**: a
+spec-compliant client that resolves that name would try the advanced path, which is not
+served here, instead of falling back to the direct one.
+
+### The service
+
+`workloads/wkd/` — one `node:22-alpine` container, no image build, the script supplied by
+`ConfigMap/wkd-script` and mounted read-only at `/app/server.mjs`. It is read-only, holds
+no state on disk, and runs as uid 1000 with `readOnlyRootFilesystem`, all capabilities
+dropped, and `RuntimeDefault` seccomp.
+
+| Request | Response |
+|---|---|
+| `GET /.well-known/openpgpkey/hu/<hash>` (and `/hu/<hash>`) | `200`, raw **binary** OpenPGP public key, `Content-Type: application/pgp-keys`, `Cache-Control: public, max-age=300`; `404` for an unknown hash |
+| `GET /.well-known/openpgpkey/policy` (and `/policy`) | `200`, zero-length body, `text/plain` |
+| `GET /healthz` | `200` (`ok`) |
+
+Nothing else is served — no HTML, no directory index, and `X-Content-Type-Options:
+nosniff` on every response. A tree that has never loaded answers `503`, which is what
+separates "no key for this address" from "not serving keys yet".
+
+The tree is rebuilt every five minutes (`WKD_REFRESH_MS`) from four JMAP calls:
+
+1. `GET /jmap/session` → the session's own account id
+   (`primaryAccounts["urn:stalwart:jmap"]`), which is what scopes everything after it.
+2. `x:Account/query {"accountId": <session>}` → every account id. **Groups come back too**
+   (`m`, `l`); only `@type == "User"` objects own keys.
+3. `x:Domain/get` → domain ids to names, because an account's address is its `name` plus
+   its `domainId`, and each alias carries a `domainId` of its own.
+4. Per onboarded user (`encryptionAtRest` reading `Aes256`), `x:PublicKey/get
+   {"accountId": <user>}`. Accounts with no key, or with at-rest disabled, are skipped.
+
+Each user's primary address and **every enabled alias whose domain is `m.2143.me`** is
+published (account `k` contributes `john2143`, `all` and `dmarc` from `m.2143.me`; its
+`terminals.john2143.com` aliases are excluded). Hash:
+`zbase32_msb(sha1(lowercase(localpart)))`, 32 characters over the alphabet
+`ybndrfg8ejkmcpqxot1uwisza345h769` — the exact function Bulwark uses, checked against two
+reference values: `john2143` → `fjbwczxhjfmgqs7e11wqxom18mqmdbag` and `john` →
+`wwq7w9d96wfsd4zkytndq84kpkjod3eb`. (`john` is deliberately *not* published — it is not an
+alias of the account, and it correctly 404s.)
+
+Several `PublicKey` objects can carry the same address — account `k` has two, both the
+same key — so the newest `createdAt` wins and a collision between two genuinely different
+keys is logged rather than published twice. Dearmoring is mandatory: the stored key is
+armored and GnuPG's WKD client expects binary. If dearmoring fails for a key the armored
+form is served instead (Bulwark accepts either); it has not had to.
+
+**A failed refresh keeps the previous tree and logs; it never installs an empty one.**
+Verified against a running instance by cutting the JMAP path underneath it: two
+consecutive scheduled refreshes logged `keeping previous tree` and the key kept serving
+byte-identically (`sha256` unchanged, still `200`).
+
+### The credential
+
+`Secret/wkd-jmap` in namespace `stalwart`, key `WKD_JMAP_PASSWORD`: a dedicated **app
+password**, not the recovery admin. Its permission map is a `Replace` list, so the
+credential can do this and nothing else:
+
+```json
+{"@type": "Replace", "permissions": {
+  "authenticate": true,
+  "sysAccountGet": true,
+  "sysAccountQuery": true,
+  "sysDomainGet": true,
+  "sysPublicKeyGet": true,
+  "sysPublicKeyQuery": true
+}}
+```
+
+**Two corrections against the first draft of this design**, both found by running it
+rather than by reading it:
+
+- **`authenticate` is required, or the credential cannot open a JMAP session at all.**
+  With only the four `sys*` permissions every request returns `403` and Stalwart logs
+  `security.unauthorized … details = "authenticate"`. The permission map in the design
+  was therefore not a working credential.
+- **`sysDomainGet` is required** to turn a `domainId` into a domain name — without it the
+  service cannot tell `m.2143.me` from `terminals.john2143.com`, the second hosted domain
+  on this instance, and cannot build an address at all.
+
+What it *cannot* do, checked rather than assumed: `Email/query`, `x:AppPassword/get`, and
+`x:Account/query` for the admin's own account (`d333333`) all return `forbidden`. It
+cannot read mail.
+
+The credential was created with `x:AppPassword/set` as account `k` (it appears as `d` in
+`x:AppPassword/get`) rather than through the admin UI, because that is reproducible and
+the admin dashboard is disabled anyway (`Admin dashboard disabled (no ADMIN_PASSWORD
+set)`). **Its value is not in Git and there is no ExternalSecret yet**: the Kubernetes
+Secret was created directly with `kubectl`, which is the documented fallback in
+`docs/adding-a-secret.md`. Follow-up: seed
+`consumers/data/john2143-com/stalwart/wkd-jmap` and add
+`workloads/secrets/stalwart-wkd-jmap.yaml` in the `tem-smtp` shape. Until then
+`Secret/wkd-jmap` is the only copy and is not restored by a GitOps sync.
+
+### The public route
+
+`m.2143.me` had no gateway listener, which is why it answered with the gateway's
+`404 page not found`. Two additions:
+
+- `workloads/gateway/gateway.yaml`: an `m-2143-me-https` listener — the
+  `stalwart-ts-2143-https` block with a different name and hostname, terminating with the
+  existing `2143-me-wildcard-tls` secret (`*.2143.me`, already issued; no new
+  certificate).
+- `workloads/wkd/route.yaml`: an `HTTPRoute` in namespace `stalwart` bound to that
+  listener by `sectionName`, hostname `m.2143.me`, one rule to the `wkd` service on 8080.
+
+**It deliberately does not carry the `lan-only` middleware** that
+`workloads/stalwart/ingress.yaml` uses: WKD exists to be reached from the open internet.
+`m.2143.me` resolves publicly (`108.56.153.222`) — unlike `stalwart.ts.2143.me`, which is
+split-horizon to the in-cluster load balancer — so the listener was the only piece
+missing.
+
+### Verification
+
+All of it from outside the cluster except where noted.
+
+**1. The service answers, with the right hash and the right bytes.**
+
+```
+https://m.2143.me/.well-known/openpgpkey/hu/fjbwczxhjfmgqs7e11wqxom18mqmdbag?l=john2143
+  -> 200 application/pgp-keys 2263 bytes
+https://m.2143.me/.well-known/openpgpkey/policy   -> 200 text/plain 0 bytes
+https://m.2143.me/.well-known/openpgpkey/hu/deadbeef -> 404
+```
+
+The body starts `c6 c1 4d 04` — an OpenPGP packet header, not `-----BEGIN`. Its `sha256`
+equals the dearmored `x:PublicKey` object `jgf0kscuahqa` that `encryptionAtRest` points
+at, and `gpg --show-keys` reports fingerprint `086AAAECF60C30A3FC463135DF001CA8A0977BD6`
+with encryption subkey `C6F723D916B1E508` — the key the stored mail is actually encrypted
+to, so the published key is usable and not merely well-formed.
+
+**2. The route is public and TLS is valid.** `curl` from the workstation (public DNS
+`108.56.153.222`, not the LAN address) with `ssl_verify_result=0`: `policy` → `200`, key
+→ `200`, unknown hash → `404`. A `404 page not found` would have meant the listener or
+`parentRefs.sectionName` was wrong.
+
+**3. The gateway accepted the route.** `Gateway/shared-gateway` reaches generation 52
+`Accepted`/`Programmed` with the new listener in its list, and the `HTTPRoute` is
+`Accepted=True`. (Before the gateway Application synced, the route read
+`Accepted=False NoMatchingParent` — the listener has to exist first.)
+
+**4. No regression.** Account `k` holds 31 messages: 22 plaintext, all with `receivedAt`
+at or before 2026-09-21T15:21Z, and 9 encrypted, all at or after 2026-09-23T09:14Z — the
+arming moment. The plaintext count is exactly the 22 recorded on 2026-09-23, so nothing
+was re-encrypted or lost by this work. `openpgpkey.m.2143.me` still does not resolve.
+
+**5. The deadlock guard cannot fire.** Read from the installed plugin
+(`/app/data/admin/plugins/pgp-true-end-to-end.js`), `onComposeSend` is:
+
+```js
+if (await config("forceEncryption") === true && !await getDefaultKeyRecord()) { …; return false; }
+if (await config("blockUntilDefaultKeyIsAvailable") === true && !await checkIsKeyUnlocked()) { …; return false; }
+```
+
+Both are `false` in the live config, so no send is blocked on either ground. Note the
+guard as written keys off the *sender's own* default key, not the recipient's — either
+way, the bootstrap cannot deadlock here.
+
+**Not verifiable from this document, and left as such:** that a composed message actually
+leaves encrypted and that a colleague's client auto-imports the sender's key. Both need
+two onboarded accounts and a logged-in webmail session; see the procedure in *How mail to
+a colleague bootstraps* above. No external client has been pointed at this WKD yet.
+
 ## Open, and the permanent limits
 
 **Open — what is left unverified or unfinished:**
@@ -375,6 +559,22 @@ one compromised key then reads every mailbox.
   described above. S/MIME toward the Google Workspace correspondent is additionally gated
   on the Workspace edition: hosted S/MIME exists only on Frontline Plus, Enterprise Plus
   and the Education tiers, and on **no** Business edition nor Enterprise Standard.
+- **The WKD credential has no vault entry.** `Secret/wkd-jmap` was created with `kubectl`
+  and is the only copy — a cluster rebuild loses it, and the service then serves `503`
+  until it is reissued. Seeding the OpenBao key and adding the ExternalSecret is the
+  follow-up.
+- **WKD is served for `m.2143.me` only.** `terminals.john2143.com` is a second hosted
+  domain on the same instance; serving it means a second listener, a second `HTTPRoute`
+  and including that domain's addresses in the tree. `john2143.com` is Google-hosted.
+- **No external client has consumed it yet.** The endpoint's shape is verified against
+  Bulwark's own request path and against GnuPG's parser, but no GnuPG or Proton lookup of
+  a `m.2143.me` address has been observed end to end.
+- **Unrelated DNS in the same zone:** `openpgpkey.2143.me` CNAMEs to `2143.me.` and
+  presents no certificate for its own name (`TLSV1_UNRECOGNIZED_NAME`). Because the
+  sub-domain *does* resolve, compliant clients skip the direct-method fallback for
+  `2143.me` addresses, so that record actively suppresses WKD for the Proton-hosted
+  domain. Deleting it is a one-line DNS change, independent of everything here;
+  publishing WKD for `2143.me` at all is separate work.
 
 **Permanent limits, stated so they are not mistaken for gaps to close later:**
 
