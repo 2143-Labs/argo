@@ -548,6 +548,44 @@ bounce, while `application/pdf`, the Office types, `image/png|jpeg|gif|webp`,
 accepted. A user attaching a `.zip` or `.asc` will get the same 501 no matter which
 crypto settings are on.
 
+### How to verify outbound after any change here
+
+The relay's verdict is in Stalwart's own log; a bounce in the client is not needed to
+diagnose. Every remote outcome appears as one of `delivery.delivered` /
+`delivery.dsn-success` (accepted) or `delivery.message-rejected` (refused, with the
+offending MIME type) plus `delivery.dsn-perm-fail`:
+
+```sh
+kubectl -n stalwart logs -l app.kubernetes.io/name=stalwart --since=20m --tail=-1 \
+  | grep -E 'queueName = "remote"' \
+  | grep -E 'delivered|dsn-success|message-rejected'
+```
+
+Intra-domain sends never reach TEM, so they show `queueName = "local"` and
+`message-ingest.ham` instead — a useful check that a test was the local kind.
+
+What each test actually proves, given that TEM forbids crypto MIME:
+
+| Test | Recipient | Crypto toggles | Proves |
+|---|---|---|---|
+| 1 | your own `@m.2143.me` mailbox | sign + encrypt **on**, no attachment | intra-domain E2E and key discovery by WKD; never touches TEM |
+| 2 | a PGP host (`john@2143.me`, Proton) | all three **off**, no attachment | plaintext delivery to a PGP-capable host |
+| 3 | a non-PGP host (`john@john2143.com`, Google Workspace — `aspmx.l.google.com`) | all three **off** | plaintext delivery to an ordinary receiver |
+| 4 | either external address | all three off, **small PNG or PDF attached** | attachments work again after `encryptDrafts` is off |
+| 5 | either external address | all three off, **`.zip` attached** | negative control: the 501 should name `application/zip` |
+
+Test 2 is not an E2E test: with encryption off the message is plaintext, and with
+encryption on TEM refuses it. **Encrypted outbound to an external PGP host cannot be
+tested while TEM is the relay** — only intra-domain E2E (test 1) and inbound from a
+correspondent can. For SPF/DKIM/DMARC reputation rather than delivery, use a fresh
+`mail-tester.com` address (as in the verification above) or `check-auth@verifier.port25.com`,
+which auto-replies with an authentication report.
+
+A composer symptom worth knowing: when `encryptDrafts` was on, an attachment appears in
+the draft renamed to `encrypted.pgp` or to a bare UUID. Seeing that name means the stored
+blob is the encrypted copy — the attachment has to be removed and re-added, not just
+un-toggled.
+
 ### Ruled out
 
 - **Direct-to-MX** (Stalwart's built-in `mx` route) for this mail: the outbound path is
