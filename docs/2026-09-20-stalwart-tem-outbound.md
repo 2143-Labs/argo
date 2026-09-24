@@ -512,6 +512,42 @@ mail, `rcpt_domain == '2143.me'` for one correspondent, or `source == 'report'` 
 the DMARC reports failing today. It requires a relay with no MIME restriction, and
 **SES is not one**: it never left its sandbox (see *Why*).
 
+### Attachments: the third switch, and the one that survives the other two
+
+Turning off the plugin's `defaultSign` and `defaultEncrypt` does **not** stop
+`application/octet-stream` appearing. `encryptDrafts` ("Encrypt drafts and uploaded
+attachments", schema default **`true`**) is a separate switch, and it is the one that
+retypes attachments:
+
+- `onBeforeBlobUpload` encrypts every uploaded attachment and re-saves it as a `File`
+  named `encrypted.pgp` with `type: "application/octet-stream"`.
+- `onBeforeDraftAutoSave` does the same for attachments already on a draft (randomised
+  name, `type: "application/octet-stream"`, plus a metadata side-map).
+- `fetchAttachments` then copies that type straight into the outgoing MIME part
+  (`contentType: att.type || "application/octet-stream"`).
+
+Worse, the two settings interact badly: `onComposeSend` returns early when *both* sign
+and encrypt are off — `if (!sign && !encrypt) return void 0;` — and the block that
+**decrypts** the stored attachments sits *after* that return. So with crypto off, the
+plugin ships the ciphertext attachment, mistyped, instead of the file the user attached.
+Measured consequence: four sends to `john@2143.me` between 2026-09-23T11:42Z and
+2026-09-24T12:00Z, all 2233–2290 bytes, all rejected for `application/octet-stream` —
+including the two sent after sign and encrypt were turned off.
+
+The remedy for a user who needs mail to leave is therefore **all three**: `defaultSign`,
+`defaultEncrypt` **and** `encryptDrafts` off, and the attachment must be removed from the
+composer and re-added, because the blob already stored there is the encrypted copy.
+Turning `encryptDrafts` off has a real cost — drafts and uploaded attachment blobs are
+then stored as written rather than as ciphertext — so it is a deliberate trade, not a
+free switch.
+
+**TEM's list governs attachments generally**, independently of PGP: `application/zip`,
+`application/gzip`, `application/octet-stream` and anything Bulwark types as "unknown"
+bounce, while `application/pdf`, the Office types, `image/png|jpeg|gif|webp`,
+`audio/mpeg|wav`, `text/calendar`, `text/csv`, `text/vcard` and `message/rfc822` are
+accepted. A user attaching a `.zip` or `.asc` will get the same 501 no matter which
+crypto settings are on.
+
 ### Ruled out
 
 - **Direct-to-MX** (Stalwart's built-in `mx` route) for this mail: the outbound path is
