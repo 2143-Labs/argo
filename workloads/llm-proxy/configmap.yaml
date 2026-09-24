@@ -130,6 +130,18 @@ data:
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-5.6-luna"
+      - model_name: "chatgpt/gpt-6-sol"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-6-sol"
+      - model_name: "chatgpt/gpt-6-luna"
+        model_info:
+          mode: responses
+          supports_native_streaming: true
+        litellm_params:
+          model: "chatgpt/gpt-6-luna"
       # OpenRouter
       - model_name: "openrouter/*"
         litellm_params:

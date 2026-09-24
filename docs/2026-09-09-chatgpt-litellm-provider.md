@@ -17,7 +17,30 @@ Config (in `workloads/llm-proxy/configmap.yaml`, model_list):
     model: "chatgpt/*"
 ```
 
-`mode: responses` is required. Any `chatgpt/<slug>` routes through — verified working: `chatgpt/gpt-5.6-terra`. Siblings `gpt-5.6-sol` / `gpt-5.6-luna` share the same codex backend.
+`mode: responses` is required, but it is not sufficient on its own. Any `chatgpt/<slug>` routes
+through — verified working: `chatgpt/gpt-5.6-terra`. Siblings `gpt-5.6-sol`, `gpt-5.6-luna`,
+`gpt-6-astra`, `gpt-6-sol` and `gpt-6-luna` share the same codex backend.
+
+**Each `chatgpt/<slug>` also needs its own explicit `model_list` entry with
+`model_info.supports_native_streaming: true`.** The `chatgpt/*` wildcard does not register a slug in
+litellm's `model_cost`, and the pinned image's static map only carries the slugs that image shipped
+with (on `v1.100.1`: `chatgpt/gpt-5.6-terra` / `-sol` / `-luna`, and no `chatgpt/gpt-6-*`). A slug in
+neither place makes `supports_native_streaming()` return `False`, which sets `should_fake_stream=True`;
+litellm then strips `stream` from the upstream Responses call and the codex backend answers
+`400 {"detail":"Stream must be set to true"}`. That is how `chatgpt/gpt-6-astra` failed on 2026-09-09
+and how `chatgpt/gpt-6-sol` / `chatgpt/gpt-6-luna` failed on 2026-09-24.
+
+Adding a new `chatgpt/<slug>` to any client (e.g. OMP) therefore requires a matching entry in
+`workloads/llm-proxy/configmap.yaml` — this is the shape:
+
+```yaml
+- model_name: "chatgpt/<slug>"
+  model_info:
+    mode: responses
+    supports_native_streaming: true
+  litellm_params:
+    model: "chatgpt/<slug>"
+```
 
 ## Token storage / persistence
 
