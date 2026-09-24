@@ -415,6 +415,46 @@ Do **not** make this uniform by pointing every account's `encryptionAtRest.publi
 one shared key: that discards the isolation `PublicKey.accountId` exists to provide, and
 one compromised key then reads every mailbox.
 
+
+#### The plugin's three send scenarios (traced in the bundle, 2026-09-24)
+
+`onComposeSend` has exactly three outcomes, and which one fires is decided **entirely by
+which recipient keys the contact search returns** — `recipientKeysFor` reads
+`contacts.search` and nothing else; WKD and keyserver lookups happen earlier, at compose
+time, and land in client-side contact state.
+
+| Scenario | Condition | What goes out |
+|---|---|---|
+| **A** | every recipient resolves to a key | one PGP/MIME message to all recipients, encrypted to the found keys plus your own |
+| **B** | some resolve, some do not | a red "mixed recipients" confirmation, then **two separate submissions**: an encrypted envelope to the keyed recipients and a cleartext envelope to the rest (the cleartext one is PGP-signed if signing is on — which TEM refuses). The Sent folder keeps the encrypted envelope |
+| **C** | none resolve | a cleartext envelope to everyone (PGP-signed if signing is on — again refused by TEM), plus a Sent copy encrypted to **your own key only** |
+
+Two corrections to what this document said earlier:
+
+1. **Mixed sends do not degrade to plaintext for everyone — they split.** Scenario B is
+   exactly the desired policy: internal recipients get the encrypted envelope, external
+   recipients get the cleartext one, from a single compose. The preconditions are that the
+   external addresses resolve to *no* key and that signing is off.
+2. **A phantom key is worse than a bounce.** On 2026-09-24 a test to two external addresses
+   plus `support@m.2143.me` left as Scenario A and was rejected by TEM with
+   `application/octet-stream`. Capturing the raw message from the outbound queue
+   (`x:QueuedMessage` carries a `blobId` for in-flight mail) showed a PGP payload with
+   **one** PKESK packet — keyid `C6F723D916B1E508`, the sender's own encryption subkey.
+   Every "recipient key" the plugin found was the sender's own public key, so the message was
+   unreadable to its recipients even if it had been delivered. Those keys are not in
+   Stalwart's address book (the `john@2143.me` card carries no key; there is no card for
+   `john@john2143.com`), not on `keys.openpgp.org` (404 for both), and not on WKD (2143.me
+   and john2143.com answer the `hu/` path with website HTML, not a key) — they exist only in
+   client-side contact state, and only the webmail UI can remove them.
+
+**Do not clear browser site data to "fix" contacts.** The plugin keeps private keys in
+IndexedDB (`allowPersistentKeys`); wiping it destroys the key and with it every encrypted
+message received since arming. Remove the key from the individual contact instead.
+
+One more traced detail: the plugin logs the full outgoing message — cleartext included —
+at `log.info("final message text - Scenario …")`. Those lines go to the browser console
+only; they do not appear in the Bulwark container log (checked 2026-09-24).
+
 ## Web Key Directory for `m.2143.me`
 
 Everything above works with **no key server** — keys travel as message attachments. WKD
