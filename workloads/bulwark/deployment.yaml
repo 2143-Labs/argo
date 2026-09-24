@@ -51,7 +51,7 @@ spec:
                       - general
       containers:
         - name: bulwark
-          image: ghcr.io/bulwarkmail/webmail:1.9.2
+          image: ghcr.io/bulwarkmail/webmail:v1.10.0
           env:
             - name: HOSTNAME
               value: "0.0.0.0"
