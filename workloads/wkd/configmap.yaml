@@ -26,6 +26,13 @@ data:
     // Read-only, stateless on disk. The key tree is rebuilt from JMAP every
     // WKD_REFRESH_MS; if a refresh fails the previous tree is kept, because
     // replacing a working tree with an empty one silently disables every lookup.
+    //
+    // The credential must carry `impersonate` or it can only read its own account's
+    // keys: registry Get authorises with `assert_is_member`, and membership is the
+    // token's own account plus the groups it belongs to (access_token.rs:476), so a
+    // second user account would 403 and fail the whole refresh. `impersonate` also
+    // lifts the per-account filter server-side, which is why every fetched key is
+    // ownership-checked below before it is published.
     import http from "node:http";
     import { createHash } from "node:crypto";
 
@@ -186,6 +193,9 @@ data:
       }
 
       const tree = new Map();
+      // Key object id -> the account it was first published for, used to catch the
+      // account filter falling back to another account's data.
+      const owners = new Map();
       const stats = {
         accounts: ids.length,
         users: users.length,
@@ -193,6 +203,7 @@ data:
         unarmed: 0,
         keyless: 0,
         collisions: 0,
+        misattributed: 0,
       };
 
       for (const user of users) {
@@ -203,15 +214,45 @@ data:
           continue;
         }
 
-        const { p } = await jmap([
-          [
-            "x:PublicKey/get",
-            { accountId: user.id, properties: ["id", "key", "accountId", "createdAt"] },
-            "p",
-          ],
-        ]);
+        // No `properties` filter on purpose: the server reports an object's
+        // `accountId` only when it differs from the one requested, and that field is
+        // the only ownership signal available. Requesting a property subset can also
+        // change how the account filter is applied, so ask for whole objects.
+        const { p } = await jmap([["x:PublicKey/get", { accountId: user.id }, "p"]]);
 
-        const keys = (p?.list ?? []).filter((k) => typeof k.key === "string" && k.key.trim().length > 0);
+        const keys = [];
+        for (const key of p?.list ?? []) {
+          if (typeof key.key !== "string" || key.key.trim().length === 0) continue;
+          // Ownership guard. The credential carries `impersonate`, which lifts the
+          // server-side per-account filter (registry/get.rs: `is_account_filtered`
+          // is false when the token has that permission), so the request's
+          // accountId cannot be trusted on its own. A key that names a different
+          // account belongs to someone else and must never be published here.
+          if (key.accountId && key.accountId !== user.id) {
+            stats.misattributed += 1;
+            log("warn", "skipping key attributed to another account", {
+              requested: user.id,
+              owns: key.accountId,
+              key: key.id,
+            });
+            continue;
+          }
+          // One key object cannot belong to two accounts; seeing the same id twice
+          // means the account filter fell back to another account's data.
+          const firstOwner = owners.get(key.id);
+          if (firstOwner && firstOwner !== user.id) {
+            stats.misattributed += 1;
+            log("error", "same key object reported for two accounts; refusing the duplicate", {
+              key: key.id,
+              first: firstOwner,
+              second: user.id,
+            });
+            continue;
+          }
+          owners.set(key.id, user.id);
+          keys.push(key);
+        }
+
         if (keys.length === 0) {
           stats.keyless += 1;
           log("warn", "onboarded account has no readable public key", { account: user.id, name: user.name });
