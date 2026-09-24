@@ -648,12 +648,26 @@ a colleague bootstraps* above. No external client has been pointed at this WKD y
   until its ownership is confirmed. The alternative — the recovery admin, which the
   design allowed as a fallback — is strictly wider, so this is the narrower of the two
   workable options rather than a convenience.
+- **Outbound encrypted mail to external recipients is blocked by the relay, and this is
+  now the largest open item.** Scaleway TEM rejects any message containing a MIME type
+  outside its fixed allow-list; OpenPGP/MIME *requires* `application/octet-stream` for
+  the payload (and `application/pgp-signature` / `application/pgp-keys` for signed or
+  key-carrying mail), none of which are on it. Every affected send has bounced — three
+  measured on 2026-09-23/24. Intra-domain E2E is unaffected (local delivery never
+  touches TEM) and *inbound* from external senders works, but an encrypted reply to a
+  correspondent cannot leave today. The routing hook, the options and what is ruled out
+  are recorded in
+  [`2026-09-20-stalwart-tem-outbound.md`](2026-09-20-stalwart-tem-outbound.md).
 
 **Permanent limits, stated so they are not mistaken for gaps to close later:**
 
 - **Automated senders can never be encrypted.** asciinema's registration mail,
   DMARC and TLS-RPT reports, and any Sieve-driven send have no browser and no key.
   They continue to transit TEM in cleartext.
+- **The relay, not the client, decides whether encrypted mail can leave.** Signing and
+  encryption necessarily produce MIME types that a strict transactional relay may
+  refuse, and with the plugin's defaults every external message composed in the webmail
+  carries one. No client-side setting fixes that: it is a relay capability question.
 - **At-rest encryption protects stored mail only.** It does nothing about what TEM
   or any other hop can read at send time.
 - **There is no server-side decrypt and no escrow.** Losing the private key loses

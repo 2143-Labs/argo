@@ -456,3 +456,79 @@ and not worth keeping a live credential for. Rollback from here is forward.
   `"v=DMARC1; p=none; rua=mailto:dmarc@m.2143.me"`, and subdomains now resolve
   through a wildcard **A** rather than the `*.john2143.com` CNAME it describes.
   Neither was changed here.
+
+## TEM's MIME allow-list — an outbound constraint found 2026-09-24
+
+TEM does not carry every message. It validates the body at `BDAT` and **permanently
+rejects (501 5.6.0) any message containing a MIME type outside a fixed list**, which
+Scaleway publishes under "Technical limitations" at
+`https://www.scaleway.com/en/developers/api/transactional-email`. That list contains no
+`application/octet-stream`, `application/pgp-signature`, `application/pgp-keys`,
+`application/pgp-encrypted`, `application/gzip` or `application/zip`, and it is **not
+customisable** — there is no console or API setting that extends it.
+
+Measured here (remote queue, 7-day window):
+
+| When (UTC) | Sender → recipient | Size | Rejection |
+|---|---|---|---|
+| 2026-09-22T17:27:41Z | `noreply-dmarc@m.2143.me` → `mailauth-reports@google.com` | 1848 | `'application/gzip' is not allowed` |
+| 2026-09-23T11:42:05Z | `John2143@m.2143.me` → `john@2143.me` | 2240 | `'application/octet-stream' is not allowed` |
+| 2026-09-24T03:13:53Z | `John2143@m.2143.me` → `john@2143.me` | 2127 | same |
+| 2026-09-24T11:35:23Z | `John2143@m.2143.me` → `john@2143.me` | 2290 | same |
+
+The only TEM deliveries that have ever succeeded are the four mail-tester probes from
+the verification above on 2026-09-20 — plain text, no attachments. **Every
+`remote`-queue attempt since then has failed**, and the three PGP ones are the first
+messages with crypto MIME, which is the part that matters.
+
+### Why this is a design constraint, not a client bug
+
+OpenPGP/MIME (RFC 3156) *requires* the parts TEM refuses: the encrypted payload is
+`application/octet-stream`, the signature part is `application/pgp-signature`, the
+version part is `application/pgp-encrypted`, and the webmail plugin's
+`alwaysSendPubKey` attaches `${addr}_publickey.asc` as `application/pgp-keys`. So a
+signed or encrypted message to an external recipient is rejected before it leaves —
+which, with the Bulwark plugin's defaults (`defaultSign` and `defaultEncrypt` both
+`true`), means every external message composed in the webmail.
+
+Stalwart's own delivery is not at fault: the route is
+`x:MtaOutboundStrategy.route` =
+`{"match":[{"if":"is_local_domain(rcpt_domain)","then":"'local'"}],"else":"'tem'"}`,
+so intra-domain mail never touches TEM and is unaffected by any of this.
+
+### The routing hook, and what it cannot see
+
+`route` is an expression over `MTA_QUEUE_RCPT_VARIABLE`
+(`crates/registry/src/schema/enums.rs:3613`): `rcpt`, `rcpt_domain`, `recipients`,
+`sender`, `sender_domain`, `priority`, `retry_num`, `notify_num`, `expires_in`,
+`last_status`, `last_error`, `queue_name`, `queue_age`, `received_from_ip`,
+`received_via_port`, `source`, `size`. There is **no variable for the message's MIME
+structure or headers**, so a route cannot be chosen on "is this PGP". The finest
+selectors are sender, sender domain, recipient domain, queue name, source and size.
+
+A second relay that permits these types, selected for just the traffic TEM cannot
+carry, is therefore the shape of the fix — `sender_domain == 'm.2143.me'` for human
+mail, `rcpt_domain == '2143.me'` for one correspondent, or `source == 'report'` for
+the DMARC reports failing today. It requires a relay with no MIME restriction, and
+**SES is not one**: it never left its sandbox (see *Why*).
+
+### Ruled out
+
+- **Direct-to-MX** (Stalwart's built-in `mx` route) for this mail: the outbound path is
+  Verizon FiOS residential — `dig -x 108.56.153.222` →
+  `pool-108-56-153-222.washdc.fios.verizon.net`. A pool PTR with no sending
+  reputation is refused or junked by large receivers, Proton included.
+- **Inline (armored) PGP instead of PGP/MIME**, which would be a `text/plain` body and
+  pass the list: the plugin *reads* inline PGP (`pgp-inline-encrypted`,
+  `pgp-inline-signed` in its reader) but never sends it, so it is not a webmail-side
+  workaround.
+- **Asking Scaleway to extend the list** — the only zero-infrastructure option left,
+  and the list is documented as fixed.
+
+### Not yet observed, and how it differs
+
+A **signed-only** message and a **plain message carrying the `_publickey.asc`
+attachment** are both blocked *by the published list* (`application/pgp-signature` and
+`application/pgp-keys` are absent from it), but neither has been measured here: every
+crypto message this instance has attempted so far was encrypted. Only the
+`application/octet-stream` and `application/gzip` rejections have direct evidence.
