@@ -44,10 +44,26 @@ Two rules came out of it and apply to every RouterOS change from now on:
 A dedicated privileged `hostNetwork` pod (`wireguard-doks` in `2143-k8s`)
 terminates a WireGuard tunnel to the router. Router peer `2143-k8s cluster:
 postgres client + tunnel`, `allowed-address=10.99.0.2/32,10.244.0.0/16`,
-interface `wg-remote`, listen UDP 51820. The tunnel is used for exactly one
-thing — reaching PostgreSQL and MongoDB without public exposure — and the
-`chain=forward` rules accept tunnel→`192.168.5.36:5432` and drop the rest
-(`wg-drop`).
+interface `wg-remote`, listen UDP 51820. `wireguard-doks` masquerades onto
+`wg0`, so home sees every DO pod as `10.99.0.2`.
+
+The tunnel carries three things. (Until 2026-09-24 this said it carried
+"exactly one thing — reaching PostgreSQL and MongoDB"; the Temporal allow was
+added that day.)
+
+- DO → home `192.168.5.36:5432`, closet PostgreSQL — `chain=forward` accept
+  `wg: doks -> postgres`. No consumer right now: the DO `openfront-pro*`
+  deployments are scaled to 0.
+- DO → home `192.168.6.20:7233`, the Temporal frontend — accept
+  `wg: doks -> temporal` (added 2026-09-24). DO `john2143-com` uses
+  `TEMPORAL_ADDRESS=192.168.6.20:7233`; see "Public Temporal gRPC" below.
+- home → DO `10.99.0.2:32040`, DO MongoDB through the ClusterIP Service
+  `mongo-tunnel`, consumed by `john2143-com-worker-209`. No router rule is
+  needed: `10.99.0.0/24` is a connected route on `wg-remote`.
+
+Everything else arriving from the tunnel hits `wg: deny tunnel traffic not
+allowed above` and is dropped and logged (`wg-drop`). A new allow goes
+`place-before` that rule, selected by its exact comment.
 
 Public `5432` is closed: a `chain=input` rule `no public postgres; log attempts`
 drops and logs WAN-sourced 5432 before the catch-all LAN rule, and its counter
@@ -55,11 +71,47 @@ rises on an external probe. (It has to live in `input`, not `forward` — the
 destination is the router itself, so a forward rule can never match.)
 
 The router's WireGuard private key was rotated when the interface was recreated;
-the pre-rotation key is dead. Router public key
-`lNbjEa+tSPp03UIQrmqc1TiRdPO+E4zYYOvXm+a1Wig=`, client public key
-`jUMIaOQP8hPqzw3t//WZrpt/WTFkRzkD18LBM27RlEE=`.
+the pre-rotation key (`2HeIlsYngjfFpCctWpzJyfFCC0+npvliQMzaglf8bGw=`) is dead.
 
-### Public MongoDB — NOT retired, still exposed
+**Rotated again 2026-09-24.** The key from that recreation,
+`lNbjEa+tSPp03UIQrmqc1TiRdPO+E4zYYOvXm+a1Wig=`, is dead too: its private key
+leaked into a session transcript, because a plain `/interface wireguard print`
+— not only `print detail` — prints `private-key=`. Router public key is now
+`26mSa5AF67ZCYagY8TBwlMLSo1YkQLUKAUjJajBwEgQ=`, pinned on the `peer` line of
+`2143-k8s/base/wireguard-doks.yaml`; client public key unchanged,
+`jUMIaOQP8hPqzw3t//WZrpt/WTFkRzkD18LBM27RlEE=`. The new private key was
+generated off-router and set from a script that never printed it, then the
+2143-k8s commit was pushed and Flux reconciled (Recreate rollout, about 30 s of
+tunnel outage). Verified after: PostgreSQL open from DO, DO →
+`192.168.6.11:443` dropped (the `wg-drop` counter rose), Temporal connected and
+an `UploadWorkflow` started, and Mongo `hello` over the tunnel returned
+`isWritablePrimary`.
+
+Key handling on RouterOS (measured 2026-09-24): read the public key with
+`/interface wireguard print proplist=name,listen-port,public-key,running` or
+`:put [/interface wireguard get [find name="wg-remote"] public-key]`, never a
+plain `print`. `/export` omits private keys (`private-key=""`), so
+network-configs exports stay safe to commit. The RouterOS log records every
+mutation with its full command text (`filter rule added by ssh-cmd:admin@…
+(*18 = /ip firewall filter add …)`) but leaves out `private-key`: set on a
+throwaway interface, the key appeared in neither `/log` nor `/system history`.
+
+### Public MongoDB — closed 2026-09-24 (was: NOT retired, still exposed)
+
+**Resolved 2026-09-24, by a different fix from the plan recorded below.**
+Instead of routing the DO service CIDR over the tunnel and moving `worker-uri`
+to the `mongo` ClusterIP, `mongo-nodeport` was replaced by a ClusterIP Service
+`mongo-tunnel` (`2143-k8s/base/service-mongo-tunnel.yaml`) with
+`externalIPs: [10.99.0.2]` on port `32040` → `27017`. `10.99.0.2` is the `wg0`
+address `wireguard-doks` puts on the node, so kube-proxy DNATs tunnel traffic to
+`mongo`, `worker-uri` stays `mongodb://…@10.99.0.2:32040/`, and no NodePort
+exists. With nothing requesting it, DOKS removed the `tcp/32040` rule from its
+managed firewall by itself (`doctl` now lists only the `30901/tcp` and
+`30478/udp` NodePort rules), and `161.35.58.72:32040` times out from the
+internet. Mongo `hello` over the tunnel returns `isWritablePrimary`. Never add a
+NodePort for Mongo again.
+
+The 2026-09-18 analysis is kept below as the reasoning record.
 
 > **Re-verified 2026-09-18 and the earlier "retired" claim is wrong.**
 > `doctl compute firewall get 2c0a7567-3422-4705-a4f9-73bffa8a52ee --format
@@ -84,6 +136,9 @@ the pre-rotation key is dead. Router public key
 > object and resets anything omitted — including the tag membership that
 > attaches the firewall to the cluster's droplets. Do not run `update` here.
 >
+> *Superseded 2026-09-24: this plan was not the fix taken — see the resolution
+> above.*
+>
 > Close it by removing the *reason* it is open: route the DO service CIDR
 > (`10.245.0.0/16`) over the WireGuard tunnel, point `worker-uri` at the `mongo`
 > ClusterIP (`10.245.190.99:27017`) instead of `10.99.0.2:32040`, then delete
@@ -94,13 +149,30 @@ the pre-rotation key is dead. Router public key
 
 What *is* in place: the `ddns-mongo` Flux resource was pruned, the deSEC
 `mongo/A` record was deleted (note the wildcard still resolves
-`mongo.john2143.com`), and `mongo-nodeport` is deliberately kept as the
-in-cluster path. `worker-uri` is now `mongodb://…@10.99.0.2:32040/` on both
+`mongo.john2143.com`), and `mongo-nodeport` was deliberately kept as the
+in-cluster path (replaced 2026-09-24 by the ClusterIP `mongo-tunnel` on the same
+`10.99.0.2:32040`). `worker-uri` is now `mongodb://…@10.99.0.2:32040/` on both
 clusters — home composes it in `workloads/secrets/default-mongo-creds.yaml` from
 OpenBao via an ESO v2 template (commit `2c75776`); the DO copy was patched by
 hand. The real consumer is the Temporal worker controller's
 `john2143-com-worker-209`, not a Deployment named `john2143-worker`.
 `wireguard-doks` is Running in the DO cluster, so the tunnel path is live.
+
+### Public Temporal gRPC — closed 2026-09-24
+
+The WAN dst-nat `temporal-grpc mtls (tcp/7233) -> .6.20` exposed the Temporal
+frontend to the internet as plaintext, unauthenticated gRPC. The `mtls` in its
+comment was false — the frontend has no TLS, which was measured from the
+internet with a plaintext HTTP/2 preface. DO `john2143-com` now reaches the
+frontend over the tunnel (`TEMPORAL_ADDRESS=192.168.6.20:7233` through
+`wg: doks -> temporal`; its log shows `Temporal: connected to 192.168.6.20:7233`
+and workflows start), and the forward was removed; `7233` from the internet now
+times out. LAN clients keep resolving `temporal-grpc.john2143.com` to
+`192.168.6.20` through the split-horizon CoreDNS hosts blob.
+
+The traefik TLSRoute `temporal-grpc` (TLS passthrough on 443 → frontend
+`:7233`) cannot work: it hands a TLS stream to a plaintext backend. Noted, not
+changed.
 
 ### CrowdSec detection
 
@@ -189,9 +261,16 @@ invalidated something that looked obviously true in a design document.
   connection shows `ssl=t`, flip `10.99.0.0/24` to `hostssl` and add a
   `hostnossl` reject above it; if any is false, leave it as `host` and record
   that TLS was not enforced.
-- **UniFi MongoDB credentials** must move from literals in git to OpenBao
-  (`john2143-com/default/unifi-mongo-creds`). The ExternalSecret is not written
-  yet and the controller stays at `replicas: 0` until it is Ready.
+  As of 2026-09-24 it is still not live: closet runs its 2026-09-16 generation,
+  and the live `pg_hba` still contains `host all all 0.0.0.0/0 scram-sha-256`.
+- **UniFi MongoDB credentials — dropped 2026-09-24, nothing left to deploy.**
+  The plan was to move the literals in git to OpenBao
+  (`john2143-com/default/unifi-mongo-creds`). Instead the in-cluster controller
+  was deleted: the argo `unifi` app and `workloads/unifi` (whose manifest held
+  the literal password) and the `unifi-data`/`unifi-mongodb-data` PVCs, PVs and
+  Longhorn volumes (Longhorn backups, last 2026-09-15T07:02Z, remain in the
+  backup target). The password remains in git history. The controller now runs
+  as the UniFi OS Server VM at `192.168.5.30`.
 - **Pi-hole as the single DNS source** and the router-edge phases below.
 
 ## Router edge design (not executed)
@@ -302,8 +381,9 @@ back to `1.1.1.1,1.0.0.1`.
 
 ## Accepted risks
 
-- The UniFi MongoDB password was public and is **not rotated**; moving the
-  literal to OpenBao does not change that.
+- The UniFi MongoDB password was public and is **not rotated**. Since
+  2026-09-24 nothing uses it — the in-cluster controller and its MongoDB were
+  deleted rather than moved to OpenBao — but it stays readable in git history.
 - The router admin password appeared in a recovery transcript and must be rotated
   by the owner before further router work.
 - Cluster policies do not yet cover `default`, so a workload there can still
@@ -312,14 +392,14 @@ back to `1.1.1.1,1.0.0.1`.
 
 ## Owner-held blockers
 
-1. **Close the public MongoDB NodePort.** The DO cloud firewall still admits
-   `tcp/32040` from `0.0.0.0/0` (see the MongoDB section above for the exact
-   command and the re-check). This one is a live internet-facing database, so
-   it outranks everything else here.
+1. **Close the public MongoDB NodePort** — done 2026-09-24. `mongo-nodeport`
+   was replaced by the ClusterIP `mongo-tunnel`, DOKS dropped the `tcp/32040`
+   rule on its own, and the port times out from the internet (see the MongoDB
+   section above).
 2. Closet `nixos-rebuild switch` for the `pg_hba` narrowing (and, separately,
    the CoreDNS change once Pi-hole is populated).
-3. OpenBao writes: `john2143-com/default/unifi-mongo-creds`,
-   `john2143-com/default/pihole-api`, and a read-only deSEC token at
-   `john2143-com/default/dns-sync-desec`.
+3. OpenBao writes: `john2143-com/default/pihole-api` and a read-only deSEC token
+   at `john2143-com/default/dns-sync-desec`. (`john2143-com/default/unifi-mongo-creds`
+   is no longer needed: the in-cluster UniFi controller was deleted 2026-09-24.)
 4. Rotate the router admin password and prove both authenticated management
    paths before any further RouterOS mutation.
