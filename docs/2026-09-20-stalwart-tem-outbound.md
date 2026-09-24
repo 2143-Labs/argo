@@ -476,10 +476,20 @@ Measured here (remote queue, 7-day window):
 | 2026-09-24T03:13:53Z | `John2143@m.2143.me` → `john@2143.me` | 2127 | same |
 | 2026-09-24T11:35:23Z | `John2143@m.2143.me` → `john@2143.me` | 2290 | same |
 
-The only TEM deliveries that have ever succeeded are the four mail-tester probes from
-the verification above on 2026-09-20 — plain text, no attachments. **Every
-`remote`-queue attempt since then has failed**, and the three PGP ones are the first
-messages with crypto MIME, which is the part that matters.
+What TEM *has* delivered, over the full retained log window (2026-09-20 04:36 → 2026-09-24
+12:27):
+
+| When (UTC) | Recipient | What it was |
+|---|---|---|
+| 2026-09-20T05:05:58Z | `test-vq7ej2pa0@srv1.mail-tester.com` | the SPF/DKIM/DMARC probe from the verification above |
+| 2026-09-20T05:16:21Z | `john@2143.me` | plain text to Proton |
+| 2026-09-20T05:18:41Z | `john@2143.me` | plain text to Proton |
+| 2026-09-20T05:19:40Z | `john@2143.me` | plain text to Proton |
+
+So **plaintext external mail delivers through TEM without difficulty**, including to Proton,
+three times, before encryption was switched on. Every `remote`-queue failure is a message
+carrying crypto MIME. The constraint is narrow, and it is about MIME types rather than about
+the mail being encrypted — see the next section.
 
 ### Why this is a design constraint, not a client bug
 
@@ -495,6 +505,52 @@ Stalwart's own delivery is not at fault: the route is
 `x:MtaOutboundStrategy.route` =
 `{"match":[{"if":"is_local_domain(rcpt_domain)","then":"'local'"}],"else":"'tem'"}`,
 so intra-domain mail never touches TEM and is unaffected by any of this.
+
+### What the shape of the allow-list says about intent
+
+Scaleway publishes the list itself, and its *shape* answers the obvious question
+(`https://www.scaleway.com/en/developers/api/transactional-email`, "Technical limitations",
+read 2026-09-24). It runs to ~70 types and it **does** contain opaque cryptographic
+envelopes:
+
+- `application/pkcs7-mime`, `application/x-pkcs7-mime` — S/MIME enveloped data
+- `application/pkcs7-signature`, `application/x-pkcs7-signature` — S/MIME signatures
+- `application/x-pkcs12`, `application/x-pkcs7-certificates`, `application/pkcs10` — certs and keys
+
+What it omits is OpenPGP and generic opaque binaries: `application/pgp-encrypted`,
+`application/pgp-signature`, `application/pgp-keys`, `application/octet-stream`,
+`application/zip`, `application/gzip`, executables. That is the signature of an
+**anti-malware and anti-abuse allow-list** — it permits crypto whose type it can name, and
+refuses the container types malware is carried in — not of a policy against carrying
+ciphertext. A `pkcs7-mime` envelope is every bit as opaque to Scaleway as a PGP message, and
+it is explicitly allowed.
+
+Two things follow, and they should be kept apart:
+
+1. **This rejection is not Scaleway reading your mail.** It is a declared-`Content-Type`
+   decision taken at `BDAT`, before content could matter, and published in advance.
+   PGP/MIME is absent because the list is a curated documents-and-media list that nobody
+   ever added OpenPGP to — not because the parts are encrypted.
+2. **A relay can still read plaintext mail you give it.** That is inherent to using one, and
+   TEM does run spam and reputation scanning — `Spam` flags, reputation score and blocklists
+   are all documented TEM concepts. Handing a cleartext message to a third-party relay is
+   handing over its contents. This is exactly why intra-domain mail stays end-to-end
+   encrypted, and it is a separate matter from the MIME rejection.
+
+**Do not relabel a PGP part as an allowed type to get past the check.** That is deliberate
+circumvention of an abuse control, it puts the domain's TEM account at risk, and the
+recipient's client would parse the blob as whatever the label claims.
+
+### Getting encrypted mail out anyway
+
+TEM cannot carry PGP/MIME, so the choice is to change the transport or change the crypto:
+
+| Option | How it works | Cost |
+|---|---|---|
+| **S/MIME** | the only crypto TEM explicitly allows (`pkcs7-mime` enveloped data, `pkcs7-signature`) | a certificate per user, which Stalwart cannot issue, and the counterparty must also use S/MIME — corporate (M365/Workspace) correspondents only, never Proton |
+| **A second relay with no allow-list**, routed for crypto-capable recipient domains | `route` sees `rcpt_domain` but not MIME, so the rule must be per-domain rather than per-message | another relay that accepts arbitrary MIME, plus the routing expression |
+| **Direct-to-MX from a VPS with a clean PTR** | no intermediary MIME policy at all | a VPS with outbound port 25 and rDNS — the home IP is residential (`pool-108-56-153-222.washdc.fios.verizon.net`) and unusable |
+| **Ask Scaleway to add the `application/pgp-*` types** | the list already carries S/MIME types, so it is curated rather than immovable | one support ticket; probably refused |
 
 ### The routing hook, and what it cannot see
 
