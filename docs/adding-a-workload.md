@@ -151,18 +151,16 @@ spec:
 Notes:
 - `allocateLoadBalancerNodePorts: false` deallocates the service's nodePorts on
   apply — the LB IP becomes the only access path (frigate, pihole-dns). Older
-  LB services (mosquitto, unifi, ts-*, …) still carry auto-assigned nodePorts;
+  LB services (mosquitto, ts-*, …) still carry auto-assigned nodePorts;
   add the flag when you touch them to reclaim the node-port exposure.
 - **Keep v4 and v6 offsets identical** (`192.168.6.2X` ↔ `fd00:6::2X`) unless
-  there's a collision reason (exceptions: traefik `::10`, unifi-inform `::30`).
+  there's a collision reason (exception: traefik `::10`).
 
 ### IP allocation table (current)
 
 | Service | v4 | v6 |
 |---|---|---|
-| unifi-inform | 192.168.6.10 | fd00:6::30 |
 | traefik (kube-system, manual) | 192.168.6.11 | fd00:6::10 |
-| unifi-discovery | 192.168.6.12 | fd00:6::12 |
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
 | steam-lobby coturn (TURN) | 192.168.6.14 | fd00:6::14 |
 | ts-voice (9987) | 192.168.6.15 | fd00:6::15 |
@@ -175,16 +173,16 @@ Notes:
 | livekit-server-rtc (7881/50000) | 192.168.6.22 | fd00:6::22 |
 | mimir-lb | 192.168.6.23 | fd00:6::23 |
 | loki-push-lb | 192.168.6.24 | fd00:6::24 |
-| unifi-web | 192.168.6.25 | fd00:6::25 |
 | frigate (5000/1984/8554/8555) | 192.168.6.26 | fd00:6::26 |
 | pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
 | factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.29–.200` (`.201–.254` reserved headroom; `factorio-game`
-owns `.28`); v6 `fd00:6::11`, `::20`, `::29`, `::31–::ff` (`::28` is factorio's,
-`::30` is unifi-inform's). Never reuse an in-use address; a collision surfaces as
-`AllocationFailed: address also in use by <ns>/<svc>`.
+**Free:** v4 `192.168.6.10`, `.12`, `.25` (released 2026-09-24 when the in-cluster
+UniFi controller was removed) and `192.168.6.29–.200` (`.201–.254` reserved
+headroom; `factorio-game` owns `.28`); v6 `fd00:6::11`, `::12`, `::20`, `::25`,
+`::29–::ff` (`::28` is factorio's). Never reuse an in-use address; a collision
+surfaces as `AllocationFailed: address also in use by <ns>/<svc>`.
 
 ### Rules of thumb
 
