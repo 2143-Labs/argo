@@ -491,6 +491,55 @@ three times, before encryption was switched on. Every `remote`-queue failure is 
 carrying crypto MIME. The constraint is narrow, and it is about MIME types rather than about
 the mail being encrypted — see the next section.
 
+### Reading a rejection: the exact text, and two traps
+
+The full rejection, as the log records it (2026-09-24T12:35:27Z, to `john@john2143.com`,
+2288 bytes):
+
+```
+Unexpected response for BDAT 2288 LAST: Code: 501, Enhanced code: 5.6.0, Message:
+'application/octet-stream' is not allowed. Please refer to
+https://mimetypes.tem.scaleway.com for explicit MIME types list.
+```
+
+That URL redirects to the same API page as the list above; there is no separate rationale
+page. The `code = 501` and the MIME type come from the `delivery.message-rejected` line, one
+line above `delivery.dsn-perm-fail`.
+
+**Trap 1 — `smtp.dkim-fail` is not a problem.** It reads "DKIM verification failed
+(smtp.dkim-fail) strict = false, result = []", and it fires immediately before every
+authenticated submission, including the four that *delivered* on 2026-09-20:
+`05:16:19 dkim-fail` → `05:16:21 delivered`. It means "the submitted message carried no
+DKIM signature", which is normal — Stalwart signs outbound itself, and the mail-tester probe
+scored 10/10 with DKIM passing. It is not a reason for a delivery failure, and it never
+explains a rejection.
+
+**Trap 2 — an `application/octet-stream` part means the message was *encrypted*, not that
+it had an attachment.** Two code paths in the plugin emit that type. `wrapAsPgpMimeEncrypted`
+writes the encrypted payload as `Content-Type: application/octet-stream; name="encrypted.asc"`,
+so a PGP/MIME body is an octet-stream part. Separately, `encryptDrafts` retypes attachments to
+`application/octet-stream` in `onBeforeDraftAutoSave`. Nothing else in the plugin produces it.
+So the type in the rejection tells you the encryption switch was on, which is a different
+question from "was there an attachment".
+
+**Diagnosing what the client actually sent is harder than it looks.** The Sent copy cannot be
+used: at-rest encryption wraps a cleartext message into the *same* shape
+(`multipart/encrypted; protocol="application/pgp-encrypted"`) as a message that arrived
+already encrypted, so the two are indistinguishable, and `preview` is null in both. And a
+permanently failed queue entry is purged — after the 12:35 rejection the outbound queue was
+empty. What does work is catching the message *while it is queued*: `x:QueuedMessage/query`
+supports only `sort: [{property: "due"}]`, and each result carries a `blobId` for the raw
+message, which `Blob/get` returns verbatim. The window is the delivery attempt itself, a
+couple of seconds for a TEM rejection.
+
+**Any key the plugin holds for these external addresses came from a manual import.** Checked
+2026-09-24: `keys.openpgp.org/vks/v1/by-email/` returns `404` for both `john@2143.me` and
+`john@john2143.com`; `https://2143.me/.well-known/openpgpkey/hu/<hash>?l=john` and the
+`john2143.com` equivalent answer `200` with the domain's *website HTML* rather than a key;
+`openpgpkey.john2143.com` and the direct path on `proton.me` return `404`. So the plugin
+cannot discover keys for either address — a stored key for one of them is something a user
+imported, and deleting it is what stops the plugin encrypting to that address.
+
 ### Why this is a design constraint, not a client bug
 
 OpenPGP/MIME (RFC 3156) *requires* the parts TEM refuses: the encrypted payload is
