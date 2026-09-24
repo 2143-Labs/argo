@@ -42,11 +42,58 @@ senders at verified domains, and only `m.2143.me` carries TEM records.
 
 | Switch | Email | Fires |
 |---|---|---|
-| Email Login Notification | `login-with-new-device`, "New device login with 2143 Labs" | automatically, on login from an unrecognised device |
-| Email Verification | `email-verification`, "Verify your 2143 Labs email address" | only when the user presses **Send Email**; rate-limited to 2 per 10 min |
-| Email Login Code from Admin | `one-time-access`, "Login Code" | when an administrator issues a code for a user |
-| API Key Expiration | `api-key-expiring-soon`, `API Key "<name>" Expiring Soon` | automatically, as a key nears expiry |
+| Email Login Notification | `login-with-new-device`, "New device login with 2143 Labs" | automatically, on a **passkey** sign-in from a new (IP + User-Agent) pair |
+| Email Verification | `email-verification`, "Verify your 2143 Labs email address" | only when the user presses **Send Email** in their own account |
+| Email Login Code from Admin | `one-time-access`, "Login Code" | when an administrator presses **Send Email** in a user's login-code dialog |
+| API Key Expiration | `api-key-expiring-soon`, `API Key "<name>" Expiring Soon` | automatically, once, when a key enters its final 7 days — checked daily at 00:00 ± 2 min |
 | Email Login Code Requested by User | `one-time-access`, "Login Code" | user-requested from the login page — **left off** |
+
+Three of these are narrower than their labels suggest, and the difference
+matters when trying to exercise them.
+
+**Login Notification is passkey-only.** It has exactly one call site —
+`backend/internal/webauthn/service.go:312`, inside `VerifyLogin`, the WebAuthn
+flow — and it is gated on `count <= 1` where `count` is the user's prior
+`SIGN_IN` audit logs for the same `(ip_address, user_agent)` pair
+(`service/audit_log_service.go:86-103`), which is where the "new device" framing
+comes from. Signing in with a **login code does not send it**, and there is no
+password sign-in in Pocket ID for it to cover.
+
+The "already seen" memory is bounded by the audit-log retention window, which
+this deployment sets to **90 days** (`AUDIT_LOG_RETENTION_DAYS: "90"` in
+`workloads/pocket-id/configmap.yaml`; it is read by `common.EnvConfig` and so is
+genuinely live, unlike the `SMTP_*` variables). A device seen 91 days ago is a
+stranger again and its next sign-in notifies. `TRUST_PROXY: "true"` means the
+recorded address is the real client IP forwarded by Traefik, so changing
+networks is enough to look like a new device.
+
+**API Key Expiration is a cron job, not an event.** `apikey/expiry_job.go` runs
+`0 0 * * *` with a 2-minute jitter, lists keys that have entered their final
+7 days, and marks each one sent so it never repeats. There is no way to trigger
+it on demand.
+
+**Email Verification has no admin variant.** The only route is
+`POST /api/users/me/send-email-verification`, which mails the *authenticated
+user's own* address; an administrator cannot send one to anyone else. The form's
+own description claims it fires "when they sign up or change their email
+address", which the code does not do — nothing sends it but a user's request.
+
+**Every message goes to a stored address: your own, or a registered user's.**
+There is no recipient field anywhere. The test email goes to whoever is signed
+in, the verification email to the requester, and the login code to the target
+user's `Email` column. Pocket ID is therefore not usable as a general mail
+sender — mailing an arbitrary third party would mean giving a user record that
+address, which also grants a login identity.
+
+**Nothing throttles these here.** Every limiter is registered through
+`RateLimitMiddleware.Add()`, and `middleware/rate_limit.go:76-80` turns that into
+a passthrough whenever `DISABLE_RATE_LIMITING` is set — which this deployment
+does, to `"true"` (`workloads/pocket-id/configmap.yaml`, on the grounds that
+Traefik already throttles the public surface). The source defaults of 2
+verification emails per 10 minutes, and the limits on the login-code endpoints,
+are therefore **not in effect**. The admin send-login-code route carries no
+limiter even when they are: `onetimeaccess/module.go` guards it with `auth`
+alone.
 
 The last one stays off deliberately: the app's own description warns it
 "significantly reduces security as anyone with access to the user's email can
