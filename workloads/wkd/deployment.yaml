@@ -1,0 +1,116 @@
+# WKD (Web Key Directory) publisher for m.2143.me.
+#
+# Publishes each onboarded account's public key at the direct-method path
+# `/.well-known/openpgpkey/hu/<zbase32(sha1(localpart))>` so external
+# correspondents' clients — and Bulwark's own compose-time lookup — can fetch it
+# with no key server and no first-message-plaintext window. The tree is rebuilt
+# from Stalwart's JMAP registry every five minutes; it is read-only and holds no
+# state of its own.
+#
+# The credential is a permission-reduced app password (`Secret/wkd-jmap`), not
+# the recovery admin: it can read accounts, domains and public keys, and cannot
+# read mail. `WKD_JMAP_USERNAME` is the account that app password belongs to —
+# the JMAP session's own account id is what scopes the enumeration, so this must
+# change if the credential is ever recreated under a different account.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wkd
+  namespace: stalwart
+  labels:
+    app: wkd
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wkd
+  template:
+    metadata:
+      labels:
+        app: wkd
+      # Roll the pod when the script or the credential changes; nothing else
+      # reloads a ConfigMap-backed process.
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: wkd
+          image: node:22-alpine
+          command: ["node", "/app/server.mjs"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: PORT
+              value: "8080"
+            - name: WKD_DOMAIN
+              value: "m.2143.me"
+            - name: WKD_JMAP_URL
+              value: "http://stalwart-stalwart-web.stalwart.svc.cluster.local:8080/jmap"
+            - name: WKD_JMAP_USERNAME
+              value: "John2143@m.2143.me"
+            - name: WKD_JMAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wkd-jmap
+                  key: WKD_JMAP_PASSWORD
+            - name: WKD_REFRESH_MS
+              value: "300000"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 15
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: script
+              mountPath: /app
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: script
+          configMap:
+            name: wkd-script
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}

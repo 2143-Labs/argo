@@ -1,0 +1,316 @@
+# The WKD publisher script, mounted read-only at /app/server.mjs.
+#
+# One file, no dependencies and no build step: node:22-alpine runs it directly.
+# It publishes the direct-method WKD tree for m.2143.me from Stalwart's public
+# keys. Contract and rationale are documented in
+# docs/2026-09-23-mail-encryption-at-rest-and-e2ee.md; the operational summary
+# is the comment block at the top of the script itself.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wkd-script
+  namespace: stalwart
+  labels:
+    app: wkd
+data:
+  server.mjs: |
+    // WKD (Web Key Directory) publisher for m.2143.me.
+    //
+    // Serves the DIRECT method layout only -- /.well-known/openpgpkey/hu/<hash> on
+    // the mail domain itself -- because that is the path Bulwark's plugin host
+    // requests. The advanced method (openpgpkey.<domain>/.../<domain>/hu/<hash>) is
+    // deliberately not served: openpgpkey.m.2143.me does not resolve to this
+    // service, and creating that name would make spec-compliant clients skip the
+    // direct-method fallback they would otherwise use.
+    //
+    // Read-only, stateless on disk. The key tree is rebuilt from JMAP every
+    // WKD_REFRESH_MS; if a refresh fails the previous tree is kept, because
+    // replacing a working tree with an empty one silently disables every lookup.
+    import http from "node:http";
+    import { createHash } from "node:crypto";
+
+    const ZBASE32 = "ybndrfg8ejkmcpqxot1uwisza345h769";
+
+    function toStr(value) {
+      return typeof value === "string" ? value.trim() : "";
+    }
+
+    function toInt(value, fallback) {
+      const parsed = Number.parseInt(value ?? "", 10);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    const cfg = {
+      port: toInt(process.env.PORT, 8080),
+      domain: toStr(process.env.WKD_DOMAIN).toLowerCase(),
+      jmapUrl: toStr(process.env.WKD_JMAP_URL),
+      username: toStr(process.env.WKD_JMAP_USERNAME),
+      password: toStr(process.env.WKD_JMAP_PASSWORD),
+      refreshMs: toInt(process.env.WKD_REFRESH_MS, 300000),
+      timeoutMs: toInt(process.env.WKD_REQUEST_TIMEOUT_MS, 20000),
+    };
+    cfg.sessionUrl =
+      toStr(process.env.WKD_JMAP_SESSION_URL) || cfg.jmapUrl.replace(/\/jmap\/?$/, "/jmap/session");
+
+    const cache = { tree: new Map(), loaded: false, updatedAt: null, lastError: null, stats: null };
+
+    function log(level, message, extra = {}) {
+      const line = JSON.stringify({ ts: new Date().toISOString(), level, message, ...extra });
+      if (level === "error") console.error(line);
+      else console.log(line);
+    }
+
+    // z-base-32 of sha1(lowercase(localpart)), most significant bit first. This is
+    // the exact function the WKD spec and Bulwark both use; reference values:
+    // john2143 -> fjbwczxhjfmgqs7e11wqxom18mqmdbag
+    // john     -> wwq7w9d96wfsd4zkytndq84kpkjod3eb
+    function zbase32(buf) {
+      let bits = "";
+      for (const byte of buf) bits += byte.toString(2).padStart(8, "0");
+      bits += "0".repeat((5 - (bits.length % 5)) % 5);
+      let out = "";
+      for (let i = 0; i < bits.length; i += 5) out += ZBASE32[Number.parseInt(bits.slice(i, i + 5), 2)];
+      return out;
+    }
+
+    function wkdHash(localpart) {
+      return zbase32(createHash("sha1").update(localpart.toLowerCase(), "utf8").digest());
+    }
+
+    // Strip the armor and base64-decode. Returns null when the input is not a
+    // well-formed armored block, so the caller can fall back to serving it as-is.
+    function dearmor(armored) {
+      const lines = armored.replace(/\r\n?/g, "\n").split("\n");
+      const begin = lines.findIndex((l) => l.startsWith("-----BEGIN PGP PUBLIC KEY BLOCK-----"));
+      const end = lines.findIndex((l) => l.startsWith("-----END PGP PUBLIC KEY BLOCK-----"));
+      if (begin === -1 || end <= begin) return null;
+      const body = [];
+      let inPayload = false;
+      for (const line of lines.slice(begin + 1, end)) {
+        if (!inPayload) {
+          if (line.trim() === "") inPayload = true; // armor headers end at the blank line
+          else if (!line.includes(":")) inPayload = true; // no headers at all
+          else continue;
+        }
+        if (line.startsWith("=")) continue; // optional CRC24 line
+        body.push(line.trim());
+      }
+      const decoded = Buffer.from(body.join(""), "base64");
+      // An OpenPGP packet header always has the high bit of the first octet set.
+      if (decoded.length === 0 || (decoded[0] & 0x80) === 0) return null;
+      return decoded;
+    }
+
+    function authHeader() {
+      return "Basic " + Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64");
+    }
+
+    async function fetchWithTimeout(url, init = {}) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+      try {
+        return await fetch(url, { ...init, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function jmap(calls, using = ["urn:ietf:params:jmap:core", "urn:stalwart:jmap"]) {
+      const res = await fetchWithTimeout(cfg.jmapUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authHeader() },
+        body: JSON.stringify({ using, methodCalls: calls }),
+      });
+      if (!res.ok) throw new Error(`JMAP HTTP ${res.status} ${res.statusText}`);
+      const doc = await res.json();
+      const byTag = {};
+      for (const [name, payload, tag] of doc.methodResponses ?? []) {
+        if (payload && payload.type) {
+          const detail = payload.description ? ` - ${payload.description}` : "";
+          throw new Error(`JMAP ${name} failed: ${payload.type}${detail}`);
+        }
+        byTag[tag] = payload;
+      }
+      return byTag;
+    }
+
+    function addressesFor(user, domains) {
+      const out = [];
+      const primaryDomain = domains.get(user.domainId);
+      if (user.name && primaryDomain) out.push(`${user.name}@${primaryDomain}`);
+      for (const alias of Object.values(user.aliases ?? {})) {
+        if (!alias || alias.enabled !== true || !alias.name) continue;
+        const domain = domains.get(alias.domainId);
+        if (domain) out.push(`${alias.name}@${domain}`);
+      }
+      return out;
+    }
+
+    async function buildTree() {
+      const sessionRes = await fetchWithTimeout(cfg.sessionUrl, {
+        headers: { Authorization: authHeader() },
+      });
+      if (!sessionRes.ok) throw new Error(`JMAP session HTTP ${sessionRes.status}`);
+      const session = await sessionRes.json();
+      const accountId =
+        session.primaryAccounts?.["urn:stalwart:jmap"] ?? Object.keys(session.accounts ?? {})[0];
+      if (!accountId) throw new Error("JMAP session named no account");
+
+      const { q } = await jmap([["x:Account/query", { accountId }, "q"]]);
+      const ids = q?.ids ?? [];
+      if (ids.length === 0) throw new Error("x:Account/query returned no accounts");
+
+      const { g } = await jmap([
+        [
+          "x:Account/get",
+          { accountId, ids, properties: ["@type", "name", "domainId", "aliases", "encryptionAtRest"] },
+          "g",
+        ],
+      ]);
+      // The query returns groups as well as users; only user accounts own keys.
+      const users = (g?.list ?? []).filter((a) => a["@type"] === "User");
+
+      const domainIds = new Set();
+      for (const user of users) {
+        if (user.domainId) domainIds.add(user.domainId);
+        for (const alias of Object.values(user.aliases ?? {})) {
+          if (alias?.domainId) domainIds.add(alias.domainId);
+        }
+      }
+      const domains = new Map();
+      if (domainIds.size > 0) {
+        const { d } = await jmap([
+          ["x:Domain/get", { accountId, ids: [...domainIds], properties: ["name"] }, "d"],
+        ]);
+        for (const domain of d?.list ?? []) domains.set(domain.id, toStr(domain.name).toLowerCase());
+      }
+
+      const tree = new Map();
+      const stats = {
+        accounts: ids.length,
+        users: users.length,
+        published: 0,
+        unarmed: 0,
+        keyless: 0,
+        collisions: 0,
+      };
+
+      for (const user of users) {
+        const atRest = user.encryptionAtRest?.["@type"];
+        if (atRest !== "Aes256") {
+          // Not onboarded: nothing to publish.
+          stats.unarmed += 1;
+          continue;
+        }
+
+        const { p } = await jmap([
+          [
+            "x:PublicKey/get",
+            { accountId: user.id, properties: ["id", "key", "accountId", "createdAt"] },
+            "p",
+          ],
+        ]);
+
+        const keys = (p?.list ?? []).filter((k) => typeof k.key === "string" && k.key.trim().length > 0);
+        if (keys.length === 0) {
+          stats.keyless += 1;
+          log("warn", "onboarded account has no readable public key", { account: user.id, name: user.name });
+          continue;
+        }
+
+        // Several PublicKey objects can carry the same address (an import and a
+        // re-import, or a real rotation). Newest wins; WKD allows one key per hash.
+        keys.sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
+        const chosen = keys[0];
+        const raw = dearmor(chosen.key) ?? Buffer.from(chosen.key.trim(), "utf8");
+
+        for (const address of addressesFor(user, domains)) {
+          const at = address.lastIndexOf("@");
+          if (at === -1) continue;
+          if (address.slice(at + 1).toLowerCase() !== cfg.domain) continue; // only this domain is served
+          const hash = wkdHash(address.slice(0, at));
+          const previous = tree.get(hash);
+          if (previous && !previous.equals(raw)) {
+            stats.collisions += 1;
+            log("warn", "two different keys for one address; newest kept", { address, account: user.id });
+          }
+          if (!previous) stats.published += 1;
+          tree.set(hash, raw);
+        }
+      }
+
+      if (users.length > 0 && tree.size === 0) {
+        throw new Error(`resolved 0 keys for ${users.length} user account(s)`);
+      }
+      return { tree, stats };
+    }
+
+    async function refresh(reason) {
+      try {
+        const { tree, stats } = await buildTree();
+        cache.tree = tree;
+        cache.loaded = true;
+        cache.updatedAt = new Date().toISOString();
+        cache.stats = stats;
+        cache.lastError = null;
+        log("info", "key tree refreshed", { reason, entries: tree.size, ...stats });
+      } catch (err) {
+        cache.lastError = err instanceof Error ? err.message : String(err);
+        log("error", "key tree refresh failed; keeping previous tree", {
+          reason,
+          error: cache.lastError,
+          entries: cache.tree.size,
+          loaded: cache.loaded,
+        });
+      }
+    }
+
+    function send(res, status, contentType, body, extra = {}) {
+      res.writeHead(status, {
+        "Content-Type": contentType,
+        "Content-Length": body.length,
+        "X-Content-Type-Options": "nosniff",
+        ...extra,
+      });
+      res.end(body);
+    }
+
+    const server = http.createServer((req, res) => {
+      const path = new URL(req.url ?? "/", "http://localhost").pathname;
+
+      if (path === "/healthz") return send(res, 200, "text/plain", Buffer.from("ok\n"));
+      if (path === "/policy" || path === "/.well-known/openpgpkey/policy") {
+        return send(res, 200, "text/plain", Buffer.alloc(0));
+      }
+
+      const match = path.match(/^(?:\/\.well-known\/openpgpkey)?\/hu\/([a-z0-9]{32})$/);
+      if (match) {
+        if (!cache.loaded) {
+          // Distinguish "no key for this address" from "not serving keys yet".
+          return send(res, 503, "text/plain", Buffer.from("key tree not loaded\n"));
+        }
+        const key = cache.tree.get(match[1]);
+        if (!key) return send(res, 404, "text/plain", Buffer.from("no key for this hash\n"));
+        return send(res, 200, "application/pgp-keys", key, { "Cache-Control": "public, max-age=300" });
+      }
+
+      return send(res, 404, "text/plain", Buffer.from("not found\n"));
+    });
+
+    for (const [name, value] of [
+      ["WKD_DOMAIN", cfg.domain],
+      ["WKD_JMAP_URL", cfg.jmapUrl],
+      ["WKD_JMAP_USERNAME", cfg.username],
+      ["WKD_JMAP_PASSWORD", cfg.password],
+    ]) {
+      if (!value) {
+        log("error", "missing required configuration", { variable: name });
+        process.exit(1);
+      }
+    }
+
+    await refresh("startup");
+    setInterval(() => refresh("scheduled"), cfg.refreshMs);
+    server.listen(cfg.port, "0.0.0.0", () =>
+      log("info", "listening", { port: cfg.port, domain: cfg.domain }),
+    );

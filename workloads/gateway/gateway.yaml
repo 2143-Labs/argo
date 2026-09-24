@@ -823,6 +823,26 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: stalwart
+    # Public, unlike the two listeners around it: WKD has to be reachable from
+    # the open internet for external correspondents' clients (see
+    # workloads/wkd/route.yaml). Certificate is the existing *.2143.me wildcard,
+    # already issued in namespace default — m.2143.me needs no new certificate.
+    - name: m-2143-me-https
+      protocol: HTTPS
+      port: 8443
+      hostname: m.2143.me
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: 2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: stalwart
     - name: mail-ts-2143-https
       protocol: HTTPS
       port: 8443

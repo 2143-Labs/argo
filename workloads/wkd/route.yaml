@@ -1,0 +1,32 @@
+# The public face of the WKD publisher: m.2143.me.
+#
+# Deliberately unlike workloads/stalwart/ingress.yaml, which sits behind the
+# `lan-only` middleware. WKD exists to be reached from the open internet by
+# correspondents' mail clients, so no filter is attached here — the structure is
+# copied from that route, never its filter list.
+#
+# The listener is `m-2143-me-https` in workloads/gateway/gateway.yaml; it
+# terminates TLS with the existing `2143-me-wildcard-tls` secret, whose
+# certificate already covers `*.2143.me`.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wkd
+  namespace: stalwart
+  labels:
+    app: wkd
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: default
+      sectionName: m-2143-me-https
+  hostnames:
+    - m.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: wkd
+          port: 8080
