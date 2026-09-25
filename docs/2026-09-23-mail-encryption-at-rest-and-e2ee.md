@@ -131,6 +131,44 @@ which Sent and Drafts copies would have stayed plaintext after the account was
 armed. It is the one deviation from the approved ordering, and it changed no
 behaviour at the time it was made.
 
+**Reverted 2026-09-25: A3 broke every outgoing message composed in the webmail.**
+Bulwark saves the compose as a draft through JMAP (`Email/set`, an
+`IngestSource::Jmap` append), so with A3 on, Stalwart stored the draft as
+`multipart/encrypted` to the account's at-rest key. `EmailSubmission/set` then sends
+that stored blob verbatim (`crates/jmap/src/submission/set.rs:659-678`,
+`blob_store().get_blob(metadata.blob_hash…)`); nothing decrypts it on the way out. Every
+submission from `John2143@` between 2026-09-23T11:42Z and 2026-09-25T07:28Z was
+therefore PGP/MIME encrypted to `C6F723D916B1E508` only:
+
+- all 11 external sends were refused by TEM with `501 'application/octet-stream'`;
+- each rejected message has the **exact byte size** of the draft appended to mailbox 3
+  in the same second (e.g. 07:28:41, 2286 B draft → 2286 B `BDAT 2286 LAST`), and the
+  12:58 queue capture held a single PKESK for the at-rest subkey;
+- `leighanne` (at-rest `Disabled`) sent to `john@2143.me` in the same window and TEM
+  delivered it (06:56, 06:59, `250`), which isolates the account setting from the relay;
+- internal sends in the window (`technology@`, `support@`) were delivered, but the body
+  was encrypted to John's at-rest key, so any other member of those groups received a
+  message only John can decrypt.
+
+The browser plugin's toggles were never the cause. Fix, applied through admin JMAP:
+
+```json
+["x:Email/set", {"update": {"singleton": {"encryptOnAppend": false}}}, "e"]
+["x:Action/set", {"create": {"reload": {"@type": "ReloadSettings"}}}, "r"]
+```
+
+`created.reload` returned; `x:Email` reads `{"encryptAtRest": true, "encryptOnAppend": false}`.
+Verified: a JMAP-created draft is now stored as `text/plain` with its canary readable
+(before the change the same probe stored `multipart/encrypted`, 1779 B, no canary), and a
+plaintext `EmailSubmission` to `john@2143.me` was accepted by TEM at 07:39:34Z
+(`250 OK: queued as c6a53f10-054c-4fd5-bf3d-11af23bde27c`). `x:Account/k` still carries
+`encryptOnAppend: true`; it is inert while the global switch is off.
+
+Cost: Drafts, Sent copies and other JMAP/IMAP appends are stored as written again.
+Mail arriving by SMTP is still encrypted at rest, and a plugin-encrypted Sent copy is
+already ciphertext. **Do not turn the global switch back on** unless Stalwart gains a
+draft exclusion or decrypts before submission.
+
 ### 4. Corrections — four things the first attempt got wrong
 
 These were found by running the calls, and each cost a round trip:
@@ -368,11 +406,10 @@ domain and for almost nothing else.
 | `tryToFetchMissingKeys` | **`true`** | required — the WKD lookup that finds a colleague's key lives inside this guard |
 | `autoImportSignerCerts` | leave `true` | only consulted for signed mail, which is now opt-in |
 
-Plus one housekeeping step: **remove any imported external correspondent's key.** The
-failed sends to `john@2143.me` are explained by exactly that — a manually imported key made
-the plugin encrypt to a Proton address, which TEM then refused. `keys.openpgp.org` does
-**not** hold that key (`/vks/v1/by-email/john@2143.me` → `404`) and `2143.me` publishes no
-WKD, so once deleted it cannot reappear on its own.
+**The 2026-09-23 → 2026-09-25 external bounces were not caused by these settings.**
+They were Stalwart's `encryptOnAppend` encrypting the stored draft that
+`EmailSubmission` then sent; see *Reverted 2026-09-25* under A3. With that switch
+off, a compose with PGP Encrypt and Sign off leaves as plaintext and TEM accepts it.
 
 **How internal encryption happens with no user action:** each user completes the two
 onboarding actions, the key lands in Stalwart's registry, the WKD publisher serves it within
@@ -418,10 +455,9 @@ one compromised key then reads every mailbox.
 
 #### The plugin's three send scenarios (traced in the bundle, 2026-09-24)
 
-`onComposeSend` has exactly three outcomes, and which one fires is decided **entirely by
-which recipient keys the contact search returns** — `recipientKeysFor` reads
-`contacts.search` and nothing else; WKD and keyserver lookups happen earlier, at compose
-time, and land in client-side contact state.
+When encryption is requested, `onComposeSend` branches on recipient keys returned by
+`recipientKeysFor` (`contacts.search`). WKD and keyserver lookups happen earlier, during
+compose; their results must be available to the send-time contact lookup.
 
 | Scenario | Condition | What goes out |
 |---|---|---|
@@ -429,27 +465,22 @@ time, and land in client-side contact state.
 | **B** | some resolve, some do not | a red "mixed recipients" confirmation, then **two separate submissions**: an encrypted envelope to the keyed recipients and a cleartext envelope to the rest (the cleartext one is PGP-signed if signing is on — which TEM refuses). The Sent folder keeps the encrypted envelope |
 | **C** | none resolve | a cleartext envelope to everyone (PGP-signed if signing is on — again refused by TEM), plus a Sent copy encrypted to **your own key only** |
 
+If both signing and encryption are off, the hook returns without processing the message.
+
 Two corrections to what this document said earlier:
 
 1. **Mixed sends do not degrade to plaintext for everyone — they split.** Scenario B is
    exactly the desired policy: internal recipients get the encrypted envelope, external
    recipients get the cleartext one, from a single compose. The preconditions are that the
    external addresses resolve to *no* key and that signing is off.
-2. **A phantom key is worse than a bounce.** On 2026-09-24 a test to two external addresses
-   plus `support@m.2143.me` left as Scenario A and was rejected by TEM with
-   `application/octet-stream`. Capturing the raw message from the outbound queue
-   (`x:QueuedMessage` carries a `blobId` for in-flight mail) showed a PGP payload with
-   **one** PKESK packet — keyid `C6F723D916B1E508`, the sender's own encryption subkey.
-   Every "recipient key" the plugin found was the sender's own public key, so the message was
-   unreadable to its recipients even if it had been delivered. Those keys are not in
-   Stalwart's address book (the `john@2143.me` card carries no key; there is no card for
-   `john@john2143.com`), not on `keys.openpgp.org` (404 for both), and not on WKD (2143.me
-   and john2143.com answer the `hu/` path with website HTML, not a key) — they exist only in
-   client-side contact state, and only the webmail UI can remove them.
+2. **The 2026-09-24 PGP/MIME capture was Stalwart's at-rest wrapper, not the plugin.**
+   The raw queue message to `john@2143.me`, `john@john2143.com` and `support@m.2143.me`
+   held one recipient-key packet, for the at-rest subkey `C6F723D916B1E508`, because
+   `encryptOnAppend` had encrypted the draft that `EmailSubmission` sent. No contact
+   keys were involved; the "phantom key" theory was wrong and no keys need deleting.
 
-**Do not clear browser site data to "fix" contacts.** The plugin keeps private keys in
-IndexedDB (`allowPersistentKeys`); wiping it destroys the key and with it every encrypted
-message received since arming. Remove the key from the individual contact instead.
+**Never clear browser site data as a troubleshooting shortcut.** The plugin stores
+private keys in IndexedDB; losing an unbacked-up key loses access to encrypted mail.
 
 One more traced detail: the plugin logs the full outgoing message — cleartext included —
 at `log.info("final message text - Scenario …")`. Those lines go to the browser console

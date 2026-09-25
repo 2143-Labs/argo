@@ -518,12 +518,16 @@ explains a rejection.
 it had an attachment.** Two code paths in the plugin emit that type. `wrapAsPgpMimeEncrypted`
 writes the encrypted payload as `Content-Type: application/octet-stream; name="encrypted.asc"`,
 so a PGP/MIME body is an octet-stream part. Separately, `encryptDrafts` retypes attachments to
-`application/octet-stream` in `onBeforeDraftAutoSave`. Nothing else in the plugin produces it.
-So the type in the rejection tells you the encryption switch was on, which is a different
-question from "was there an attachment".
+`application/octet-stream` in `onBeforeDraftAutoSave`. The third source is Stalwart itself:
+with `x:Email.encryptOnAppend` on, the JMAP-saved draft is stored as PGP/MIME and
+`EmailSubmission` sends that stored blob verbatim. **That third source caused every rejection
+from 2026-09-23T11:42Z to 2026-09-25T07:28Z**; the switch was turned off on 2026-09-25 (see
+the mail-encryption doc, *Reverted 2026-09-25*). Check it first: if the rejected size equals
+the size of a `message-ingest.jmap-append` to mailbox 3 in the same second, the server
+encrypted the draft.
 
-**Diagnosing what the client actually sent is harder than it looks.** The Sent copy cannot be
-used: at-rest encryption wraps a cleartext message into the *same* shape
+**Diagnosing what the client actually sent is harder than it looks.** While `encryptOnAppend`
+was on (2026-09-23 → 2026-09-25), the Sent copy could not be used: at-rest encryption wrapped a cleartext message into the *same* shape
 (`multipart/encrypted; protocol="application/pgp-encrypted"`) as a message that arrived
 already encrypted, so the two are indistinguishable, and `preview` is null in both. And a
 permanently failed queue entry is purged — after the 12:35 rejection the outbound queue was
@@ -532,13 +536,10 @@ supports only `sort: [{property: "due"}]`, and each result carries a `blobId` fo
 message, which `Blob/get` returns verbatim. The window is the delivery attempt itself, a
 couple of seconds for a TEM rejection.
 
-**Any key the plugin holds for these external addresses came from a manual import.** Checked
-2026-09-24: `keys.openpgp.org/vks/v1/by-email/` returns `404` for both `john@2143.me` and
-`john@john2143.com`; `https://2143.me/.well-known/openpgpkey/hu/<hash>?l=john` and the
-`john2143.com` equivalent answer `200` with the domain's *website HTML* rather than a key;
-`openpgpkey.john2143.com` and the direct path on `proton.me` return `404`. So the plugin
-cannot discover keys for either address — a stored key for one of them is something a user
-imported, and deleting it is what stops the plugin encrypting to that address.
+**Resolved 2026-09-25: no contact keys were involved.** The captured message's single
+recipient-key packet was for the at-rest subkey because Stalwart had encrypted the draft
+before submission. A plaintext `EmailSubmission` sent after `encryptOnAppend` was turned
+off was accepted by TEM (`250 OK`, 07:39:34Z).
 
 ### Why this is a design constraint, not a client bug
 
@@ -635,16 +636,15 @@ Worse, the two settings interact badly: `onComposeSend` returns early when *both
 and encrypt are off — `if (!sign && !encrypt) return void 0;` — and the block that
 **decrypts** the stored attachments sits *after* that return. So with crypto off, the
 plugin ships the ciphertext attachment, mistyped, instead of the file the user attached.
-Measured consequence: four sends to `john@2143.me` between 2026-09-23T11:42Z and
-2026-09-24T12:00Z, all 2233–2290 bytes, all rejected for `application/octet-stream` —
-including the two sent after sign and encrypt were turned off.
+This is from code reading; it has not been measured. The rejections once attributed to it
+(2026-09-23T11:42Z → 2026-09-24T12:00Z) were caused by `encryptOnAppend`, and match their
+drafts' sizes byte for byte.
 
-The remedy for a user who needs mail to leave is therefore **all three**: `defaultSign`,
-`defaultEncrypt` **and** `encryptDrafts` off, and the attachment must be removed from the
-composer and re-added, because the blob already stored there is the encrypted copy.
-Turning `encryptDrafts` off has a real cost — drafts and uploaded attachment blobs are
-then stored as written rather than as ciphertext — so it is a deliberate trade, not a
-free switch.
+With `encryptOnAppend` off, a message without attachments leaves as plaintext once
+`defaultSign` and `defaultEncrypt` are off. If a user attaches files while `encryptDrafts` is
+on, remove the attachment, turn `encryptDrafts` off, and re-add it: the blob already stored is
+the encrypted copy. Turning `encryptDrafts` off stores drafts and uploaded attachments as
+written, so it is a deliberate trade.
 
 **TEM's list governs attachments generally**, independently of PGP: `application/zip`,
 `application/gzip`, `application/octet-stream` and anything Bulwark types as "unknown"
