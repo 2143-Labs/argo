@@ -23,13 +23,17 @@
 # exist in this namespace, left from the 2026-05 attempt, so this remains an
 # option — but a pinned local pack is the reproducible choice for GitOps.)
 #
-# Loader: no download at boot. The pack ships
-# libraries/net/minecraftforge/forge/1.20.1-47.4.20/, and start-setupModpack
-# runs before the TYPE dispatch, so `mc-image-helper install-forge` finds the
-# installation already in /data and skips it (FORGE_FORCE_REINSTALL is left
-# false). start-deployForge writes /data/.run-forge.env with SERVER="run.sh",
-# and start-finalExec logs "Using Forge supplied run.sh script..." — i.e. itzg
-# deliberately runs the PACK's run.sh.
+# Loader: the TYPE dispatch runs FIRST (start-configuration -> start-deployForge
+# -> start-setupWorld -> start-setupDatapack -> start-setupModpack), so on the
+# very first boot `mc-image-helper install-forge` downloads and runs the Forge
+# 47.4.20 installer from the network, and only afterwards does the generic pack
+# get copied over /data. Observed 2026-09-26: first boot logged "Downloading
+# Forge installer 47.4.20"; the restart logged no installer activity at all, so
+# install-forge is a no-op once its manifest exists on the PVC. Restarts are
+# offline; a fresh PVC needs maven.minecraftforge.net reachable once.
+# start-deployForge writes /data/.run-forge.env with SERVER="run.sh", and
+# start-finalExec logs "Using Forge supplied run.sh script..." — itzg runs the
+# run.sh in /data, which the pack overlay replaced with the pack's own copy.
 #
 # MEMORY=8G does take effect despite the pack's user_jvm_args.txt saying
 # -Xmx4G: start-finalExec:594 overwrites /data/user_jvm_args.txt with the
@@ -148,7 +152,8 @@ spec:
               value: FORGE
             - name: VERSION
               value: "1.20.1"
-            # Matches the bundled libraries/ tree, so install-forge is a no-op.
+            # Pinned to the version of the pack's bundled libraries/ tree, so
+            # the pack overlay and itzg's own install agree.
             - name: FORGE_VERSION
               value: "47.4.20"
             # Container path, not a URL - see the header. No network at start.
