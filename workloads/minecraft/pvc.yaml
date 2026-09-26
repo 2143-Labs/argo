@@ -1,0 +1,20 @@
+# Star Technology server state on longhorn-2 (2-replica Retain tier).
+#
+# Retain matters here. The 2026-05 attempt used the plain 'longhorn'
+# StorageClass (reclaim Delete) for minecraft-data-lh, and when the workload was
+# pruned on 2026-06-03 the PV and its Longhorn volume went with it. There is no
+# surviving copy of that world.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minecraft-data-lh
+  namespace: default
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-2
+  resources:
+    requests:
+      # ~1.1 GiB is baseline: the 494 MB pack zip stays staged under
+      # /data/packs, plus ~576 MB extracted (mods, config, kubejs, libraries).
+      # The rest is skyblock world growth.
+      storage: 30Gi

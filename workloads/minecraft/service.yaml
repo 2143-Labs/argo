@@ -1,0 +1,28 @@
+# MetalLB dual-stack LoadBalancer for the Minecraft game port (TCP 25565).
+#
+# LAN clients connect to 192.168.6.29:25565 directly (hairpin NAT was removed
+# 2026-05-29). WAN clients reach it via a MikroTik dst-nat rule on tcp/25565 —
+# NOT yet present; see the notes in the runbook.
+#
+# 192.168.6.29 / fd00:6::29 sit inside the 'services' IPAddressPool
+# (192.168.6.10-192.168.6.200, fd00:6::10-fd00:6::ff) and were unallocated as of
+# 2026-09-26 (.11 and .13-.24, .26-.28 were taken).
+#
+# allocateLoadBalancerNodePorts is false: the .6.x address is the only entry
+# point, so no ports are consumed from the 30000-32767 node-port range. The old
+# deployment exposed nodePort 32565 instead; that is deliberately not repeated.
+apiVersion: v1
+kind: Service
+metadata:
+  name: minecraft-game
+  namespace: default
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.29,fd00:6::29"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  selector: {app: minecraft}
+  ports:
+    - {port: 25565, targetPort: 25565, protocol: TCP, name: game}

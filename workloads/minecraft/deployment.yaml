@@ -1,0 +1,204 @@
+# Star Technology (CurseForge) skyblock GregTech pack — Minecraft 1.20.1,
+# Forge 47.4.20, 164 mods — via the itzg/minecraft-server image.
+#
+# ---------------------------------------------------------------------------
+# Why this shape
+# ---------------------------------------------------------------------------
+# The upstream artifact is a COMPLETE CurseForge server pack: mods/, config/,
+# kubejs/, defaultconfigs/, the full Forge 1.20.1-47.4.20 libraries/ tree,
+# run.sh, user_jvm_args.txt and a tuned server.properties. It is self-launching.
+#
+# Pack delivery uses GENERIC_PACK with a CONTAINER PATH, not a URL:
+#   itzg's handleGenericPacks (scripts/start-setupModpack) runs
+#   `get -o /data/packs --output-filename --skip-up-to-date "$pack"` for every
+#   URL entry on EVERY container start, and `exit 2`s if the fetch fails. A
+#   path entry takes the other branch and does no network I/O at all.
+#   Paired with SKIP_GENERIC_PACK_UPDATE_CHECK=true and the persisted
+#   /data/.generic_pack.sum, a restart neither re-downloads nor re-extracts the
+#   494 MB pack. The zip is staged once by the initContainer below and lives on
+#   the PVC thereafter.
+#
+# Why not TYPE=AUTO_CURSEFORGE: it needs a CF_API_KEY and re-resolves the pack
+# from CurseForge's API on every boot. (A `curseforge-api-key` Secret does still
+# exist in this namespace, left from the 2026-05 attempt, so this remains an
+# option — but a pinned local pack is the reproducible choice for GitOps.)
+#
+# Loader: no download at boot. The pack ships
+# libraries/net/minecraftforge/forge/1.20.1-47.4.20/, and start-setupModpack
+# runs before the TYPE dispatch, so `mc-image-helper install-forge` finds the
+# installation already in /data and skips it (FORGE_FORCE_REINSTALL is left
+# false). start-deployForge writes /data/.run-forge.env with SERVER="run.sh",
+# and start-finalExec logs "Using Forge supplied run.sh script..." — i.e. itzg
+# deliberately runs the PACK's run.sh.
+#
+# MEMORY=8G does take effect despite the pack's user_jvm_args.txt saying
+# -Xmx4G: start-finalExec:594 overwrites /data/user_jvm_args.txt with the
+# MEMORY-derived opts before exec'ing run.sh (which reads @user_jvm_args.txt).
+#
+# server.properties: the pack ships one with level-type=skyblockbuilder:skyblock
+# and that is what makes the skyblock world generate. itzg's either/or here is
+#   [ ! -e "$SERVER_PROPERTIES" ]  -> create with defaults
+#   elif OVERRIDE_SERVER_PROPERTIES -> customizeServerProps false
+# and customizeServerProps only writes properties whose env var is explicitly
+# set (it gates each block on `[[ -v MODE ]]`, `[[ -v DIFFICULTY ]]`, ...).
+# So LEVEL_TYPE / DIFFICULTY / MOTD / LEVEL_SEED are deliberately NOT set:
+# setting LEVEL_TYPE would overwrite the pack's value and silently generate a
+# normal overworld instead of a skyblock world.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minecraft
+  namespace: default
+  labels:
+    app: minecraft
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  # RWO volume, single replica: a rolling update would deadlock two pods on one
+  # PVC. Same reasoning as factorio and seaweedfs.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: minecraft
+  template:
+    metadata:
+      labels:
+        app: minecraft
+    spec:
+      # Pinned to big, the only node with room for an 8G-heap GregTech pack:
+      # big 82Gi RAM at ~41% memory requested; closet is at 95%, arch allocates
+      # only 16Gi (and already runs 105% of CPU limits), nas has ~5Gi free,
+      # office is tainted wifi+seated (and is on wifi), pite is arm64.
+      nodeSelector:
+        kubernetes.io/hostname: big
+      # The k3s node resolv.conf carries a ts.2143.me search path, which makes
+      # external hostnames resolve to wildcard Tailscale IPs and breaks TLS with
+      # unrecognized_name (diagnosed 2026-05-05, commit e8d1717). Pin DNS to
+      # CoreDNS explicitly so the initContainer's download resolves correctly —
+      # the same fix the previous deployment needed, and it still applied then.
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 10.43.0.10
+        searches:
+          - default.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+      # The server traps SIGTERM and flushes the world; a big GT skyblock world
+      # can take well over the 30s default.
+      terminationGracePeriodSeconds: 120
+      initContainers:
+        # Stage the pack zip onto the PVC exactly once. Every later restart
+        # short-circuits on the size check and never touches the network.
+        - name: stage-pack
+          image: curlimages/curl:8.11.1
+          imagePullPolicy: IfNotPresent
+          # curlimages/curl declares a non-root user; the PVC is root-owned.
+          securityContext:
+            runAsUser: 0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              dest=/data/packs/star-technology.zip
+              mkdir -p /data/packs
+              if [ -s "$dest" ]; then
+                echo "pack already staged ($(wc -c < "$dest") bytes) - skipping download"
+                exit 0
+              fi
+              echo "staging Star Technology server pack"
+              curl -fSL --retry 10 --retry-all-errors --retry-delay 5 \
+                --max-time 2400 -o "$dest.part" "$PACK_URL"
+              # Guard against staging an error page as if it were the pack.
+              # On 2026-09-26 this host returned a 503 with an HTML body, and
+              # the pack host is known to be flaky. A bad file left in place
+              # would also defeat the "already staged" guard on every later
+              # restart, so it is removed and the init container fails loudly.
+              if [ "$(head -c 2 "$dest.part")" != "PK" ]; then
+                echo "ERROR: downloaded file is not a zip (no PK magic)" >&2
+                rm -f "$dest.part"
+                exit 1
+              fi
+              size=$(wc -c < "$dest.part")
+              if [ "$size" -lt 100000000 ]; then
+                echo "ERROR: pack is only $size bytes, expected ~494MB" >&2
+                rm -f "$dest.part"
+                exit 1
+              fi
+              mv "$dest.part" "$dest"
+              echo "pack staged: $size bytes"
+          env:
+            - name: PACK_URL
+              value: "https://i.brick.gay/gM59.zip"
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      containers:
+        - name: minecraft
+          # java17: Minecraft 1.20.1 / Forge 47.4.20 target Java 17. Pinned to
+          # a dated tag rather than 'latest' or 'stable-java17' so GitOps
+          # diffs are meaningful.
+          image: itzg/minecraft-server:2026.9.2-java17
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: EULA
+              value: "TRUE"
+            - name: TYPE
+              value: FORGE
+            - name: VERSION
+              value: "1.20.1"
+            # Matches the bundled libraries/ tree, so install-forge is a no-op.
+            - name: FORGE_VERSION
+              value: "47.4.20"
+            # Container path, not a URL - see the header. No network at start.
+            - name: GENERIC_PACK
+              value: /data/packs/star-technology.zip
+            # Without this, every container start re-fetches the pack to compare
+            # checksums. With it, an existing /data/.generic_pack.sum short-
+            # circuits the update check entirely.
+            - name: SKIP_GENERIC_PACK_UPDATE_CHECK
+              value: "true"
+            - name: MEMORY
+              value: "8G"
+            - name: INIT_MEMORY
+              value: "2G"
+          ports:
+            - containerPort: 25565
+              protocol: TCP
+              name: game
+          volumeMounts:
+            - mountPath: /data
+              name: data
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+            # 8G heap plus room for metaspace, JIT code cache and Netty direct
+            # buffers. Deliberately above the heap so the JVM OOMs before the
+            # kernel OOM-kills the container.
+            limits:
+              memory: 12Gi
+          # First boot applies the pack, verifies Forge and generates a
+          # skyblock world across 164 mods; startup can take many minutes.
+          # tcpSocket is only a liveness approximation - the listener binds
+          # before the "Done" message, so an early client may still be kicked.
+          startupProbe:
+            tcpSocket:
+              port: game
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: game
+            periodSeconds: 15
+            failureThreshold: 4
+          # No livenessProbe on purpose: a long full GC or a large autosave can
+          # stall the tick loop for minutes, and killing the pod mid-save is
+          # worse than a stalled server. The JVM's own watchdog
+          # (max-tick-time=60000, from the pack) covers genuine hangs.
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minecraft-data-lh
