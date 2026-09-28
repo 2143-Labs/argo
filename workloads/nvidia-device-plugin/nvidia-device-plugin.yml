@@ -68,9 +68,14 @@ spec:
         hostPath:
           path: /driver-root
           type: Directory
+      # The plugin always writes its CDI spec to /var/run/cdi inside the container.
+      # Back it with /etc/cdi on the host: NixOS nvidia-cdi-generator.service has
+      # RuntimeDirectory=cdi, which wipes /run/cdi whenever it runs (e.g. on a
+      # rebuild) and silently breaks GPU container creation until the plugin restarts.
+      # containerd scans both /etc/cdi and /var/run/cdi.
       - name: cdi-root
         hostPath:
-          path: /var/run/cdi
+          path: /etc/cdi
           type: Directory
       - name: nix-store
         hostPath:
