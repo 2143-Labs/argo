@@ -632,6 +632,8 @@ data:
     detectors:
       onnx_0:
         type: onnx
+      onnx_1:
+        type: onnx
     face_recognition:
       detection_threshold: 0.7
       enabled: true
