@@ -658,7 +658,7 @@ data:
       model_size: small
       recognition_threshold: 0.9
     model:
-      path: plus://76f86376e9f306d53a28d00d4927ba50
+      path: plus://7132ccf17b6cec25b827d04c5bb0b78d
     mqtt:
       host: 192.168.5.76
       password: pT2hmIXUXN4IkhdCGy3frXEmKYY
