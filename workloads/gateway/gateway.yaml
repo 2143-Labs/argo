@@ -12,71 +12,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: rots-https
-      protocol: HTTPS
-      port: 8443
-      hostname: rots.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: rots-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: prod-rots-https
-      protocol: HTTPS
-      port: 8443
-      hostname: prod.rots.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: rots-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: auth-prod-rots-https
-      protocol: HTTPS
-      port: 8443
-      hostname: auth.prod.rots.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: rots-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: dev-rots-https
-      protocol: HTTPS
-      port: 8443
-      hostname: dev.rots.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: rots-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: auth-dev-rots-https
-      protocol: HTTPS
-      port: 8443
-      hostname: auth.dev.rots.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: rots-2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
 
     - name: john2143-https
       protocol: HTTPS
@@ -720,32 +655,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: design-aross-studio-https
-      protocol: HTTPS
-      port: 8443
-      hostname: design.aross.studio
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: aross-studio-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: portfolio-aross-studio-https
-      protocol: HTTPS
-      port: 8443
-      hostname: portfolio.aross.studio
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: aross-studio-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
 
     - name: anni-2143-me-https
       protocol: HTTPS
@@ -765,6 +674,19 @@ spec:
       protocol: HTTPS
       port: 8443
       hostname: balabusta.homes
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: balabusta-homes-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: www-balabusta-homes-https
+      protocol: HTTPS
+      port: 8443
+      hostname: www.balabusta.homes
       tls:
         mode: Terminate
         certificateRefs:

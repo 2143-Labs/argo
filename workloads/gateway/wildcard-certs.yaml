@@ -42,20 +42,6 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: rots-2143-me-wildcard
-  namespace: default
-spec:
-  secretName: rots-2143-me-wildcard-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - "*.rots.2143.me"
-    - "rots.2143.me"
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
   name: aross-studio-tls
   namespace: default
 spec:
@@ -105,3 +91,4 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - balabusta.homes
+    - www.balabusta.homes

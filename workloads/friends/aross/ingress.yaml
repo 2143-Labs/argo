@@ -7,14 +7,8 @@ spec:
   parentRefs:
     - name: shared-gateway
       sectionName: aross-studio-https
-    - name: shared-gateway
-      sectionName: design-aross-studio-https
-    - name: shared-gateway
-      sectionName: portfolio-aross-studio-https
   hostnames:
     - aross.studio
-    - design.aross.studio
-    - portfolio.aross.studio
   rules:
     - matches:
         - path:

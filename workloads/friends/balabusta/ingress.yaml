@@ -35,8 +35,8 @@ spec:
           namespace: keda
           port: 8080
 ---
-# http:// -> https:// for balabusta.homes. Same as gateway/john2143-http-to-https,
-# which is already at the Gateway API cap of 16 hostnames per HTTPRoute.
+# http:// -> https://balabusta.homes for the apex and www (one hop). Separate from
+# gateway/john2143-http-to-https, which is at the Gateway API cap of 16 hostnames.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -48,6 +48,7 @@ spec:
       sectionName: acme-http
   hostnames:
     - balabusta.homes
+    - www.balabusta.homes
   rules:
     - matches:
         - path:
@@ -57,5 +58,30 @@ spec:
         - type: RequestRedirect
           requestRedirect:
             scheme: https
-            port: 443
+            hostname: balabusta.homes
+            statusCode: 301
+---
+# https://www.balabusta.homes -> https://balabusta.homes. No backend, so it never
+# wakes the scale-to-zero pod.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: balabusta-www-redirect
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: www-balabusta-homes-https
+  hostnames:
+    - www.balabusta.homes
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: balabusta.homes
             statusCode: 301

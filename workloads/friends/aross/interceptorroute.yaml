@@ -10,8 +10,6 @@ spec:
   rules:
     - hosts:
         - aross.studio
-        - design.aross.studio
-        - portfolio.aross.studio
   scalingMetric:
     concurrency:
       targetValue: 10
