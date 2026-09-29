@@ -385,7 +385,8 @@ data:
           height: 1080
           width: 1920
         ffmpeg:
-          hwaccel_args: "preset-nvidia-h264"
+          # CPU decode: frees P4 NVDEC (was 19-40% per pmon) for the other cameras
+          hwaccel_args: []
           inputs:
           - path: rtsp://${NVR_USER}:${NVR_PASS}@${NVR_HOST}/h264Preview_05_main
             roles:
@@ -631,8 +632,6 @@ data:
             default: 30
     detectors:
       onnx_0:
-        type: onnx
-      onnx_1:
         type: onnx
     face_recognition:
       detection_threshold: 0.7
