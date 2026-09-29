@@ -761,6 +761,20 @@ spec:
         namespaces:
           from: Same
 
+    - name: balabusta-homes-https
+      protocol: HTTPS
+      port: 8443
+      hostname: balabusta.homes
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: balabusta-homes-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
+
     - name: listen-2143-me-https
       protocol: HTTPS
       port: 8443

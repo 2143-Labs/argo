@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: balabusta
+  labels:
+    app: balabusta
+spec:
+  type: ClusterIP
+  selector:
+    app: balabusta
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
