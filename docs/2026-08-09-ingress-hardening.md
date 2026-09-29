@@ -86,7 +86,7 @@ For a machine/API surface (S3, upload endpoints, webhooks that aren't GitHub), u
 - Traefik OTLP traces: fixed 2026-08-09 (commit `39ee505` dotfiles) — `tracing.otlp.grpc.enabled: true` was missing, so the endpoint was never rendered and Tempo had 0 traces. Now flowing: `traefik` spans → alloy OTLP → Tempo (verified 50+ traces/10m).
 - Traefik 3.7.10 upgrade is blocked by chart 40.1.3's proxy-version cap; a k3s upgrade would land it (and with it `underscoreHeadersStrategy: reject` for CVE-2026-33433 — the entryPoints block is in the valuesContent and activates when the chart allows ≥3.7.6).
 - The bouncer secret volume is a live deployment patch (chart 40.1.3 has no pod-volume hook) — re-apply `kubectl patch` after any traefik helm re-render.
-- GitHub webhook delivery (argo-webhook.john2143.com) remains broken at the router — unaffected by this work.
+- GitHub webhook delivery (argo-webhook.john2143.com): fixed 2026-09-29. The router was never the problem: the hook sent `application/x-www-form-urlencoded`, and Argo CD rejects that with a 400. See `2026-09-29-argocd-github-webhook.md`.
 - `Gateway/shared-gateway` shows a persistent ArgoCD OutOfSync drift (controller-owned status) — pre-existing, cosmetic.
 
 ## 7. Update 2026-09-18 — detection actually switched on
