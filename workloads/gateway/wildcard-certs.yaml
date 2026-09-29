@@ -52,8 +52,7 @@ spec:
   dnsNames:
     - "*.rots.2143.me"
     - "rots.2143.me"
-
-
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -66,7 +65,7 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - aross.studio
-
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
