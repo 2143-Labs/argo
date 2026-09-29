@@ -1,7 +1,7 @@
 # Argo CD: GitHub push webhook, signed with a secret from OpenBao
 
 **Date:** 2026-09-29
-**Status:** implemented and **verified**. A push to `main` now reaches Argo CD within about a second. Deliveries are HMAC-signed, and argocd-server rejects unsigned or forged requests.
+**Status:** implemented and **verified**. A push to `main` now reaches Argo CD within about a second. Deliveries are HMAC-signed. Both argocd-server and argocd-applicationset-controller reject unsigned or forged requests.
 **Scope:**
 - GitHub hook `662488712` on `2143-Labs/argo`.
 - GitHub hook `663721590` on `2143-Labs/steam-lobby`.
@@ -70,9 +70,13 @@ Verified after the merge:
 | argocd-server | `662488712` on `2143-Labs/argo` (`push`) → `argo-webhook.john2143.com/api/webhook` | Within seconds. `watchSettings` notices the change and logs `github secret modified. restarting` (an in-process restart, not a pod restart) |
 | argocd-applicationset-controller | `663721590` on `2143-Labs/steam-lobby` (`pull_request`) → `applicationset-webhook.john2143.com/api/webhook` | **Only at startup.** It reads the settings once in `NewWebhookHandler` |
 
-A ping to `663721590` after the change returned `200`.
+The applicationset-controller was restarted at 2026-09-29 18:33Z (`kubectl -n argocd rollout restart deploy/argocd-applicationset-controller`) so that it loaded the new key. Until then it had been running since 2026-09-17, before the key existed, and accepted unsigned events. Results after the restart:
+- A ping from GitHub on `663721590` returned `200`.
+- A forged signature returned `400`, logged as `Webhook processing failed: HMAC verification failed`.
+- A missing signature header returned `400`, logged as `missing X-Hub-Signature-256 Header`.
+- All three ApplicationSets (`friend-sites`, `steam-lobby-preview`, `vpn-endpoints`) stayed `ErrorOccurred=False` / `ResourcesUpToDate=True`.
 
-The applicationset-controller was deliberately **not** restarted, so it keeps accepting unsigned events until its next natural restart. GitHub already signs with the matching secret, so nothing breaks when enforcement starts.
+The ping sent before the restart also returned `200`. That was expected, since GitHub was already signing with the same secret.
 
 ## Rotation
 
@@ -124,15 +128,27 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X POST https://argo-webhook.john2143.
   -H 'X-Hub-Signature-256: sha256=0000000000000000000000000000000000000000000000000000000000000000' \
   --data '{}'
 
+# applicationset-controller (steam-lobby PR hook): expect ping 200, then a forged ping rejected with 400,
+# logged as "Webhook processing failed: HMAC verification failed".
+# Keep the curl on one line: a line-wrapped paste drops the signature header, and the test then fails
+# with "missing X-Hub-Signature-256 Header" instead of exercising the HMAC check.
+gh api -X POST repos/2143-Labs/steam-lobby/hooks/663721590/pings
+gh api "repos/2143-Labs/steam-lobby/hooks/663721590/deliveries?per_page=1" --jq '.[0] | [.delivered_at, .event, .status_code] | @tsv'
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST https://applicationset-webhook.john2143.com/api/webhook -H 'Content-Type: application/json' -H 'X-GitHub-Event: ping' -H 'X-Hub-Signature-256: sha256=0000000000000000000000000000000000000000000000000000000000000000' --data '{}'
+kubectl -n argocd logs deploy/argocd-applicationset-controller --since=5m | jq -Rr 'fromjson? | select(.msg | test("(?i)webhook|HMAC")) | .msg'
+
 # The ExternalSecret and the key (names only).
 kubectl -n argocd get externalsecret webhook-github
 kubectl -n argocd get secret argocd-secret -o go-template='{{range $k, $v := .data}}{{$k}}{{"\n"}}{{end}}'
 ```
 
 Results on 2026-09-29:
-- Signed test delivery: `push 200`.
-- Forged signature: `400`, logged as `HMAC verification failed`.
-- Missing signature header: `400`, logged as `missing X-Hub-Signature-256 Header`.
+
+| Test | argocd-server | applicationset-controller (after the 18:33Z restart) |
+|---|---|---|
+| Signed delivery from GitHub | `push 200` | `ping 200` |
+| Forged signature | `400`, `HMAC verification failed` | `400`, `HMAC verification failed` |
+| Missing signature header | `400`, `missing X-Hub-Signature-256 Header` | `400`, `missing X-Hub-Signature-256 Header` |
 
 ## Gotchas
 
