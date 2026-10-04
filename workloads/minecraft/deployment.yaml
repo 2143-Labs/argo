@@ -70,12 +70,24 @@ spec:
       labels:
         app: minecraft
     spec:
-      # Pinned to big, the only node with room for an 8G-heap GregTech pack:
-      # big 82Gi RAM at ~41% memory requested; closet is at 95%, arch allocates
-      # only 16Gi (and already runs 105% of CPU limits), nas has ~5Gi free,
-      # office is tainted wifi+seated (and is on wifi), pite is arm64.
-      nodeSelector:
-        kubernetes.io/hostname: big
+      # Prefers closet, as a soft preference only (2026-10-04: this replaced the
+      # hard nodeSelector pin to big; factorio's identical closet preference was
+      # removed in the same change). The scheduler still falls back to any node
+      # that can fit the 8Gi request, so a full closet degrades to big rather
+      # than leaving the pod Pending. big was the original pin because it was
+      # the only node with room for an 8G-heap GregTech pack: closet sat at 95%
+      # of requested memory, arch allocates only 16Gi, nas had ~5Gi free, office
+      # is tainted wifi+seated (and is on wifi), pite is arm64.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - closet
       # The k3s node resolv.conf carries a ts.2143.me search path, which makes
       # external hostnames resolve to wildcard Tailscale IPs and breaks TLS with
       # unrecognized_name (diagnosed 2026-05-05, commit e8d1717). Pin DNS to
