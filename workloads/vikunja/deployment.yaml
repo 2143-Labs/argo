@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vikunja
+  namespace: default
+  labels:
+    app: vikunja
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate            # SQLite + RWO volume: never two writers
+  selector:
+    matchLabels:
+      app: vikunja
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: vikunja
+    spec:
+      # Required: the Service is named "vikunja", so service links would inject
+      # VIKUNJA_SERVICE_HOST/VIKUNJA_PORT/... and Vikunja reads every VIKUNJA_*
+      # env var as config.
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values: [general]
+      containers:
+        - name: vikunja
+          image: vikunja/vikunja:2.7.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 3456
+              name: http
+          # VIKUNJA_SERVICE_SECRET, VIKUNJA_AUTH_OPENID_PROVIDERS_POCKETID_CLIENTID,
+          # VIKUNJA_AUTH_OPENID_PROVIDERS_POCKETID_CLIENTSECRET
+          envFrom:
+            - secretRef:
+                name: vikunja-secrets
+          env:
+            # Env, not config.yml: the image bakes VIKUNJA_DATABASE_PATH=/db/vikunja.db
+            # and env is merged after the config file.
+            - name: VIKUNJA_DATABASE_PATH
+              value: /data/vikunja.db
+            - name: VIKUNJA_FILES_BASEPATH
+              value: /data/files
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/vikunja   # whole dir, no subPath, so updates propagate
+              readOnly: true
+          resources:
+            requests: { cpu: "50m", memory: "128Mi" }
+            limits: { cpu: "1000m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 6
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vikunja-data
+        - name: config
+          configMap:
+            name: vikunja-config

@@ -1,0 +1,30 @@
+# Mounted as a directory at /etc/vikunja (on Vikunja's default config search path).
+# Secrets (service.secret, provider clientid/clientsecret) come from env via
+# Secret/vikunja-secrets; Vikunja deep-merges VIKUNJA_* env over this file.
+# database.path and files.basepath are env vars in the Deployment because the
+# image bakes VIKUNJA_DATABASE_PATH and env wins over the file.
+# Do not enable emailfallback/usernamefallback (GHSA-xv7q-fvmc-jx96).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vikunja-config
+  namespace: default
+  labels:
+    app: vikunja
+data:
+  config.yml: |
+    service:
+      publicurl: "https://tasks.2143.me"
+      enableregistration: false
+    database:
+      type: sqlite
+    auth:
+      local:
+        enabled: false
+      openid:
+        enabled: true
+        providers:
+          pocketid:
+            name: "Pocket ID"
+            authurl: "https://au.2143.me"
+            scope: "openid email profile"
