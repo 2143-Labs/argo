@@ -88,32 +88,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    - name: fs-john2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: fs.john2143.com
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: john2143-com-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
-    - name: fsui-john2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: fsui.john2143.com
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: john2143-com-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
     - name: files-john2143-https
       protocol: HTTPS
       port: 8443
@@ -479,30 +453,6 @@ spec:
         namespaces:
           from: Same
 
-    - name: spire-grpc-passthrough
-      protocol: TLS
-      port: 8443
-      hostname: spire.john2143.com
-      tls:
-        mode: Passthrough
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: spire-server
-    - name: spiffe-jwks-passthrough
-      protocol: TLS
-      port: 8443
-      hostname: spiffe.john2143.com
-      tls:
-        mode: Passthrough
-      allowedRoutes:
-        namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: spire-server
     # LiveKit's embedded TURN server always advertises
     # turns:<domain>:443?transport=tcp (hardcoded in pkg/service/roommanager.go)
     # and terminates TLS itself, so this listener passes the raw TLS stream
@@ -521,19 +471,6 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: matrix
-    - name: element-chat-2143-https
-      protocol: HTTPS
-      port: 8443
-      hostname: element.chat.2143.me
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: 2143-me-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: Same
     - name: element-john2143-https
       protocol: HTTPS
       port: 8443

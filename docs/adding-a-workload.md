@@ -66,7 +66,7 @@ Add a new listener entry to `shared-gateway`:
       from: Same
 ```
 
-Wildcard certificates cover all subdomains. There are 4 wildcard certs managed in `workloads/gateway/wildcard-certs.yaml` — you do **not** need to add a `Certificate` resource. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
+Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. There are 3 wildcard certs (`*.ts.2143.me`, `*.2143.me`, `*.john2143.com`) plus a few single-host certs in `workloads/gateway/wildcard-certs.yaml` — a one-label subdomain of a wildcard needs **no** new `Certificate`. `scripts/validate-gateway-certs.sh` fails CI when a listener's hostname is not covered by its Certificate. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
 ### b. HTTPRoute (`workloads/<name>/ingress.yaml`)
 

@@ -8,6 +8,8 @@
 #    the cluster (4610198, 1aea132) and stopped renewing.
 # 2. Every Secret a Gateway listener serves is the secretName of exactly one
 #    Certificate in the same namespace (metadata.namespace must be explicit).
+# 3. Every listener hostname is covered by its Certificate's dnsNames (exact,
+#    or a "*." wildcard one label up; wildcards don't cover deeper subdomains).
 #
 # Helm chart templates (*/templates/*) are not plain YAML and are skipped.
 set -euo pipefail
@@ -38,6 +40,19 @@ while IFS= read -r secret; do
   fi
 done <<<"$refs"
 
+pairs=$(yq e -N 'select(.kind == "Gateway") | .metadata.namespace as $ns | .spec.listeners[] | select(.hostname and .tls.certificateRefs) | .hostname as $h | .tls.certificateRefs[] | select((.kind // "Secret") == "Secret") | (.namespace // $ns) + "/" + .name + " " + $h' "${files[@]}" | sort -u)
+sans=$(yq e -N 'select(.kind == "Certificate") | ((.metadata.namespace // "<no-namespace>") + "/" + .spec.secretName) as $s | .spec.dnsNames[]? | $s + " " + .' "${files[@]}" | tr '[:upper:]' '[:lower:]' | sort -u)
+
+while read -r secret host; do
+  [[ -z "$secret" ]] && continue
+  grep -qxF "$secret" <<<"$certs" || continue   # missing Certificate already reported above
+  h=${host,,}
+  if ! grep -qxF "$secret $h" <<<"$sans" && ! grep -qxF "$secret *.${h#*.}" <<<"$sans"; then
+    echo "::error::listener hostname $host is not covered by any dnsName of the Certificate writing $secret; clients will get a certificate name mismatch"
+    fail=1
+  fi
+done <<<"$pairs"
+
 while IFS= read -r secret; do
   [[ -z "$secret" ]] && continue
   echo "::error::more than one Certificate writes Secret $secret; cert-manager refuses to issue for duplicates"
@@ -47,4 +62,4 @@ done < <(uniq -d <<<"$certs")
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
-echo "gateway certs OK: $(grep -c . <<<"$refs") listener secrets, each backed by one Certificate"
+echo "gateway certs OK: $(grep -c . <<<"$refs") listener secrets, each backed by one Certificate; $(grep -c . <<<"$pairs") listener hostnames covered"
