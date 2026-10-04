@@ -16,14 +16,26 @@ spec:
       values: |
         fullnameOverride: "temporal"
         schema:
-          # The chart's default (useHelmHooks: true) renders a fixed-name
-          # `temporal-schema` Job with backoffLimit 100. ArgoCD applies it as a
-          # normal resource and Job pod templates are immutable, so any change
-          # to the schema job (e.g. rotated DB credentials) can never be
-          # applied and the app wedges forever. The chart documents
-          # useHelmHooks: false for non-Helm tooling; it names the Job
-          # per chart-version/revision instead.
-          useHelmHooks: false
+          # Helm hook annotations become an Argo CD PreSync hook with
+          # BeforeHookCreation + HookSucceeded: the idempotent setup/update
+          # runs before every sync, gates server rollouts on a migrated schema,
+          # re-reads the CNPG password each run, and is excluded from
+          # sync-status (no TTL -> Missing -> immutable-Job wedge).
+          useHelmHooks: true
+          backoffLimit: 5
+          activeDeadlineSeconds: 1800
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containerSecurityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
         server:
           config:
             persistence:
@@ -124,9 +136,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      # The chart's temporal-schema Job is rendered from a helm.sh hook but
-      # applied by ArgoCD as a normal resource. Job pod templates are
-      # immutable, so a changed job spec (e.g. rotated DB credentials) can
-      # never be applied in place and wedges the whole app out of sync.
-      - Replace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 1m
+        factor: 2
+        maxDuration: 10m
