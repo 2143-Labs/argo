@@ -19,9 +19,14 @@ spec:
         - "-volumeSizeLimitMB=30000"
         - "-mdir=/data/master"
         ports: [{containerPort: 9333, name: http}, {containerPort: 19333, name: grpc}]
+        readinessProbe:
+          httpGet: {path: /cluster/healthz, port: 9333}
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         resources:
-          requests: {memory: "128Mi", cpu: "100m"}
-          limits: {memory: "256Mi", cpu: "500m"}
+          requests: {memory: "1Gi", cpu: "500m"}
+          limits: {memory: "1Gi", cpu: "500m"}
         volumeMounts:
         - name: data
           mountPath: /data

@@ -38,9 +38,14 @@ spec:
         ports:
         - {containerPort: 8888, name: filer}
         - {containerPort: 8333, name: s3}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8333}
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         resources:
-          requests: {memory: "2Gi", cpu: "200m"}
-          limits: {memory: "2Gi", cpu: "500m"}
+          requests: {memory: "4Gi", cpu: "1000m"}
+          limits: {memory: "4Gi", cpu: "1000m"}
         volumeMounts:
         - name: data
           mountPath: /data
