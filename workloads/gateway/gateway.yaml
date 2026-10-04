@@ -792,3 +792,17 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: chess-dsstar-us-https
+      protocol: HTTPS
+      port: 8443
+      hostname: chess.dsstar.us
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: chess-dsstar-us-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
