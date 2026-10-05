@@ -16,6 +16,15 @@ spec:
       values: |
         podAnnotations:
           reloader.stakater.com/auto: "true"
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: In
+                      values: ["big"]
         tempo:
           storage:
             trace:
