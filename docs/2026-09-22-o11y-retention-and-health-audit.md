@@ -175,3 +175,61 @@ worth verifying.
 3. **Alloy tolerations** for `office` and `pite`.
 4. **Self-monitoring alerts** so these fail loudly next time.
 5. Restart churn in `loki-backend`.
+
+## Remediation outcome (2026-10-05)
+
+Re-measured live 2026-10-05 ~09:10Z. No Loki, Mimir, or Alloy configuration was changed; the
+recovery came from repairing SeaweedFS. Both storage findings above traced back to SeaweedFS
+volumes that existed on disk but were not registered with the master. The volume server started
+on 2026-09-24 failed to load 265 of its volumes (`loading leveldb … resource temporarily
+unavailable`). Restarting it on 2026-09-27 07:33:51Z re-registered all 400 at 07:50:24Z.
+
+| Signal | Status | Evidence |
+|---|---|---|
+| Pre-repair forensics | PASS | `nas:/home/john/mimir-forensics.0kX80yX5`, captured before the repair; `SHA256SUMS` verify; volumes 630/702 recorded as missing at capture |
+| SeaweedFS registration | PASS (gate deviations accepted) | disk = master = volume server = 453 volumes; the 7 previously missing IDs (577/617/630/636/702/735/748) resolve; one volume node; filer log clean since 08:17Z |
+| Loki retention | PASS | first successful run 2026-10-04 (between 03:03Z and 09:48Z); ~92 successes since; last success 08:57Z |
+| Mimir history | PASS | bucket index rebuilt 08:54Z, 52 blocks (2026-09-04 → today), 30 blocks loaded on both pods; `up{instance="nas"}` present at 1/7/14/21/29d, absent at 31/35d |
+| Mimir 30d retention | PASS (single snapshot) | the one block past 720h is marked; `blocks_marked_for_deletion_total{reason="retention"}` = 1; 42 blocks cleaned; no deletion mark older than 13h remains. The planned two-index comparison was NOT OBSERVED |
+| Alloy coverage of office/pite | PASS | DaemonSet 4/4 (arch, big, closet, nas); office and pite kubelet/cAdvisor `up` = 1 with 29–30 samples per 15m; their longhorn-manager logs reach Loki via `alloy-2dssk` (office) and `alloy-n7wl5` (pite) |
+
+Corrections to the findings above:
+
+- **P1 options 1–2 were not used and should not be.** `bucket_index.enabled` was removed in Mimir
+  2.11, and 3.2.1 shards its compactors through the ring, so two replicas are fine. The index
+  rebuilt by itself once its objects were readable.
+- **P3 Alloy was a false gap.** Every Alloy source uses cluster-wide API discovery with
+  clustering, so office and pite were always scraped and tailed from the other four nodes.
+  Tolerations were declined: there is no coverage gain; pite is arm64 with 2,793,276Ki
+  allocatable at ~44% used; Alloy pods use 467–767Mi each with no limit; and the Alloy
+  ServiceAccount can list secrets cluster-wide. Tolerations only make sense alongside a node-local
+  component and an explicit `alloy.resources` limit.
+
+Gate deviations (accepted 2026-10-05 instead of a clean 10-minute gate):
+
+- On 2026-09-27 the filer's 60m peak was 1,701 MiB against the 1,638 MiB threshold (80% of its
+  old 2Gi limit), and one Loki index object (`index_20679/…8d970335.tsdb.gz`) pointed at a missing
+  chunk. That object has since been replaced and now returns 404.
+- The filer limit is now 4Gi (Guaranteed QoS, commit `d002ce3`). Its 7-day peak was 3,036 MiB,
+  with no OOM kills.
+- On 2026-10-05 the filer had only been up 1h, and its container memory series was missing (see
+  open items).
+
+Open items:
+
+- **Mimir series-limit drops.** Since ~08:03Z, `mimir-1` rejects new series
+  (`err-mimir-max-series-per-user`, ~134 samples/s, ~1.7% of intake). It holds 321k series
+  against its ~250k share of `max_global_series_per_user: 500000`, because it absorbed all series
+  while `mimir-0` restarted 9 times between 07:50Z and 08:12Z during the SeaweedFS outage. Only
+  144k of those series are active, so this is expected to clear at head compaction; confirm it
+  does.
+- **SeaweedFS restarts cause full outages.** The volume server rejoins the master only after
+  every volume loads, and large TTL'd frigate-genai volumes make that slow. Measured gaps:
+  2026-09-27 07:33–07:50Z and 2026-10-05 ~07:43–08:16Z (the nas reboot).
+- **Read-only volume.** `litellm-spend-logs_460` stays read-only after a torn write from August.
+- **Pool checksum error.** The `tank` scrub that finished 2026-10-01 reported 1 error
+  (CKSUM 4 on each raidz disk; `zpool status -v` lists no damaged files).
+- **Partial Mimir blocks.** 46 partial blocks from 2026-08-10 → 2026-08-13 are skipped by the
+  cleaner and never deleted.
+- **Loki's 55–90d gap is unresolved.** Logs reach back ~60d. Data from before 2026-07-29 is
+  still not reachable, and the 90d policy starts deleting only from ~2026-10-27.
