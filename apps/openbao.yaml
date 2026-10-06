@@ -441,8 +441,6 @@ spec:
                 average: 100
                 burst: 50
                 period: 1m
-                sourceCriterion:
-                  ipStrategy: {}
 
           - apiVersion: traefik.io/v1alpha1
             kind: Middleware

@@ -1,12 +1,15 @@
 # Rate limit + in-flight cap + CrowdSec bouncer for public web surfaces. Attach
 # all three via ExtensionRef to any internet-facing HTTPRoute. Real client IPs
 # reach traefik (externalTrafficPolicy: Local), so both limiters key on the
-# socket RemoteAddr with `ipStrategy: {}`. NEVER use ipStrategy.excludedIPs:
-# it reads only X-Forwarded-For, which the entrypoint strips from untrusted
-# clients, so every client collapses into ONE shared bucket per route (Traefik
-# docs: excludedIPs "cannot be used to deactivate rate limiting for some IPs").
-# There is no LAN exemption. LAN clients that hairpin share the WAN IP's bucket;
-# LAN clients on split-horizon DNS get their own per-IP bucket.
+# socket RemoteAddr. rateLimit omits sourceCriterion (Traefik's default is
+# RemoteAddr); inFlightReq spells it `ipStrategy: {}`. Do not add `ipStrategy: {}`
+# to an existing rateLimit: server-side apply turned that edit into null and the
+# CRD rejected it (2026-10-06). NEVER use ipStrategy.excludedIPs: it reads only
+# X-Forwarded-For, which the entrypoint strips from untrusted clients, so every
+# client collapses into ONE shared bucket per route (Traefik docs: excludedIPs
+# "cannot be used to deactivate rate limiting for some IPs"). There is no LAN
+# exemption. LAN clients that hairpin share the WAN IP's bucket; LAN clients on
+# split-horizon DNS get their own per-IP bucket.
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -18,8 +21,6 @@ spec:
     average: 100
     burst: 50
     period: 1m
-    sourceCriterion:
-      ipStrategy: {}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
