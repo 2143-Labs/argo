@@ -322,12 +322,17 @@ spec:
                   source_labels = ["__journal_priority_keyword"]
                   target_label  = "level"
                 }
+                rule {
+                  target_label = "job"
+                  replacement  = "node-journal"
+                }
               }
 
               loki.source.journal "node" {
                 path          = "/var/log/journal"
                 max_age       = "12h"
-                labels        = { job = "node-journal" }
+                // job is set by the relabel rule: this component forces
+                // job=<component id> over `labels`.
                 relabel_rules = loki.relabel.journal.rules
                 forward_to    = [loki.write.home.receiver]
               }
