@@ -90,6 +90,10 @@ spec:
         - mountPath: /etc/crowdsec/acquis.yaml
           name: acquis-config-volume
           subPath: acquis.yaml
+        - mountPath: /etc/crowdsec/parsers/s02-enrich/home-wan-whitelist.yaml
+          name: crowdsec-agent-whitelists
+          subPath: home-wan-whitelist.yaml
+          readOnly: true
         - mountPath: /var/log
           name: varlog
           readOnly: true
@@ -143,6 +147,10 @@ spec:
           defaultMode: 420
           name: acquis-configmap
         name: acquis-config-volume
+      - configMap:
+          defaultMode: 420
+          name: crowdsec-agent-whitelists
+        name: crowdsec-agent-whitelists
       - emptyDir: {}
         name: crowdsec-config
       - hostPath:

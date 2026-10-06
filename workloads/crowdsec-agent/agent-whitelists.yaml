@@ -1,0 +1,18 @@
+# Household WAN IP. LAN clients that resolve public hostnames hairpin through the
+# Verizon CR1000B and reach Traefik as this address, so without this every LAN
+# burst (Grafana drilldown, Factorio mod manager, Vikunja token refresh) fires
+# hub scenarios on our own IP and the LAPI shares the signal with CAPI.
+# Keep in sync with clientTrustedIps in workloads/{gateway,pocket-id,stalwart}/security-middlewares.yaml and apps/openbao.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-agent-whitelists
+  namespace: crowdsec
+data:
+  home-wan-whitelist.yaml: |
+    name: john2143/home-wan-whitelist
+    description: "Discard events from the household WAN IP (hairpinned LAN traffic)"
+    whitelist:
+      reason: "household WAN IP (hairpin NAT)"
+      ip:
+        - "108.56.153.222"
