@@ -32,6 +32,11 @@ spec:
             email_attribute_path: "email"
             login_attribute_path: "preferred_username"
             allow_assign_grafana_admin: true
+            auto_login: true
+          auth:
+            disable_login_form: true
+          security:
+            disable_ip_address_login_protection: false
         datasources:
           datasources.yaml:
             apiVersion: 1
@@ -46,11 +51,14 @@ spec:
                 uid: loki
                 url: http://loki-gateway.observability.svc
                 jsonData:
+                  httpHeaderName1: X-Scope-OrgID
                   derivedFields:
                     - name: TraceID
                       matcherRegex: 'trace_id=(\w+)'
                       url: '$${__value.raw}'
                       datasourceUid: tempo
+                secureJsonData:
+                  httpHeaderValue1: fake
               - name: Tempo
                 type: tempo
                 uid: tempo
