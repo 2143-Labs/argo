@@ -25,7 +25,6 @@ spec:
       serviceAccountName: frigate-genai
       terminationGracePeriodSeconds: 180
       tolerations:
-        - {key: wifi, operator: Exists, effect: NoSchedule}
         - {key: pi, operator: Exists, effect: NoSchedule}
       affinity:
         nodeAffinity:

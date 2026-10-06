@@ -23,8 +23,6 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: frigate-genai
-      tolerations:
-        - {key: wifi, operator: Exists, effect: NoSchedule}
       containers:
         - name: triggers
           image: ghcr.io/john2143/frigate-genai-genai:v237
