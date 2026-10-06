@@ -116,6 +116,6 @@ argo:
 
 - 0-replica TWC worker Deployments (KEDA idle) are **Healthy** under ArgoCD v3.3.6 — not a Progressing source.
 - The TWC's `ensureConnectionFinalizer` re-adds `temporal.io/delete-protection` on reconcile; the finalizer on a non-terminating object is harmless. Only a *stuck terminating* Connection is a health problem.
-- ffmpeg capacity now: 4 CPU / 8Gi / 10Gi per pod; 5 pods fit on `big`; `office` (seated taint) serves as overflow for build transitions.
+- ffmpeg capacity now: 4 CPU / 8Gi / 10Gi per pod; 5 pods fit on `big`; `office` serves as overflow for build transitions via the cluster's `wifi-node-policy` (storage-free pods auto-tolerate office's wifi taint).
 
 **State after fix**: 59/59 apps Healthy; all 4 WorkerDeployments at v141 (no ramp); ffmpeg 5/5 Running; zero evictions.

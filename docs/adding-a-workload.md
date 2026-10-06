@@ -43,6 +43,17 @@ Add Kubernetes resources under `workloads/<name>/`. Typical files:
 
 No `kustomization.yaml` is needed — Argo applies all YAML in the directory.
 
+### Node placement (do nothing)
+
+Never add tolerations or node selectors for node network topology. Wifi-only
+nodes (currently `office`) carry the taint `wifi=no-network-storage:NoSchedule`;
+the cluster policy `workloads/wifi-node-policy` adds the matching toleration at
+admission to every pod that mounts no network storage (no PVC, NFS, iSCSI, CSI,
+ephemeral volume or hostPath) and is not a DaemonSet or hostNetwork pod. Pods
+with storage stay on wired nodes automatically. A pod that tolerates the wifi
+taint while mounting network storage is rejected. Wired nodes are always
+preferred; wifi nodes are overflow.
+
 ## 3. Expose via HTTPS (HTTPRoute)
 
 Three things are needed to expose a service at `<sub>.ts.2143.me` (or another domain):

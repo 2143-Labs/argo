@@ -1,0 +1,45 @@
+# Hard guarantee: no pod that tolerates the wifi node taint may mount network
+# storage (Longhorn/NFS/etc. traffic must never cross wifi). CREATE only, so
+# updates/finalizer removal on existing pods are never blocked.
+# Excluded namespaces: keep in sync with mutating.yaml.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: wifi-node-forbid-network-storage
+spec:
+  failurePolicy: Ignore
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, longhorn-system, metallb-system, observability, matrix, steam-lobby, cert-manager, cnpg-system, external-secrets, keda, temporal-system]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  matchConditions:
+    - name: tolerates-wifi-node
+      expression: >-
+        has(object.spec.tolerations) && object.spec.tolerations.exists(t,
+          (!has(t.effect) || t.effect == 'NoSchedule') && (
+            ((!has(t.key) || t.key == '') && has(t.operator) && t.operator == 'Exists') ||
+            (has(t.key) && t.key == 'wifi' && (
+              (has(t.operator) && t.operator == 'Exists') ||
+              (has(t.value) && t.value == 'no-network-storage')))))
+  validations:
+    - expression: >-
+        !has(object.spec.volumes) || !object.spec.volumes.exists(v,
+          has(v.persistentVolumeClaim) || has(v.ephemeral) || has(v.nfs) ||
+          has(v.iscsi) || has(v.csi) || has(v.cephfs) || has(v.rbd) ||
+          has(v.fc) || has(v.glusterfs))
+      message: "pods that tolerate wifi=no-network-storage must not mount network storage; remove the wifi toleration (wifi nodes never carry storage traffic)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: wifi-node-forbid-network-storage-binding
+spec:
+  policyName: wifi-node-forbid-network-storage
+  validationActions: [Deny]

@@ -77,7 +77,7 @@ spec:
       # than leaving the pod Pending. big was the original pin because it was
       # the only node with room for an 8G-heap GregTech pack: closet sat at 95%
       # of requested memory, arch allocates only 16Gi, nas had ~5Gi free, office
-      # is tainted wifi+seated (and is on wifi), pite is arm64.
+      # is wifi-only (its PVC keeps it off), pite is arm64.
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

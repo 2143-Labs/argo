@@ -1,5 +1,4 @@
 # workloads/mc-mirror-job/job.yaml
-# Should be allowed on taint "seated=true:NoSchedule" (main node)
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,15 +10,6 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
-      tolerations:
-        - key: "seated"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
-        #- key: "wifi"
-          #operator: "Equal"
-          #value: "true"
-          #effect: "NoSchedule"
       containers:
         - name: mc
           image: minio/mc

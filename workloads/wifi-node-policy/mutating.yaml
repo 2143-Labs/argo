@@ -1,0 +1,65 @@
+# Wifi-attached nodes (tainted wifi=no-network-storage:NoSchedule) run any pod
+# that mounts no network storage. This policy adds that toleration at admission
+# so workload manifests never mention node topology. Pods with network storage,
+# hostPath (node-bound data), hostNetwork, DaemonSet pods, and the excluded
+# namespaces never get it. The soft wifi-overflow taint is deliberately NOT
+# tolerated, so wired nodes stay preferred. Companion: validating.yaml.
+# Excluded namespaces: core + real-time media + apiserver-critical (webhooks
+# with failurePolicy Fail / aggregated APIs). Keep in sync with validating.yaml.
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: wifi-node-tolerate-storage-free
+spec:
+  failurePolicy: Ignore
+  reinvocationPolicy: Never
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, longhorn-system, metallb-system, observability, matrix, steam-lobby, cert-manager, cnpg-system, external-secrets, keda, temporal-system]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  matchConditions:
+    - name: no-network-or-node-bound-storage
+      expression: >-
+        !has(object.spec.volumes) || !object.spec.volumes.exists(v,
+          has(v.persistentVolumeClaim) || has(v.ephemeral) || has(v.nfs) ||
+          has(v.iscsi) || has(v.csi) || has(v.cephfs) || has(v.rbd) ||
+          has(v.fc) || has(v.glusterfs) || has(v.hostPath))
+    - name: not-host-network
+      expression: "!has(object.spec.hostNetwork) || !object.spec.hostNetwork"
+    - name: not-daemonset
+      expression: >-
+        !has(object.metadata.ownerReferences) ||
+        !object.metadata.ownerReferences.exists(o, o.kind == 'DaemonSet')
+    # Skip only pods that already tolerate THIS taint value. A storage-free pod
+    # that only tolerates the old wifi=true still gets the new toleration.
+    - name: not-already-tolerated
+      expression: >-
+        !has(object.spec.tolerations) || !object.spec.tolerations.exists(t,
+          (!has(t.effect) || t.effect == 'NoSchedule') && (
+            ((!has(t.key) || t.key == '') && has(t.operator) && t.operator == 'Exists') ||
+            (has(t.key) && t.key == 'wifi' && (
+              (has(t.operator) && t.operator == 'Exists') ||
+              (has(t.value) && t.value == 'no-network-storage')))))
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          has(object.spec.tolerations) ?
+            [JSONPatch{op: "add", path: "/spec/tolerations/-",
+              value: Object.spec.tolerations{key: "wifi", operator: "Equal", value: "no-network-storage", effect: "NoSchedule"}}] :
+            [JSONPatch{op: "add", path: "/spec/tolerations",
+              value: [Object.spec.tolerations{key: "wifi", operator: "Equal", value: "no-network-storage", effect: "NoSchedule"}]}]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: wifi-node-tolerate-storage-free-binding
+spec:
+  policyName: wifi-node-tolerate-storage-free

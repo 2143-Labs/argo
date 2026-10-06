@@ -45,9 +45,12 @@ spec:
           # uploads are affected; live volumes are untouched.
           backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
           backupTargetCredentialSecret: ""
-          # Allow Longhorn pods to schedule on tainted nodes (specifically
-          # arch's seated=true:NoSchedule). Without this, no replica nor
-          # CSI plugin would land on arch.
+          # Longhorn tolerates seated/wifi/pi with operator Equal "true". Only `pi`
+          # is live today. Wifi-only nodes are tainted wifi=no-network-storage, which
+          # these tolerations deliberately do NOT match, so Longhorn never runs on a
+          # wifi node (see workloads/wifi-node-policy). Never tolerate `wifi` with
+          # operator Exists here. Changing this setting is refused while any volume
+          # is attached, so it is intentionally left as-is.
           taintToleration: "seated=true:NoSchedule; wifi=true:NoSchedule; pi=true:NoSchedule"
         longhornManager:
           tolerations:
