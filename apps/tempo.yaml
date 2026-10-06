@@ -37,10 +37,29 @@ spec:
                 access_key: ${S3_ACCESS_KEY}
                 secret_key: ${S3_SECRET_KEY}
           retention: 168h
+          # TraceQL metrics / Traces Drilldown. Without storage.path Tempo runs the
+          # generator as an idle no-op and its ring stays empty ("empty ring").
+          # Only local-blocks is enabled, so nothing is remote-written; the chart
+          # always renders remote_write, hence remoteWriteUrl.
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://mimir.observability.svc:8080/api/v1/push
+            storage:
+              path: /tmp/tempo
+            traces_storage:
+              path: /tmp/traces
+            processor:
+              local_blocks:
+                flush_to_storage: true
+          overrides:
+            defaults:
+              metrics_generator:
+                processors:
+                  - local-blocks
           resources:
             requests:
               cpu: 500m
-              memory: 1Gi
+              memory: 3Gi
           extraArgs:
             config.expand-env: "true"
           extraEnvFrom:
