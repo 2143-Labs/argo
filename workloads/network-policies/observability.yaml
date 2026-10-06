@@ -10,13 +10,14 @@
 #   * same namespace - Alloy -> loki-gateway/mimir/tempo, loki-canary ->
 #     loki-gateway, grafana -> all three datasources, and the Loki/Mimir
 #     memberlist gossip (7946) between their own pods.
-#   * cluster SNAT gateways - mimir-lb (192.168.6.23:8080) and loki-push-lb
-#     (192.168.6.24:3100), plus their NodePorts 30674/30108. Both use
+#   * cluster SNAT gateways - mimir-lb (192.168.6.23:8080), loki-push-lb
+#     (192.168.6.24:3100) and syslog-lb (192.168.6.25:514/udp -> Alloy 1514),
+#     plus mimir/loki NodePorts 30674/30108 (syslog-lb has none). All three use
 #     externalTrafficPolicy: Cluster, so kube-proxy masquerades every client -
 #     a LAN host, a cluster node, even another pod reaching the VIP - to the
 #     receiving node's flannel.1 (cross-node) or cni0 (same-node) address.
 #     That means the real client address is not visible here at all, and the
-#     allowance below is effectively "anything that can reach the VIP". Both
+#     allowance below is effectively "anything that can reach the VIP". All
 #     endpoints are unauthenticated LAN-facing ports, so this does not widen
 #     access beyond what they already had; it is recorded here so nobody thinks
 #     the VIP is pod-isolated.

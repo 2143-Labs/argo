@@ -36,3 +36,30 @@ spec:
       port: 3100
       targetPort: 8080
       nodePort: 30108
+---
+# MikroTik router syslog -> Alloy loki.source.syslog (UDP 1514). The router
+# sends over IPv4; the v6 address only follows the repo's dual-stack standard.
+# externalTrafficPolicy stays Cluster (default): kube-proxy SNATs to the node's
+# flannel/cni address, which the observability allow-ingress policy already
+# admits (its cluster-SNAT ipBlocks), and the sender is labelled statically
+# (host="router") because only the router logs here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: syslog-lb
+  namespace: observability
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.25,fd00:6::25"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  selector:
+    app.kubernetes.io/instance: alloy
+    app.kubernetes.io/name: alloy
+  ports:
+    - name: syslog-udp
+      port: 514
+      targetPort: 1514
+      protocol: UDP

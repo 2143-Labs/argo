@@ -173,16 +173,18 @@ Notes:
 | livekit-server-rtc (7881/50000) | 192.168.6.22 | fd00:6::22 |
 | mimir-lb | 192.168.6.23 | fd00:6::23 |
 | loki-push-lb | 192.168.6.24 | fd00:6::24 |
+| syslog-lb (514/UDP → Alloy) | 192.168.6.25 | fd00:6::25 |
 | frigate (5000/1984/8554/8555) | 192.168.6.26 | fd00:6::26 |
 | pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
 | factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
+| minecraft-game | 192.168.6.29 | fd00:6::29 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.10`, `.12`, `.25` (released 2026-09-24 when the in-cluster
-UniFi controller was removed) and `192.168.6.29–.200` (`.201–.254` reserved
-headroom; `factorio-game` owns `.28`); v6 `fd00:6::11`, `::12`, `::20`, `::25`,
-`::29–::ff` (`::28` is factorio's). Never reuse an in-use address; a collision
-surfaces as `AllocationFailed: address also in use by <ns>/<svc>`.
+**Free:** v4 `192.168.6.10`, `.12` and `192.168.6.30–.200` (`.201–.254` reserved
+headroom; `syslog-lb` owns `.25`, `minecraft-game` `.29`); v6 `fd00:6::11`,
+`::12`, `::20`, `::2a–::ff` (`::25` is syslog-lb's, `::29` minecraft's). Never
+reuse an in-use address; a collision surfaces as `AllocationFailed: address also
+in use by <ns>/<svc>`.
 
 ### Rules of thumb
 

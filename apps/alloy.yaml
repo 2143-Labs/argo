@@ -306,6 +306,56 @@ spec:
                   }
                 }
               }
+
+              // -- Node systemd journal (k3s, kubelet, sshd, postgres, ...) --
+              loki.relabel "journal" {
+                forward_to = []
+                rule {
+                  source_labels = ["__journal__systemd_unit"]
+                  target_label  = "unit"
+                }
+                rule {
+                  source_labels = ["__journal__hostname"]
+                  target_label  = "host"
+                }
+                rule {
+                  source_labels = ["__journal_priority_keyword"]
+                  target_label  = "level"
+                }
+              }
+
+              loki.source.journal "node" {
+                path          = "/var/log/journal"
+                max_age       = "12h"
+                labels        = { job = "node-journal" }
+                relabel_rules = loki.relabel.journal.rules
+                forward_to    = [loki.write.home.receiver]
+              }
+
+              // -- MikroTik router syslog (BSD/RFC3164 over UDP via syslog-lb 192.168.6.25:514) --
+              loki.relabel "syslog" {
+                forward_to = []
+                rule {
+                  source_labels = ["__syslog_message_severity"]
+                  target_label  = "level"
+                }
+                rule {
+                  source_labels = ["__syslog_message_app_name"]
+                  target_label  = "app"
+                }
+              }
+
+              loki.source.syslog "mikrotik" {
+                listener {
+                  address                = "0.0.0.0:1514"
+                  protocol               = "udp"
+                  syslog_format          = "rfc3164"
+                  use_incoming_timestamp = false
+                  labels                 = { job = "mikrotik", host = "router" }
+                }
+                relabel_rules = loki.relabel.syslog.rules
+                forward_to    = [loki.write.home.receiver]
+              }
           clustering:
             enabled: true
             name: alloy
@@ -315,6 +365,12 @@ spec:
             extra:
               - name: positions
                 mountPath: /var/lib/alloy
+              - name: journal
+                mountPath: /var/log/journal
+                readOnly: true
+              - name: machine-id
+                mountPath: /etc/machine-id
+                readOnly: true
           extraPorts:
             - name: otlp-grpc
               port: 4317
@@ -324,6 +380,10 @@ spec:
               port: 4318
               targetPort: 4318
               protocol: TCP
+            - name: syslog-udp
+              port: 1514
+              targetPort: 1514
+              protocol: UDP
         controller:
           volumes:
             extra:
@@ -331,6 +391,14 @@ spec:
                 hostPath:
                   path: /var/lib/alloy
                   type: DirectoryOrCreate
+              - name: journal
+                hostPath:
+                  path: /var/log/journal
+                  type: Directory
+              - name: machine-id
+                hostPath:
+                  path: /etc/machine-id
+                  type: File
         resources:
           requests:
             cpu: 100m
