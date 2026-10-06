@@ -19,6 +19,9 @@ spec:
       containers:
         - name: mimir
           image: grafana/mimir:3.2.1
+          # Relative data dirs (./tsdb WAL+head, ./tsdb-sync, ./data-compactor, ...) resolve
+          # against cwd; the image's cwd is "/" (ephemeral). Put them on the PVC.
+          workingDir: /data
           args:
             - "-target=all,alertmanager"
             - "-config.file=/etc/mimir/mimir.yaml"
@@ -120,6 +123,9 @@ data:
       join_members:
         - dns+mimir-memberlist.observability.svc.cluster.local:7946
       abort_if_cluster_join_fails: false
+      # Re-resolve join_members periodically. Without this, a pod whose startup
+      # join only reaches itself stays in its own ring forever (split-brain).
+      rejoin_interval: 1m
 ---
 apiVersion: v1
 kind: Service
