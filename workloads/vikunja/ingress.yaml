@@ -17,9 +17,8 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      # content-* tier, not public-*: the SPA fans out to many asset/API requests,
-      # and LAN clients hairpin in as the WAN IP (not in excludedIPs), so the
-      # household would share one 100/min public-rate-limit bucket.
+      # content-* tier, not public-*: the SPA fans out to many asset/API requests, and
+      # LAN clients that hairpin share the WAN IP's per-IP bucket.
       filters:
         - type: ExtensionRef
           extensionRef:
