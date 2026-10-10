@@ -26,8 +26,8 @@
 - **CrowdSec** (chart 0.24.0): `crowdsec-lapi` (8080), `crowdsec-appsec` (7422, AppSec WAF with CRS virtual patching), `crowdsec-agent` DaemonSet reading traefik pod logs (`/var/log/containers/traefik-*.log`, program `traefik`). Collections: `crowdsecurity/appsec-virtual-patching`, `crowdsecurity/appsec-crs`, plus `crowdsecurity/traefik` — but see §7: the Traefik collection was **not** actually installed in the standalone agent until 2026-09-18, so until then every access-log line was ingested and discarded and no log-based scenario could fire. Bouncer key stored as the `crowdsec-bouncer-key` Secret in `kube-system` (never committed — the argo repo is public).
 - **Bouncer**: `maxlerebourg/crowdsec-bouncer-traefik-plugin` **v1.7.1** loaded via `experimental.plugins` in the traefik HelmChartConfig; key file mounted at `/etc/traefik/secrets/crowdsec-bouncer-key`. All of it is declarative: the plugin config lives in the HelmChartConfig in `dotfiles/nixos/closet-configuration.nix` (lines ~180-189), the key volume is part of that same HelmChartConfig render, and the Secret itself is created by the k3s bootstrap at `dotfiles/nixos/cluster/modules/k3s-common.nix:326`. There is no post-render `kubectl patch` to re-apply: a chart re-render reproduces the same volume.
 - **Middlewares** (one copy per namespace — Gateway API `ExtensionRef` resolves only in the route's namespace):
-  - `public-rate-limit` — 100 req/min avg, 50 burst, per source IP (no `sourceCriterion` = Traefik's default RemoteAddr). No LAN exemption — the original `excludedIPs` collapsed every client into one shared bucket and was removed 2026-10-06.
-  - `public-inflight-limit` — 50 concurrent requests per IP (slowloris/connection-exhaustion cap → 429).
+  - `public-rate-limit` — 5000 req/min avg, 2500 burst, per source IP (no `sourceCriterion` = Traefik's default RemoteAddr). Generous on purpose: a flood backstop, never tuned to page weight. Raised from 100/50 on 2026-10-10 after the burst of 50 rejected every cold load of au.2143.me (~77 requests) and rendered a black page; the former `content-*` tier (same values) was folded into it. No LAN exemption — the original `excludedIPs` collapsed every client into one shared bucket and was removed 2026-10-06.
+  - `public-inflight-limit` — 2500 concurrent requests per IP (connection-exhaustion cap → 429).
   - `crowdsec-bouncer` — LAPI stream mode (60s sync), AppSec enabled, fail-open on AppSec errors.
 
 ## 3. Protected routes (15)
@@ -78,7 +78,7 @@ For a machine/API surface (S3, upload endpoints, webhooks that aren't GitHub), u
 
 - **Ban/unban an IP**: `kubectl exec -n crowdsec deploy/crowdsec-lapi -- cscli decisions add --ip X -d 1h` / `cscli decisions delete --ip X`. The bouncer re-syncs within ~60s. `cscli decisions list` shows active bans.
 - **AppSec model**: CRS runs out-of-band — SQLi/XSS probing is detected and the source IP is banned after the event threshold (6 events / ~30s observed). Inline vpatch rules cover known CVEs. AppSec failures are fail-open (`crowdsecAppsecFailureBlock`/`crowdsecAppsecUnreachableBlock: false`).
-- **Rate limit tuning**: `average`/`burst` live in the `public-rate-limit` middleware; raise if a legit client (e.g. S3 syncs to files.john2143.com) trips 429s. In-flight cap (`amount: 50`) likewise.
+- **Rate limit tuning**: never lower the shared `public-*` values — every public route uses them. To give one route a different limit, add a route-specific Middleware (`<app>-rate-limit` / `<app>-inflight-limit`) in the same file and namespace as its HTTPRoute and point that route's `ExtensionRef` at it; put a strict limit on its own narrow path rule.
 - **The bouncer reads the socket RemoteAddr**, not `X-Forwarded-For` — a spoofed header will NOT bypass it, but equally, tests must come from the real client IP (external probe) or the LAN IP is used (exempt from rate limit only).
 
 ## 6. Known follow-ups (out of scope this run)

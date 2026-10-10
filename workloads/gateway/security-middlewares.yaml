@@ -11,11 +11,20 @@
 # exemption. LAN clients that hairpin share the WAN IP's bucket; LAN clients on
 # split-horizon DNS get their own per-IP bucket.
 #
-# Two tiers. Use public-* for ordinary pages, where a few dozen requests per
-# minute per client is generous. Use content-* for routes whose page views fan
-# out to many sub-resource requests - a Seafile folder view fires ~280 thumbnail
-# GETs in about a second, which the public burst of 50 rejects outright. The
-# content-* values are the public ones x50.
+# Generous by default. public-rate-limit / public-inflight-limit are a flood
+# backstop against a single address, not an abuse filter: reputation
+# (crowdsec-bouncer) is what stops scanners. The values sit >=10x above the
+# busiest real client measured 2026-09-25..10-09 (496 req/min; ~100 requests in
+# one second on a cold SPA load) and are the former content-* values, which
+# Grafana, Seafile and Vikunja ran on without a single 429 to a real client.
+# Never lower the shared values: the old burst of 50 rejected every cold load
+# of au.2143.me (~77 requests) and rendered a black page.
+#
+# Per-route override: to give ONE route a different limit, define a Middleware
+# with a route-specific name (<app>-rate-limit / <app>-inflight-limit) in the
+# same file and namespace as that HTTPRoute, and point that route's
+# ExtensionRef at it. Put a strict limit on its own narrow rule (e.g. a
+# PathPrefix match for a login endpoint) rather than on the whole host.
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -24,8 +33,8 @@ metadata:
   namespace: default
 spec:
   rateLimit:
-    average: 100
-    burst: 50
+    average: 5000
+    burst: 2500
     period: 1m
 ---
 apiVersion: traefik.io/v1alpha1
@@ -35,7 +44,7 @@ metadata:
   namespace: default
 spec:
   inFlightReq:
-    amount: 50
+    amount: 2500
     sourceCriterion:
       ipStrategy: {}
 ---

@@ -438,8 +438,8 @@ spec:
               namespace: openbao
             spec:
               rateLimit:
-                average: 100
-                burst: 50
+                average: 5000
+                burst: 2500
                 period: 1m
 
           - apiVersion: traefik.io/v1alpha1
@@ -449,7 +449,7 @@ spec:
               namespace: openbao
             spec:
               inFlightReq:
-                amount: 50
+                amount: 2500
                 sourceCriterion:
                   ipStrategy: {}
 

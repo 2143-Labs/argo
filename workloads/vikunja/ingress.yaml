@@ -17,19 +17,17 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      # content-* tier, not public-*: the SPA fans out to many asset/API requests, and
-      # LAN clients that hairpin share the WAN IP's per-IP bucket.
       filters:
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: content-rate-limit
+            name: public-rate-limit
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: content-inflight-limit
+            name: public-inflight-limit
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
