@@ -51,28 +51,6 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: content-rate-limit
-  namespace: default
-spec:
-  rateLimit:
-    average: 5000
-    period: 1m
-    burst: 2500
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: content-inflight-limit
-  namespace: default
-spec:
-  inFlightReq:
-    amount: 2500
-    sourceCriterion:
-      ipStrategy: {}
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
   name: crowdsec-bouncer
   namespace: default
 spec:
