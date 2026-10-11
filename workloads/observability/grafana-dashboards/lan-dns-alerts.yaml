@@ -74,7 +74,10 @@ data:
 
           # The router's lan-dns-down script logs "lan-dns down: LAN forwards disabled"
           # (topic warning, shipped to Loki by router syslog) when it fails LAN clients
-          # over to public answers.
+          # over to public answers. level="warning" is required: the router's info-level
+          # audit line for any script edit echoes the script source, text included.
+          # Instant, not range: a range result is a time series, which the threshold
+          # expression rejects (the rule goes to Error instead of Alerting).
           - uid: lan-dns-failover
             title: LAN DNS failed over to public answers
             condition: C
@@ -86,8 +89,8 @@ data:
                 datasourceUid: loki
                 model:
                   editorMode: code
-                  expr: sum(count_over_time({job="mikrotik"} |= "lan-dns down" [15m]))
-                  queryType: range
+                  expr: sum(count_over_time({job="mikrotik", level="warning"} |= "lan-dns down" [15m]))
+                  queryType: instant
                   intervalMs: 60000
                   maxDataPoints: 43200
                   refId: A
