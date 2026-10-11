@@ -1,9 +1,9 @@
 # LAN and cluster DNS (`lan-dns`)
 
 **Status:** stage 1 (LAN clients) live since 2026-10-11 (UTC). Stage 2 (pods) is
-pending on its follow-up card (identifier added when the card is created), gated
-on a clean 7-day soak: no failovers in Loki, both lan-dns pods `2/2`,
-`check-lan-dns.sh 192.168.5.1` exits 0.
+pending on board card #23 ("LAN DNS stage 2", 2143 Labs AI Tasks; stage 1 was
+#22), gated on a clean 7-day soak, read on or after 2026-10-18T02:15Z: no
+failovers in Loki, both lan-dns pods `2/2`, `check-lan-dns.sh 192.168.5.1` exits 0.
 
 ## Contract
 
