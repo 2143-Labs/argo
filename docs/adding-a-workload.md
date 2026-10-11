@@ -116,6 +116,18 @@ Add A and AAAA `extra_records` so the hostname resolves over Tailscale:
   value: "fd7a:115c:a1e0::2"
 ```
 
+### d. LAN and cluster DNS (automatic)
+
+Nothing to do for LAN clients or pods: `lan-dns` answers every HTTPRoute/TLSRoute
+hostname on `shared-gateway` with the gateway address (`192.168.6.11`) within about
+a minute, as long as the hostname is inside one of its zones (`2143.me`,
+`john2143.com`, `aross.studio`, `balabusta.homes`, `chess.dsstar.us`,
+`mm.b.hero.rehab`). CI (`scripts/validate-lan-dns-zones.sh`) fails if it isn't.
+A new domain, a non-HTTP LoadBalancer name, or a name that must resolve publicly
+on the LAN each needs one extra step — see [lan-dns.md](lan-dns.md).
+Tailnet clients still need 3c for `.ts.2143.me` names. Pods use lan-dns only
+after stage 2 (see lan-dns.md "Status").
+
 ## 4. Expose Non-HTTP Protocols
 
 Use the same LoadBalancer path as everything else (section 5) — UDP and TCP
@@ -123,7 +135,9 @@ ports go on the LB service (`pihole-dns` 53/UDP+TCP, `mosquitto` 1883,
 `coturn` 3478 are the patterns). **NodePort is legacy**: since the 2026-08-13
 migration it is used by exactly one service — `matter-server-nodeport`
 (hostNetwork + mDNS/multicast requires node-IP access). Only reach for NodePort
-if a workload genuinely needs node-IP access.
+if a workload genuinely needs node-IP access. For a LAN hostname on a non-HTTP
+LoadBalancer IP, add it to the `hosts` block in `workloads/lan-dns/configmap.yaml`
+([lan-dns.md](lan-dns.md)).
 
 ## 5. Expose as a LoadBalancer (MetalLB — the default)
 
@@ -189,11 +203,11 @@ Notes:
 | pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
 | factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
 | minecraft-game | 192.168.6.29 | fd00:6::29 |
+| lan-dns (53 → k8s_gateway) | 192.168.6.30 | fd00:6::30 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.10`, `.12` and `192.168.6.30–.200` (`.201–.254` reserved
-headroom; `syslog-lb` owns `.25`, `minecraft-game` `.29`); v6 `fd00:6::11`,
-`::12`, `::20`, `::2a–::ff` (`::25` is syslog-lb's, `::29` minecraft's). Never
+**Free:** v4 `192.168.6.10`, `.12` and `192.168.6.31–.200` (`.201–.254` reserved
+headroom); v6 `fd00:6::11`, `::12`, `::20`, `::2a–::2f`, `::31–::ff`. Never
 reuse an in-use address; a collision surfaces as `AllocationFailed: address also
 in use by <ns>/<svc>`.
 

@@ -21,6 +21,7 @@ public filters (rate limit, in-flight cap, CrowdSec bouncer) are gone with the
 public host: they were replaced, not supplemented.
 
 ## A `ts.` name needs three resolvers, and never a public record
+> **Updated 2026-10-11:** item 2 is now automatic: LAN clients (router `192.168.5.1`, not `192.168.6.1` as written below) get route hostnames from `lan-dns` ([lan-dns.md](lan-dns.md)). Item 3 stays until lan-dns stage 2; item 1, headscale `extra_records`, is still added by hand. The no-public-record rule still holds.
 
 `.ts.2143.me` is a headscale MagicDNS zone. Every name in it is enumerated:
 

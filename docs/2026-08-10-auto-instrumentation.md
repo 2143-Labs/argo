@@ -50,6 +50,7 @@ LAPI stream; only the out-of-band CRS body inspection is disabled.
 keep the full `crowdsec-bouncer` (they don't trigger body-keyword rules).
 
 ### Layer 3: Split-horizon DNS (durable fix)
+> **Superseded 2026-10-11** (3a): the router's static entries were replaced by `lan-dns`, which answers from Gateway API routes. 3b (CoreDNS `hosts.split-horizon`) stays until lan-dns stage 2. See [lan-dns.md](lan-dns.md).
 
 Internal traffic resolves public hostnames to the internal traefik LB
 `192.168.6.11` instead of the public IP. No hairpin, no masquerade, traefik
