@@ -3,6 +3,11 @@ kind: HTTPRoute
 metadata:
   name: factorio
   namespace: default
+  # Not in LAN DNS: factorio.john2143.com is also the UDP 34197 game address
+  # (router dst-nat -> 192.168.6.28). One A record can't serve both, so the LAN
+  # gets the public answer and hairpins. docs/lan-dns.md "Exceptions".
+  labels:
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway

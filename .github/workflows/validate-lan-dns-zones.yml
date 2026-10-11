@@ -1,0 +1,37 @@
+name: Validate LAN DNS zones
+
+on:
+  pull_request:
+    paths:
+      - apps/**
+      - workloads/**
+      - scripts/validate-lan-dns-zones.sh
+      - .github/workflows/validate-lan-dns-zones.yml
+  push:
+    paths:
+      - apps/**
+      - workloads/**
+      - scripts/validate-lan-dns-zones.sh
+      - .github/workflows/validate-lan-dns-zones.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-lan-dns-zones-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Route hostnames inside lan-dns zones
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Validate LAN DNS zones
+        run: nix develop -c ./scripts/validate-lan-dns-zones.sh

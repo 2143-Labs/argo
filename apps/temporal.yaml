@@ -79,6 +79,8 @@ spec:
 
 
 
+          # LAN DNS pins temporal-grpc.john2143.com to this IP in
+          # workloads/lan-dns/configmap.yaml (hosts block); change both together.
           frontend:
             service:
               type: LoadBalancer

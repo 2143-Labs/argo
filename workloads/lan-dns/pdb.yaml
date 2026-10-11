@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: lan-dns
+  namespace: lan-dns
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: lan-dns

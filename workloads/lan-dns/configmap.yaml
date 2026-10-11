@@ -1,0 +1,59 @@
+# Corefile for lan-dns. Read docs/lan-dns.md before editing.
+# The zone line after "# lan-dns-zones" and the k8s_gateway line must list the
+# same zones, and every route hostname must be inside one
+# (scripts/validate-lan-dns-zones.sh enforces both). The router FWD entries and
+# dotfiles coredns-custom must carry the same zones (not checkable in CI).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lan-dns-corefile
+  namespace: lan-dns
+data:
+  Corefile: |
+    # A queries for the split-horizon zones: route hostnames -> gateway address.
+    # Only A: k8s_gateway answers NODATA for MX/TXT on routed names, and AAAA is
+    # deliberately left to public DNS. Every other query falls to the "." block.
+    # lan-dns-zones
+    2143.me:1053 john2143.com:1053 aross.studio:1053 balabusta.homes:1053 chess.dsstar.us:1053 mm.b.hero.rehab:1053 {
+        view a-only {
+            expr type() == 'A'
+        }
+        errors
+        log . {
+            class error
+        }
+        prometheus :9153
+        cache 30
+        # Names that are not routes on shared-gateway. Keep in sync with the LB IPs
+        # of temporal-frontend (apps/temporal.yaml) and stalwart/stalwart-stalwart.
+        hosts {
+            192.168.6.13 imap.m.2143.me smtp.m.2143.me
+            192.168.6.20 temporal-grpc.john2143.com
+            ttl 60
+            fallthrough
+        }
+        k8s_gateway 2143.me john2143.com aross.studio balabusta.homes chess.dsstar.us mm.b.hero.rehab {
+            resources HTTPRoute TLSRoute
+            ttl 60
+            fallthrough
+        }
+        forward . 1.1.1.1 1.0.0.1
+    }
+
+    # Everything else (other query types, other zones): public DNS.
+    .:1053 {
+        errors
+        log . {
+            class error
+        }
+        health {
+            lameduck 5s
+        }
+        ready
+        prometheus :9153
+        cache 30
+        forward . 1.1.1.1 1.0.0.1
+        loop
+        reload
+        loadbalance
+    }

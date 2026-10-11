@@ -1,0 +1,43 @@
+# LAN/pod resolver for the split-horizon zones. See docs/lan-dns.md.
+apiVersion: v1
+kind: Service
+metadata:
+  name: lan-dns
+  namespace: lan-dns
+  labels:
+    app: lan-dns
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.30,fd00:6::30"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  selector:
+    app: lan-dns
+  ports:
+    - port: 53
+      targetPort: 1053
+      protocol: UDP
+      name: dns-udp
+    - port: 53
+      targetPort: 1053
+      protocol: TCP
+      name: dns-tcp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lan-dns-metrics
+  namespace: lan-dns
+  labels:
+    app: lan-dns
+spec:
+  type: ClusterIP
+  selector:
+    app: lan-dns
+  ports:
+    - port: 9153
+      targetPort: 9153
+      protocol: TCP
+      name: metrics

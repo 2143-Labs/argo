@@ -1,0 +1,129 @@
+# lan-dns alerts (docs/lan-dns.md). No Grafana contact point is provisioned in
+# git and Grafana's storage is an emptyDir, so these appear in Grafana's alert
+# list; they notify nobody until a contact point exists.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lan-dns-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  lan-dns-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: lan-dns
+        folder: Alerts
+        interval: 1m
+        rules:
+          # Readiness runs a real route lookup (ready-probe sidecar), so "available"
+          # means "answers route names". kube-state-metrics is already in Mimir.
+          - uid: lan-dns-replicas
+            title: lan-dns has fewer than 2 ready pods
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: kube_deployment_status_replicas_available{namespace="lan-dns", deployment="lan-dns"}
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 2
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: NoData
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: lan-dns is running below 2 ready pods
+              description: >-
+                Fewer than 2 lan-dns pods answer route names (readiness checks a real lookup).
+                At 0 the router netwatch switches LAN clients to public answers. See
+                docs/lan-dns.md "Debugging".
+
+          # The router's lan-dns-down script logs "lan-dns down: LAN forwards disabled"
+          # (topic warning, shipped to Loki by router syslog) when it fails LAN clients
+          # over to public answers.
+          - uid: lan-dns-failover
+            title: LAN DNS failed over to public answers
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: loki
+                model:
+                  editorMode: code
+                  expr: sum(count_over_time({job="mikrotik"} |= "lan-dns down" [15m]))
+                  queryType: range
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: The router disabled the lan-dns forwards
+              description: >-
+                Netwatch on the router could not resolve john2143.com via 192.168.6.30 three
+                times and disabled the "lan-dns forward" entries; LAN clients get public
+                answers until it recovers. See docs/lan-dns.md "Debugging".

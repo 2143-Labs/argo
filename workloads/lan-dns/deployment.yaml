@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lan-dns
+  namespace: lan-dns
+  labels:
+    app: lan-dns
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: lan-dns
+  template:
+    metadata:
+      labels:
+        app: lan-dns
+    spec:
+      serviceAccountName: lan-dns
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: lan-dns
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: coredns
+          image: ghcr.io/k8s-gateway/k8s_gateway:1.8.2
+          args: ["-conf", "/etc/coredns/Corefile"]
+          ports:
+            - name: dns-udp
+              containerPort: 1053
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: 1053
+              protocol: TCP
+            - name: metrics
+              containerPort: 9153
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8181
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: corefile
+              mountPath: /etc/coredns
+              readOnly: true
+        # Pod readiness requires every container Ready, so a pod that cannot yet
+        # answer from routes gets no traffic. k8s_gateway SERVFAILs until its
+        # informers sync, and its `ready` plugin does not reflect that.
+        # john2143.com is a route hostname (default/john2143-http-to-https); if that
+        # route disappears every pod goes unready and the router fails over to
+        # public answers (docs/lan-dns.md).
+        - name: ready-probe
+          image: docker.io/library/busybox:1.38
+          command: ["sh", "-c", "trap 'exit 0' TERM; while :; do sleep 3600 & wait $!; done"]
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "nslookup -type=a john2143.com 127.0.0.1:1053 | grep -q '^Address: 192\\.168\\.'"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests: {cpu: 1m, memory: 4Mi}
+            limits: {memory: 16Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+      volumes:
+        - name: corefile
+          configMap:
+            name: lan-dns-corefile

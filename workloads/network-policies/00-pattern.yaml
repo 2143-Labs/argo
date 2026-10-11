@@ -141,6 +141,12 @@
 #   metallb-system, cnpg-system  - hostNetwork controllers that also serve other
 #                                  namespaces' pods.
 #   argocd                       - already covered by the upstream install.
+#   lan-dns                      - LAN DNS behind a LoadBalancer VIP. The
+#                                  per-node SNAT ipBlock list (MAINTENANCE
+#                                  above) would turn a node addition or a
+#                                  podCIDR change into silent partial loss of
+#                                  LAN name resolution. The pods hold only a
+#                                  read-only route/CRD token.
 #   flux-system, authentik, vpn-endpoints, reloader, kube-node-lease,
 #   kube-public                  - out of scope for this effort.
 #

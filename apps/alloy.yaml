@@ -216,6 +216,7 @@ spec:
                   { __address__ = "crowdsec-service.crowdsec.svc:6060" },
                   { __address__ = "crowdsec-appsec-service.crowdsec.svc:6060" },
                   { __address__ = "crowdsec-agent-service.crowdsec.svc:6060" },
+                  { __address__ = "lan-dns-metrics.lan-dns.svc:9153" },
                 ]
                 job_name        = "observability"
                 scrape_interval = "30s"

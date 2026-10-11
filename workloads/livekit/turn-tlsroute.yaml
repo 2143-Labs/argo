@@ -7,6 +7,11 @@ kind: TLSRoute
 metadata:
   name: livekit-turn
   namespace: matrix
+  # Not in LAN DNS: steam-lobby coturn resolves turn.john2143.com via kube-dns to
+  # learn the public WAN IP (external-ip). If it resolved to the gateway, coturn
+  # would advertise a LAN address and external TURN would break.
+  labels:
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway

@@ -26,6 +26,9 @@ spec:
       # ClusterIPs, and the IPv6 one (fd42:42:43::a) never answers, so musl's
       # resolver returns EAI_AGAIN. dnsPolicy: None drops both of kube-dns's
       # addresses, so the ClusterFirst search domains/ndots are restated here.
+      # turn.john2143.com is also a Gateway TLSRoute; it resolves to the public IP
+      # in-cluster only because workloads/livekit/turn-tlsroute.yaml carries
+      # k8s-gateway.dns/ignore (docs/lan-dns.md).
       dnsPolicy: None
       dnsConfig:
         nameservers:

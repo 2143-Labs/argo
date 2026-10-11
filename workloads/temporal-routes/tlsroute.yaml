@@ -3,6 +3,12 @@ kind: TLSRoute
 metadata:
   name: temporal-grpc
   namespace: default
+  # Not in LAN DNS: temporal-grpc.john2143.com is pinned to the frontend LB
+  # 192.168.6.20 in the lan-dns hosts block (workloads/lan-dns/configmap.yaml).
+  # This route hands TLS to a plaintext frontend and cannot work
+  # (docs/2026-09-17-network-hardening.md).
+  labels:
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway
