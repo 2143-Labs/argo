@@ -1,4 +1,5 @@
 # Ingress hardening: request telemetry + rate limiting + CrowdSec WAF (2026-08-09)
+> **Superseded 2026-10-13** (§4 "Protecting a NEW public route" and the §3 exclusion list): see [public-edge.md](public-edge.md).
 
 **Status: COMPLETE and verified.** Public web surfaces have request-level telemetry (traefik JSON access logs → Loki), per-IP rate limiting, a per-IP in-flight cap, and a CrowdSec WAF (LAPI + agent + AppSec + traefik plugin bouncer) that bans abusive IPs with 403 and blocks known exploits inline. The 15 routes listed in §3 carry the full 3-filter chain; the routes added in the 2026-09-18 pass (§7) carry either the full chain or the bouncer alone. The 10 internal `*.ts.2143.me` routes remain LAN-only via the pre-existing `lan-only` middleware.
 

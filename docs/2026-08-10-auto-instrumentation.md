@@ -1,4 +1,5 @@
 # Auto-instrumentation + WAN-IP aliasing fix (2026-08-10)
+> **Superseded 2026-10-13** (Layer 2 "API routes → no-appsec bouncer" rule and the bouncer-choice table): see [public-edge.md](public-edge.md).
 
 ## Incident timeline
 
