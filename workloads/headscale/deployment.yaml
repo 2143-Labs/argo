@@ -45,7 +45,7 @@ spec:
               name: http
             - containerPort: 9090
               name: metrics
-            - containerPort: 3478
+            - containerPort: 3479
               protocol: UDP
               name: stun
           readinessProbe:

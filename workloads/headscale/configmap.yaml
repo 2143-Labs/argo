@@ -129,7 +129,10 @@ data:
         region_code: "headscale"
         region_name: "Headscale Embedded DERP"
         verify_clients: true
-        stun_listen_addr: "0.0.0.0:3478"
+        # Own port: the router's WAN udp/3478 belongs to steam-lobby coturn (.6.14).
+        # headscale advertises this port as the region's STUNPort; the router forwards
+        # WAN udp/3479 -> headscale-stun 192.168.6.18 (comment "headscale stun").
+        stun_listen_addr: "0.0.0.0:3479"
         private_key_path: /var/lib/headscale/derp_server_private.key
         automatically_add_embedded_derp_region: true
       urls: []

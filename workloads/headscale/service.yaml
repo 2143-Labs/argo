@@ -32,9 +32,11 @@ spec:
   type: LoadBalancer
   selector:
     app: headscale
+  # WAN udp/3479 is forwarded here by the router (comment "headscale stun").
+  # Must match derp.server.stun_listen_addr in configmap.yaml.
+  allocateLoadBalancerNodePorts: false
   ports:
-    - port: 3478
-      targetPort: 3478
-      nodePort: 30478
+    - port: 3479
+      targetPort: 3479
       protocol: UDP
       name: stun
