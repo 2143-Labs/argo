@@ -33,3 +33,92 @@ spec:
       backendRefs:
         - name: john2143-com
           port: 80
+---
+# i.john2143.com/<id> is the short upload link (no /f/). Uploads and explicit /f/ links
+# pass through; everything else is rewritten to /f/<rest>.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: john2143-com-i-prefix
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: i-john2143-https
+  hostnames:
+    - i.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /uf
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - name: john2143-com
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /f/
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - name: john2143-com
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /f/
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - name: john2143-com
+          port: 80
