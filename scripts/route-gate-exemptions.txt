@@ -1,0 +1,9 @@
+# HTTPRoute rules on shared-gateway that carry no edge gate. Read docs/public-edge.md.
+# Every line needs a reason. Remove the line in the same commit that gates the rule.
+argocd/argocd-webhook /api/webhook GitHub webhook (HMAC-verified); GitHub's addresses must never be rate-limited or banned
+argocd/argocd-applicationset-webhook /api/webhook GitHub webhook (HMAC-verified); GitHub's addresses must never be rate-limited or banned
+default/matrix-tuwunel /voice Voice relay; protocol-level traffic the bouncer cannot inspect
+default/headscale / Tailscale control protocol; gate pending (board task #4 step 4, class B)
+default/livekit-john2143 / LiveKit signalling; gate pending (board task #4 step 4, class B)
+kube-system/docker-registry / OCI registry behind basicAuth; bouncer pending (board task #4 step 4, class B)
+stalwart/wkd / Web Key Directory, must be internet-reachable; bouncer pending (board task #4 step 4, class A)
