@@ -23,4 +23,4 @@ spec:
           taskQueue: john2143-com
           targetQueueSize: "5"
           activationTargetQueueSize: "2"
-          queueTypes: workflow
+          queueTypes: "workflow,activity"

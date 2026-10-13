@@ -24,6 +24,7 @@ spec:
       labels: {app: john2143-com-worker, app.kubernetes.io/part-of: john2143-com}
     spec:
       serviceAccountName: john2143-worker
+      terminationGracePeriodSeconds: 60
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -76,6 +77,7 @@ spec:
               value: "public-prod"
             - name: NODE_ENV
               value: "production"
+          readinessProbe: {httpGet: {path: /ready, port: 3000}, periodSeconds: 10, failureThreshold: 3}
           resources:
             requests: {memory: "256Mi", cpu: "100m"}
             limits: {memory: "2Gi", cpu: "2000m"}
