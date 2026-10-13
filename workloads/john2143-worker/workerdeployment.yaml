@@ -3,6 +3,10 @@ kind: WorkerDeployment
 metadata:
   name: john2143-com-worker
   labels: {app: john2143-com-worker}
+  annotations:
+    # apps/john2143-worker.yaml ignores diffs on unsafeCustomBuildID, so a commit that
+    # changes only the build ID never syncs. Bump this alongside such a change.
+    john2143.com/build-id-sync: "209-1"
 spec:
   workerOptions:
     connectionRef: {name: john2143-temporal}
