@@ -36,7 +36,7 @@ Add Kubernetes resources under `workloads/<name>/`. Typical files:
 | File | Purpose |
 |---|---|
 | `deployment.yaml` | Deployment (use `strategy: Recreate` for stateful single-replica workloads) |
-| `service.yaml` | ClusterIP service for in-cluster traffic; add a second NodePort service for non-HTTP protocols (UDP/TCP) |
+| `service.yaml` | ClusterIP service for in-cluster traffic; non-HTTP protocols (UDP/TCP) get a LoadBalancer service (section 5) |
 | `pvc.yaml` | PersistentVolumeClaims (`storageClassName: local-path`) |
 | `configmap.yaml` | Configuration (if needed) |
 | `ingress.yaml` | HTTPRoute for web UIs (see below) |
@@ -56,7 +56,7 @@ preferred; wifi nodes are overflow.
 
 ## 3. Expose via HTTPS (HTTPRoute)
 
-Three things are needed to expose a service at `<sub>.ts.2143.me` (or another domain):
+A LAN/tailnet name `<sub>.ts.2143.me` needs a listener (a), a route carrying `lan-only` (b) and a headscale record (c). A public name needs the listener and route plus an edge gate instead of `lan-only` (d).
 
 ### a. Gateway Listener (`workloads/gateway/gateway.yaml`)
 
@@ -76,6 +76,8 @@ Add a new listener entry to `shared-gateway`:
     namespaces:
       from: Same
 ```
+
+`from: Same` admits routes from the Gateway's namespace (`default`) only. A route in another namespace needs `from: Selector` with `matchLabels: {kubernetes.io/metadata.name: <namespace>}`, as on the `argocd-ts-2143-https`, `longhorn-ts-2143-https` and `au-2143-https` listeners in `workloads/gateway/gateway.yaml`.
 
 Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. There are 3 wildcard certs (`*.ts.2143.me`, `*.2143.me`, `*.john2143.com`) plus a few single-host certs in `workloads/gateway/wildcard-certs.yaml` — a one-label subdomain of a wildcard needs **no** new `Certificate`. `scripts/validate-gateway-certs.sh` fails CI when a listener's hostname is not covered by its Certificate. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
@@ -98,25 +100,39 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
       backendRefs:
         - name: <name>
           port: 80
 ```
 
+**Never omit `lan-only` on a `.ts.2143.me` route.** The name is private only in DNS. The gateway serves any route whose hostname a client sends to the WAN address, so without `lan-only` the app is on the internet. (A request for `argocd.ts.2143.me` sent to the WAN IP returns 403 only because its route carries `lan-only`.) The Middleware must exist in the route's namespace; copy `workloads/gateway/lan-only-middleware.yaml` (precedents: `workloads/argocd/ingress.yaml`, `workloads/longhorn-ui/ingress.yaml`, `workloads/stalwart/security-middlewares.yaml`). CI (`scripts/validate-route-gates.sh`) rejects a `.ts` rule without it.
+
 ### c. Headscale DNS (`workloads/headscale/configmap.yaml`)
 
-Add A and AAAA `extra_records` so the hostname resolves over Tailscale:
+Add one A record so the name resolves on the tailnet (MagicDNS). Every record points at the gateway; there are no AAAA records:
 
 ```yaml
+# <sub>.ts.2143.me
 - name: "<sub>.ts.2143.me"
   type: "A"
-  value: "100.64.0.2"
-- name: "<sub>.ts.2143.me"
-  type: "AAAA"
-  value: "fd7a:115c:a1e0::2"
+  value: "192.168.6.11"
 ```
 
-### d. LAN and cluster DNS (automatic)
+Remove the record in the same commit that removes the route.
+
+### d. Public hostname
+
+A public hostname carries an edge gate instead of `lan-only`. Pick the gate from
+[Public edge](public-edge.md). If the app has no login of its own, also follow
+[Exposing an Unauthenticated App](exposing-an-unauthenticated-app.md).
+
+### e. LAN and cluster DNS (automatic)
 
 Nothing to do for LAN clients or pods: `lan-dns` answers every HTTPRoute/TLSRoute
 hostname on `shared-gateway` with the gateway address (`192.168.6.11`) within about
@@ -132,10 +148,9 @@ after stage 2 (see lan-dns.md "Status").
 
 Use the same LoadBalancer path as everything else (section 5) — UDP and TCP
 ports go on the LB service (`lan-dns` 53/UDP+TCP, `mosquitto` 1883,
-`coturn` 3478 are the patterns). **NodePort is legacy**: since the 2026-08-13
-migration it is used by exactly one service — `matter-server-nodeport`
-(hostNetwork + mDNS/multicast requires node-IP access). Only reach for NodePort
-if a workload genuinely needs node-IP access. For a LAN hostname on a non-HTTP
+`coturn` 3478 are the patterns). **Do not add NodePort services.** None remain
+in the repo or the cluster; a workload that needs node-IP access (hostNetwork,
+mDNS) uses `hostNetwork` instead. For a LAN hostname on a non-HTTP
 LoadBalancer IP, add it to the `hosts` block in `workloads/lan-dns/configmap.yaml`
 ([lan-dns.md](lan-dns.md)).
 
