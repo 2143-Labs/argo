@@ -1,4 +1,5 @@
 # Ingress + observability hardening (planned 2026-10-05, executed 2026-10-06)
+> **Correction 2026-10-13:** 174.138.108.28 is a DigitalOcean load balancer in our own account (`doctl compute load-balancer list`), not a dead Hetzner host. It does not serve these names.
 
 **Status: COMPLETE. Two checks need a browser, and one change waits on a closet rebuild.**
 Tracked as card **#8** on the `2143 Labs AI Tasks` board.

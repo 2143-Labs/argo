@@ -1,5 +1,7 @@
 # Split-horizon DNS mapping (2026-08-10)
 > **Superseded 2026-10-11.** LAN answers for these names are now generated from Gateway API routes by `lan-dns`; pods follow in stage 2. See [lan-dns.md](lan-dns.md).
+>
+> **Correction 2026-10-13:** 174.138.108.28 is a DigitalOcean load balancer in our own account (`doctl compute load-balancer list`), not a dead Hetzner host. It does not serve these names.
 
 Derived from: `kubectl get httproute -A`, `kubectl get gateway shared-gateway`,
 live dst-nat (`mikrotik-connect r '/ip firewall nat print where chain=dstnat'`),

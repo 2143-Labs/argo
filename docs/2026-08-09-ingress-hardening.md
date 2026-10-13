@@ -1,5 +1,13 @@
 # Ingress hardening: request telemetry + rate limiting + CrowdSec WAF (2026-08-09)
 > **Superseded 2026-10-13** (§4 "Protecting a NEW public route" and the §3 exclusion list): see [public-edge.md](public-edge.md).
+>
+> **Correction 2026-10-13:** the bouncer key is not fully declarative (§2). Only the volume is (HelmChartConfig in `dotfiles/nixos/closet-configuration.nix`). Traefik mounts `kube-system/crowdsec-bouncer-key`, which was created by hand (`kubectl-create`, 2026-08-09); the k3s bootstrap (`k3s-common.nix:326`) creates a different Secret, `crowdsec/crowdsec-bouncer-key` with data key `key`. A rebuilt cluster has no bouncer key until it is recreated by hand.
+>
+> **Correction 2026-10-13:** §6 "re-apply `kubectl patch` after any traefik helm re-render" is stale; the bouncer volume is declared in the HelmChartConfig (`closet-configuration.nix`, `deployment.additionalVolumes`).
+>
+> **Correction 2026-10-13:** §5 "the LAN IP is used (exempt from rate limit only)" is backwards. Nothing is exempt from the rate limits; LAN, tailnet and the household WAN address are exempt from CrowdSec (`clientTrustedIps`).
+>
+> **Correction 2026-10-13:** §6 says `underscoreHeadersStrategy: reject` activates once the chart allows Traefik ≥ 3.7.6. Traefik is 3.7.8 and supports it, but it is set nowhere (not in the live args, not in dotfiles); the default is `keep`.
 
 **Status: COMPLETE and verified.** Public web surfaces have request-level telemetry (traefik JSON access logs → Loki), per-IP rate limiting, a per-IP in-flight cap, and a CrowdSec WAF (LAPI + agent + AppSec + traefik plugin bouncer) that bans abusive IPs with 403 and blocks known exploits inline. The 15 routes listed in §3 carry the full 3-filter chain; the routes added in the 2026-09-18 pass (§7) carry either the full chain or the bouncer alone. The 10 internal `*.ts.2143.me` routes remain LAN-only via the pre-existing `lan-only` middleware.
 

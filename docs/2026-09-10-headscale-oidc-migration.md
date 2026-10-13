@@ -1,4 +1,5 @@
 # Headscale OIDC migration to Pocket ID (2026-09-10)
+> **Correction 2026-10-13:** Pocket ID enforces Allowed User Groups only when the client has "Group restricted" on (`isGroupRestricted`; v2.14.0 `IsUserGroupAllowedToAuthorize`). Without it, any Pocket ID user can log in to headscale. Whether the headscale client has it on was not checked.
 
 Derived from: live cluster state (`kubectl exec deploy/headscale -- headscale …`),
 `headscale policy get`, `sudo tailscale debug netmap` on `office`, and the headscale

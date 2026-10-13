@@ -228,8 +228,9 @@ Run from office in `~/repos/argo`, in this order.
   MISMATCH (`factorio.john2143.com` answered `.6.11`) to 0. Of the 55 removed
   names, 52 answer exactly as before; `factorio.john2143.com` now resolves
   publicly on purpose.
-- `rots.2143.me` and `prod.rots.2143.me` now resolve publicly (dead
-  `174.138.108.28`) because no route serves them; before, they reached a Traefik
+- `rots.2143.me` and `prod.rots.2143.me` now resolve publicly (to
+  `174.138.108.28`, our DigitalOcean load balancer, which does not serve them)
+  because no route serves them; before, they reached a Traefik
   404.
 - Pods: 14 MISMATCHes against `10.43.0.10` at cutover (names missing from
   `hosts.split-horizon`). Stage 2 is pending on its follow-up card; CoreDNS still
