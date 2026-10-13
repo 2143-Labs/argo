@@ -1,0 +1,37 @@
+name: Validate headscale DNS
+
+on:
+  pull_request:
+    paths:
+      - apps/**
+      - workloads/**
+      - scripts/validate-headscale-dns.sh
+      - .github/workflows/validate-headscale-dns.yml
+  push:
+    paths:
+      - apps/**
+      - workloads/**
+      - scripts/validate-headscale-dns.sh
+      - .github/workflows/validate-headscale-dns.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-headscale-dns-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Tailnet records match .ts routes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Validate headscale DNS
+        run: nix develop -c ./scripts/validate-headscale-dns.sh

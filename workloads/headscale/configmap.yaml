@@ -196,10 +196,6 @@ data:
         - name: "immich.ts.2143.me"
           type: "A"
           value: "192.168.6.11"
-        # grocy.ts.2143.me
-        - name: "grocy.ts.2143.me"
-          type: "A"
-          value: "192.168.6.11"
         # cameras.ts.2143.me
         - name: "cameras.ts.2143.me"
           type: "A"
