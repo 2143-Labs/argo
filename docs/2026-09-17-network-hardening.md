@@ -271,9 +271,33 @@ invalidated something that looked obviously true in a design document.
   Longhorn volumes (Longhorn backups, last 2026-09-15T07:02Z, remain in the
   backup target). The password remains in git history. The controller now runs
   as the UniFi OS Server VM at `192.168.5.30`.
-- **Pi-hole as the single DNS source** and the router-edge phases below.
+- **Pi-hole as the single DNS source** — dropped 2026-10-13: Pi-hole was retired
+  (`ca42187`; its query log showed no LAN client queries since it was deployed).
+  LAN DNS is `lan-dns` (`lan-dns.md`). The router-edge phases below are partly done.
 
-## Router edge design (not executed)
+## Router edge design (fail-closed pool + management surface: executed 2026-10-11/13)
+
+**Outcome.** The fail-closed swap below ran on 2026-10-13 with these differences:
+
+- RouterOS 7.19.6 has no `type=unreachable`; the four aggregates are
+  `blackhole distance=250` (comments start `fail-closed:`). Unannounced VIPs are
+  dropped silently instead of getting an ICMP unreachable.
+- `/system scheduler` is blocked by device-mode `home`, so the auto-rollback was a
+  named script run with `:execute` that waited 6 min and re-added the address
+  unless its comment was set to `disarmed`. It was disarmed after the post-checks
+  passed (new SSH login; router pings to `192.168.0.1`, `1.1.1.1`, `8.8.8.8`;
+  router DNS; router → `lan-dns` `.6.30`; `check-lan-dns.sh 192.168.5.1` exit 0;
+  router syslog reaching `.6.25`; external HTTPS 200 from 3 countries).
+- Pi-hole `.6.27` was already retired, so the precondition was the 18 announced
+  VIPs (`.6.17` openrct2 is scaled to 0 and correctly unannounced).
+
+Management surface, 2026-10-11: `ftp`, `telnet`, `api`, `api-ssl`, `www` and
+`/tool bandwidth-server` were disabled; only `ssh` and `winbox` remain, unbound.
+That departs from the paragraph below (it kept `www`); Winbox by IP or MAC is the
+recovery path. Binding to source subnets and a dedicated management port are not
+done yet.
+
+The original design follows.
 
 The goal is that a withdrawn MetalLB VIP fails closed instead of degrading to an
 ARP race, and that the router's management surface is not reachable from every

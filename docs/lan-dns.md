@@ -149,7 +149,7 @@ Run from office in `~/repos/argo`, in this order.
    must print `192.168.6.11`. Use the router, not `dig` on office or pite: those
    are k3s nodes, so `dig @192.168.6.30` from them goes through their own
    kube-proxy and proves nothing about the BGP path. The router's `:resolve`
-   against v6 VIPs (`server=fd00:6::30`, also `fd00:6::27`) fails with
+   against v6 VIPs (`server=fd00:6::30`, and other `fd00:6::` VIPs) fails with
    `dns server failure`; that is not a lan-dns fault.
 4. **Is the name a route?**
    `kubectl --context closet-as-admin get httproute,tlsroute -A -o wide | grep <name>`.

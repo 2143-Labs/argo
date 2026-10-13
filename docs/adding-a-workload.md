@@ -131,7 +131,7 @@ after stage 2 (see lan-dns.md "Status").
 ## 4. Expose Non-HTTP Protocols
 
 Use the same LoadBalancer path as everything else (section 5) — UDP and TCP
-ports go on the LB service (`pihole-dns` 53/UDP+TCP, `mosquitto` 1883,
+ports go on the LB service (`lan-dns` 53/UDP+TCP, `mosquitto` 1883,
 `coturn` 3478 are the patterns). **NodePort is legacy**: since the 2026-08-13
 migration it is used by exactly one service — `matter-server-nodeport`
 (hostNetwork + mDNS/multicast requires node-IP access). Only reach for NodePort
@@ -175,7 +175,7 @@ spec:
 
 Notes:
 - `allocateLoadBalancerNodePorts: false` deallocates the service's nodePorts on
-  apply — the LB IP becomes the only access path (frigate, pihole-dns). Older
+  apply — the LB IP becomes the only access path (frigate, lan-dns). Older
   LB services (mosquitto, ts-*, …) still carry auto-assigned nodePorts;
   add the flag when you touch them to reclaim the node-port exposure.
 - **Keep v4 and v6 offsets identical** (`192.168.6.2X` ↔ `fd00:6::2X`) unless
@@ -200,15 +200,14 @@ Notes:
 | loki-push-lb | 192.168.6.24 | fd00:6::24 |
 | syslog-lb (514/UDP → Alloy) | 192.168.6.25 | fd00:6::25 |
 | frigate (5000/1984/8554/8555) | 192.168.6.26 | fd00:6::26 |
-| pihole-dns (53) | 192.168.6.27 | fd00:6::27 |
 | factorio-game (34197/UDP) | 192.168.6.28 | fd00:6::28 |
 | minecraft-game | 192.168.6.29 | fd00:6::29 |
 | lan-dns (53 → k8s_gateway) | 192.168.6.30 | fd00:6::30 |
 | seaweedfs-s3-lan (S3 8333, WireGuard/LAN) | 192.168.6.31 | fd00:6::31 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.10`, `.12` and `192.168.6.32–.200` (`.201–.254` reserved
-headroom); v6 `fd00:6::11`, `::12`, `::20`, `::2a–::2f`, `::32–::ff`. Never
+**Free:** v4 `192.168.6.10`, `.12`, `.27` and `192.168.6.32–.200` (`.201–.254` reserved
+headroom); v6 `fd00:6::11`, `::12`, `::20`, `::27`, `::2a–::2f`, `::32–::ff`. Never
 reuse an in-use address; a collision surfaces as `AllocationFailed: address also
 in use by <ns>/<svc>`.
 
