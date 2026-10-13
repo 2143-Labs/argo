@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: john2143-com-files
+  annotations:
+    longhorn.io/number-of-replicas: "2"
+    # The imageserver app prunes; reverting this claim must never delete home uploads
+    # that are not on the filer yet.
+    argocd.argoproj.io/sync-options: Prune=false
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 20Gi}}
+  storageClassName: longhorn-2

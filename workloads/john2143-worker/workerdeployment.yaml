@@ -47,7 +47,7 @@ spec:
                   name: mongo-creds
                   key: worker-uri
             - name: MINIO_ENDPOINT_URL
-              value: "https://files.john2143.com"
+              value: "http://seaweedfs-s3.default.svc.cluster.local:8333"
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:

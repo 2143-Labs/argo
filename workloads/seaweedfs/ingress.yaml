@@ -45,6 +45,11 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
+            name: lan-only
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
             name: crowdsec-bouncer-noappsec
       backendRefs:
         - name: seaweedfs-s3
