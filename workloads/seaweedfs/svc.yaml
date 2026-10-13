@@ -13,3 +13,19 @@ metadata:
 spec:
   selector: {app: seaweedfs-filer}
   ports: [{port: 8888, targetPort: 8888}]
+---
+# Plain-HTTP S3 for clients that reach the LAN without Traefik: the DO cluster over
+# WireGuard (router rule "wg: doks -> seaweed s3"). SigV4 authenticates; WireGuard encrypts.
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs-s3-lan
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.31,fd00:6::31"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  selector: {app: seaweedfs-filer}
+  ports: [{name: s3, port: 8333, targetPort: 8333, protocol: TCP}]
