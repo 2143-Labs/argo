@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: john2143-temporal}
     temporalNamespace: john2143-com
-    unsafeCustomBuildID: "209"
+    unsafeCustomBuildID: "209-1"
   rollout:
     strategy: AllAtOnce
   sunset:
