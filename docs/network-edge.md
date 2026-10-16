@@ -55,10 +55,9 @@ Every other `.6.x` service has no WAN path by design (LAN and tailnet only),
 including matrix coturn `.6.21` and LiveKit's `50000/udp`; public Matrix media
 uses TURN over TLS on 443.
 
-Verified 2026-10-16 from check-host.net: TCP 80, 443, 993, 3478, 7881, 8280,
+Verified 2026-10-16 from check-host.net: TCP 80, 443, 587, 993, 3478, 7881, 8280,
 18080, 25565 and 30033 connect from 3 of 3 nodes, and TCP 25 from 2 of 3; UDP
-3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik. TCP 587 was not
-re-probed (rate limit); its forward did not change.
+3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik.
 
 ## Adding a public port
 
