@@ -200,7 +200,7 @@ Notes:
 
 | Service | v4 | v6 |
 |---|---|---|
-| traefik (kube-system, manual) | 192.168.6.11 | fd00:6::10 |
+| traefik (kube-system; pinned by the k3s HelmChartConfig in dotfiles, both families) | 192.168.6.11 | fd00:6::10 |
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
 | steam-lobby coturn (TURN) | 192.168.6.14 | fd00:6::14 |
 | ts-voice (9987) | 192.168.6.15 | fd00:6::15 |
@@ -243,8 +243,10 @@ in use by <ns>/<svc>`.
   (kube-proxy DNATs TCP/UDP only). Probe from a **non-cluster host**: office and
   pite are k3s nodes, so their kube-proxy intercepts VIPs locally and their
   probes prove nothing about the router path.
-- **WAN access?** Add a dst-nat on the MikroTik pointing the WAN port at the
-  `.6.x` IP (LAN-only services need none).
+- **WAN access?** Two forwards are needed: the Verizon router to `192.168.0.2`
+  and a MikroTik dst-nat to the `.6.x` IP (LAN-only services need neither).
+  Steps, the live port table and how to prove it from outside:
+  [network-edge.md](network-edge.md).
 
 ### Pitfalls (verified 2026-08-13)
 
