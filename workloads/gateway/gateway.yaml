@@ -539,19 +539,19 @@ spec:
         namespaces:
           from: Same
 
-    #- name: mm-b-hero-rehab-https
-      #protocol: HTTPS
-      #port: 8443
-      #hostname: mm.b.hero.rehab
-      #tls:
-        #mode: Terminate
-        #certificateRefs:
-          #- group: ""
-            #kind: Secret
-            #name: mm-b-hero-rehab-tls
-      #allowedRoutes:
-        #namespaces:
-          #from: Same
+    - name: mm-b-hero-rehab-https
+      protocol: HTTPS
+      port: 8443
+      hostname: mm.b.hero.rehab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: mm-b-hero-rehab-tls
+      allowedRoutes:
+        namespaces:
+          from: Same
     #- name: mm-timestone-2143-https
       #protocol: HTTPS
       #port: 8443

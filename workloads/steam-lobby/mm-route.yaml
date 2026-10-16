@@ -1,6 +1,6 @@
 # mm.b.hero.rehab /joinlobby -> steam-lobby service /steam/joinlobby.
-# Mirrored on the timestone domains so any of the three can serve in a pinch
-# (all three resolve to the cluster WAN; certs in workloads/gateway/wildcard-certs.yaml).
+# The timestone mirrors (mm.timestone.2143.me, mm.timestone.john2143.com) lost
+# their listeners in 1333576; re-add both here if those listeners come back.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -10,14 +10,8 @@ spec:
   parentRefs:
     - name: shared-gateway
       sectionName: mm-b-hero-rehab-https
-    - name: shared-gateway
-      sectionName: mm-timestone-2143-https
-    - name: shared-gateway
-      sectionName: mm-timestone-john2143-https
   hostnames:
     - mm.b.hero.rehab
-    - mm.timestone.2143.me
-    - mm.timestone.john2143.com
   rules:
     - matches:
         - path:
