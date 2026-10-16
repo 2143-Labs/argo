@@ -108,14 +108,24 @@ Zones: `2143.me`, `john2143.com`, `aross.studio`, `balabusta.homes`,
 - **2 replicas on different nodes** (required anti-affinity), `maxUnavailable: 0`,
   PDB `minAvailable: 1`.
 - **Router failover.** Netwatch `lan-dns` resolves `john2143.com` via
-  `192.168.6.30` every 10 s (timeout 3 s). On failure, script `lan-dns-down`
-  re-checks 3 times (2 s apart), then disables the `lan-dns forward` entries,
-  flushes the cache and logs `lan-dns down: LAN forwards disabled` (topic
-  warning). LAN clients then get public answers. On recovery `lan-dns-up`
-  re-enables them and logs `lan-dns up: LAN forwards enabled`. Worst case, LAN
-  lookups in the zones fail for about 35 s before failover. There is no
-  `ignore-initial-up`, so after a router reboot the initial "up" re-enables the
-  forwards.
+  `192.168.6.30` every 10 s (timeout 3 s). When it goes down, script
+  `lan-dns-down` starts `lan-dns-watch` (at most one copy). The watcher re-checks
+  every 5 s **for as long as netwatch stays down**: an answer inside
+  `192.168.0.0/16` resets the count; a timeout or any other answer (e.g. the
+  public IP, which lan-dns returns when the Gateway has no address) counts as bad.
+  After 3 bad results in a row it disables the `lan-dns forward` entries, flushes
+  the cache and logs `lan-dns down: LAN forwards disabled` (topic warning). LAN
+  clients then get public answers. If netwatch goes up first, the watcher logs
+  `lan-dns watch: netwatch up again, no failover` and exits. On recovery
+  `lan-dns-up` re-enables the forwards and logs `lan-dns up: LAN forwards
+  enabled`. Worst case, LAN lookups in the zones fail for about a minute before
+  failover. There is no `ignore-initial-up`, so after a router reboot the initial
+  "up" re-enables the forwards.
+
+  Why a loop (2026-10-16): netwatch runs the down-script only on the up→down
+  transition. The earlier script re-checked 3 times once; on 2026-10-16 one of
+  those checks succeeded while lan-dns was going unready, so it never failed over
+  and the forwards pointed at an unreachable resolver for 3 hours.
 - **Alerts** (`workloads/observability/grafana-dashboards/lan-dns-alerts.yaml`):
   `lan-dns-replicas` (fewer than 2 available pods for 5 min) and
   `lan-dns-failover` (any `lan-dns down` warning from the router in 15 min).
@@ -189,8 +199,8 @@ Run from office in `~/repos/argo`, in this order.
 
    **Full rollback to static records:**
    1. `mikrotik-connect r '/tool netwatch remove [find name="lan-dns"]'`, then
-      `/system script remove [find name="lan-dns-down"]` and
-      `[find name="lan-dns-up"]`.
+      `/system script remove [find name="lan-dns-down"]`,
+      `[find name="lan-dns-watch"]` and `[find name="lan-dns-up"]`.
    2. `mikrotik-connect r '/ip dns static remove [find comment="lan-dns forward"]'`.
    3. Re-add one A record per route hostname (`192.168.6.11`, `ttl=1d`), plus
       `imap.m.2143.me`/`smtp.m.2143.me` → `192.168.6.13` and
@@ -213,6 +223,10 @@ Run from office in `~/repos/argo`, in this order.
   in Grafana → Alerting only. `lan-dns-failover` was verified to evaluate cleanly
   but has not yet fired for real.
 - Readiness and netwatch both depend on the `john2143.com` route existing.
+- lan-dns answers only while the Gateway has an address. If Traefik's Service
+  loses `192.168.6.11` (as on 2026-10-15 and 10-16, see History), every lan-dns pod
+  goes unready and the router fails over; the sites behind Traefik are down
+  anyway in that case.
 - Netwatch counts a timeout as down (drilled); whether it counts SERVFAIL is
   untested. A full outage shows up as a timeout because MetalLB withdraws `.30`
   when no pod is Ready.
@@ -235,3 +249,11 @@ Run from office in `~/repos/argo`, in this order.
 - Pods: 14 MISMATCHes against `10.43.0.10` at cutover (names missing from
   `hosts.split-horizon`). Stage 2 is pending on its follow-up card; CoreDNS still
   uses `hosts.split-horizon` until then.
+- 2026-10-15 17:27 – 22:23 and 2026-10-16 14:57 – 18:10 (UTC): Traefik served
+  nothing. A k3s re-apply of the Traefik chart reset its MetalLB annotation to
+  `192.168.6.11` only (the `fd00:6::10` half had been added by hand); MetalLB
+  rejected a one-address request for a dual-stack Service and released `.6.11`.
+  Fixed in dotfiles `d5a830f` (HelmChartConfig now pins both). lan-dns went
+  unready both times, as designed. The router failed over on 10-15; on 10-16 the
+  one-shot re-check passed once and it did not, which is why the down-script now
+  starts the `lan-dns-watch` loop.
