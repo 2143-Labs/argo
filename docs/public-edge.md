@@ -24,6 +24,28 @@ Definitions and values: `workloads/gateway/security-middlewares.yaml` (rate limi
 
 The only rules without a gate are listed, with reasons, in `scripts/route-gate-exemptions.txt`. Adding a line there is a review decision: say why in the commit message.
 
+## Anubis in front of an app
+
+Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
+(live example: `status.2143.me`):
+
+- `workloads/anubis-<app>/`: one Anubis Deployment + Service per app, reverse-proxy
+  mode, `TARGET` = the app's Service, `REDIRECT_DOMAINS` = the app's hostnames,
+  no `PUBLIC_URL`, default policy, persistent signing key.
+- A failover `TraefikService` next to the route: Anubis first, the app's Service
+  on `502-504`, so an Anubis outage serves the app unfiltered instead of failing.
+- The route keeps its gate filters and points `backendRefs` at the TraefikService
+  (`group: traefik.io`, `kind: TraefikService`, no port).
+- Not for an identity provider, or anything else non-browser clients must reach.
+  `au.2143.me` (pocket-id) is the case in point: `/authorize` and
+  `/api/oidc/end-session` are browser navigations whose whole request rides in
+  the query string, `/.well-known/` is the only OIDC path the stock policy
+  allow-lists, and the stock policy challenges every `Mozilla|Opera` user
+  agent — so a relying party using a browser-like HTTP client would get the
+  challenge HTML wherever it expects JSON.
+
+Example: `workloads/anubis-status/`, `workloads/gateway/status-route.yaml`.
+
 ## Not covered
 
 Non-HTTP surfaces (mail 25/587/993, TURN, game servers, MQTT, TLS-passthrough listeners such as `temporal-grpc-mtls` and `turn-john2143-passthrough`) get no edge gate: CrowdSec reads only Traefik's HTTP access log.
