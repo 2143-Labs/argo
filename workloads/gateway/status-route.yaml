@@ -55,3 +55,24 @@ subsets:
     ports:
       - port: 3030
         protocol: TCP
+---
+# status.2143.me goes through Anubis (workloads/anubis-status). If Anubis has no
+# ready pod (Traefik answers 503) or fails upstream (502/504), serve the page
+# directly so the status page never depends on Anubis being up. 500 is not in
+# the range: that is Anubis's own error page and must not be replayed.
+apiVersion: traefik.io/v1alpha1
+kind: TraefikService
+metadata:
+  name: status-anubis
+  namespace: default
+spec:
+  failover:
+    service:
+      name: anubis-status
+      port: 80
+    fallback:
+      name: pite-status
+      port: 3030
+    errors:
+      status:
+        - "502-504"

@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: anubis-test
+  name: anubis-status
   namespace: default
   labels:
-    app: anubis-test
+    app: anubis-status
 spec:
   selector:
-    app: anubis-test
+    app: anubis-status
   ports:
     - name: http
       port: 80

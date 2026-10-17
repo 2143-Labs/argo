@@ -1,0 +1,31 @@
+# Persistent JWT signing key for Anubis (HS512_SECRET), generated once in-cluster.
+# Not in OpenBao: ESO's OpenBao policy is read-only. CreatedOnce = never rotated;
+# deleting the Secret makes ESO generate a new one (everyone re-solves once).
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: anubis-status-signing-key
+  namespace: default
+spec:
+  length: 128
+  digits: 32
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: anubis-status-signing-key
+  namespace: default
+spec:
+  refreshPolicy: CreatedOnce
+  target:
+    name: anubis-status-signing-key
+    creationPolicy: Owner
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: anubis-status-signing-key

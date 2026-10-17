@@ -1,20 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: anubis-test
+  name: anubis-status
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   labels:
-    app: anubis-test
+    app: anubis-status
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: anubis-test
+      app: anubis-status
   template:
     metadata:
       labels:
-        app: anubis-test
+        app: anubis-status
     spec:
       affinity:
         nodeAffinity:
@@ -37,14 +39,13 @@ spec:
               value: ":9090"
             - name: TARGET
               value: "http://pite-status.default.svc:3030"
-            - name: PUBLIC_URL
-              value: "https://anubis-test.john2143.com"
             - name: REDIRECT_DOMAINS
-              value: "anubis-test.john2143.com"
-            - name: SERVE_ROBOTS_TXT
-              value: "true"
-            - name: SLOG_LEVEL
-              value: "debug"
+              value: "status.2143.me"
+            - name: HS512_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: anubis-status-signing-key
+                  key: password
           ports:
             - name: http
               containerPort: 8080
