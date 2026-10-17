@@ -8,7 +8,7 @@ metadata:
   labels:
     app: anubis-status
 spec:
-  replicas: 0
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
