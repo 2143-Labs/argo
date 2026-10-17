@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: livekit-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - livekit.john2143.com
   rules:

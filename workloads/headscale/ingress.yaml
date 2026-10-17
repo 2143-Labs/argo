@@ -6,9 +6,9 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: net-john2143-https
+      sectionName: john2143-wildcard-https
     - name: shared-gateway
-      sectionName: net-2143-https
+      sectionName: 2143-me-wildcard-https
   hostnames:
     - net.john2143.com
     - net.2143.me

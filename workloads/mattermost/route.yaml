@@ -11,7 +11,7 @@ spec:
       kind: Gateway
       name: shared-gateway
       namespace: default
-      sectionName: mattermost-john2143-https
+      sectionName: john2143-wildcard-https
   rules:
     - matches:
         - path:

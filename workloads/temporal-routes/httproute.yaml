@@ -8,7 +8,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: temporal-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - temporal.ts.2143.me
   rules:
@@ -40,7 +40,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: temporal-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - temporal.john2143.com
   rules:

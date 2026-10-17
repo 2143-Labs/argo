@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: stalwart-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - stalwart.ts.2143.me
   rules:

@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: seafile-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - seafile.john2143.com
   rules:

@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: argocd-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - argocd.ts.2143.me
   rules:
@@ -34,7 +34,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: argo-webhook-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - argo-webhook.john2143.com
   rules:
@@ -78,7 +78,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: applicationset-webhook-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - applicationset-webhook.john2143.com
   rules:

@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: files-ui-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - files-ui.ts.2143.me
   rules:
@@ -32,7 +32,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: files-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - files.john2143.com
   rules:

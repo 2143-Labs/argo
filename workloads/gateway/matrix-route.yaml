@@ -11,7 +11,7 @@ spec:
       kind: Gateway
       name: shared-gateway
       namespace: default
-      sectionName: matrix-2143-https
+      sectionName: 2143-me-wildcard-https
   rules:
     - matches:
         - path:

@@ -312,7 +312,7 @@ spec:
               parentRefs:
                 - name: shared-gateway
                   namespace: default
-                  sectionName: openbao-ts-2143-https
+                  sectionName: ts-2143-me-wildcard-https
               hostnames:
                 - openbao.ts.2143.me
               rules:
@@ -491,7 +491,7 @@ spec:
               parentRefs:
                 - name: shared-gateway
                   namespace: default
-                  sectionName: openbao-john2143-https
+                  sectionName: john2143-wildcard-https
               hostnames:
                 - openbao.john2143.com
               rules:

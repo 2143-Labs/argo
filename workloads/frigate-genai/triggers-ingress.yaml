@@ -7,7 +7,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: cameras-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - cameras.ts.2143.me
   rules:
@@ -38,7 +38,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: cameras-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - cameras.john2143.com
   rules:

@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: grafana-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames: [grafana.john2143.com]
   rules:
     - matches:

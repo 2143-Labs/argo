@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: pvp-pr-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - {{ .Values.ingress.host }}
   rules:

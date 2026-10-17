@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: mail-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - mail.ts.2143.me
   rules:

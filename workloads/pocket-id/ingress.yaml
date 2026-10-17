@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: au-2143-https
+      sectionName: 2143-me-wildcard-https
   hostnames:
     - au.2143.me
   rules:

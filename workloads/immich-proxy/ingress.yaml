@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: images-2143-https
+      sectionName: 2143-me-wildcard-https
   hostnames:
     - images.2143.me
   rules:

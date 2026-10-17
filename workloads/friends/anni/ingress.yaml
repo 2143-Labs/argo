@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: anni-2143-me-https
+      sectionName: 2143-me-wildcard-https
   hostnames:
     - anni.2143.me
   rules:

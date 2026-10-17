@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: containerstore-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - containerstore.john2143.com
   rules:

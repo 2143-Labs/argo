@@ -11,7 +11,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: factorio-john2143-https
+      sectionName: john2143-wildcard-https
   hostnames:
     - factorio.john2143.com
   rules:
