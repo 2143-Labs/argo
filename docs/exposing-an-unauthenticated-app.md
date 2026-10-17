@@ -226,7 +226,7 @@ workloads/some-temp-app/
   routes.yaml                                 three HTTPRoutes
 workloads/network-policies/some-temp-app.yaml NetworkPolicies (see §6)
 workloads/secrets/…                           two ExternalSecrets (see docs/adding-a-secret.md)
-workloads/gateway/gateway.yaml                three listeners (see §5)
+workloads/gateway/gateway.yaml                the app namespace on two listener allowlists (see §5)
 workloads/headscale/configmap.yaml            tailnet DNS for the .ts name (adding-a-workload.md §3c)
 ```
 
@@ -362,7 +362,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata: {name: some-temp-app-lan, namespace: some-temp-app}
 spec:
-  parentRefs: [{name: shared-gateway, namespace: default, sectionName: some-temp-app-ts-2143-https}]
+  parentRefs: [{name: shared-gateway, namespace: default, sectionName: ts-2143-me-wildcard-https}]
   hostnames: [some-temp-app.ts.2143.me]
   rules:
     - matches: [{path: {type: PathPrefix, value: /}}]
@@ -376,7 +376,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata: {name: some-temp-app-public, namespace: some-temp-app}
 spec:
-  parentRefs: [{name: shared-gateway, namespace: default, sectionName: some-temp-app-john2143-https}]
+  parentRefs: [{name: shared-gateway, namespace: default, sectionName: john2143-wildcard-https}]
   hostnames: [some-temp-app.john2143.com]
   rules:
     - matches: [{path: {type: PathPrefix, value: /admin}}]      # one rule per admin prefix
@@ -393,7 +393,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata: {name: some-temp-app-api, namespace: some-temp-app}
 spec:
-  parentRefs: [{name: shared-gateway, namespace: default, sectionName: api-some-temp-app-john2143-https}]
+  parentRefs: [{name: shared-gateway, namespace: default, sectionName: john2143-wildcard-https}]
   hostnames: [api-some-temp-app.john2143.com]
   rules:
     - matches: [{path: {type: PathPrefix, value: /api/remote-worker}}]
@@ -428,33 +428,12 @@ before it reaches a proxy. Default: the whole app, gated by the floor.
 
 ## 5. Gateway listeners and DNS
 
-Add three listeners to `workloads/gateway/gateway.yaml`. Routes live in another
-namespace, so use a namespace selector, as the existing `au-2143-https` (pocket-id)
-and `argocd-*` listeners do:
-
-```yaml
-- name: some-temp-app-ts-2143-https
-  protocol: HTTPS
-  port: 8443
-  hostname: some-temp-app.ts.2143.me
-  tls: {mode: Terminate, certificateRefs: [{kind: Secret, name: ts-2143-me-wildcard-tls}]}
-  allowedRoutes: {namespaces: {from: Selector, selector: {matchLabels: {kubernetes.io/metadata.name: some-temp-app}}}}
-- name: some-temp-app-john2143-https
-  protocol: HTTPS
-  port: 8443
-  hostname: some-temp-app.john2143.com
-  tls: {mode: Terminate, certificateRefs: [{kind: Secret, name: john2143-com-wildcard-tls}]}
-  allowedRoutes: {namespaces: {from: Selector, selector: {matchLabels: {kubernetes.io/metadata.name: some-temp-app}}}}
-- name: api-some-temp-app-john2143-https
-  protocol: HTTPS
-  port: 8443
-  hostname: api-some-temp-app.john2143.com
-  tls: {mode: Terminate, certificateRefs: [{kind: Secret, name: john2143-com-wildcard-tls}]}
-  allowedRoutes: {namespaces: {from: Selector, selector: {matchLabels: {kubernetes.io/metadata.name: some-temp-app}}}}
-```
-
-`scripts/validate-gateway-certs.sh` (CI) checks that each hostname is covered by
-the certificate its listener uses.
+The routes pin the existing wildcard listeners (`ts-2143-me-wildcard-https`,
+`john2143-wildcard-https`). They live in namespace `some-temp-app`, so add
+`some-temp-app` to the `matchExpressions` `values` list of both listeners in
+`workloads/gateway/gateway.yaml`. Do not add listeners.
+`scripts/validate-gateway-certs.sh` (CI) checks that each route hostname is
+covered by its listener's certificate.
 
 DNS: public `*.john2143.com` already resolves to the home WAN through the wildcard.
 For the `.ts.2143.me` name, add the headscale `extra_records` entry
@@ -608,7 +587,7 @@ Isolation:
 
 ## Teardown
 
-Delete the Argo Application, the three listeners, the headscale record and the
+Delete the Argo Application, the namespace from both listener allowlists, the headscale record and the
 NetworkPolicy file. In Pocket ID, delete the federated clients, the machine-proxy
 client, the human client, the API resource and the two groups. Then remove the
 OpenBao entries and this app's inventory row.

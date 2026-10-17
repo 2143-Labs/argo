@@ -56,30 +56,21 @@ preferred; wifi nodes are overflow.
 
 ## 3. Expose via HTTPS (HTTPRoute)
 
-A LAN/tailnet name `<sub>.ts.2143.me` needs a listener (a), a route carrying `lan-only` (b) and a headscale record (c). A public name needs the listener and route plus an edge gate instead of `lan-only` (d).
+A LAN/tailnet name `<sub>.ts.2143.me` needs a route on the existing wildcard listener carrying `lan-only` (b) and a headscale record (c). A public name needs the route plus an edge gate instead of `lan-only` (d).
 
 ### a. Gateway Listener (`workloads/gateway/gateway.yaml`)
 
-Add a new listener entry to `shared-gateway`:
+Usually nothing: `shared-gateway` has one listener per wildcard certificate. Pin the route to it by `sectionName`:
 
-```yaml
-- name: <sub>-ts-2143-https
-  protocol: HTTPS
-  port: 8443
-  hostname: <sub>.ts.2143.me
-  tls:
-    mode: Terminate
-    certificateRefs:
-      - kind: Secret
-        name: ts-2143-me-wildcard-tls
-  allowedRoutes:
-    namespaces:
-      from: Same
-```
+| Hostname | `sectionName` | Certificate |
+|---|---|---|
+| `<sub>.john2143.com` | `john2143-wildcard-https` | `*.john2143.com` |
+| `<sub>.2143.me` | `2143-me-wildcard-https` | `*.2143.me` |
+| `<sub>.ts.2143.me` | `ts-2143-me-wildcard-https` | `*.ts.2143.me` |
 
-`from: Same` admits routes from the Gateway's namespace (`default`) only. A route in another namespace needs `from: Selector` with `matchLabels: {kubernetes.io/metadata.name: <namespace>}`, as on the `argocd-ts-2143-https`, `longhorn-ts-2143-https` and `au-2143-https` listeners in `workloads/gateway/gateway.yaml`.
+A route outside namespace `default` attaches only if its namespace is in that listener's `allowedRoutes` `matchExpressions` `values` list in `workloads/gateway/gateway.yaml`; add it there.
 
-Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. There are 3 wildcard certs (`*.ts.2143.me`, `*.2143.me`, `*.john2143.com`) plus a few single-host certs in `workloads/gateway/wildcard-certs.yaml` — a one-label subdomain of a wildcard needs **no** new `Certificate`. `scripts/validate-gateway-certs.sh` fails CI when a listener's hostname is not covered by its Certificate. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
+Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. A deeper name or a new domain needs a `Certificate` in `workloads/gateway/wildcard-certs.yaml` and its own listener. Keep `shared-gateway` at 16 listeners or fewer: Traefik writes one BackendTLSPolicy status ancestor per listener and fails every status write beyond 16. `scripts/validate-gateway-certs.sh` fails CI when a route pins no listener or a missing one, when a pinned hostname is not covered by the listener's hostname or Certificate, or when the Gateway exceeds 16 listeners. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
 ### b. HTTPRoute (`workloads/<name>/ingress.yaml`)
 
@@ -92,7 +83,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: <sub>-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - <sub>.ts.2143.me
   rules:
