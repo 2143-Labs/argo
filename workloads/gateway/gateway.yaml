@@ -27,6 +27,79 @@ spec:
         namespaces:
           from: Same
 
+    # One listener per wildcard certificate. Routes attach by sectionName; a
+    # hostname must be one label under the wildcard (the certificate covers
+    # nothing deeper — scripts/validate-gateway-certs.sh enforces it). Traefik
+    # writes one BackendTLSPolicy ancestor per listener and refuses more than
+    # 16, so keep this Gateway at 16 listeners or fewer: add a namespace to an
+    # allowlist below instead of adding a listener.
+    - name: john2143-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.john2143.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: john2143-com-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - default
+                  - argocd
+                  - kube-system
+                  - openbao
+    - name: 2143-me-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.2143.me"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: 2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - default
+                  - pocket-id
+                  - stalwart
+    - name: ts-2143-me-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.ts.2143.me"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: ts-2143-me-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - default
+                  - argocd
+                  - longhorn-system
+                  - openbao
+                  - stalwart
+
     # Per-PR steam-lobby previews: pvp-{N}.john2143.com attaches here. The
     # listener has NO hostname (match-all) because this Traefik build only
     # string-matches listener↔route hostnames — a wildcard listener rejects
