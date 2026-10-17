@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: longhorn-ts-2143-https
+      sectionName: ts-2143-me-wildcard-https
   hostnames:
     - longhorn.ts.2143.me
   rules:

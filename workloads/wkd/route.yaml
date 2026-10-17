@@ -5,7 +5,7 @@
 # correspondents' mail clients, so no filter is attached here — the structure is
 # copied from that route, never its filter list.
 #
-# The listener is `m-2143-me-https` in workloads/gateway/gateway.yaml; it
+# The listener is `2143-me-wildcard-https` in workloads/gateway/gateway.yaml; it
 # terminates TLS with the existing `2143-me-wildcard-tls` secret, whose
 # certificate already covers `*.2143.me`.
 apiVersion: gateway.networking.k8s.io/v1
@@ -19,7 +19,7 @@ spec:
   parentRefs:
     - name: shared-gateway
       namespace: default
-      sectionName: m-2143-me-https
+      sectionName: 2143-me-wildcard-https
   hostnames:
     - m.2143.me
   rules:
