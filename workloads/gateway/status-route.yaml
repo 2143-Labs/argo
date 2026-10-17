@@ -30,8 +30,9 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: pite-status
-          port: 3030
+        - group: traefik.io
+          kind: TraefikService
+          name: status-anubis
 ---
 apiVersion: v1
 kind: Service
