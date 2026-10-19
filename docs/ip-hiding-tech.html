@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IP hiding &amp; self-hosted edge — north star</title>
+<style>
+  :root {
+    --bg:#fbfaf7; --fg:#1d1d1f; --muted:#5f6368; --line:#d9d6cf; --panel:#f1efe9;
+    --code:#ece9e1; --accent:#2457c5; --ok:#1f7a4d; --warn:#9a5800; --bad:#b3261e; --info:#5b3fb0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#141517; --fg:#e6e6e3; --muted:#a3a3a0; --line:#34363b; --panel:#1c1e22;
+      --code:#23262b; --accent:#7aa2ff; --ok:#5cc28e; --warn:#e0a34a; --bad:#f2766d; --info:#b49cff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 72rem; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+  h1 { font-size:2rem; line-height:1.2; margin:0 0 .4rem; }
+  h2 { font-size:1.45rem; margin:3rem 0 .8rem; padding-top:.6rem; border-top:1px solid var(--line); }
+  h3 { font-size:1.12rem; margin:1.8rem 0 .5rem; }
+  p, li { max-width: 62rem; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size:.88em; }
+  code { background:var(--code); padding:.08em .35em; border-radius:4px; }
+  pre { background:var(--code); padding:1rem 1.1rem; border-radius:8px; overflow-x:auto; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:.8rem 0 1.2rem; font-size:.93rem; }
+  th, td { border:1px solid var(--line); padding:.45rem .6rem; vertical-align:top; text-align:left; }
+  th { background:var(--panel); font-weight:600; }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--panel) 45%, transparent); }
+  td.num { text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
+  .meta { color:var(--muted); font-size:.95rem; margin-bottom:1.5rem; }
+  .lede { font-size:1.15rem; max-width:60rem; }
+  .callout { border-left:4px solid var(--accent); background:var(--panel); padding:.8rem 1rem; border-radius:0 8px 8px 0; margin:1rem 0; }
+  .callout.warn { border-color:var(--warn); }
+  .callout.bad  { border-color:var(--bad); }
+  .callout.ok   { border-color:var(--ok); }
+  .callout.decide { border-color:var(--info); }
+  .callout > :first-child { margin-top:0; }
+  .callout > :last-child { margin-bottom:0; }
+  .pill { display:inline-block; font-size:.75rem; font-weight:600; letter-spacing:.02em; padding:.05rem .5rem;
+          border-radius:999px; border:1px solid currentColor; white-space:nowrap; vertical-align:.1em; }
+  .pill.todo { color:var(--muted); } .pill.done { color:var(--ok); } .pill.input { color:var(--info); }
+  .pill.verify { color:var(--warn); } .pill.risk { color:var(--bad); }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap:1rem; margin:1rem 0; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:.9rem 1rem; background:var(--panel); }
+  .card h4 { margin:0 0 .35rem; font-size:1rem; }
+  .card p { margin:.2rem 0; font-size:.95rem; }
+  nav.toc { columns: 2 18rem; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:.8rem 1.2rem; }
+  nav.toc ol { margin:0; padding-left:1.4rem; }
+  details { border:1px solid var(--line); border-radius:10px; padding:.2rem 1rem; margin:.7rem 0; background:var(--bg); }
+  details[open] { padding-bottom:.8rem; }
+  summary { cursor:pointer; font-weight:600; padding:.55rem 0; }
+  summary .pill { margin-left:.5rem; }
+  .exit { border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.5rem; }
+  figure { margin:1.2rem 0; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:.4rem; }
+  svg.diagram { width:100%; height:auto; display:block; }
+  svg .box { fill:var(--panel); stroke:var(--line); stroke-width:1.5; }
+  svg .box.edge { stroke:var(--accent); }
+  svg .box.backend { fill:none; stroke:var(--ok); stroke-dasharray:6 4; }
+  svg .box.closed { stroke:var(--bad); }
+  svg .box.sub { fill:var(--bg); }
+  svg text { fill:var(--fg); font:13px system-ui, sans-serif; }
+  svg text.title { font-weight:700; font-size:14px; }
+  svg text.muted { fill:var(--muted); font-size:12px; }
+  svg text.wglabel { fill:var(--ok); font-weight:600; }
+  svg .wire { stroke:var(--fg); stroke-width:1.6; fill:none; }
+  svg .wg { stroke:var(--ok); stroke-width:2; stroke-dasharray:7 5; fill:none; }
+  svg .arrowhead { fill:var(--fg); }
+  svg .arrowhead.wg { fill:var(--ok); }
+  .small { font-size:.9rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>IP hiding &amp; self-hosted edge — north star</h1>
+<p class="meta">
+  Owner: John · Adopted 2026-10-16 · Design v5.5 · Implementation: <span class="pill todo">not started</span> · Next step: Phase 0 · Board: task 173 (#48)
+  <br>Lives in <code>argo/docs/ip-hiding-tech.html</code>. Edit it as decisions land; record changes in the <a href="#changelog">changelog</a>.
+</p>
+
+<p class="lede">
+  We host our own sites, chat, games, mail and media, today on two clusters: the one in the house and a small one at
+  DigitalOcean. This document is the target we are building toward:
+  <strong>no backend is ever reachable or identifiable from the internet, and the house least of all.</strong>
+  Public traffic arrives at small, disposable edge machines that we own and can move between providers at will.
+  Backends reach out to them; nothing reaches in. No Cloudflare, no single third party that sees or controls our
+  traffic, and every piece that runs on an edge is pinned, signed and deployed through a reviewed, recorded pipeline.
+</p>
+
+<div class="callout ok">
+  <p><strong>The requirements.</strong> Everything below exists to satisfy these. If a later change breaks one, it needs a decision recorded here.</p>
+  <ol>
+    <li><strong>No public DNS record points at a backend, and no backend exposes a service to the internet.</strong> The house is the hard line; the DigitalOcean cluster follows the same rule. The only listeners allowed are silent, key-authenticated WireGuard ports (the router's, for the DO link and any keyed peer, and DO's end of that link): they answer nothing without a key. External access to something specific goes through one of the <a href="#doors">doors into the house</a>, never an ad-hoc port forward.</li>
+    <li><strong>TCP and UDP</strong> both work for every public service.</li>
+    <li><strong>Edges are fungible and ephemeral.</strong> Any edge can be destroyed, replaced, or moved to another provider in minutes. Backend addresses (the home IP is mostly static) never matter to the edges.</li>
+    <li><strong>The home IP is soft state everywhere outside the house.</strong> Anything that needs it learns it from a packet the house sent and holds it in memory only. It is never stored in git, a Secret, DNS, or a firewall rule (<a href="#homeip">where the home IP lives</a>).</li>
+    <li><strong>Backends are pluggable.</strong> One edge fleet serves every backend. Adding a backend is a manifest and a connector, not a new edge design.</li>
+    <li><strong>Zero trust and auditable</strong>, shaped for an eventual SOC 2 Type I: pinned, signed, SBOM'd artifacts; reviewed, gated, recorded changes.</li>
+    <li><strong>Traffic lands in Kubernetes, not on a machine.</strong> No backend node is special. The tailnet (headscale) is the operator plane, and only that.</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li><a href="#today">Where we are today</a></li>
+    <li><a href="#principles">Principles</a></li>
+    <li><a href="#threats">Threat model</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#backends">Backends</a></li>
+    <li><a href="#edge">What an edge is</a></li>
+    <li><a href="#requirements">Edge requirements &amp; traffic</a></li>
+    <li><a href="#contract">The per-app contract</a></li>
+    <li><a href="#mail">Mail</a></li>
+    <li><a href="#supply">Supply chain &amp; deploy model</a></li>
+    <li><a href="#lifecycle">Lifecycle &amp; recovery</a></li>
+    <li><a href="#decisions">Decisions</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#verification">Verification &amp; drills</a></li>
+    <li><a href="#soc2">SOC 2 mapping</a></li>
+    <li><a href="#cdn">Toward a CDN (future)</a></li>
+    <li><a href="#risks">Risks &amp; accepted trade-offs</a></li>
+    <li><a href="#open">Open questions</a></li>
+    <li><a href="#related">Related work</a></li>
+    <li><a href="#changelog">Changelog</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="today">1. Where we are today</h2>
+
+<div class="callout bad">
+  <p><strong>Fix now, independent of this plan: MongoDB is reachable from the internet.</strong> The DigitalOcean Gateway has a
+  <code>mongo-proxy</code> TCP listener on port 4040 (<code>2143-k8s/overlays/prod/gateway.yaml:359-364</code>,
+  route <code>base/tcproute.yaml</code>) that forwards to <code>mongo:27017</code>, and the cluster's LoadBalancer publishes it
+  on <code>174.138.108.28:4040</code> with no source restriction. A TCP connect from outside succeeded on 2026-10-16. Mongo has a root
+  password, so this is password-protected, not open, but it is the same exposure the 2026-09-24 NodePort removal meant to end.
+  Home reaches Mongo over the tunnel (<code>10.99.0.2:32040</code>), not this port.</p>
+</div>
+
+<p>Every home service terminates on the household WAN IP. (The literal address appears in older docs; this
+document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">Phase 10</a>.)</p>
+
+<h3>Names that resolve to the house</h3>
+<p>Checked 2026-10-13 against <code>1.1.1.1</code>:</p>
+<table>
+  <thead><tr><th>Resolves to home</th><th>Published by</th></tr></thead>
+  <tbody>
+    <tr><td><code>john2143.com</code> and wildcard, so also <code>net.john2143.com</code>, <code>net.2143.me</code> (CNAME), <code>matrix.2143.me</code> (CNAME), <code>turn.john2143.com</code>, <code>livekit.john2143.com</code></td><td>home-pi deSEC DDNS (<code>dotfiles/nixos/cluster/hosts/home-pi.nix</code>)</td></tr>
+    <tr><td><code>m.2143.me</code></td><td>home-pi DDNS</td></tr>
+    <tr><td><code>dsstar.us</code></td><td>home-pi DDNS</td></tr>
+    <tr><td><code>balabusta.homes</code> and wildcard</td><td>home-pi DDNS</td></tr>
+    <tr><td><code>headscale.9s.pics</code></td><td>home-pi DDNS. The first tailnet test, superseded by the in-cluster headscale at <code>net.john2143.com</code>. <strong>Retiring</strong> (D12).</td></tr>
+  </tbody>
+</table>
+
+<h3>Inbound paths into the house</h3>
+<table>
+  <thead><tr><th>Path</th><th>Today</th><th>Fate in this design</th></tr></thead>
+  <tbody>
+    <tr><td>Traefik 80/443</td><td>dst-nat → <code>192.168.6.11</code></td><td>Edge, routed by name</td></tr>
+    <tr><td>Mail 25 / 587 / 993</td><td>dst-nat → Stalwart <code>.6.13</code></td><td>Edge TCP passthrough with PROXY (see <a href="#mail">Mail</a>)</td></tr>
+    <tr><td>TURN 3478 tcp+udp, relay 45000–45063/udp</td><td>dst-nat → steam-lobby coturn <code>.6.14</code></td><td>coturn runs <em>on</em> the edges</td></tr>
+    <tr><td>LiveKit RTC 7881/tcp</td><td>dst-nat → <code>.6.22</code></td><td>Removed; media via TURN/TLS through edges</td></tr>
+    <tr><td>TeamSpeak 9987/udp, 30033/tcp</td><td>dst-nat → <code>.6.15</code>, <code>.6.16</code></td><td>Edge UDP + TCP</td></tr>
+    <tr><td>OpenRCT2 11753/tcp</td><td>dst-nat → <code>.6.17</code></td><td>Edge TCP</td></tr>
+    <tr><td>Factorio 34197/udp</td><td>dst-nat → <code>.6.28</code></td><td>Edge UDP</td></tr>
+    <tr><td>Minecraft 25565/tcp</td><td>dst-nat → <code>.6.29</code></td><td>Edge TCP</td></tr>
+    <tr><td>headscale STUN 3479/udp</td><td>dst-nat → <code>.6.18</code> (added 2026-10-13)</td><td>Replaced by <code>derper</code> on the edges</td></tr>
+    <tr><td>monero p2p 18080/tcp</td><td>dst-nat → <code>.5.76</code></td><td>Drop inbound (node keeps working outbound-only) <span class="pill input">confirm</span></td></tr>
+    <tr><td>linkerd multicluster 4143/tcp</td><td>Removed 2026-10-11 (no consumer)</td><td><span class="pill done">done</span></td></tr>
+    <tr><td><strong>Router WireGuard 51820/udp</strong></td><td>The DO cluster dials <code>john2143.com:51820</code> (<code>2143-k8s/base/wireguard-doks.yaml:33</code>). Live router rules (read 2026-10-16) let it reach Postgres <code>.5.36:5432</code>, Temporal <code>.6.20:7233</code>, SeaweedFS <code>.6.31:8333</code> and router DNS; home reaches DO's Mongo back through it. The DO firewall blocks inbound, so home can't dial out today.</td><td>Kept, direction flipped (D14): home initiates; DO stores no home address (<a href="#dolink">the DO ↔ home link</a>)</td></tr>
+    <tr><td>home-pi headscale 6767 (and attic 8280)</td><td>Forwarded by the <em>Verizon</em> router straight to home-pi (<code>192.168.0.154</code>), bypassing the MikroTik. Attic on home-pi is reached through the same name.</td><td>Retire (D12): forward, DDNS unit and record all go. Attic, if still wanted, is reached over the tailnet only.</td></tr>
+  </tbody>
+</table>
+<p class="small">The live MikroTik record (network-engineer skill, live-verified 2026-10-11, updated 2026-10-13) has 16 dst-nat rules plus the router's own WireGuard listener; the committed export (<code>dotfiles/network-configs/router.rsc:188-240</code>) is stale. The Verizon CR1000B in front is <em>not</em> a DMZ: every open port also needs a Verizon forward, so there are two layers to close. Phase 0 re-reads both live.</p>
+
+<h3>The DigitalOcean cluster's public surface</h3>
+<p>Read from the live cluster (<code>2143prod</code>, one node) on 2026-10-16:</p>
+<table>
+  <thead><tr><th>Exposure</th><th>What answers</th><th>Fate</th></tr></thead>
+  <tbody>
+    <tr><td>LoadBalancer <code>apps-gateway-nginx</code> <code>174.138.108.28</code> + IPv6, ports 80, 443</td><td>nginx-gateway-fabric: <code>2143.me</code>, <code>i.2143.me</code>, <code>labs.2143.me</code>, <code>derp-r.2143.me</code>, <code>grafana.2143.me</code>, <code>openfront.pro</code> (+ <code>api</code>, <code>analysis</code>, <code>tkbot</code>), <code>poe.sale</code>, <code>poe2.sale</code>, the <code>i.*</code> image-host names, <code>2143.gay</code>, <code>2143.moe</code>, <code>9s.pics</code>, <code>0x2b.pics</code>, <code>devolved.us</code>, <code>up.brick.gay</code>, <code>prod.john2143.com</code></td><td>Names move to the edges; LoadBalancer deleted (<a href="#p10">Phase 10</a>)</td></tr>
+    <tr><td>Same LoadBalancer, port 4040</td><td>MongoDB (see callout above)</td><td>Remove now</td></tr>
+    <tr><td>LoadBalancer <code>linkerd-gateway</code> <code>143.244.214.201</code>:4143</td><td>Nothing (connection refused); the home side was removed 2026-10-11</td><td>Delete</td></tr>
+    <tr><td>Node IP, NodePort 30478/udp</td><td><code>derp-r</code> STUN</td><td>Retired with <code>derp-r</code> (D11)</td></tr>
+    <tr><td>Node IP, 30901/tcp</td><td>Tor middle relay (published in the Tor consensus with contact <code>tor@2143.me</code>)</td><td>Needs a decision (D17)</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="principles">2. Principles</h2>
+<ol>
+  <li><strong>Edges hold nothing worth stealing and nothing worth keeping.</strong> An edge is a pinned image plus one rendered config. Losing it loses nothing.</li>
+  <li><strong>Replace, don't repair.</strong> No shell, no SSH, no in-place upgrades. Changing an edge means rendering a new config and rolling the slot.</li>
+  <li><strong>Home bootstraps every link that touches the house.</strong> Every tunnel is initiated from the house (and every other backend dials out too). The far end learns the address from the handshake; nothing has to be told it in advance.</li>
+  <li><strong>Backends are interchangeable to the edge.</strong> An edge knows "names and ports, and which backend owns each". It knows nothing else about a backend.</li>
+  <li><strong>Backends are separate trust domains.</strong> No backend reaches another through a shared control plane: not the tailnet, not the edges, not DNS, not a shared certificate. The one path between backends is the static, key-pinned DO ↔ home WireGuard link, and its reach is fixed by each side's own firewall.</li>
+  <li><strong>Kubernetes owns everything durable</strong>: the per-app contract, the connectors, DNS publication, the deploy runner. Each backend's GitOps deploys its part like any other workload.</li>
+  <li><strong>Every running byte has a provenance trail.</strong> Built or mirrored by CI, scanned, SBOM'd, signed, verified before deploy, recorded after.</li>
+  <li><strong>Fail closed.</strong> An app whose egress must be masked can't reach the internet directly at all. A missing proxy setting breaks the app; it doesn't leak.</li>
+  <li><strong>Edges are untrusted transit.</strong> TLS ends at the backend. An edge sees ciphertext (plain HTTP on port 80 aside), proxies declared ports only, and never routes IP between its peers.</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="threats">3. Threat model</h2>
+<div class="grid">
+  <div class="card">
+    <h4>Defended against</h4>
+    <p>Internet scanners and opportunistic attackers finding the house or any other backend.</p>
+    <p>DDoS against a backend: floods hit edges with datacenter bandwidth; backend uplinks carry only tunnel traffic.</p>
+    <p>A provider outage, ban or price change: slots move to another provider.</p>
+    <p>A compromised edge: it can see what transits it, but it can't reach anything except connector pods on declared ports, and it holds no long-lived credential beyond its own slot key.</p>
+    <p>Lateral movement: a compromised edge or tailnet control plane gets no path into a backend, and a compromised backend gets no valid certificate for another. The static DO ↔ home link reaches only the ports each side's firewall allows (<a href="#trust">trust boundaries</a>).</p>
+    <p>Supply-chain tampering: unsigned or unknown images never reach an edge or a connector.</p>
+  </div>
+  <div class="card">
+    <h4>Accepted (documented)</h4>
+    <p>An edge sees each backend's IP as the source of its tunnel. Removing that needs a relay hop. See <a href="#risks">risks</a>.</p>
+    <p>Our own tailnet devices may connect directly to backend nodes and see their IPs.</p>
+    <p>Providers can see edge memory and user-data (slot key, TURN secret). That's no more than they can do by controlling the VM.</p>
+    <p>Volumetric attacks larger than an edge's link take that edge down; DNS steers away from it and we add slots.</p>
+  </div>
+  <div class="card">
+    <h4>Out of scope here</h4>
+    <p>Hardening each cluster itself (identity, segmentation, secrets): security epic #160 for home.</p>
+    <p>Application-layer abuse (bots, scraping): CrowdSec at Traefik, optionally Anubis behind Traefik.</p>
+    <p>Content caching at the edge: see <a href="#cdn">Toward a CDN</a>.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="architecture">4. Architecture</h2>
+
+<figure>
+<svg class="diagram" viewBox="0 0 1000 630" role="img" aria-label="Architecture: internet to two edge slots; connectors in the home cluster and the DigitalOcean cluster dial WireGuard out to every edge; neither backend accepts inbound">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="arrowhead" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+    <marker id="arrwg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="arrowhead wg" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <!-- internet -->
+  <rect class="box" x="330" y="10" width="340" height="46" rx="23"/>
+  <text class="title" x="500" y="38" text-anchor="middle">Internet — TCP + UDP clients</text>
+  <text class="muted" x="500" y="78" text-anchor="middle">public DNS → live edge IPs only (never a backend)</text>
+  <path class="wire" d="M345,50 L260,104" marker-end="url(#arr)"/>
+  <path class="wire" d="M655,50 L740,104" marker-end="url(#arr)"/>
+
+  <!-- edges -->
+  <rect class="box edge" x="40" y="106" width="420" height="150" rx="10"/>
+  <text class="title" x="60" y="132">edge slot s1 · provider A · Talos</text>
+  <text x="60" y="156">443 by SNI · 80 by Host · other ports by number</text>
+  <text x="60" y="178">coturn (TURN) · derper (DERP + STUN) · tinyproxy (egress)</text>
+  <text x="60" y="200">firewall: declared ports + wg 51820 only</text>
+  <text class="muted" x="60" y="222">no shell · Talos API reachable only through the tunnel</text>
+  <text class="muted" x="60" y="242">static pods by digest, from our registry</text>
+
+  <rect class="box edge" x="540" y="106" width="420" height="150" rx="10"/>
+  <text class="title" x="560" y="132">edge slot s2 · provider B · Talos</text>
+  <text x="560" y="156">identical render; different provider</text>
+  <text x="560" y="178">slots s3, s4 defined but idle</text>
+  <text class="muted" x="560" y="222">any slot can be replaced or moved</text>
+  <text class="muted" x="560" y="242">by one reviewed change</text>
+
+  <!-- wireguard -->
+  <path class="wg" d="M210,330 L210,262" marker-end="url(#arrwg)"/>
+  <path class="wg" d="M300,330 C 420,300 640,290 700,262" marker-end="url(#arrwg)"/>
+  <path class="wg" d="M800,330 L800,262" marker-end="url(#arrwg)"/>
+  <path class="wg" d="M745,330 C 640,300 400,292 300,262" marker-end="url(#arrwg)"/>
+  <text class="wglabel" x="40" y="292">WireGuard, dialed out</text>
+  <text class="wglabel" x="40" y="310">by every backend</text>
+
+  <!-- home backend -->
+  <rect class="box backend" x="20" y="320" width="645" height="240" rx="12"/>
+  <text class="title" x="40" y="346" style="fill:var(--ok)">backend: home k3s</text>
+
+  <rect class="box sub" x="40" y="358" width="115" height="58" rx="8"/>
+  <text x="97" y="382" text-anchor="middle">connector-0</text>
+  <text class="muted" x="97" y="402" text-anchor="middle">node A</text>
+  <rect class="box sub" x="165" y="358" width="115" height="58" rx="8"/>
+  <text x="222" y="382" text-anchor="middle">connector-1</text>
+  <text class="muted" x="222" y="402" text-anchor="middle">node B</text>
+  <rect class="box sub" x="290" y="358" width="115" height="58" rx="8"/>
+  <text x="347" y="382" text-anchor="middle">connector-2</text>
+  <text class="muted" x="347" y="402" text-anchor="middle">node C</text>
+
+  <path class="wire" d="M405,387 L433,387" marker-end="url(#arr)"/>
+  <rect class="box sub" x="435" y="358" width="125" height="58" rx="8"/>
+  <text x="497" y="382" text-anchor="middle">Traefik</text>
+  <text class="muted" x="497" y="402" text-anchor="middle">TLS ends here</text>
+  <path class="wire" d="M560,387 L573,387" marker-end="url(#arr)"/>
+  <rect class="box sub" x="575" y="358" width="75" height="58" rx="8"/>
+  <text x="612" y="392" text-anchor="middle">apps</text>
+
+  <text class="muted" x="40" y="436">HAProxy (TCP) · nft (UDP) → Services · :8888 egress → edges</text>
+
+  <rect class="box sub" x="40" y="450" width="145" height="58" rx="8"/>
+  <text x="112" y="474" text-anchor="middle">edge-controller</text>
+  <text class="muted" x="112" y="494" text-anchor="middle">probes · DNS</text>
+  <rect class="box sub" x="195" y="450" width="150" height="58" rx="8"/>
+  <text x="270" y="474" text-anchor="middle">edge-deploy runner</text>
+  <text class="muted" x="270" y="494" text-anchor="middle">gated pipeline</text>
+  <rect class="box sub" x="355" y="450" width="140" height="58" rx="8"/>
+  <text x="425" y="474" text-anchor="middle">OpenBao</text>
+  <text class="muted" x="425" y="494" text-anchor="middle">slot keys</text>
+  <rect class="box sub" x="505" y="450" width="145" height="58" rx="8"/>
+  <text x="577" y="474" text-anchor="middle">headscale</text>
+  <text class="muted" x="577" y="494" text-anchor="middle">operator plane</text>
+
+  <text class="muted" x="40" y="535">no node is special: connectors spread across nodes; any can die</text>
+
+  <!-- DO backend -->
+  <rect class="box backend" x="690" y="320" width="290" height="240" rx="12"/>
+  <text class="title" x="710" y="346" style="fill:var(--ok)">backend: DigitalOcean</text>
+  <rect class="box sub" x="710" y="358" width="250" height="58" rx="8"/>
+  <text x="835" y="382" text-anchor="middle">connector ×2</text>
+  <text class="muted" x="835" y="402" text-anchor="middle">same image as home</text>
+  <path class="wire" d="M835,416 L835,446" marker-end="url(#arr)"/>
+  <rect class="box sub" x="710" y="450" width="250" height="58" rx="8"/>
+  <text x="835" y="474" text-anchor="middle">nginx-gateway → apps</text>
+  <text class="muted" x="835" y="494" text-anchor="middle">TLS ends here</text>
+  <text class="muted" x="710" y="535">i.2143.me, openfront.pro, …</text>
+
+  <!-- closed doors -->
+  <rect class="box closed" x="60" y="578" width="540" height="40" rx="8"/>
+  <text x="330" y="603" text-anchor="middle">home router: no dst-nat; only silent WireGuard for the DO link</text>
+  <rect class="box closed" x="690" y="578" width="290" height="40" rx="8"/>
+  <text x="835" y="603" text-anchor="middle">DO: no LoadBalancer, firewall closed</text>
+</svg>
+<figcaption>Requests enter at a live edge, which picks the owning backend by name or port and forwards across that backend's outbound WireGuard tunnel to any of its connector pods. TLS terminates in the backend. No address or name points at a backend.</figcaption>
+</figure>
+
+<h3>Key properties</h3>
+<ul>
+  <li><strong>Fixed slots, fungible machines.</strong> Slots <code>s1</code>–<code>s4</code> each have a WireGuard keypair (in OpenBao) and a name <code>s&lt;N&gt;.edge.2143.me</code>. A VM <em>is</em> a slot because the pipeline gave it that slot's key. Replacing the VM, or moving the slot to another provider, changes only that slot's A record. No backend is reconfigured.</li>
+  <li><strong>Backends initiate.</strong> Every connector pod resolves every slot name and dials it. The edge learns the backend's current address from the handshake, so a backend IP change heals on the next keepalive and is configured nowhere.</li>
+  <li><strong>Edges are layer 4, routed by name.</strong> Port 443 is routed by TLS SNI without decrypting; port 80 by the HTTP Host header (it is plaintext anyway, and ACME HTTP-01 needs it); every other port belongs to exactly one backend. TCP carries a PROXY v2 header with the real client IP, so per-IP rate limits, CrowdSec and mail checks keep working. UDP is relayed through the tunnel.</li>
+  <li><strong>Media relays live on edges.</strong> A TURN relay must advertise an address it owns, so coturn runs on every edge. LiveKit stays at home and is reached only through TURN/TLS.</li>
+  <li><strong>The tailnet moves behind the edges too, and stays an operator plane.</strong> headscale is a normal app behind Traefik; DERP and STUN come from <code>derper</code> on the edges. Backends never use it to reach each other (<a href="#trust">trust boundaries</a>).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="backends">5. Backends</h2>
+<p>A <strong>backend</strong> is a cluster that serves public names. Each runs the same signed <code>edge-connector</code> image, dials every slot, and declares what it serves in its own manifest. Backends never appear in public DNS and never accept internet traffic.</p>
+
+<table>
+  <thead><tr><th></th><th><code>home</code></th><th><code>do</code></th></tr></thead>
+  <tbody>
+    <tr><td>Cluster / GitOps</td><td>home k3s · Argo CD (<code>argo</code>)</td><td>DOKS <code>2143prod</code> · Flux (<code>2143-k8s</code>)</td></tr>
+    <tr><td>Manifest</td><td><code>argo/workloads/edge/manifest.yaml</code></td><td><code>2143-k8s/base/edge/manifest.yaml</code></td></tr>
+    <tr><td>Connectors</td><td>StatefulSet ×3, required anti-affinity</td><td>×2 (one node today: same failure domain, still survives a pod restart)</td></tr>
+    <tr><td>Connector keys</td><td>OpenBao, one per ordinal</td><td>Secret applied by the deploy pipeline, one per ordinal (that cluster has no OpenBao)</td></tr>
+    <tr><td>Tunnel addresses</td><td><code>10.61.0.11–13</code></td><td><code>10.61.0.21–22</code></td></tr>
+    <tr><td>Where traffic lands</td><td>Traefik, Stalwart and game Services</td><td>nginx-gateway (HTTP/HTTPS only)</td></tr>
+    <tr><td>Masked egress</td><td>Matrix federation (<code>egress: proxy</code>)</td><td>none needed today</td></tr>
+    <tr><td>Left exposed after cutover</td><td>a silent WireGuard listener on the router, for the DO link (D14)</td><td>a silent WireGuard listener for the DO link (D14); the Tor ORPort if D17 keeps it on the node</td></tr>
+  </tbody>
+</table>
+
+<h3>Routing and ownership rules</h3>
+<ul>
+  <li>Each hostname, wildcard and non-HTTP port is claimed by <strong>exactly one</strong> backend. The render step fails on a duplicate claim.</li>
+  <li>An exact name beats a wildcard. <code>i.2143.me</code> (do) and <code>au.2143.me</code> (home) coexist with no wildcard claimed by either.</li>
+  <li>Names come from the manifest, not from Gateway listeners. Both clusters hold a <code>*.2143.me</code> certificate today, so listener wildcards are ambiguous by design.</li>
+  <li>Known overlap to resolve in Phase 0: <code>files.john2143.com</code> has an HTTPRoute in both clusters. Public DNS points home today.</li>
+  <li>Health is per (slot, backend). A slot that loses one backend withdraws only that backend's names from its address.</li>
+</ul>
+
+<h3>Home-side pieces</h3>
+<table>
+  <thead><tr><th>Piece</th><th>Shape</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><code>edge-connector</code></td><td>StatefulSet ×3 in namespace <code>edge</code>. Peers: every slot by DNS name, re-resolved every 30 s. HAProxy for TCP, nft for UDP, HAProxy :8888 for egress, a tailscale container advertising the tunnel range for operators.</td><td>No node in the path is special; a pod or node loss is a health-check event on the edges. Same capabilities the <code>vpn-endpoints</code> pods already use.</td></tr>
+    <tr><td><code>edge-controller</code></td><td>Deployment ×1. Probes each (slot, backend) end to end with per-backend health names (<code>edge-health.2143.me</code>, <code>edge-health-do.2143.me</code>). Publishes every public name → live slot IPs to deSEC with hysteresis; never publishes an empty set.</td><td>Replaces home-pi's DDNS scripts. If home is down the controller stops, records stay as last published, and DO names keep working.</td></tr>
+    <tr><td><code>edge-deploy</code> runner</td><td>Dedicated ARC runner scale set; accepts jobs only from <code>edge-tofu</code>'s <code>edges</code> environment, with a fork guard. Namespace-scoped RBAC; reads OpenBao via Kubernetes auth.</td><td>Deploys work even when every edge is down, and OpenBao is never exposed.</td></tr>
+    <tr><td>Admission</td><td>sigstore <code>policy-controller</code> enforcing on namespace <code>edge</code>.</td><td>The home half of the trust chain.</td></tr>
+    <tr><td>Traefik / Stalwart</td><td>Trust PROXY protocol from the pod CIDR; a NetworkPolicy allows only connectors to reach those listeners.</td><td>Keeps the real client IP for rate limits, CrowdSec and mail.</td></tr>
+  </tbody>
+</table>
+
+<h3>DigitalOcean-side changes</h3>
+<ul>
+  <li>nginx-gateway accepts PROXY protocol from the connectors <span class="pill verify">verify</span> — otherwise DO apps see the connector as every client.</li>
+  <li>Both LoadBalancers are deleted; the cloud firewall allows nothing inbound.</li>
+  <li><code>derp-r</code> is retired. Its STUN can't work behind an edge (STUN must see the client's real address), and edge derpers replace it.</li>
+  <li>The private link to home (<code>wireguard-doks</code>, <code>home-tunnel-proxy</code>, <code>mongo-tunnel</code>) stays (D14) with home as the initiator: <code>wireguard-doks</code> drops its <code>john2143.com</code> endpoint, listens on a fixed port, and learns the home address from home's handshake (<a href="#dolink">the DO ↔ home link</a>). The node filters <code>wg0</code> so home reaches only Mongo. The dead <code>home-endpoint</code> ExternalName (→ <code>john2143.com</code>) goes. The DO node leaves the home tailnet (D18).</li>
+</ul>
+
+<h3 id="dolink">The DO ↔ home link</h3>
+<p>A static WireGuard link between the home router (<code>wg-remote</code>, <code>10.99.0.1</code>) and the DO node (<code>wireguard-doks</code>, <code>10.99.0.2</code>). <strong>Home always initiates.</strong> DO is only ever told where home is by home itself.</p>
+<table>
+  <thead><tr><th></th><th>Home router (initiator)</th><th>DO node (responder)</th></tr></thead>
+  <tbody>
+    <tr><td>Peer endpoint</td><td>DO's link address (<code>endpoint-address</code>, see bootstrap below)</td><td><strong>none configured</strong>: learned from home's handshake, held in the kernel, gone on restart</td></tr>
+    <tr><td>Listens on</td><td>UDP 51820 (existing Verizon forward; silent)</td><td>fixed UDP 51820; DO cloud firewall allows it from <em>any</em> source, because a source rule would mean storing the home IP</td></tr>
+    <tr><td>Keepalive</td><td>every 25 s: bootstraps the link, keeps the path open, re-teaches DO after a home IP change or a DO restart</td><td>every 25 s once it has learned the endpoint: liveness for alerts, and keeps DO's stateful firewall entry warm</td></tr>
+    <tr><td>Firewall on what arrives</td><td>Tunnel ACL: Temporal 7233, SeaweedFS 8333, router DNS (and Postgres 5432 until removed); everything else dropped and logged</td><td><code>wg0</code> filtered to Mongo 32040 only</td></tr>
+    <tr><td>Stores about the other side</td><td>DO's link address and public key</td><td>home's public key only</td></tr>
+  </tbody>
+</table>
+<p><strong>Bootstrap.</strong> DO's pod brings up <code>wg0</code> with home's key and no endpoint, and waits; it cannot reach home and does not try. The router's next keepalive (≤ 25 s) completes a handshake from wherever home is today; DO's kernel records that address and starts its own keepalives. Nothing is written down.</p>
+<table>
+  <thead><tr><th>Event</th><th>What happens</th><th>Recovery</th></tr></thead>
+  <tbody>
+    <tr><td>Home IP changes</td><td>The router's next keepalive arrives from the new address; DO follows it. Until then DO's keepalives go to the old address and are ignored there (ciphertext only).</td><td>≤ 25 s after the WAN is back</td></tr>
+    <tr><td><code>wireguard-doks</code> restarts</td><td>The endpoint is lost; DO waits for the next keepalive.</td><td>≤ 25 s</td></tr>
+    <tr><td>DO node replaced</td><td>Home must still find DO. Needs a DO link address that survives node replacement (below).</td><td>≤ 25 s if the address follows the node; otherwise down until the router is updated</td></tr>
+    <tr><td>Router reboot</td><td><code>endpoint-address</code> is configuration, so the router dials again on boot.</td><td>≤ 25 s after boot</td></tr>
+  </tbody>
+</table>
+<p><strong>Finding DO after a node replacement</strong> is the one real bootstrap problem; the DO node is three days old, so replacements are routine. Options:</p>
+<ul>
+  <li><strong>DO Reserved IP</strong> (default): one stable address, reassigned by a small DO-side job to whichever node runs <code>wireguard-doks</code>. The router pins it once. <span class="pill verify">verify</span> that DOKS nodes accept a Reserved IP, its cost, and that replies leave from it.</li>
+  <li><strong>Edge rendezvous</strong> (fallback): every edge already sees DO's current address as the source of DO's connector tunnel. Home asks an edge over its own tunnel and updates the router. A lying edge only causes a failed handshake, because the keys are pinned; it needs a scoped RouterOS API user at home.</li>
+  <li>Rejected: a DNS name for the link (publishes a backend address); a DO API token at home (a cross-backend credential).</li>
+</ul>
+
+<h3 id="doors">Doors into the house</h3>
+<p>The goal is that the home IP stays obscured, not that the house is unreachable. Anything that needs to reach something at home uses the first door that works, in this order:</p>
+<table>
+  <thead><tr><th>#</th><th>Door</th><th>Who learns the home IP</th><th>Use for</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Public, through the edges (a manifest entry)</td><td>Nobody</td><td>Anything meant for the public: sites, mail, games, voice</td></tr>
+    <tr><td>2</td><td>Tailnet</td><td>Our own devices, when they connect peer-to-peer</td><td>Operators and their machines (D18)</td></tr>
+    <tr><td>3</td><td>Keyed WireGuard peer, <strong>home-initiated</strong></td><td>That peer, in memory only</td><td>A machine with a stable address (the DO link is this)</td></tr>
+    <tr><td>4</td><td>Keyed WireGuard peer, peer-initiated</td><td>That peer, stored: it has to be told the address</td><td>A roaming device that can't use the tailnet; fully trusted parties only; revoking means rotating the lease</td></tr>
+    <tr><td>5</td><td>Raw port forward</td><td>The whole internet</td><td>Only with a recorded decision saying why 1–4 can't work. None planned.</td></tr>
+  </tbody>
+</table>
+<p>Every door 3–5 is a row in this register: its own key (or port), its own <code>allowed-address</code>, a default-deny forward ACL naming exactly what it reaches, and a review date. All of them share the router's one silent WireGuard port.</p>
+<table>
+  <thead><tr><th>Door</th><th>Type</th><th>Reaches</th><th>Learns home IP</th><th>Review</th></tr></thead>
+  <tbody>
+    <tr><td><code>peer1</code> — DO cluster</td><td>3</td><td>Temporal 7233, SeaweedFS 8333, router DNS (Postgres 5432 until removed)</td><td>DO node, in memory</td><td>at each phase exit</td></tr>
+  </tbody>
+</table>
+
+<h3 id="trust">Trust boundaries</h3>
+<p>The edges exist so backends never have to trust each other or the network between them. A compromise of one backend, of the tailnet's control plane, or of the edge fleet must not become a path into another backend. Each shared component, what its compromise gives an attacker, and what contains it:</p>
+<table>
+  <thead><tr><th>Shared component</th><th>If compromised (as of 2026-10-16)</th><th>Containment</th></tr></thead>
+  <tbody>
+    <tr><td>headscale (operator tailnet)</td><td>The control plane decides who is a peer, which routes are approved and what the policy says. headscale has no equivalent of Tailnet Lock <span class="pill verify">verify</span>, so clients accept whatever it sends. <code>closet</code> and <code>arch</code> advertise <code>192.168.5.0/24</code> and <code>192.168.6.0/24</code>, so a headscale compromise <em>already</em> reaches the whole home LAN. The DO node (<code>doks-us-nyc</code>: privileged, host network, <code>--accept-routes</code>) is a tagged exit node on the same tailnet.</td><td>Operators only (D18). No backend-to-backend traffic on it. The DO node leaves it. Subnet routes narrowed to what operators actually use. Policy stays file-mode from git.</td></tr>
+    <tr><td>Edge fleet</td><td>Every backend's connectors peer with every edge, so an edge sees ciphertext and routing metadata for all backends and can send packets to any connector.</td><td>Edges proxy declared ports only and never route between peers (no forwarding between WireGuard peers; each peer's AllowedIPs is its own /32). Connectors accept only declared ports from edge addresses.</td></tr>
+    <tr><td>TLS certificates</td><td>Both clusters hold a valid <code>*.2143.me</code> certificate (DO <code>2143-me-tls-key-prod</code>, home <code>2143-me-wildcard</code>), and home's <code>*.john2143.com</code> covers DO's <code>prod.john2143.com</code>. A DO compromise can present a valid certificate for <code>au.2143.me</code> (SSO), <code>net.2143.me</code> (headscale), <code>tasks</code>, <code>matrix</code>, <code>m</code>; a home compromise can do the same for DO's names.</td><td>Each backend holds certificates only for names it serves; no wildcard in a zone two backends share (D19). CAA records per name pin issuance to the owning backend's ACME account and DNS-01, so edge port-80 routing can't be used to mint a certificate.</td></tr>
+    <tr><td>DNS publication (the edge-controller's deSEC token)</td><td>Repoint any public name.</td><td>Token limited to the records the controller publishes (deSEC token policies <span class="pill verify">verify</span>). CAA means repointing alone yields no certificate. Record changes alert.</td></tr>
+    <tr><td><code>edge-deploy</code> runner (at home)</td><td>Renders the edges that also serve DO, so a home compromise could ship a malicious edge config.</td><td>DO's keys never leave DO and CAA blocks issuance, so the worst case for DO is downtime, not interception. Renders are signed and recorded.</td></tr>
+    <tr><td>DO ↔ home WireGuard link</td><td>Static keys, no control plane. From DO, the router admits Postgres <code>.5.36:5432</code> (no consumer today), Temporal <code>.6.20:7233</code>, SeaweedFS <code>.6.31:8333</code> and router DNS 53, all plaintext. From home, the DO node's <code>wg0</code> is not filtered: a home compromise reaches every port on the DO node.</td><td>Kept (D14). Reach is set by each receiver's firewall, not by a remote server. DO filters <code>wg0</code> to Mongo only. Drop the Postgres rule while nothing uses it. TLS inside the tunnel where the service supports it (Temporal certificates already exist).</td></tr>
+  </tbody>
+</table>
+<p>Known cross-backend dependencies, all on the WireGuard link: DO → home Temporal (gRPC 7233), SeaweedFS S3 (8333), router DNS, and Postgres (5432, unused while <code>openfront-pro*</code> is scaled to 0); home → DO MongoDB (<code>10.99.0.2:32040</code>). Phase 0 confirms the list is complete.</p>
+
+<!-- ============================================================ -->
+<h2 id="edge">6. What an edge is</h2>
+<p>A VM booted from the pinned Talos factory image, configured entirely by one rendered machine config passed as user-data. The same pattern timestone uses for its Hetzner nodes (<code>timestone-tofu/hetzner/talos.tf:48-70</code>): factory schematic → provider image → VM. No cluster runs on the edge; Talos runs a fixed set of static pods.</p>
+<table>
+  <thead><tr><th>Component</th><th>Role</th><th>Ports (public unless noted)</th></tr></thead>
+  <tbody>
+    <tr><td><code>nginx</code> (stream + a small http block)</td><td>443: <code>ssl_preread</code> picks the backend by SNI. 80: Host header picks the backend. Other ports: one backend each. Upstreams are that backend's connectors over the tunnel, health-checked. Always sends PROXY v2 on TCP.</td><td>from the manifests</td></tr>
+    <tr><td><code>coturn</code></td><td>TURN relay; <code>external-ip</code> = this edge's public IP; shared secret. <strong>Must</strong> deny relaying to private ranges and the tunnel range (see <a href="#risks">risks</a>).</td><td>3478 tcp/udp, relay range udp</td></tr>
+    <tr><td><code>derper</code></td><td>Tailnet relay + STUN for our headscale. TLS on 8443 because 443 is passed through.</td><td>8443/tcp, 3479/udp</td></tr>
+    <tr><td><code>tinyproxy</code></td><td>Egress proxy for apps whose outbound must not show a backend IP. Bound to the tunnel address only.</td><td>tunnel 8888 (not public)</td></tr>
+    <tr><td>WireGuard (Talos native)</td><td>Peers = every connector of every backend; no endpoints (they dial in).</td><td>51820/udp, silent to unauthenticated packets</td></tr>
+    <tr><td>Talos API</td><td>Management and evidence (config hash, running digests). Mutual TLS.</td><td>50000, tunnel only</td></tr>
+  </tbody>
+</table>
+<p>Every image is pulled by digest from <code>ghcr.io/2143-labs/edge-*</code>, including third-party ones (nginx, coturn) which we mirror. An edge never pulls from a registry we don't control.</p>
+
+<!-- ============================================================ -->
+<h2 id="requirements">7. Edge requirements &amp; traffic</h2>
+
+<h3>Measured traffic (2026-10-09 → 10-16)</h3>
+<p>What the edges would carry today. Pod counters include LAN traffic, so non-HTTP rows are upper bounds.</p>
+<table>
+  <thead><tr><th>Source</th><th>Measured</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td>Home HTTP(S) from real external clients</td><td class="num">≈ 37 MB/day</td><td>Traefik access logs, 3 days, excluding LAN, tailnet and the household's own WAN address; top hosts <code>john2143.com</code>, <code>aross.studio</code>, <code>balabusta.homes</code>, <code>files.john2143.com</code></td></tr>
+    <tr><td>Minecraft</td><td class="num">8–43 GB/day; avg 2.3, peak 8.9 Mbit/s (1 h)</td><td>cAdvisor transmit, 7 days. The dominant edge load.</td></tr>
+    <tr><td>TeamSpeak, headscale, Matrix, Stalwart, LiveKit, coturn, Factorio</td><td class="num">≈ 1 GB/day together</td><td>cAdvisor, 7 days</td></tr>
+    <tr><td>DO nginx-gateway (all DO sites)</td><td class="num">≈ 8 GB/day</td><td>kubelet cAdvisor on the DO node, 3.2 days</td></tr>
+    <tr><td>All home edge-bound pods, peak</td><td class="num">11 Mbit/s (5 min); p95 7.4</td><td>cAdvisor, 7 days</td></tr>
+    <tr><td><em>Not edge traffic:</em> Traefik total</td><td class="num">650 GB/week</td><td>98% is Loki and Tempo talking to SeaweedFS via <code>files.john2143.com</code> from inside the cluster</td></tr>
+    <tr><td><em>Not edge traffic:</em> DO node total</td><td class="num">≈ 213 GB/day</td><td>Dominated by the Tor relay on host networking; stays off the edges</td></tr>
+  </tbody>
+</table>
+<div class="callout warn">
+  <p><strong>Split-horizon DNS is load-bearing.</strong> Internal clients must keep resolving public names to internal addresses. If Loki or Tempo ever resolved <code>files.john2143.com</code> to an edge, 650 GB/week would leave the house and come back through the tunnel. The leak checklist tests this from every backend.</p>
+</div>
+
+<h3>Sizing targets</h3>
+<p>Edge-bound total today: <strong>about 15–55 GB/day, 0.5–1.7 TB/month</strong>, peaks near 12 Mbit/s. Each live slot must carry everything alone (D3), so each is sized for:</p>
+<table>
+  <thead><tr><th>Dimension</th><th>Target per slot</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>vCPU / RAM / disk</td><td>2 shared vCPU · 2 GB · 20 GB</td><td>nginx stream, WireGuard and coturn are light; Talos plus static pods want headroom. Packets per second (game and voice UDP), not bandwidth, is the CPU driver.</td></tr>
+    <tr><td>Throughput</td><td>100 Mbit/s sustained, port ≥ 1 Gbit/s</td><td>~10× today's peak; a group call over TURN or a busy game night fits</td></tr>
+    <tr><td>Transfer</td><td>2 TB/month outbound</td><td>today's worst month with headroom; inbound is free at both providers</td></tr>
+    <tr><td>Latency</td><td>≤ 10 ms RTT to home and to DO NYC</td><td>edges add a hop to every game packet; US East keeps it small</td></tr>
+    <tr><td>Kernel</td><td>conntrack ≥ 256k, SYN cookies on, larger UDP buffers</td><td>survive floods and many TURN allocations</td></tr>
+    <tr><td>MTU</td><td>public 1500 · tunnel 1420 · TCP MSS clamped to 1380</td><td>no fragmentation through the tunnel</td></tr>
+  </tbody>
+</table>
+
+<h3>What a provider must offer</h3>
+<table>
+  <thead><tr><th>Requirement</th><th>Must / should</th></tr></thead>
+  <tbody>
+    <tr><td>Boot our pinned Talos image (custom image upload or snapshot) with the machine config as user-data</td><td>must</td></tr>
+    <tr><td>Static public IPv4 per VM (IPv6 nice to have)</td><td>must</td></tr>
+    <tr><td>Unfiltered inbound TCP and UDP on any port, including 25, 3478 and the relay range; no provider-side L7 proxying</td><td>must</td></tr>
+    <tr><td>Inbound UDP 51820 from anywhere (backends roam)</td><td>must</td></tr>
+    <tr><td>Outbound: GHCR, DNS, NTP, and 443/8448 for masked egress. Outbound SMTP is <em>not</em> needed (mail leaves via a relay)</td><td>must</td></tr>
+    <tr><td>OpenTofu provider, hourly billing, boot to serving in ≤ 3 min</td><td>must</td></tr>
+    <tr><td>Acceptable-use policy that permits TURN relaying, inbound mail and game servers</td><td>must</td></tr>
+    <tr><td>Region in US East, ≥ 1 Gbit/s port, provider-side volumetric DDoS filtering</td><td>should</td></tr>
+    <tr><td>A second, unrelated provider for the other live slot</td><td>must (D3)</td></tr>
+  </tbody>
+</table>
+
+<h3>The first two providers</h3>
+<p class="small">Pricing and policy as found 2026-10-16; re-check in Phase 0.</p>
+<table>
+  <thead><tr><th></th><th>Hetzner Cloud (Ashburn)</th><th>DigitalOcean (NYC)</th></tr></thead>
+  <tbody>
+    <tr><td>Included outbound</td><td>1 TB per server in US regions (EU regions 20 TB); not pooled</td><td>Pooled per account; basic droplets add 500 GiB and up</td></tr>
+    <tr><td>Overage</td><td>about €1/TB</td><td>$0.01/GiB</td></tr>
+    <tr><td>Port 25</td><td>Inbound fine; outbound 25/465 blocked for new accounts</td><td>Inbound fine; outbound 25/465/587 blocked</td></tr>
+    <tr><td>Talos path</td><td><code>imager</code> snapshot, as timestone</td><td>Custom image from the factory URL <span class="pill verify">verify</span></td></tr>
+    <tr><td>Watch</td><td>A slot carrying everything for a month exceeds 1 TB: a few euros</td><td>The pool is shared with the DOKS node, whose Tor relay moves several TB/month</td></tr>
+  </tbody>
+</table>
+
+<h3>Traffic flows through an edge</h3>
+<table>
+  <thead><tr><th>Flow</th><th>Direction</th><th>Ports</th><th>Billed?</th></tr></thead>
+  <tbody>
+    <tr><td>Clients → edge</td><td>inbound</td><td>80, 443, 25, 587, 993, game ports, 3478, 3479, 8443, relay range</td><td>no</td></tr>
+    <tr><td>Edge → clients</td><td>outbound</td><td>same</td><td>yes — the main cost</td></tr>
+    <tr><td>Connector ↔ edge tunnel</td><td>backend dials in to 51820/udp</td><td>51820</td><td>edge→backend (requests, uploads, game input) is billed outbound; responses are free inbound</td></tr>
+    <tr><td>Masked egress (tinyproxy)</td><td>edge → internet</td><td>443, 8448</td><td>yes, small (Matrix federation ≈ 30 MB/day)</td></tr>
+    <tr><td>Image pulls</td><td>edge → GHCR</td><td>443</td><td>no (inbound); boot only</td></tr>
+    <tr><td>Health probes, Talos API</td><td>through the tunnel</td><td>443, 50000</td><td>negligible</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="contract">8. The per-app contract</h2>
+<p>Each backend has one manifest, kept in that backend's GitOps repo. It is the only thing an app owner edits to publish something or mask its egress. The backend's GitOps renders its connector from it. The edge pipeline renders from the commits pinned in <code>edge-tofu/manifest.lock</code>, so a new port ships backend-first and then edge-side, each as its own reviewed change.</p>
+
+<pre><code># argo/workloads/edge/manifest.yaml
+backend: home
+http:
+  to: kube-system/traefik                 # 80 + 443, PROXY v2
+  hosts: [john2143.com, "*.john2143.com", dsstar.us, balabusta.homes, "*.balabusta.homes",
+          au.2143.me, tasks.2143.me, chat.2143.me, llm.2143.me, net.2143.me, matrix.2143.me, m.2143.me]
+apps:
+  stalwart:  { ingress: { tcp: [25, 587, 993], to: stalwart/stalwart-stalwart, proxy: true, hosts: [m.2143.me] } }
+  openrct2:  { ingress: { tcp: [11753],        to: default/openrct2-game } }
+  minecraft: { ingress: { tcp: [25565],        to: default/minecraft-game } }
+  teamspeak: { ingress: { udp: [9987], tcp: [30033], to: default/ts } }
+  factorio:  { ingress: { udp: [34197],        to: default/factorio-game } }
+  livekit:   { egress:  none }
+  tuwunel:   { egress:  { proxy: { exclude: ["*.svc", "*.cluster.local", "au.2143.me"] } } }</code></pre>
+
+<pre><code># 2143-k8s/base/edge/manifest.yaml
+backend: do
+http:
+  to: nginx-gateway/apps-gateway-nginx    # 80 + 443, PROXY v2 (verify nginx-gateway support)
+  hosts: [2143.me, i.2143.me, labs.2143.me, grafana.2143.me, openfront.pro, "*.openfront.pro",
+          poe.sale, poe2.sale, 2143.gay, "*.2143.gay", 2143.moe, "*.2143.moe", 9s.pics, "*.9s.pics",
+          0x2b.pics, "*.0x2b.pics", devolved.us, "*.devolved.us", up.brick.gay, i.brick.gay,
+          i.dsstar.us, prod.john2143.com, i.prod.john2143.com]</code></pre>
+
+<pre><code># edge-tofu/edge.yaml — the edge platform's own services, not tied to a backend
+turn: { component: coturn, udp: [3478, "45000-45127"], tcp: [3478], hosts: [turn.john2143.com] }
+derp: { component: derper, udp: [3479], tcp: [8443],    hosts: [derp.edge.2143.me] }</code></pre>
+<p class="small">Host lists and Service names are illustrative; Phase 0 resolves them against the live clusters. <code>i.dsstar.us</code> (do) inside <code>dsstar.us</code> (home) is allowed: exact names don't collide.</p>
+
+<table>
+  <thead><tr><th>Key</th><th>On the edge</th><th>In the backend</th></tr></thead>
+  <tbody>
+    <tr><td><code>http.hosts</code></td><td>443: SNI → this backend's connectors. 80: Host → same. PROXY v2 on both.</td><td>HAProxy <code>accept-proxy</code> → <code>http.to</code>, re-sending PROXY v2</td></tr>
+    <tr><td><code>ingress.tcp</code></td><td>Stream listener per port → this backend's connectors, PROXY v2</td><td>HAProxy → <code>&lt;svc&gt;.&lt;ns&gt;.svc</code>, re-sending PROXY v2 only if <code>proxy: true</code></td></tr>
+    <tr><td><code>ingress.udp</code></td><td>Stream UDP listener → this backend's connectors</td><td>nft DNAT → Service ClusterIP + masquerade. The app sees the pod IP; UDP has no PROXY header.</td></tr>
+    <tr><td><code>egress: none</code></td><td>—</td><td>NetworkPolicy denying all non-cluster egress, IPv4 and IPv6</td></tr>
+    <tr><td><code>egress: proxy</code></td><td>tinyproxy on the tunnel address, CONNECT 443/8448</td><td>App proxy → <code>http://edge-connector.edge.svc:8888</code> (HAProxy → live slots) <em>plus</em> a NetworkPolicy denying direct internet</td></tr>
+    <tr><td><code>hosts</code></td><td>—</td><td>edge-controller publishes them to the live slots for that backend</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="mail">9. Mail</h2>
+<table>
+  <thead><tr><th>Domain</th><th>Inbound (MX)</th><th>Outbound</th><th>Affected?</th></tr></thead>
+  <tbody>
+    <tr><td><code>m.2143.me</code></td><td>Stalwart at home</td><td>Stalwart → Resend (relay route lives in Stalwart's datastore, not git; <code>docs/2026-09-20-stalwart-tem-outbound.md</code> still describes the previous TEM relay)</td><td>yes</td></tr>
+    <tr><td><code>john2143.com</code></td><td>Google Workspace</td><td>Google</td><td>no</td></tr>
+    <tr><td><code>2143.me</code> (apex)</td><td>Proton</td><td>Proton</td><td>no</td></tr>
+  </tbody>
+</table>
+
+<h3>Inbound: MX on the edges</h3>
+<p><code>m.2143.me</code> resolves to the live edges like any other name. Ports 25, 587 and 993 pass straight through with PROXY v2, so Stalwart terminates TLS, holds the keys, stores the mail, and sees the real sending server's address for SPF, reputation and rate limits. Without PROXY every message would appear to come from a connector pod and SPF would fail.</p>
+<div class="callout decide">
+  <p><strong>Is it bad that the MX lands on a droplet IP?</strong> Not for receiving. Address reputation and reverse DNS matter to the <em>sender</em>; servers delivering to us don't score our address. The edge holds no mail and no keys, both providers allow inbound 25, and senders queue and retry for days if an edge is replaced mid-delivery. The real requirements are:</p>
+  <ul>
+    <li><strong>MTA-STS in <code>enforce</code> mode plus TLS-RPT</strong> for <code>m.2143.me</code> (and DANE if <code>2143.me</code> is DNSSEC-signed <span class="pill verify">verify</span>). STARTTLS on port 25 is opportunistic; without a policy a hostile edge could strip it and read mail in transit. MTA-STS binds to the MX hostname and certificate, not the IP, so moving edges doesn't affect it.</li>
+    <li><strong>Remove <code>mx</code> from the <code>m.2143.me</code> SPF record</strong> before the MX moves. Otherwise every edge IP becomes an authorised sender. Edges never send mail.</li>
+    <li>A droplet IP would be bad as a <em>sending</em> address (shared cloud ranges, outbound 25 blocked). That is the case this design avoids: nothing sends direct-to-MX.</li>
+  </ul>
+</div>
+
+<h3>Outbound: through the relay</h3>
+<p>Recipients see Resend's servers, not ours. Two things to confirm:</p>
+<ul>
+  <li><strong>What the relay sees and stamps.</strong> Stalwart connects to Resend from the household WAN IP today. Whether Resend writes that address into a <code>Received</code> header that recipients can read is not documented. Phase 0 sends a test message to an outside mailbox and reads the raw headers. <span class="pill verify">verify</span></li>
+  <li><strong>If it leaks:</strong> send Stalwart's relay connection through masked egress. Both providers block common SMTP ports outbound (Hetzner 25/465, DigitalOcean 25/465/587); Resend also listens on 2465 and 2587, which neither blocks. Stalwart has no HTTP CONNECT support, so this would be a tunnel-level egress path rather than tinyproxy, and gets designed only if the header check fails.</li>
+  <li>Stalwart's own <code>Received</code> line for mail submitted by our clients records the client's address. That is expected and does not reveal a backend.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="supply">10. Supply chain &amp; deploy model</h2>
+<p>A new repository, <code>2143-Labs/edge-tofu</code>, laid out like <code>timestone-tofu</code>:</p>
+<pre><code>versions.json       Talos version + schematic, tofu + providers, every image digest, tool checksums
+images/             Dockerfiles we build (derper, tinyproxy, edge-connector) + mirror list for third-party images
+talos/              machine-config templates and patches (firewall, wireguard, static pods, files)
+edge.yaml           edge platform services (turn, derp)
+manifest.lock       pinned commit per backend: argo (home), 2143-k8s (do)
+tofu/               modules/edge (provider-agnostic) · providers/{hcloud,digitalocean,…} · slots.tf · dns-slots.tf
+bin/edge.py         render | verify | plan | roll | rotate-slot | drill — the same CLI CI uses
+deployments/        one JSON record per deploy: slot, provider, config hash, digests, approver, run URL
+.github/workflows/  pr.yml · release.yml · deploy.yml · nightly.yml</code></pre>
+
+<table>
+  <thead><tr><th>Stage</th><th>Runs on</th><th>Does</th><th>Leaves behind</th></tr></thead>
+  <tbody>
+    <tr><td>Pull request</td><td>GitHub-hosted</td><td>Build our images; mirror third-party images by digest; SBOM (syft, SPDX); vulnerability scan (grype; criticals fail unless an exception is recorded); render machine configs from every pinned manifest, failing on ownership conflicts; <code>tofu plan</code> against redacted inputs; post plan and rendered-config diff</td><td>PR checks, plan comment, SBOM artifacts</td></tr>
+    <tr><td>Merge</td><td>protected <code>main</code></td><td>Required checks, review, signed commits</td><td>git history</td></tr>
+    <tr><td>Release</td><td>GitHub-hosted (OIDC)</td><td>Keyless <code>cosign sign</code> each image; attest SBOM and SLSA provenance; bot PR records digests in <code>versions.json</code></td><td>Rekor entries, attestations in GHCR</td></tr>
+    <tr><td>Deploy</td><td><code>edge-deploy</code> runner, environment <code>edges</code> (approval)</td><td><code>bin/edge.py verify</code> (every digest signed by our release workflow identity, SBOM attested, Talos installer digest matches); read slot keys and tokens from OpenBao; <code>tofu apply</code>; roll one slot at a time behind the health gate; commit the deploy record</td><td>GitHub deployment, job log, <code>deployments/*.json</code>, OpenBao audit log</td></tr>
+    <tr><td>Nightly</td><td>GitHub-hosted + runner</td><td>Drift (<code>tofu plan</code> + Talos config hash vs last record); re-scan every running digest; confirm the pinned Talos image exists on every provider in rotation</td><td>reports, alerts</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <p><strong>Secrets on the edge.</strong> A slot's WireGuard key and the shared TURN secret are part of that edge's machine config, so they sit in provider user-data and in tofu state. State is encrypted and stored remotely. Anyone with access to that provider project can impersonate that one slot, which is no more than they can do by controlling the VM. <code>bin/edge.py rotate-slot sN</code> issues a new key, connectors pick it up, and the slot re-rolls.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="lifecycle">11. Lifecycle &amp; recovery</h2>
+<table>
+  <thead><tr><th>Event</th><th>What happens</th><th>Human</th><th>Target</th></tr></thead>
+  <tbody>
+    <tr><td>Add / replace an edge</td><td>Edit the slot's <code>{provider, region, size}</code>; PR → merge → approve. VM boots with its config; tofu writes the slot record; connectors re-resolve and dial; the controller sees two passing probes and publishes.</td><td>PR + approval</td><td>≤ 5 min after approval</td></tr>
+    <tr><td>Edge dies</td><td>Probe fails 3× (90 s) → slot withdrawn (TTL 60). Clients holding the other address retry immediately.</td><td>none</td><td>No visible outage with ≥ 2 live slots</td></tr>
+    <tr><td>Move providers</td><td>Same as replace with a different provider. Images are pre-imported everywhere in rotation.</td><td>PR + approval</td><td>≤ 5 min</td></tr>
+    <tr><td>Patch OS / component</td><td>Bump <code>versions.json</code> → release → deploy rolls slots one at a time. Never in place.</td><td>PR + approval</td><td>—</td></tr>
+    <tr><td>Publish a new name or port</td><td>Backend manifest PR, then <code>manifest.lock</code> bump PR.</td><td>2 PRs</td><td>—</td></tr>
+    <tr><td>Add a backend</td><td>Deploy the connector there with its own keys; add its repo and commit to <code>manifest.lock</code>; render checks ownership; roll.</td><td>PRs + approval</td><td>—</td></tr>
+    <tr><td>A backend's IP changes</td><td>The next keepalive from the new address re-establishes every tunnel, including the DO ↔ home link. Details and open questions: <a href="#ipchange">when the home IP changes</a>.</td><td>none</td><td>≤ 25 s after the WAN is back (≤ 3 min if the watchdog has to rebind)</td></tr>
+    <tr><td>Connector pod / node dies</td><td>Edges' health checks skip it; the pod reschedules with the same key.</td><td>none</td><td>≤ 5 s blip</td></tr>
+    <tr><td>A backend is down</td><td>Its names fail health on every slot and stop being published only if the controller can see that; other backends' names are unaffected.</td><td>none</td><td>—</td></tr>
+    <tr><td>All edges dead</td><td>The runner is at home; the deploy job recreates slots with no dependency on any edge or on headscale.</td><td>approve deploy</td><td>≤ 6 min</td></tr>
+    <tr><td>Edge compromised</td><td>Destroy the VM; rotate the slot key and the TURN secret; review logs for the window.</td><td>runbook</td><td>—</td></tr>
+    <tr><td>Break-glass</td><td>The same <code>bin/edge.py</code> from an operator machine on the tailnet; a post-hoc PR records what happened.</td><td>logged</td><td>—</td></tr>
+  </tbody>
+</table>
+<p>A weekly <code>edge-roll</code> replaces the oldest slot's VM. It is the patch cadence, a recovery drill, and evidence, all in one.</p>
+
+<h3 id="ipchange">When the home IP changes</h3>
+<p>The public address is Verizon DHCP behind two NATs: pod → node → MikroTik (masquerades to its own WAN address <code>192.168.0.2</code>, which does not change) → Verizon CR1000B (NATs to the public address, which can). Repo docs show the same address since at least 2026-08-10; how often Verizon changes it is unknown. A change most likely comes with a WAN outage or a CR1000B reboot, but a lease can also change with the link up.</p>
+<table>
+  <thead><tr><th>What depends on the home IP</th><th>Today</th><th>After this design</th><th>Understood?</th></tr></thead>
+  <tbody>
+    <tr><td>Public home names</td><td>home-pi DDNS rewrites them every 5 min, then resolvers wait out the TTL: roughly 5–10 min down</td><td>No record contains the home IP. Nothing to update.</td><td><span class="pill done">yes</span></td></tr>
+    <tr><td>Edge tunnels</td><td>—</td><td>Each connector's next keepalive (every 25 s) comes from the new address; the edge authenticates it and moves the peer's endpoint (WireGuard roaming). Edges accept 51820 from anywhere, so nothing on the edge changes.</td><td><span class="pill verify">mostly</span> Assumes the CR1000B drops its old UDP mappings. If it keeps one, keepalives every 25 s hold it open indefinitely and the tunnel stays dead with no error. Mitigation: a connector watchdog (handshake older than 180 s → rebind to a new source port, which forces a new mapping).</td></tr>
+    <tr><td>DO ↔ home link</td><td><code>wg set … endpoint john2143.com:51820</code> resolves the name once, when the pod starts, and never again; the router never dials (<code>endpoint-address=""</code>). <strong>A home IP change breaks the link until someone restarts <code>wireguard-doks</code></strong>, even after DDNS has fixed the name.</td><td>Home initiates (D14). The router's next keepalive arrives from the new address and DO follows it; DO stores no home address, so there is nothing to update (<a href="#dolink">the DO ↔ home link</a>).</td><td><span class="pill done">yes</span> once D14 is built; <span class="pill risk">no failover</span> today</td></tr>
+    <tr><td>edge-controller</td><td>—</td><td>Its probes run from home, so during the outage every slot fails for home at once. That pattern means the observer is down, not the edges: freeze, don't withdraw. (The never-empty rule already stops it withdrawing the last slot.) DO names are unaffected.</td><td><span class="pill verify">specify</span> in the controller</td></tr>
+    <tr><td>CrowdSec trust entries (<code>agent-whitelists.yaml</code> + five <code>clientTrustedIps</code>)</td><td>Static, edited by hand (<code>2026-10-05-ingress-o11y-hardening.md</code>). After a change the old address stays trusted, so whoever Verizon hands it to next bypasses CrowdSec, and household hairpin traffic from the new address is unexempted: the 2026-08-10 household-wide ban again.</td><td>Removed before the address changes (Phase 9): split horizon for every household client means nothing at home reaches its own services through the WAN address, so nothing needs trusting. Re-adding the new address is not an option: <code>argo</code> is a public repo.</td><td><span class="pill done">yes</span></td></tr>
+    <tr><td>Third-party allowlists naming the home IP (deSEC token <code>allowed_subnets</code>, Resend or DO API key restrictions, GitHub)</td><td>unknown</td><td>Any that exist break DNS publishing, certificate renewal or mail after a change.</td><td><span class="pill input">unknown</span> — Phase 0 inventory</td></tr>
+    <tr><td>IPv6</td><td>The Verizon v6 prefix changes more often than the v4 address</td><td>Connectors dial edges over IPv4 only, so a prefix change is never a roam.</td><td><span class="pill done">yes</span></td></tr>
+  </tbody>
+</table>
+<p><strong>Expected sequence after cutover.</strong> WAN drops: home names start failing at the edges within seconds (health checks), DO names keep working, the DO link goes down, the controller freezes. WAN returns with a new address: within one keepalive (25 s) the edge tunnels and the DO link are back with no change anywhere; if the CR1000B kept a stale mapping, the watchdog fixes it within 3 min. Nothing configured anywhere mentions the new address.</p>
+<p><strong>How it gets tested.</strong> WireGuard can't tell a new source port from a new source address, so roaming and the watchdog can be rehearsed any time by changing a connector's listen port. The real thing is the Phase 10 lease rotation (D13), which is also the first time the CR1000B's behaviour is observed. How to force a new FiOS address is itself a Phase 0 question.</p>
+
+<h3 id="homeip">Where the home IP lives</h3>
+<p>Storing the home IP outside the house is how it leaks, so the target is that it is stored nowhere. Today the current address is already permanently public: it is committed in <code>argo</code>, <code>dotfiles</code> (both public repos) and their history. That can't be undone, which is why the address is rotated (D13) rather than scrubbed, and why the <em>next</em> address must never be written down.</p>
+<table>
+  <thead><tr><th>Where</th><th>Today</th><th>Target</th></tr></thead>
+  <tbody>
+    <tr><td>Public DNS</td><td><code>john2143.com</code> and the other DDNS names; DNS history services</td><td>No record (Phase 9); history points at a dead address (Phase 10)</td></tr>
+    <tr><td><code>argo</code> (public)</td><td>CrowdSec whitelist, five <code>clientTrustedIps</code>, about ten docs</td><td>Config entries removed (Phase 9); docs keep naming a dead address</td></tr>
+    <tr><td><code>dotfiles</code> (public)</td><td>Router export (sniffer filter), network-engineer skill</td><td>Same. Router exports are scrubbed of addresses before commit (they will also hold the DO link address).</td></tr>
+    <tr><td>CrowdSec community signals</td><td>Past alerts on the household address</td><td>Dead address after rotation</td></tr>
+    <tr><td>DO node</td><td>Resolves <code>john2143.com</code> at start</td><td>Kernel memory only, learned from home's handshake</td></tr>
+    <tr><td>Edges</td><td>—</td><td>Kernel memory only, learned from each connector's handshake</td></tr>
+    <tr><td>Third parties (deSEC token subnets, Resend, DO API, GitHub)</td><td>unknown</td><td>none (Phase 0 inventory)</td></tr>
+  </tbody>
+</table>
+<p class="small">This hides the address from the services we host. Ordinary browsing from home still shows it to every site visited; that is outside this design.</p>
+
+<!-- ============================================================ -->
+<h2 id="decisions">12. Decisions</h2>
+<table>
+  <thead><tr><th>#</th><th>Topic</th><th>Decision</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>D1</td><td>Edge OS</td><td>Talos, same version and factory pattern as timestone (1.14.0 in <code>timestone-tofu/talos/versions.json</code>); schematic with only what the edge needs</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D2</td><td>Data plane</td><td>Plain WireGuard, initiated by each backend's connectors. Tailnet is the operator plane only.</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D3</td><td>Slots</td><td>4 defined, 2 live on 2 providers; each live slot sized to carry everything alone (<a href="#requirements">section 7</a>)</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D4</td><td>Providers</td><td>Hetzner Ashburn + DigitalOcean NYC first; another only once its Talos image + user-data path is proven</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D5</td><td>Repos</td><td>New <code>2143-Labs/edge-tofu</code>; each backend's manifest stays in that backend's repo, pinned by commit</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D6</td><td>Deploy runner</td><td>Dedicated ARC scale set in the home cluster, not the general CI VM</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D7</td><td>Signing</td><td>cosign keyless via GitHub OIDC; verification pins the release workflow identity on <code>main</code></td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D8</td><td>Registry</td><td>Edges and connectors pull only from <code>ghcr.io/2143-labs/edge-*</code>, by digest</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D9</td><td>TLS</td><td>Terminates in backends only. Edges route 443 by SNI and 80 by Host without holding any certificate.</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D10</td><td>Media</td><td>coturn on every edge; LiveKit at home with <code>egress: none</code>, reached via TURN/TLS on 443</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D11</td><td>Tailnet relays</td><td>headscale behind the edges; embedded DERP off; <code>derper</code> on edges; <code>derp-r</code> on DO retired</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D12</td><td>home-pi's tailnet (<code>headscale.9s.pics</code>, 6767, 8280)</td><td>Retire it. It was the first test; the tailnet control server is the in-cluster headscale.</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D13</td><td>Home IP</td><td>Rotate the FiOS lease after cutover so the historical address answers nothing. Only after Phase 9 has removed every configured copy, so the new address is never committed.</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D14</td><td>DO ↔ home private link</td><td>Keep the static WireGuard link with home as the initiator: the router pins DO's link address and sends keepalives; DO has no endpoint for home, learns it from the handshake and keepalives back. DO's link address survives node replacement (Reserved IP; edge rendezvous as fallback). DO's firewall allows 51820 from any source; DO filters <code>wg0</code> to Mongo; the router keeps its allowlist. (Briefly "retire it" in v5.1; restored because a static, silent, allowlisted link does not carry the shared-control-plane risk.)</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D15</td><td>Backends</td><td>One edge fleet, many backends: per-backend connectors and manifests, single-owner names and ports</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D16</td><td>Mail</td><td>MX on the edges with PROXY v2; outbound via Resend only; MTA-STS enforce + TLS-RPT; no <code>mx</code> in SPF</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D17</td><td>Tor relay</td><td>A relay must publish its own IP. Keep it on the DO node (that node stays identifiable), or move it to its own VM unrelated to any backend</td><td><span class="pill input">needs input</span></td></tr>
+    <tr><td>D18</td><td>Operator tailnet</td><td>Operators and their machines only. No backend is a subnet router or peer for another backend's traffic; the DO node leaves it; home subnet routes narrowed to what operators use</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D19</td><td>Certificates</td><td>Each backend holds certificates only for names it serves; no wildcard in a zone shared by two backends; CAA per name pins the issuing ACME account and DNS-01</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D20</td><td>External access to the house</td><td>Through the <a href="#doors">doors</a> in order: edges, tailnet, keyed WireGuard peers (home-initiated first). Every keyed peer or forward is a register row with its own ACL. A raw port forward needs a recorded decision.</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D21</td><td>Outage page</td><td>Owner requirement (2026-10-16): when a backend is unreachable, browsers get a branded "temporarily unavailable" page, not a timeout. Conflicts with D9: an edge that holds no certificate can't serve an HTTPS page for the name, and HSTS rules out falling back to port 80. Options: (a) edges hold certificates for browser-facing names and terminate only while no connector is healthy, so private keys sit on untrusted machines; (b) opt-in termination per hostname, the same switch as <a href="#cdn">section 16</a>; (c) accept a connection error when the backend is down. Separable and possible today: a Traefik <code>errors</code> middleware with a static page for 502–504 on browser-facing routes covers "app down, house up".</td><td><span class="pill input">needs input</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="roadmap">13. Roadmap</h2>
+<p>Everything is reversible until Phase 10. Router forwards, home-pi DDNS and the DO LoadBalancer stay in place until then, so DNS can always be pointed back.</p>
+
+<details open>
+  <summary>Phase 0 — Verify the unknowns (no changes) <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>Talos on each provider: image import path (Hetzner: <code>imager</code>, as timestone; DO: custom image from the factory URL) and machine config via user-data.</li>
+    <li>Talos edge mode: static pods from machine config, native WireGuard, ingress firewall documents in 1.14; whether a single-node control plane is required for static pods.</li>
+    <li>Sidero installer signature and SBOM availability; record the verification command.</li>
+    <li>headscale 0.29.3: HA subnet routes across three pods; external DERP map with <code>stunport</code>; disabling embedded DERP.</li>
+    <li>OpenBao: Kubernetes auth and an audit device (enable if absent).</li>
+    <li>deSEC write path from tofu for <code>s&lt;N&gt;.edge.2143.me</code>.</li>
+    <li>cert-manager: which certificates use HTTP-01 (DO's <code>i.dsstar.us</code> does) and moving them to DNS-01 so CAA can require it; each cluster's ACME account URI for CAA; deSEC token policies for a scoped controller token; whether headscale 0.29 has anything like Tailnet Lock.</li>
+    <li>PROXY protocol: Traefik <code>proxyProtocol.trustedIPs</code> with mixed PROXY/plain, Stalwart, nginx-gateway-fabric. Tuwunel CONNECT proxy; in-pod nft DNAT to a ClusterIP; LiveKit call with relay-only ICE.</li>
+    <li>Hostname ownership: list every public name per backend; resolve <code>files.john2143.com</code>.</li>
+    <li>Mail: Resend header check; MTA-STS hosting; DNSSEC status of <code>2143.me</code>.</li>
+    <li>Live MikroTik dst-nat table, WAN listeners and the Verizon CR1000B forwards (the export is stale); confirm the monero consumer; IPv6 inbound policy on the MikroTik and the Verizon router; that the CR1000B drops rather than rejects unforwarded UDP (the MikroTik already drops: <code>drop all not coming from LAN</code>), so 51820 looks like every closed port.</li>
+    <li>Home IP change: whether the CR1000B drops its UDP mappings when the WAN address changes; how to force a new FiOS address for the drill; every third-party allowlist that names the home IP (deSEC token subnets, Resend, DO API, GitHub).</li>
+    <li>DO ↔ home link: every flow on it (live rules: DO → Postgres 5432, Temporal 7233, SeaweedFS 8333, router DNS; home → Mongo 32040); whether a custom DO firewall rule for UDP 51820 can be attached to the DOKS node pool and survives node replacement; whether the DO exit node is still used.</li>
+    <li>DO link bootstrap: whether a DOKS node can hold a DO Reserved IP that a job reassigns on node replacement, its cost, and that <code>wireguard-doks</code> replies from it; for the fallback, a RouterOS API user scoped to one peer's endpoint and an edge endpoint hint. That the CR1000B forward preserves the router's source port 51820 outbound.</li>
+    <li>Outage page (D21): choose (a), (b) or (c). For (a) or (b): how an edge obtains and rotates a certificate without a backend's ACME account (DNS-01 with a scoped deSEC token; the CAA record for that name must then allow it). Independent of the edges: a Traefik <code>errors</code> middleware for 502–504 on browser-facing routes.</li>
+    <li>Provider pricing and port policies in <a href="#requirements">section 7</a>; DO transfer-pool use with the Tor relay counted.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> every item has an answer recorded here, or a fallback chosen.</p>
+</details>
+
+<details>
+  <summary>Phase 1 — Supply chain first <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>Create <code>edge-tofu</code>: <code>versions.json</code>, <code>images/</code>, <code>bin/edge.py</code>, PR and release workflows. Mirror nginx and coturn; build derper, tinyproxy and edge-connector; SBOM, scan, sign, attest.</li>
+    <li>Branch protection on <code>edge-tofu</code>, <code>argo</code> and <code>2143-k8s</code>: required checks, signed commits, no direct pushes. Environment <code>edges</code> requires approval.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> <code>bin/edge.py verify</code> passes on released digests and fails on a deliberately unsigned one.</p>
+</details>
+
+<details>
+  <summary>Phase 2 — Home backend <span class="pill todo">not started</span></summary>
+  <ol>
+    <li><code>argo/workloads/edge/</code>: manifest, connector, controller (dry-run), runner, NetworkPolicies, policy-controller, ExternalSecrets.</li>
+    <li>Traefik and Stalwart trust PROXY from the pod CIDR, gated by NetworkPolicy (the Traefik change is a closet rebuild).</li>
+    <li>Connectors dial edges over IPv4 only, with a watchdog: handshake older than 180 s → rebind to a new source port.</li>
+    <li><code>edge-health.2143.me</code> route → a minimal endpoint returning 200 and the caller's address (the probe target; the controller uses the address to notice a home IP change).</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> three connectors on three nodes; controller logs what it would publish; policy-controller rejects an unsigned image in <code>edge</code>.</p>
+</details>
+
+<details>
+  <summary>Phase 3 — First two edges, through the pipeline only <span class="pill todo">not started</span></summary>
+  <ol>
+    <li><code>s1</code> on Hetzner Ashburn, <code>s2</code> on DO NYC. PR → merge → approve. No manual applies.</li>
+    <li>Controller publishes one name: <code>status.2143.me</code>.</li>
+    <li>Run every drill in <a href="#verification">Verification</a> and record the timings.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> external request succeeds with the real client IP in Traefik's log; CrowdSec ban enforced through the edge; au.2143.me cold load 168/168 × 200; drills meet targets.</p>
+</details>
+
+<details>
+  <summary>Phase 4 — TCP and UDP services, and mail <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>Manifest entries for OpenRCT2, Minecraft, TeamSpeak, Factorio.</li>
+    <li>Mail: publish MTA-STS (enforce) and TLS-RPT; drop <code>mx</code> from SPF; then Stalwart's entry and <code>m.2143.me</code> on the edges.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> mail from an outside provider arrives with the sender's real address in Stalwart's log; IMAP and submission work from LTE; each game joins from outside; TeamSpeak voice works.</p>
+</details>
+
+<details>
+  <summary>Phase 5 — DigitalOcean backend <span class="pill todo">not started</span></summary>
+  <ol>
+    <li><code>2143-k8s/base/edge/</code>: manifest and two connectors; nginx-gateway accepts PROXY from them.</li>
+    <li>Pin <code>2143-k8s</code> in <code>manifest.lock</code>; render passes ownership checks; roll.</li>
+    <li>Certificates per D19: DO drops <code>*.2143.me</code> for its exact names; home drops <code>*.2143.me</code> and <code>*.john2143.com</code> coverage of DO names (exact names in shared zones); CAA per name for both backends.</li>
+    <li>Controller publishes one DO name (<code>labs.2143.me</code>), then the rest.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> DO sites served through both slots with real client IPs in nginx logs; killing the DO connectors withdraws only DO names.</p>
+</details>
+
+<details>
+  <summary>Phase 6 — Media <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>coturn on edges with peer restrictions (private ranges, CGNAT, loopback, the tunnel range). Coordinate with the TURN subtask of epic #160 (authenticate the credential endpoint).</li>
+    <li>Tuwunel and steam-lobby point at <code>turn.john2143.com</code>; LiveKit loses direct UDP and gets <code>egress: none</code>; in-cluster coturns and MetalLB <code>.14/.21/.22</code> removed.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> Matrix call LTE↔home; Heorot room from two external devices; TURN relay address is an edge IP; relaying to <code>10.61.0.11</code> is refused.</p>
+</details>
+
+<details>
+  <summary>Phase 7 — Masked egress for Matrix <span class="pill todo">not started</span></summary>
+  <p>tinyproxy on edges; Tuwunel federation on with <code>global.proxy.by_domain</code> → <code>edge-connector.edge.svc:8888</code>; NetworkPolicy denies its direct internet.</p>
+  <p class="exit"><strong>Exit:</strong> proxied <code>ifconfig.me</code> shows an edge IP; unproxied request fails; federation tester passes.</p>
+</details>
+
+<details>
+  <summary id="p8">Phase 8 — Tailnet behind the edges <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>DERP map → <code>derp.edge.2143.me</code>; embedded DERP off; <code>derp-r</code> retired.</li>
+    <li>DO ↔ home link (D14), before the DNS cutover: give DO a link address that survives node replacement (Reserved IP + reassign job, or edge rendezvous); <code>wireguard-doks</code> drops its endpoint and listens on fixed UDP 51820 (cloud firewall rule, any source); the router sets <code>endpoint-address</code> to DO's link address with a 25 s keepalive; the DO node filters <code>wg0</code> to Mongo only; handshake-age alert. Remove <code>home-endpoint</code>.</li>
+    <li>DO node off the home tailnet (D18): remove <code>tailscale-exit</code> from <code>2143-k8s</code>, or, if the exit node is still wanted, run it outside any backend.</li>
+    <li>Narrow the home subnet routes on <code>closet</code> and <code>arch</code> to what operators use.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> a phone on LTE joins and reaches a home node; <code>tailscale netcheck</code> shows the edge region; DO apps still reach Temporal and S3 and home still reaches Mongo, with <code>john2143.com</code> no longer in the DO config; across the link only those ports answer.</p>
+</details>
+
+<details>
+  <summary>Phase 9 — DNS cutover <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>Controller publishes every name of every backend. Delete the home-pi DDNS units.</li>
+    <li>Retire home-pi's headscale (D12; independent of the edges, can happen any time): stop headscale, delete the <code>headscale.9s.pics</code> DDNS unit and record, remove the Verizon 6767 (and 8280) forwards, and move or drop the remaining references in <code>dotfiles</code> (attic substituter and login in <code>nixos/cluster/modules/k3s-common.nix</code>, the default login server in <code>nixos/cluster/modules/tailscale.nix</code>, the johndeploy skill).</li>
+    <li>Split horizon for every household client (LAN, pods and tailnet), so nothing at home reaches its own services through the WAN address. Prerequisite: LAN DNS stage 2 (task 143, #23: pods resolve through lan-dns; gate 2026-10-18). Then delete the CrowdSec home-WAN whitelist and the five <code>clientTrustedIps</code> entries: the last configured copies of the home IP.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> no record in any of our zones resolves to a backend address, and no configuration anywhere contains the home IP.</p>
+</details>
+
+<details>
+  <summary id="p10">Phase 10 — Lock the doors <span class="pill todo">not started</span></summary>
+  <ol>
+    <li>Remove every MikroTik dst-nat <em>and</em> every Verizon CR1000B forward, except UDP 51820 for the DO link (keep disabled copies for a week).</li>
+    <li>Delete both DO LoadBalancers; close the DO cloud firewall to all inbound (except the Tor ORPort if D17 keeps it there).</li>
+    <li>Rotate the FiOS lease, only after Phase 9 (otherwise the new address would have to be committed to a public repo). This is the real IP-change drill (<a href="#ipchange">section 11</a>): every tunnel, including the DO link, must come back with no config change.</li>
+  </ol>
+  <p class="exit"><strong>Exit:</strong> TCP and UDP scans of the old and new home IP and the DO addresses show nothing open (UDP 51820 indistinguishable from closed; bar a D17 exception); every service works via edges.</p>
+</details>
+
+<details>
+  <summary>Phase 11 — Continuous controls <span class="pill todo">not started</span></summary>
+  <p>Nightly drift and re-scan; weekly <code>edge-roll</code>; alerts (ntfy) for live slots &lt; 2, stale handshakes per backend and on the DO ↔ home link, drift, new critical CVE in a running digest, and any deploy outside the pipeline. Write <code>edge-tofu/docs/controls.md</code> from the <a href="#soc2">SOC 2 mapping</a>.</p>
+  <p class="exit"><strong>Exit:</strong> one month of green nightly runs and four recorded weekly rolls.</p>
+</details>
+
+<!-- ============================================================ -->
+<h2 id="verification">14. Verification &amp; drills</h2>
+<h3>Leak checklist (after Phase 10, then monthly)</h3>
+<table>
+  <thead><tr><th>Surface</th><th>Check</th><th>Pass</th></tr></thead>
+  <tbody>
+    <tr><td>DNS</td><td>Every record in every zone via a public resolver</td><td>No backend address</td></tr>
+    <tr><td>Inbound</td><td>TCP + UDP scan of the old and new home IPv4, the home's public IPv6 addresses, and the DO node and former LoadBalancer addresses</td><td>Nothing open; UDP 51820 indistinguishable from closed (bar a D17 exception)</td></tr>
+    <tr><td>Split horizon</td><td>From inside each backend, resolve every public name it serves</td><td>Internal addresses, never an edge</td></tr>
+    <tr><td>Home IP at rest</td><td>Search every repo, Secret, DNS zone and firewall rule for the current home address</td><td>Not found (git history before the rotation excepted)</td></tr>
+    <tr><td>Isolation</td><td>From the DO node across <code>wg0</code>, probe home's LAN ranges; from home across the link, probe the DO node; from any edge, probe connector addresses beyond declared ports</td><td>Only Temporal 7233, SeaweedFS 8333 and router DNS (DO → home) and Mongo 32040 (home → DO) answer; nothing else</td></tr>
+    <tr><td>Certificates</td><td>Certificate Transparency log search for every zone; CAA records</td><td>Every certificate issued by the owning backend's account; no wildcard in a shared zone</td></tr>
+    <tr><td>Client IP</td><td>Traefik <code>ClientHost</code>, nginx-gateway log, Stalwart session log for external connections</td><td>The real client, not an edge or pod</td></tr>
+    <tr><td>UDP</td><td>Factorio join, TeamSpeak voice from outside</td><td>Work</td></tr>
+    <tr><td>Matrix egress</td><td>Proxied vs direct request from Tuwunel</td><td>Edge IP / blocked</td></tr>
+    <tr><td>Mail</td><td>Raw headers of a message sent to an outside mailbox; MTA-STS policy fetch</td><td>No backend address; policy in <code>enforce</code></td></tr>
+    <tr><td>TURN</td><td>External relay allocation; relay attempt into the tunnel range</td><td>Edge address / refused</td></tr>
+    <tr><td>Supply chain</td><td><code>bin/edge.py verify</code> against the digests each edge reports</td><td>All signed by our release identity, SBOM attested</td></tr>
+    <tr><td>Drift</td><td>Talos config hash on each edge vs <code>deployments/</code></td><td>Equal</td></tr>
+  </tbody>
+</table>
+<h3>Drills (Phase 3, then every weekly roll)</h3>
+<table>
+  <thead><tr><th>Drill</th><th>Target</th></tr></thead>
+  <tbody>
+    <tr><td>Destroy one of two live slots under a request loop</td><td>0 failed requests</td></tr>
+    <tr><td>Replace it on a different provider</td><td>≤ 5 min from approval to serving</td></tr>
+    <tr><td>Destroy every slot, redeploy</td><td>≤ 6 min to first successful external request</td></tr>
+    <tr><td>Delete one connector pod</td><td>≤ 5 s blip</td></tr>
+    <tr><td>Stop one backend's connectors</td><td>Only that backend's names fail</td></tr>
+    <tr><td>Restart <code>wireguard-doks</code>; replace the DO node</td><td>Link back ≤ 25 s, with no change on the router</td></tr>
+    <tr><td>Change the home IP (Phase 10; roaming can be rehearsed earlier by changing a connector's listen port)</td><td>Edge tunnels and the DO link back ≤ 25 s after the WAN returns; nothing configured mentions the new address</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="soc2">15. SOC 2 mapping</h2>
+<p>What evidence this design produces. This is not a compliance claim.</p>
+<table>
+  <thead><tr><th>Criterion</th><th>Control here</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>CC6.1 Logical access</td><td>No shell on edges; Talos API tunnel-only with mutual TLS; operators via tailnet + Pocket ID SSO; deploy credentials only in OpenBao</td><td>headscale ACL and OpenBao policies in git; OpenBao audit log</td></tr>
+    <tr><td>CC6.6 Boundary protection</td><td>Edges are the only public surface; default-deny edge firewall; no backend exposes a service (one silent WireGuard listener for the DO link); the DO link allowlisted on both ends; edges reach connectors on declared ports only</td><td>Rendered firewall in git; router export; DO firewall; scan and isolation results</td></tr>
+    <tr><td>CC6.7 Transmission</td><td>TLS end to end to backends; WireGuard edge↔backend; MTA-STS for mail</td><td>Config in git; TLS-RPT reports</td></tr>
+    <tr><td>CC6.8 Malicious software</td><td>Only signed, scanned images by digest; admission enforcement in <code>edge</code></td><td>Rekor, attestations, scan reports, admission logs</td></tr>
+    <tr><td>CC7.1 Config &amp; vulnerability monitoring</td><td>Nightly drift and re-scan</td><td>Nightly reports</td></tr>
+    <tr><td>CC7.2 Monitoring</td><td>Alerts on slot health, handshakes, drift, egress denials</td><td>Alert rules in git; alert history</td></tr>
+    <tr><td>CC8.1 Change management</td><td>PR, required checks, approval-gated environment, recorded deploys, post-hoc PR for break-glass</td><td>PRs, GitHub deployments, <code>deployments/*.json</code></td></tr>
+    <tr><td>CC9.2 Vendors</td><td>Providers are interchangeable subprocessors; Resend is the mail relay</td><td>Vendor list in <code>controls.md</code></td></tr>
+  </tbody>
+</table>
+<div class="callout bad">
+  <p><strong>Gaps this design does not close:</strong></p>
+  <ul>
+    <li><strong>Separation of duties.</strong> One person can't meaningfully review their own changes. Either a second reviewer for production changes, or a documented compensating control with explicit risk acceptance. <span class="pill input">needs input</span></li>
+    <li><strong>Scope.</strong> timestone treats the home cluster as nonprod. If home or DO services become in-scope systems, those clusters need their own audit logging, admission control, access reviews and backup evidence (much of it is epic #160). <span class="pill input">needs input</span></li>
+    <li>Policies, risk assessment, onboarding, incident response and vendor management are organizational controls, not infrastructure.</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="cdn">16. Toward a CDN (future, not committed)</h2>
+<p>Today the edges are proxies, not a CDN: they cache nothing because they never see plaintext. Becoming our own CDN for static, public content (the image hosts, site assets) means letting an edge terminate TLS for <em>specific hostnames</em> and cache their responses.</p>
+<table>
+  <thead><tr><th>Gain</th><th>Cost</th></tr></thead>
+  <tbody>
+    <tr><td>Static content served from the edge; backend uplinks carry only cache misses</td><td>That hostname's certificate and plaintext live on an untrusted, ephemeral machine</td></tr>
+    <tr><td>Floods against cached content never reach a backend</td><td>Cache invalidation, per-edge certificate issuance, a bigger edge image to sign and audit</td></tr>
+  </tbody>
+</table>
+<p>If we do it: opt in per hostname in the manifest (<code>cache: true</code>), short-lived certificates issued in the backend and rendered per slot, public content only, never anything behind a login. That would be a new decision recorded here first.</p>
+
+<!-- ============================================================ -->
+<h2 id="risks">17. Risks &amp; accepted trade-offs</h2>
+<table>
+  <thead><tr><th>Risk</th><th>Handling</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill risk">high</span> MongoDB on the DO LoadBalancer, port 4040 (see <a href="#today">section 1</a>)</td><td>Remove the listener, route, LB rule and firewall rule now; confirm nothing external uses it. Tracked on task 177 (#51), with the rest of the DO hygiene.</td></tr>
+    <tr><td><span class="pill risk">high</span> TURN as a pivot. Today's coturn has no peer restrictions and its credential endpoint is anonymous (epic #160). An edge coturn without restrictions could relay into the tunnel and reach connector pods.</td><td>Edge coturn denies private, CGNAT, loopback and tunnel ranges from day one; Phase 6 exit checks it; credential endpoint fixed under #160.</td></tr>
+    <tr><td>An edge sees each backend's IP (tunnel source)</td><td>Accepted. To remove it, connectors would dial out through a relay (e.g. the existing Mullvad endpoints): an extra hop and a third-party dependency. Deferred.</td></tr>
+    <tr><td>The mail relay sees the home IP, and may stamp it</td><td>Phase 0 header check; masked SMTP egress only if it leaks (<a href="#mail">section 9</a>).</td></tr>
+    <tr><td>Tor relay identifies the DO node</td><td>D17.</td></tr>
+    <tr><td>A home IP change leaves stale state behind</td><td>Stale CR1000B mapping: connector watchdog. CrowdSec trust entries: removed in Phase 9, before the rotation. DO link: home re-teaches DO on its next keepalive; nothing to update.</td></tr>
+    <tr><td>DO's link address doesn't survive a node replacement</td><td>Reserved IP reassigned by a DO-side job; edge rendezvous as fallback; handshake-age alert either way.</td></tr>
+    <tr><td>A backend outage shows as a connection error, not a branded page</td><td>D21 (needs input). Until then, a Traefik <code>errors</code> page covers "app down, house up".</td></tr>
+    <tr><td><span class="pill risk">high</span> headscale is already a path into the whole home LAN (approved subnet routes <code>192.168.5.0/24</code>, <code>192.168.6.0/24</code> on <code>closet</code> and <code>arch</code>), and it is internet-facing by necessity</td><td>D18: operators only, routes narrowed, DO node removed. Longer term, operator access to admin UIs by identity rather than LAN-wide routes (the policy's own warning about <code>192.168.6.11:443</code> says the same).</td></tr>
+    <tr><td><span class="pill risk">high</span> Both backends hold <code>*.2143.me</code></td><td>D19; Phase 5.</td></tr>
+    <tr><td>Split-horizon failure hairpins internal traffic through edges</td><td>Leak-checklist test from every backend; 650 GB/week of S3 traffic depends on it.</td></tr>
+    <tr><td>Slot key and TURN secret in provider user-data and tofu state</td><td>Encrypted remote state; per-slot keys; one-command rotation.</td></tr>
+    <tr><td>PROXY trust on pod CIDRs</td><td>NetworkPolicy so only connectors reach the PROXY listeners.</td></tr>
+    <tr><td>Transfer overage</td><td>Small at today's volume (Hetzner about €1/TB past 1 TB; DO $0.01/GiB past the pool). Alert at 70% of allowance.</td></tr>
+    <tr><td>LiveKit without direct UDP</td><td>Media is TCP-relayed. If quality suffers: a designated media slot whose IP the controller writes into LiveKit's <code>node_ip</code>.</td></tr>
+    <tr><td>Deploy runner as a path to the cluster</td><td>Dedicated scale set, namespace-scoped RBAC, environment-gated, fork guard. Aligns with #160's CI → cluster-admin subtask.</td></tr>
+    <tr><td>Talos specifics unverified</td><td>Phase 0 answers each before any code.</td></tr>
+    <tr><td>IPv6</td><td>The house has public IPv6: the MikroTik egresses via NAT66 from its SLAAC address on 2GWAN, and devices on the Verizon LAN (home-pi) get global addresses directly. Masked-egress NetworkPolicies must deny <code>::/0</code> as well as <code>0.0.0.0/0</code>; Phase 0 checks v6 inbound policy on both routers; the leak scan covers v6.</td></tr>
+    <tr><td>History</td><td>The current home address is in DNS history, community blocklist signals and the history of two public repos forever. Rotation (home) and LoadBalancer deletion (DO) make those addresses dead, not secret; the new home address is never stored outside the house.</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="open">18. Open questions</h2>
+<ul>
+  <li><span class="pill input">needs input</span> D17: Tor relay on the DO node, or on its own VM?</li>
+  <li><span class="pill input">needs input</span> SOC 2 scope: which systems are in scope?</li>
+  <li><span class="pill input">needs input</span> Separation of duties: second reviewer, or compensating control?</li>
+  <li><span class="pill input">confirm</span> monero inbound can be dropped.</li>
+  <li><span class="pill input">confirm</span> nothing outside the DO cluster uses Mongo on port 4040.</li>
+  <li><span class="pill input">needs input</span> Is the DO exit node (<code>doks-us-nyc</code>) still wanted? If not, it leaves the tailnet entirely (D18).</li>
+  <li><span class="pill input">needs input</span> D21: outage page — (a) edge-held certificates used only during an outage, (b) opt-in termination per hostname, or (c) accept a connection error?</li>
+  <li><span class="pill verify">verify</span> Everything listed under Phase 0.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="related">19. Related work</h2>
+<ul>
+  <li>Board "2143 Labs AI Tasks" (project 11). <strong>Tracking card: task 173 (#48)</strong>. Security epic: task 160 (referred to as "#160" in this doc), especially its TURN (task 161, #38) and CI → cluster-admin subtasks. Router segmentation: task 170 (#47); its router re-export must scrub addresses (<a href="#homeip">where the home IP lives</a>). DO hygiene: task 177 (#51) owns the Mongo 4040 removal, <code>derp-r</code> client verification until D11 retires it, the linkerd LoadBalancer and the stale DO DNS zones. LAN DNS stage 2: task 143 (#23), prerequisite for Phase 9. Trim public routes: task 162 (#39), which shrinks the first manifest. SOC 2 standard: task 146 (#25), which owns the scope question. "Add anubis": task 22 (#4, project 9) — compatible with this design; Anubis would sit behind Traefik at home.</li>
+  <li><a href="2026-08-09-ingress-hardening.md">2026-08-09 ingress hardening</a> — the current Traefik middlewares (rate limit, in-flight, CrowdSec).</li>
+  <li><a href="2026-10-05-ingress-o11y-hardening.md">2026-10-05 ingress + o11y hardening</a> — per-IP keying and the CrowdSec WAN whitelist that Phase 9 removes.</li>
+  <li><a href="2026-09-20-stalwart-tem-outbound.md">2026-09-20 Stalwart outbound relay</a> — how the relay route is stored and verified (describes TEM; the relay is now Resend).</li>
+  <li><code>2143-k8s/Readme.md</code> (WireGuard and Mongo sections) — the DO ↔ home link that D14 keeps, home-initiated after Phase 8.</li>
+  <li><code>timestone-tofu</code> — the Talos factory/imager pattern, pinned versions and guarded operator scripts this design reuses.</li>
+  <li><code>workloads/vpn-endpoints/</code> — the in-cluster WireGuard/tailscale pod pattern the connector follows.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="changelog">20. Changelog</h2>
+<table>
+  <thead><tr><th>Date</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>2026-10-10</td><td>Edge rate limits made generous (<code>75c84a3</code>, <code>ec9b89e</code>). Anubis evaluated: worthwhile only for public content, not a priority.</td></tr>
+    <tr><td>2026-10-12</td><td>v1: two VPS edges, NixOS, tunnel terminating on one home node. Rejected: single node in the path.</td></tr>
+    <tr><td>2026-10-12</td><td>v2: tunnel terminates on a StatefulSet in kube. Kept.</td></tr>
+    <tr><td>2026-10-13</td><td>v3: stock Debian edges on the tailnet. Rejected: not auditable (mutable OS, unsigned images, runtime config) and headscale still needed a home DNS record.</td></tr>
+    <tr><td>2026-10-13</td><td>v4: Talos edges, signed supply chain, home dials out over WireGuard, no home DNS.</td></tr>
+    <tr><td>2026-10-16</td><td>Adopted as the north star. Added: DO tunnel flip, Minecraft and headscale STUN to the inventory, TURN pivot risk, CDN direction.</td></tr>
+    <tr><td>2026-10-16</td><td>D12 decided: retire <code>headscale.9s.pics</code> (first test). Inventory corrected from the live router record: linkerd 4143 already removed, Verizon forwards are a second layer to close, the house has public IPv6.</td></tr>
+    <tr><td>2026-10-16</td><td>v5: backends abstracted (home and DigitalOcean, both hidden; <code>wg-ingress</code> renamed <code>edge-connector</code>); SNI/Host routing; edge requirements from measured traffic; mail section; DO public surface inventoried, including Mongo on port 4040. D14 changed from "flip the tunnel" to "move the link onto the tailnet". D15–D17 added. Phases renumbered 0–11.</td></tr>
+    <tr><td>2026-10-16</td><td>v5.1: trust boundaries. D14 reversed: no network link between backends (moving it onto the tailnet would have made headscale a key to both); cross-backend dependencies become <code>internal</code> services through the edges with mutual TLS. D18 (operator tailnet only) and D19 (per-backend certificates + CAA) added. Found: both clusters hold <code>*.2143.me</code>; headscale already routes to the whole home LAN; the DO node is a privileged exit node on the home tailnet.</td></tr>
+    <tr><td>2026-10-16</td><td>v5.2: D14 restored. The DO ↔ home WireGuard link stays: static keys and a silent listener are not the shared-control-plane risk that made the tailnet a bad fit. Changes: DO dials the home IP from a Secret instead of <code>john2143.com</code>, DO filters <code>wg0</code> to Mongo, handshake-age alert. The <code>internal</code> contract key from v5.1 is removed (nothing needs it).</td></tr>
+    <tr><td>2026-10-16</td><td>v5.3: home-IP-change analysis (<a href="#ipchange">section 11</a>). Found: today's DO link does not survive a home IP change (the endpoint name is resolved once at pod start; the router never dials). D14 now pins both ends with keepalives on both sides so either address can change. Added: connector watchdog and IPv4-only dialing, controller freeze on all-slot failure, WAN-address mismatch alert for CrowdSec. Corrected the router allowlist from the live rules (Postgres 5432 and router DNS were missing).</td></tr>
+    <tr><td>2026-10-16</td><td>v5.4: home bootstraps the DO link. DO stores no home address (no Secret): the router initiates and keeps alive, DO learns the endpoint from the handshake and keeps alive back. DO's link address survives node replacement (Reserved IP; edge rendezvous fallback). Added: the home IP as soft state (requirement 4, "where the home IP lives"), doors into the house with a register (D20), Phase 9 removes every configured copy before the Phase 10 rotation. Found: <code>argo</code>, <code>dotfiles</code> and <code>2143-k8s</code> are public, and the first two already contain the current home address.</td></tr>
+    <tr><td>2026-10-17</td><td>v5.5: D21 (branded outage page: owner requirement, conflicts with D9, needs input) with a Phase 0 item and a risk row. Board reconciliation: Phase 9's split horizon names LAN DNS stage 2 (#23) as its prerequisite; Mongo 4040, <code>derp-r</code> verification and the DO DNS zones are tracked on #51; #39 (trim public routes) shrinks the first manifest; #25 owns the SOC 2 scope question. Fixed two stale references (D14 keeps the DO link; the CrowdSec whitelist is removed in Phase 9, not updated in Phase 10).</td></tr>
+  </tbody>
+</table>
+
+</main>
+</body>
+</html>

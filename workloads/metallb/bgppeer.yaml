@@ -8,3 +8,10 @@ spec:
   peerASN: 65001
   peerAddress: 192.168.5.1
   dualStackAddressFamily: true
+  # BFD: a dead or stalled node is withdrawn in ~1.5 s instead of the 180 s hold time.
+  bfdProfile: router-bfd
+  # The router only listens (connection metallb-speakers, connect=no); redial
+  # within 5 s after any session reset instead of FRR's 30-120 s default.
+  connectTime: 5s
+  # enableGracefulRestart stays unset (false): with GR negotiated, FRR skips
+  # the Cease on shutdown and the router would keep stale routes.

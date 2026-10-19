@@ -1,0 +1,10 @@
+apiVersion: metallb.io/v1beta1
+kind: BFDProfile
+metadata:
+  name: router-bfd
+  namespace: metallb-system
+spec:
+  # Matches /routing bfd configuration on the MikroTik: 300 ms x 5 = 1.5 s detection.
+  receiveInterval: 300
+  transmitInterval: 300
+  detectMultiplier: 5
