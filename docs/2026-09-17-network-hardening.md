@@ -1,5 +1,7 @@
 # Network hardening — state and design
 
+> **Correction 2026-10-15:** Traefik's VIP pair (`192.168.6.6`, `fd00:6::6`) comes from the dedicated MetalLB `ingress` pool and the Service pins no address; both addresses sit outside the `services` ranges. See [2026-10-15-fungible-ingress.md](2026-10-15-fungible-ingress.md).
+
 Written 2026-09-17, finalised 2026-09-18 after the outage described below.
 This is the running record for the network hardening effort: what is live, what
 is written but not deployed, what is deliberately deferred, and which facts were

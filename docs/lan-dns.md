@@ -126,6 +126,12 @@ Zones: `2143.me`, `john2143.com`, `aross.studio`, `balabusta.homes`,
   transition. The earlier script re-checked 3 times once; on 2026-10-16 one of
   those checks succeeded while lan-dns was going unready, so it never failed over
   and the forwards pointed at an unreachable resolver for 3 hours.
+- **WAN ingress follows lan-dns.** Router script `ingress-follow` (netwatch
+  `test-script`, every 1 min) resolves `john2143.com` through the router's DNS
+  and points the WAN 80/443 dst-nat rules at the answer when it is inside
+  `192.168.6.0/24`. While lan-dns is down the router resolves publicly, the
+  guard rejects the answer, and the last target is kept
+  ([record](2026-10-15-fungible-ingress.md)).
 - **Alerts** (`workloads/observability/grafana-dashboards/lan-dns-alerts.yaml`):
   `lan-dns-replicas` (fewer than 2 available pods for 5 min) and
   `lan-dns-failover` (any `lan-dns down` warning from the router in 15 min).

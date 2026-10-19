@@ -236,7 +236,16 @@ in use by <ns>/<svc>`.
 - **WAN access?** Two forwards are needed: the Verizon router to `192.168.0.2`
   and a MikroTik dst-nat to the `.6.x` IP (LAN-only services need neither).
   Steps, the live port table and how to prove it from outside:
-  [network-edge.md](network-edge.md).
+  [network-edge.md](network-edge.md). WAN 80/443 are the exception: their target
+  is the ingress VIP and router script `ingress-follow` keeps it current
+  ([record](2026-10-15-fungible-ingress.md)).
+- **Long-lived flows (games, voice, TURN) -> `externalTrafficPolicy: Local`.**
+  With `Cluster` every speaker announces the VIP and the router ECMP-hashes
+  across them, so any node draining or joining breaks part of the live
+  sessions. `Local` announces only from the pod's node and keeps real client
+  IPs. The pod must not tolerate the `pi` or `wifi` taints, and a namespace
+  with NetworkPolicy needs explicit source rules
+  ([node maintenance](node-maintenance.md)).
 
 ### Pitfalls (verified 2026-08-13)
 

@@ -106,11 +106,13 @@ WAN address always fails (ICMP is filtered upstream).
   router's DNS and rewrites both dst-nat rules when the answer (inside
   `192.168.6.0/24`) differs. Never edit those two rules' targets by hand; the
   script reverts them within a minute.
-- **Traefik's address is pinned in dotfiles**, not in this repo: the k3s
-  HelmChartConfig in `dotfiles/nixos/closet-configuration.nix` sets
-  `metallb.io/loadBalancerIPs: "192.168.6.11,fd00:6::10"`. It must list both
-  families. A v4-only value on a dual-stack Service makes MetalLB release the
-  address, which took every public site down on 2026-10-15 and 10-16.
+- **Traefik's address is not pinned anywhere.** The k3s HelmChartConfig in
+  `dotfiles/nixos/closet-configuration.nix` sets
+  `metallb.io/address-pool: ingress`; the pair (`192.168.6.6`, `fd00:6::6`)
+  lives only in the `ingress` IPAddressPool. A single-family
+  `metallb.io/loadBalancerIPs` pin on this dual-stack Service made MetalLB
+  release the address and took every public site down on 2026-10-15 and 10-16
+  ([record](2026-10-15-fungible-ingress.md)).
 
 ## Router access and recovery
 

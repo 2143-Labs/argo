@@ -1,5 +1,7 @@
 # MetalLB IPv6 dual-stack rollout (2026-08-12/13)
 
+> **Correction 2026-10-15:** Traefik's VIP pair (`192.168.6.6`, `fd00:6::6`) comes from the dedicated MetalLB `ingress` pool and the Service pins no address; both addresses sit outside the `services` ranges. The five per-node router connections `metallb-*` are replaced by one listener `metallb-speakers` (192.168.5.0/24, address-list `k8s-nodes`, filter `metallb-in`, BFD); afi is set on that connection directly. See [2026-10-15-fungible-ingress.md](2026-10-15-fungible-ingress.md).
+
 Derived from live verification during rollout: `kubectl get svc -A`,
 `mikrotik-connect r` session/route dumps, frr-k8s rendered config, and
 non-cluster-host TCP probes.
