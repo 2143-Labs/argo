@@ -1,7 +1,7 @@
 # Fungible ingress -- 2026-10-15 outage, root cause and redesign
 
 **Date:** 2026-10-15 (redesign executed 2026-10-19)
-**Status:** Complete, except ECMP (trialled and reverted, follow-up #78) and pite's own rebuild and migration.
+**Status:** Complete, except ECMP (trialled and reverted, follow-up #78).
 
 ## Outage
 
@@ -116,9 +116,10 @@ listener one at a time, each with a 6-minute dead-man script that would have
 re-enabled the named connection if the move had gone wrong (the idiom was
 proved first with a non-disruptive `fe-revert-test`). Each node verified:
 session `E` under the listener, BFD `up` (300/300, multiplier 5), and prefix count
-back to its baseline. `pite` still uses its named connection `metallb-pite`
-because its rebuild has not completed; it announces nothing either way (the
-label and `spec: {}` both exclude it), and it moves last.
+back to its baseline. `pite` moved last, after its own rebuild opened UDP 3784: its session came up
+on the listener with BFD `up` and, like the others, it advertises nothing (the
+label and `spec: {}` both exclude it). With that, the last named connection
+`metallb-pite` was removed -- the router now holds exactly one BGP connection.
 
 ECMP was trialled last (`multipath=16` on the instance) and **reverted**. With it
 enabled, TLS connections on the WAN hairpin path died mid-handshake (`curl: (35)
