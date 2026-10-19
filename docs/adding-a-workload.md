@@ -182,7 +182,7 @@ spec:
 Notes:
 - `allocateLoadBalancerNodePorts: false` deallocates the service's nodePorts on
   apply — the LB IP becomes the only access path (frigate, lan-dns). Older
-  LB services (mosquitto, ts-*, …) still carry auto-assigned nodePorts;
+  LB services (mosquitto, …) still carry auto-assigned nodePorts;
   add the flag when you touch them to reclaim the node-port exposure.
 - **Keep v4 and v6 offsets identical** (`192.168.6.2X` ↔ `fd00:6::2X`).
 

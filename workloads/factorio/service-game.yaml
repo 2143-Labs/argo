@@ -11,6 +11,9 @@ metadata:
 spec:
   type: LoadBalancer
   allocateLoadBalancerNodePorts: false
+  # Local: only the node running the pod announces this VIP, so draining any
+  # other node never re-hashes live players (argo docs/node-maintenance.md).
+  externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
   selector: {app: factorio}

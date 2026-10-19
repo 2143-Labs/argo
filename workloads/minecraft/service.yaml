@@ -1,12 +1,11 @@
 # MetalLB dual-stack LoadBalancer for the Minecraft game port (TCP 25565).
 #
 # LAN clients connect to 192.168.6.29:25565 directly (hairpin NAT was removed
-# 2026-05-29). WAN clients reach it via a MikroTik dst-nat rule on tcp/25565 —
-# NOT yet present; see the notes in the runbook.
+# 2026-05-29). WAN clients reach it via the MikroTik dst-nat
+# "minecraft (tcp/25565) -> .6.29".
 #
-# 192.168.6.29 / fd00:6::29 sit inside the 'services' IPAddressPool
-# (192.168.6.10-192.168.6.200, fd00:6::10-fd00:6::ff) and were unallocated as of
-# 2026-09-26 (.11 and .13-.24, .26-.28 were taken).
+# 192.168.6.29 / fd00:6::29 are pinned from the 'services' IPAddressPool
+# (workloads/metallb/ipaddresspool.yaml).
 #
 # allocateLoadBalancerNodePorts is false: the .6.x address is the only entry
 # point, so no ports are consumed from the 30000-32767 node-port range. The old
@@ -21,6 +20,9 @@ metadata:
 spec:
   type: LoadBalancer
   allocateLoadBalancerNodePorts: false
+  # Local: only the node running the pod announces this VIP, so draining any
+  # other node never re-hashes live players (argo docs/node-maintenance.md).
+  externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   ipFamilies: [IPv4, IPv6]
   selector: {app: minecraft}
