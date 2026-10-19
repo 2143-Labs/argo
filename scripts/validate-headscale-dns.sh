@@ -17,7 +17,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 # The shared-gateway (traefik) LoadBalancer address: the traefik row of the IP
 # allocation table in docs/adding-a-workload.md §5.
-gateway_ip=192.168.6.11
+gateway_ip=192.168.6.6
 cm=workloads/headscale/configmap.yaml
 route_kinds='.kind == "HTTPRoute" or .kind == "TLSRoute" or .kind == "GRPCRoute"'
 

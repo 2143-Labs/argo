@@ -112,7 +112,7 @@ Add one A record so the name resolves on the tailnet (MagicDNS). Every record po
 # <sub>.ts.2143.me
 - name: "<sub>.ts.2143.me"
   type: "A"
-  value: "192.168.6.11"
+  value: "192.168.6.6"
 ```
 
 Remove the record in the same commit that removes the route.
@@ -126,7 +126,7 @@ A public hostname carries an edge gate instead of `lan-only`. Pick the gate from
 ### e. LAN and cluster DNS (automatic)
 
 Nothing to do for LAN clients or pods: `lan-dns` answers every HTTPRoute/TLSRoute
-hostname on `shared-gateway` with the gateway address (`192.168.6.11`) within about
+hostname on `shared-gateway` with the gateway address (`192.168.6.6`) within about
 a minute, as long as the hostname is inside one of its zones (`2143.me`,
 `john2143.com`, `aross.studio`, `balabusta.homes`, `chess.dsstar.us`,
 `mm.b.hero.rehab`). CI (`scripts/validate-lan-dns-zones.sh`) fails if it isn't.
@@ -184,14 +184,13 @@ Notes:
   apply — the LB IP becomes the only access path (frigate, lan-dns). Older
   LB services (mosquitto, ts-*, …) still carry auto-assigned nodePorts;
   add the flag when you touch them to reclaim the node-port exposure.
-- **Keep v4 and v6 offsets identical** (`192.168.6.2X` ↔ `fd00:6::2X`) unless
-  there's a collision reason (exception: traefik `::10`).
+- **Keep v4 and v6 offsets identical** (`192.168.6.2X` ↔ `fd00:6::2X`).
 
 ### IP allocation table (current)
 
 | Service | v4 | v6 |
 |---|---|---|
-| traefik (kube-system; pinned by the k3s HelmChartConfig in dotfiles, both families) | 192.168.6.11 | fd00:6::10 |
+| traefik (kube-system; `ingress` pool via `metallb.io/address-pool` in the k3s HelmChartConfig in dotfiles, no address pin) | 192.168.6.6 | fd00:6::6 |
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
 | steam-lobby coturn (TURN) | 192.168.6.14 | fd00:6::14 |
 | ts-voice (9987) | 192.168.6.15 | fd00:6::15 |

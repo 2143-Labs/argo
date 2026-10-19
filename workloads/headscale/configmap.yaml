@@ -94,7 +94,7 @@ data:
         },
         // Home users: friends and family John knows in person.
         //
-        // WARNING: 192.168.6.11:443 fronts EVERY *.ts.2143.me host, including the
+        // WARNING: 192.168.6.6:443 fronts EVERY *.ts.2143.me host, including the
         // admin UIs (ArgoCD, OpenBao, Longhorn, UniFi). Traefik's lan-only
         // middleware admits the whole tailnet (100.64.0.0/10) and cannot tell John
         // apart from another member, so ANY member added here reaches all 12 hosts.
@@ -179,51 +179,51 @@ data:
         # home.ts.2143.me
         - name: "home.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # files-ui.ts.2143.me
         - name: "files-ui.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # longhorn.ts.2143.me
         - name: "longhorn.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # argocd.ts.2143.me
         - name: "argocd.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # immich.ts.2143.me
         - name: "immich.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # cameras.ts.2143.me
         - name: "cameras.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # cams.ts.2143.me
         - name: "cams.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # temporal.ts.2143.me
         - name: "temporal.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # unifi.ts.2143.me
         - name: "unifi.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # openbao.ts.2143.me
         - name: "openbao.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # stalwart.ts.2143.me
         - name: "stalwart.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
         # mail.ts.2143.me
         - name: "mail.ts.2143.me"
           type: "A"
-          value: "192.168.6.11"
+          value: "192.168.6.6"
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
 
