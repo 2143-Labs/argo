@@ -35,7 +35,7 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 
 | Verizon entry | WAN port | MikroTik rule (comment) | Target | Service |
 |---|---|---|---|---|
-| web, web3 | 80, 443 | `traefik http (tcp/80) -> .6.11`, `traefik https (tcp/443) -> .6.11` | `.6.11` | Traefik (`shared-gateway`) |
+| web, web3 | 80, 443 | `ingress http (tcp/80) -> traefik VIP (ingress-follow)`, `ingress https (tcp/443) -> traefik VIP (ingress-follow)` | ingress VIP (`.6.6`; kept current by router script `ingress-follow`) | Traefik (`shared-gateway`) |
 | mail-smtp, mail-submission, mail-imap | 25, 587, 993 | `mail-smtp (tcp/25) -> .6.13` and the 587/993 twins | `.6.13` | stalwart |
 | Coturn TURN | 3478 | `steam-lobby coturn TURN (tcp/3478) -> .6.14`, `… (udp/3478) …` | `.6.14` | steam-lobby/coturn |
 | p2p relays | 45000-45063 | `steam-lobby coturn relay (udp/45000-45063) -> .6.14` | `.6.14` | steam-lobby/coturn relay range |
@@ -100,6 +100,12 @@ WAN address always fails (ICMP is filtered upstream).
   on the bridge. MetalLB's `/32` and `/128` routes override them. Rollback, if a
   `.6.x` address must ever be on the bridge again:
   `/ip address add address=192.168.6.1/24 interface=bridge comment="rollback: service pool connected"`.
+- **WAN 80/443 follow the cluster.** Script `ingress-follow` (source
+  `dotfiles/network-configs/scripts/ingress-follow.rsc`), run every minute by the
+  `test-script` of netwatch `ingress-follow`, resolves `john2143.com` through the
+  router's DNS and rewrites both dst-nat rules when the answer (inside
+  `192.168.6.0/24`) differs. Never edit those two rules' targets by hand; the
+  script reverts them within a minute.
 - **Traefik's address is pinned in dotfiles**, not in this repo: the k3s
   HelmChartConfig in `dotfiles/nixos/closet-configuration.nix` sets
   `metallb.io/loadBalancerIPs: "192.168.6.11,fd00:6::10"`. It must list both
