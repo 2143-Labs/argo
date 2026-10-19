@@ -1,7 +1,7 @@
 # Fungible ingress -- 2026-10-15 outage, root cause and redesign
 
 **Date:** 2026-10-15 (redesign executed 2026-10-19)
-**Status:** Complete for the ingress move, router listener, BFD, Local games and alerts. ECMP (Step 9) and pite's own migration are still to run; see "Peering and failure detection".
+**Status:** Complete, except ECMP (trialled and reverted, follow-up #78) and pite's own rebuild and migration.
 
 ## Outage
 
@@ -70,7 +70,7 @@ pin must name both families.
 | 11 | argo | (this commit) | record, `node-maintenance.md`, guide corrections |
 | interim | dotfiles | `d5a830f` | dual-stack pin (superseded by 3.1) |
 | upgrade | router | -- | 7.19.6 -> 7.24.5, 2026-10-17 (owner) |
-| 6 | router | -- | `metallb-speakers` listener, `k8s-nodes` admission, `metallb-in` filter, BFD, router-id pin, node migrations (captured by the 9.3 baseline export) |
+| 6/9 | router | -- | `metallb-speakers` listener, `k8s-nodes` admission, `metallb-in` filter, BFD, router-id pin, `multipath=16` trialled and reverted, node migrations (captured by the 9.3 baseline export) |
 
 ## How the router follows the cluster
 
@@ -119,6 +119,17 @@ session `E` under the listener, BFD `up` (300/300, multiplier 5), and prefix cou
 back to its baseline. `pite` still uses its named connection `metallb-pite`
 because its rebuild has not completed; it announces nothing either way (the
 label and `spec: {}` both exclude it), and it moves last.
+
+ECMP was trialled last (`multipath=16` on the instance) and **reverted**. With it
+enabled, TLS connections on the WAN hairpin path died mid-handshake (`curl: (35)
+Recv failure: Connection reset by peer`, after ServerHello) while plain HTTP on
+port 80 and direct-to-VIP traffic kept working. The A/B was unambiguous: unsetting
+`multipath` restored `301`/`200` immediately, re-enabling reproduced the failure,
+and `ipv4-multipath-hash-policy=l4` only moved which hostnames broke. The route
+shapes themselves were correct (`.6.6/32` and `fd00:6::6/128` as `+` routes over
+the two Traefik nodes, `.29/32` single), so the mechanism works and the loss is in
+flow delivery -- follow-up #78. BFD alone still gives ~1.5 s withdrawal, which is
+the property that matters.
 
 Admission was proved end to end: a TCP probe from office (in `k8s-nodes`, no
 speaker) connected; with its address-list entry disabled the probe failed and
@@ -188,6 +199,7 @@ hours.
 - #75 CNPG: graceful disruption -- drains switch over instead of blocking.
 - #76 Longhorn: single-replica non-CNPG volumes block drains.
 - #77 big: frr-k8s container restart loop (probe timeout vs CPU pressure).
+- #78 ECMP breaks TLS on the WAN hairpin path -- investigate before re-enabling.
 
 ## Remaining address literals
 
