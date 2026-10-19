@@ -8,6 +8,7 @@ spec:
   description: Default project
   sourceRepos:
     - https://github.com/2143-Labs/argo.git
+    - https://github.com/2143-Labs/status.git
     - https://github.com/kubernetes-sigs/gateway-api.git
     - https://argoproj.github.io/argo-helm
     - https://cloudnative-pg.github.io/charts
