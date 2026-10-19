@@ -1,0 +1,48 @@
+# One Application per open PR in 2143-Labs/status, rendered from the PR's own
+# commit and served at https://status-{N}.john2143.com.
+#
+# No image build: the chart turns designs/*.html into a ConfigMap, so the preview
+# shows exactly what the PR contains. Closing the PR prunes the namespace, the
+# route and the page. Pattern copied from steam-lobby-preview.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: status-design-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: status
+          tokenRef: { secretName: github-token, key: token }
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'status-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/status.git
+        targetRevision: '{{.head_sha}}'
+        path: .
+        helm:
+          parameters:
+            - { name: namespace, value: 'status-pr-{{.number}}' }
+            - { name: host, value: 'status-{{.number}}.john2143.com' }
+            - { name: routeName, value: 'status-pr-{{.number}}' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'status-pr-{{.number}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

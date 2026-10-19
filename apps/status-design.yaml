@@ -1,0 +1,30 @@
+# Design gallery: every merged design at https://status.john2143.com/*.html
+# Serves the `main` branch of 2143-Labs/status. Previews are separate (see
+# status-design-preview.yaml); production status lives on its own host.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: status-design
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/status.git
+    targetRevision: main
+    path: .
+    helm:
+      parameters:
+        - { name: namespace, value: status-design }
+        - { name: host, value: status.john2143.com }
+        - { name: routeName, value: status-design }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: status-design
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
