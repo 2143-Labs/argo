@@ -8,6 +8,21 @@ spec:
   - 192.168.6.10-192.168.6.200
   - fd00:6::10-fd00:6::ff
 ---
+# The ingress VIP pair (WAN/LAN entry point, Traefik). Exactly one address per
+# family so the dual-stack Traefik Service gets both from one pool without
+# pinning either. autoAssign: false keeps every other Service off it; only a
+# Service annotated `metallb.io/address-pool: ingress` can take it.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: ingress
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.6.6-192.168.6.6
+  - fd00:6::6-fd00:6::6
+  autoAssign: false
+---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
