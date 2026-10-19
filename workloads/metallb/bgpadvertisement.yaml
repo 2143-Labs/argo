@@ -3,11 +3,8 @@ kind: BGPAdvertisement
 metadata:
   name: bgp
   namespace: metallb-system
-spec:
-  # Keep the 1G Pi running Mullvad out of service and API VIP routing.
-  # The remaining speakers still advertise; pite's BGP peering stays intact.
-  nodeSelectors:
-    - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: NotIn
-          values: ["pite"]
+# Advertise every pool from every speaker. Nodes that must not announce carry
+# the label node.kubernetes.io/exclude-from-external-load-balancers (pite
+# permanently, drained nodes temporarily) - argo docs/node-maintenance.md.
+# Never use hostname selectors here.
+spec: {}
