@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-lifecycle
+  labels: {app: seaweedfs-lifecycle}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: seaweedfs-lifecycle}}
+  template:
+    metadata: {labels: {app: seaweedfs-lifecycle}}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values: [nas]
+      tolerations:
+      - {key: wifi, operator: Equal, value: no-network-storage, effect: NoSchedule}
+      containers:
+      - name: admin
+        image: chrislusf/seaweedfs:4.48
+        args: ["admin", "-master=seaweedfs-master:9333", "-port=23646", "-dataDir=/data/admin"]
+        resources:
+          requests: {cpu: 10m, memory: 64Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        volumeMounts: [{name: data, mountPath: /data}]
+      - name: worker
+        image: chrislusf/seaweedfs:4.48
+        args: ["worker", "-admin=127.0.0.1:23646", "-jobType=s3_lifecycle", "-workingDir=/data"]
+        resources:
+          requests: {cpu: 10m, memory: 64Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        volumeMounts: [{name: data, mountPath: /data}]
+      volumes:
+      - name: data
+        emptyDir: {}
