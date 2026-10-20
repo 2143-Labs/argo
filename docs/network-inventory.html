@@ -79,6 +79,17 @@
   .counts { display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0 1.5rem; }
   .counts div { border:1px solid var(--line); border-radius:9px; padding:.5rem .8rem; background:var(--panel); font-size:.9rem; }
   .counts b { display:block; font-size:1.25rem; line-height:1.2; }
+  svg .dot-net { fill:var(--accent); } svg .dot-kube { fill:var(--ok); }
+  svg .dot-srv { fill:var(--info); } svg .dot-cli { fill:var(--muted); }
+  svg .dot-vip { fill:var(--warn); }
+  svg .ring { fill:none; stroke:var(--warn); stroke-width:1.6; }
+  .legend .sw.net { border-color:var(--accent); background:var(--accent); }
+  .legend .sw.kube { border-color:var(--ok); background:var(--ok); }
+  .legend .sw.srv { border-color:var(--info); background:var(--info); }
+  .legend .sw.cli { border-color:var(--muted); background:var(--muted); }
+  .legend .sw.vip { border-color:var(--warn); background:var(--warn); }
+  .legend .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; border:2px solid var(--warn); vertical-align:-.05em; margin-right:.3rem; }
+  .legend .dot.full { background:var(--warn); }
 </style>
 </head>
 <body>
@@ -91,9 +102,9 @@
 </p>
 
 <div class="counts">
-  <div><b>75</b>IPv4 hosts under 192.168.0.0/16</div>
+  <div><b>77</b>IPv4 hosts under 192.168.0.0/16</div>
   <div><b>5</b>on the Verizon LAN</div>
-  <div><b>7</b>cameras / NVR</div>
+  <div><b>8</b>camera net</div>
   <div><b>42</b>on the switch LAN</div>
   <div><b>20</b>MetalLB VIPs</div>
   <div><b>22</b>tailnet devices</div>
@@ -107,15 +118,19 @@
 </p>
 
 <div class="legend">
-  <span><span class="sw cluster"></span>router / network boundary</span>
-  <span><span class="sw local"></span>zone card — every host listed</span>
-  <span><span class="sw do"></span>tunnel or overlay</span>
+  <span><span class="sw net"></span>networking equipment — router, switches, APs</span>
+  <span><span class="sw kube"></span>Kubernetes hosts — 3 servers, 3 agents</span>
+  <span><span class="sw srv"></span>servers — Proxmox, BMC, VMs, controller</span>
+  <span><span class="sw cli"></span>client devices — phones, IoT, cameras, printer</span>
+  <span><span class="sw vip"></span>MetalLB VIP</span>
+  <span><span class="dot full"></span>Cluster announcement</span>
+  <span><span class="dot"></span>Local announcement</span>
   <span><span class="pill wan">WAN</span> reachable from the internet</span>
 </div>
 
 <h2 id="map">The network</h2>
 <figure>
-<svg class="diagram" viewBox="0 0 1240 820" role="img" aria-label="Whole-network map: the internet and the DigitalOcean cluster both enter through the Verizon LAN, the plaintext port forwards and the encrypted WireGuard tunnel terminate on the MikroTik, then the 10G fabric feeds the four LAN subnets">
+<svg class="diagram" viewBox="0 0 1240 820" role="img" aria-label="Whole-network map: the internet and the DigitalOcean cluster enter through the Verizon LAN; hosts are colour-coded as networking, kube, server, client and MetalLB VIP">
   <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker><marker id="a2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker></defs>
 <rect x="80" y="8" width="280" height="44" rx="9" class="inet"/>
 <text x="220" y="26" class="title" text-anchor="middle">Internet</text>
@@ -130,11 +145,11 @@
 <rect x="60" y="100" width="560" height="175" rx="9" class="panel"/>
 <text x="74" y="122" class="title">192.168.0.0/24 — Verizon CR1000B</text>
 <text x="74" y="138" class="muted">the only door in · per-port forwards to .0.2</text>
-<text x="74" y="160" class="" style="font-size:11.5px;">.0.1  Verizon CR1000B</text>
-<text x="74" y="177" class="" style="font-size:11.5px;">.0.2  MikroTik 2GWAN</text>
-<text x="74" y="194" class="" style="font-size:11.5px;">.0.152  MikroTik 2GWAN (2nd)</text>
-<text x="74" y="211" class="" style="font-size:11.5px;">.0.154  home-pi</text>
-<text x="74" y="228" class="" style="font-size:11.5px;">.0.165  unidentified</text>
+<circle cx="77" cy="156.5" r="3" class="dot-net"/><text x="86" y="160" class="" style="font-size:10.5px;">.0.1  Verizon CR1000B</text>
+<circle cx="77" cy="173.5" r="3" class="dot-net"/><text x="86" y="177" class="" style="font-size:10.5px;">.0.2  MikroTik 2GWAN</text>
+<circle cx="77" cy="190.5" r="3" class="dot-net"/><text x="86" y="194" class="" style="font-size:10.5px;">.0.152  MikroTik 2GWAN (2nd)</text>
+<circle cx="77" cy="207.5" r="3" class="dot-srv"/><text x="86" y="211" class="" style="font-size:10.5px;">.0.154  home-pi</text>
+<circle cx="77" cy="224.5" r="3" class="dot-cli"/><text x="86" y="228" class="" style="font-size:10.5px;">.0.165  unidentified</text>
 <text x="74" y="258" class="muted" style="font-size:9.5px;">forwards 80,443,25,587,993,3478,3479,7881,9987,11753,18080,25565,30033,34197,45000-45063, 51820/udp</text>
 <rect x="720" y="100" width="470" height="175" rx="9" class="panel"/>
 <text x="734" y="122" class="title">MikroTik RB5009 — the boundary</text>
@@ -156,104 +171,106 @@
 <path d="M40,380 L1200,380" class="wire" opacity=".4"/>
 <path d="M955,356 L955,380" class="wire"/>
 <path d="M125,380 L125,390" class="wire" opacity=".6"/>
-<rect x="30" y="390" width="190" height="210" rx="9" class="panel"/>
+<rect x="30" y="390" width="190" height="235" rx="9" class="panel"/>
 <text x="44" y="412" class="title">192.168.1.0/24</text>
 <text x="44" y="428" class="muted">cameras · egress blocked</text>
-<text x="44" y="452" class="" style="font-size:11.5px;">.1.1  router (bridge)</text>
-<text x="44" y="471" class="" style="font-size:11.5px;">.1.61  Garage cam</text>
-<text x="44" y="490" class="" style="font-size:11.5px;">.1.63  Front cam</text>
-<text x="44" y="509" class="" style="font-size:11.5px;">.1.64  Front cam</text>
-<text x="44" y="528" class="" style="font-size:11.5px;">.1.65  Side cam</text>
-<text x="44" y="547" class="" style="font-size:11.5px;">.1.66  Front cam</text>
-<text x="44" y="566" class="" style="font-size:11.5px;">.1.67  NVR</text>
-<text x="44" y="588" class="muted">Reolink · no WAN access</text>
+<circle cx="47" cy="448.5" r="3" class="dot-net"/><text x="56" y="452" class="" style="font-size:10.5px;">.1.1  router (bridge)</text>
+<circle cx="47" cy="467.5" r="3" class="dot-net"/><text x="56" y="471" class="" style="font-size:10.5px;">.1.250  core switch</text>
+<circle cx="47" cy="486.5" r="3" class="dot-cli"/><text x="56" y="490" class="" style="font-size:10.5px;">.1.61  Garage cam</text>
+<circle cx="47" cy="505.5" r="3" class="dot-cli"/><text x="56" y="509" class="" style="font-size:10.5px;">.1.63  Front cam</text>
+<circle cx="47" cy="524.5" r="3" class="dot-cli"/><text x="56" y="528" class="" style="font-size:10.5px;">.1.64  Front cam</text>
+<circle cx="47" cy="543.5" r="3" class="dot-cli"/><text x="56" y="547" class="" style="font-size:10.5px;">.1.65  Side cam</text>
+<circle cx="47" cy="562.5" r="3" class="dot-cli"/><text x="56" y="566" class="" style="font-size:10.5px;">.1.66  Front cam</text>
+<circle cx="47" cy="581.5" r="3" class="dot-cli"/><text x="56" y="585" class="" style="font-size:10.5px;">.1.67  NVR</text>
+<text x="44" y="610" class="muted">Reolink · no WAN access</text>
 <path d="M430,380 L430,390" class="wire" opacity=".6"/>
 <rect x="235" y="390" width="390" height="400" rx="9" class="panel"/>
 <text x="249" y="412" class="title">192.168.5.0/24 — switch LAN</text>
 <text x="249" y="428" class="muted">42 hosts · statics .1–.49 · DHCP pool .50–.254</text>
-<text x="249" y="452" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
-<text x="249" y="466" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
-<text x="249" y="480" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
-<text x="249" y="494" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
-<text x="249" y="508" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
-<text x="249" y="522" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
-<text x="249" y="536" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
-<text x="249" y="550" class="" style="font-size:10.5px;">.5.9 pite</text>
-<text x="249" y="564" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
-<text x="249" y="578" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
-<text x="249" y="592" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
-<text x="249" y="606" class="" style="font-size:10.5px;">.5.36 closet</text>
-<text x="249" y="620" class="" style="font-size:10.5px;">.5.68 big</text>
-<text x="249" y="634" class="" style="font-size:10.5px;">.5.76 arch</text>
-<text x="249" y="648" class="" style="font-size:10.5px;">.5.122 steam</text>
-<text x="249" y="662" class="" style="font-size:10.5px;">.5.140 secu</text>
-<text x="249" y="676" class="" style="font-size:10.5px;">.5.175 nas</text>
-<text x="249" y="690" class="" style="font-size:10.5px;">.5.209 office</text>
-<text x="249" y="704" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
-<text x="437" y="452" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
-<text x="437" y="466" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
-<text x="437" y="480" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
-<text x="437" y="502" class="" style="font-size:10.5px;">.5.53 unidentified</text>
-<text x="437" y="516" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
-<text x="437" y="530" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
-<text x="437" y="544" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
-<text x="437" y="558" class="" style="font-size:10.5px;">.5.118 vpin</text>
-<text x="437" y="572" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
-<text x="437" y="586" class="" style="font-size:10.5px;">.5.123 mirror</text>
-<text x="437" y="600" class="" style="font-size:10.5px;">.5.124 iPhone</text>
-<text x="437" y="614" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
-<text x="437" y="628" class="" style="font-size:10.5px;">.5.131 unidentified</text>
-<text x="437" y="642" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
-<text x="437" y="656" class="" style="font-size:10.5px;">.5.146 unidentified</text>
-<text x="437" y="670" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
-<text x="437" y="684" class="" style="font-size:10.5px;">.5.164 AiDot</text>
-<text x="437" y="698" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sensor-52f0c8</text>
-<text x="437" y="712" class="" style="font-size:10.5px;">.5.168 AiDot</text>
-<text x="437" y="726" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sensor-6c7088</text>
-<text x="437" y="740" class="" style="font-size:10.5px;">.5.172 unidentified</text>
-<text x="437" y="754" class="" style="font-size:10.5px;">.5.187 unidentified</text>
-<text x="437" y="768" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
+<circle cx="252" cy="448.5" r="3" class="dot-net"/><text x="261" y="452" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
+<circle cx="252" cy="462.5" r="3" class="dot-net"/><text x="261" y="466" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
+<circle cx="252" cy="476.5" r="3" class="dot-net"/><text x="261" y="480" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
+<circle cx="252" cy="490.5" r="3" class="dot-net"/><text x="261" y="494" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
+<circle cx="252" cy="504.5" r="3" class="dot-net"/><text x="261" y="508" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
+<circle cx="252" cy="518.5" r="3" class="dot-cli"/><text x="261" y="522" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
+<circle cx="252" cy="532.5" r="3" class="dot-srv"/><text x="261" y="536" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
+<circle cx="252" cy="546.5" r="3" class="dot-kube"/><text x="261" y="550" class="" style="font-size:10.5px;">.5.9 pite</text>
+<circle cx="252" cy="560.5" r="3" class="dot-vip"/><text x="261" y="564" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
+<circle cx="252" cy="574.5" r="3" class="dot-srv"/><text x="261" y="578" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
+<circle cx="252" cy="588.5" r="3" class="dot-srv"/><text x="261" y="592" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
+<circle cx="252" cy="602.5" r="3" class="dot-kube"/><text x="261" y="606" class="" style="font-size:10.5px;">.5.36 closet</text>
+<circle cx="252" cy="616.5" r="3" class="dot-kube"/><text x="261" y="620" class="" style="font-size:10.5px;">.5.68 big</text>
+<circle cx="252" cy="630.5" r="3" class="dot-kube"/><text x="261" y="634" class="" style="font-size:10.5px;">.5.76 arch</text>
+<circle cx="252" cy="644.5" r="3" class="dot-srv"/><text x="261" y="648" class="" style="font-size:10.5px;">.5.122 steam</text>
+<circle cx="252" cy="658.5" r="3" class="dot-srv"/><text x="261" y="662" class="" style="font-size:10.5px;">.5.140 secu</text>
+<circle cx="252" cy="672.5" r="3" class="dot-kube"/><text x="261" y="676" class="" style="font-size:10.5px;">.5.175 nas</text>
+<circle cx="252" cy="686.5" r="3" class="dot-kube"/><text x="261" y="690" class="" style="font-size:10.5px;">.5.209 office</text>
+<circle cx="252" cy="700.5" r="3" class="dot-srv"/><text x="261" y="704" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
+<circle cx="440" cy="448.5" r="3" class="dot-net"/><text x="449" y="452" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
+<circle cx="440" cy="462.5" r="3" class="dot-net"/><text x="449" y="466" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
+<circle cx="440" cy="476.5" r="3" class="dot-net"/><text x="449" y="480" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
+<circle cx="440" cy="498.5" r="3" class="dot-cli"/><text x="449" y="502" class="" style="font-size:10.5px;">.5.53 unidentified</text>
+<circle cx="440" cy="512.5" r="3" class="dot-cli"/><text x="449" y="516" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
+<circle cx="440" cy="526.5" r="3" class="dot-cli"/><text x="449" y="530" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
+<circle cx="440" cy="540.5" r="3" class="dot-cli"/><text x="449" y="544" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
+<circle cx="440" cy="554.5" r="3" class="dot-cli"/><text x="449" y="558" class="" style="font-size:10.5px;">.5.118 vpin</text>
+<circle cx="440" cy="568.5" r="3" class="dot-cli"/><text x="449" y="572" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
+<circle cx="440" cy="582.5" r="3" class="dot-cli"/><text x="449" y="586" class="" style="font-size:10.5px;">.5.123 mirror</text>
+<circle cx="440" cy="596.5" r="3" class="dot-cli"/><text x="449" y="600" class="" style="font-size:10.5px;">.5.124 iPhone</text>
+<circle cx="440" cy="610.5" r="3" class="dot-cli"/><text x="449" y="614" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
+<circle cx="440" cy="624.5" r="3" class="dot-cli"/><text x="449" y="628" class="" style="font-size:10.5px;">.5.131 unidentified</text>
+<circle cx="440" cy="638.5" r="3" class="dot-cli"/><text x="449" y="642" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
+<circle cx="440" cy="652.5" r="3" class="dot-cli"/><text x="449" y="656" class="" style="font-size:10.5px;">.5.146 unidentified</text>
+<circle cx="440" cy="666.5" r="3" class="dot-cli"/><text x="449" y="670" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
+<circle cx="440" cy="680.5" r="3" class="dot-cli"/><text x="449" y="684" class="" style="font-size:10.5px;">.5.164 AiDot</text>
+<circle cx="440" cy="694.5" r="3" class="dot-cli"/><text x="449" y="698" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sens…</text>
+<circle cx="440" cy="708.5" r="3" class="dot-cli"/><text x="449" y="712" class="" style="font-size:10.5px;">.5.168 AiDot</text>
+<circle cx="440" cy="722.5" r="3" class="dot-cli"/><text x="449" y="726" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sens…</text>
+<circle cx="440" cy="736.5" r="3" class="dot-cli"/><text x="449" y="740" class="" style="font-size:10.5px;">.5.172 unidentified</text>
+<circle cx="440" cy="750.5" r="3" class="dot-cli"/><text x="449" y="754" class="" style="font-size:10.5px;">.5.187 unidentified</text>
+<circle cx="440" cy="764.5" r="3" class="dot-cli"/><text x="449" y="768" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
 <path d="M805,380 L805,390" class="wire" opacity=".6"/>
 <rect x="640" y="390" width="330" height="240" rx="9" class="panel"/>
 <text x="654" y="412" class="title">192.168.6.0/24 — MetalLB</text>
-<text x="654" y="428" class="muted">20 VIPs · 10 WAN · 10 LAN/WG only</text>
-<text x="654" y="452" class="" style="font-size:10.5px;">.6.6 traefik</text>
-<text x="814" y="452" class="" style="font-size:10.5px;">.6.13 stalwart</text>
-<text x="654" y="466" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
-<text x="814" y="466" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
-<text x="654" y="480" class="" style="font-size:10.5px;">.6.16 ts-files</text>
-<text x="814" y="480" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
-<text x="654" y="494" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
-<text x="814" y="494" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
-<text x="654" y="508" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
-<text x="814" y="508" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
-<text x="654" y="522" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
-<text x="814" y="522" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
-<text x="654" y="536" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
-<text x="814" y="536" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
-<text x="654" y="550" class="" style="font-size:10.5px;">.6.26 frigate</text>
-<text x="814" y="550" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
-<text x="654" y="564" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
-<text x="814" y="564" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
-<text x="654" y="578" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
-<text x="814" y="578" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
+<text x="654" y="428" class="muted">20 VIPs · filled = Cluster · ring = Local</text>
+<circle cx="657" cy="448.5" r="3" class="ring"/><text x="666" y="452" class="" style="font-size:10.5px;">.6.6 traefik</text>
+<circle cx="817" cy="448.5" r="3" class="ring"/><text x="826" y="452" class="" style="font-size:10.5px;">.6.13 stalwart</text>
+<circle cx="657" cy="462.5" r="3" class="dot-vip"/><text x="666" y="466" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
+<circle cx="817" cy="462.5" r="3" class="ring"/><text x="826" y="466" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
+<circle cx="657" cy="476.5" r="3" class="ring"/><text x="666" y="480" class="" style="font-size:10.5px;">.6.16 ts-files</text>
+<circle cx="817" cy="476.5" r="3" class="dot-vip"/><text x="826" y="480" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
+<circle cx="657" cy="490.5" r="3" class="ring"/><text x="666" y="494" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
+<circle cx="817" cy="490.5" r="3" class="dot-vip"/><text x="826" y="494" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
+<circle cx="657" cy="504.5" r="3" class="dot-vip"/><text x="666" y="508" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
+<circle cx="817" cy="504.5" r="3" class="dot-vip"/><text x="826" y="508" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
+<circle cx="657" cy="518.5" r="3" class="dot-vip"/><text x="666" y="522" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
+<circle cx="817" cy="518.5" r="3" class="dot-vip"/><text x="826" y="522" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
+<circle cx="657" cy="532.5" r="3" class="dot-vip"/><text x="666" y="536" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
+<circle cx="817" cy="532.5" r="3" class="dot-vip"/><text x="826" y="536" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
+<circle cx="657" cy="546.5" r="3" class="dot-vip"/><text x="666" y="550" class="" style="font-size:10.5px;">.6.26 frigate</text>
+<circle cx="817" cy="546.5" r="3" class="ring"/><text x="826" y="550" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
+<circle cx="657" cy="560.5" r="3" class="ring"/><text x="666" y="564" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
+<circle cx="817" cy="560.5" r="3" class="dot-vip"/><text x="826" y="564" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
+<circle cx="657" cy="574.5" r="3" class="dot-vip"/><text x="666" y="578" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
+<circle cx="817" cy="574.5" r="3" class="dot-vip"/><text x="826" y="578" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
 <text x="654" y="620" class="muted">no router interface — BGP /32s only</text>
 <path d="M1097,380 L1097,390" class="wire" opacity=".6"/>
-<rect x="985" y="390" width="225" height="105" rx="9" class="panel"/>
+<rect x="985" y="390" width="225" height="125" rx="9" class="panel"/>
 <text x="999" y="412" class="title">192.168.88.0/24</text>
 <text x="999" y="428" class="muted">recovery / factory default</text>
-<text x="999" y="452" class="" style="font-size:11.5px;">.88.254  router</text>
-<text x="999" y="470" class="muted">upstairs-core still has .88.1</text>
-<rect x="985" y="515" width="225" height="200" rx="9" class="panel"/>
-<text x="999" y="537" class="title">Overlays</text>
-<text x="999" y="553" class="muted">not on the bridge</text>
-<text x="999" y="576" class="" style="font-size:11px;">fd00:1::/64 — node ULA</text>
-<text x="999" y="595" class="" style="font-size:11px;">fd00:6::/64 — MetalLB v6</text>
-<text x="999" y="614" class="" style="font-size:11px;">10.42.0.0/16 — pods</text>
-<text x="999" y="633" class="" style="font-size:11px;">10.43.0.0/16 — services</text>
-<text x="999" y="652" class="" style="font-size:11px;">10.99.0.0/24 — WireGuard</text>
-<text x="999" y="671" class="" style="font-size:11px;">100.64.0.0/10 — tailnet (22)</text>
-<text x="999" y="690" class="" style="font-size:11px;">10.244/.245 — DO side</text>
+<circle cx="1002" cy="448.5" r="3" class="dot-net"/><text x="1011" y="452" class="" style="font-size:10.5px;">.88.254  router</text>
+<circle cx="1002" cy="466.5" r="3" class="dot-net"/><text x="1011" y="470" class="" style="font-size:10.5px;">.88.1  upstairs-core</text>
+<text x="999" y="496" class="muted">both keep the defconf address</text>
+<rect x="985" y="530" width="225" height="200" rx="9" class="panel"/>
+<text x="999" y="552" class="title">Overlays</text>
+<text x="999" y="568" class="muted">not on the bridge</text>
+<text x="999" y="592" class="" style="font-size:11px;">fd00:1::/64 — node ULA</text>
+<text x="999" y="611" class="" style="font-size:11px;">fd00:6::/64 — MetalLB v6</text>
+<text x="999" y="630" class="" style="font-size:11px;">10.42.0.0/16 — pods</text>
+<text x="999" y="649" class="" style="font-size:11px;">10.43.0.0/16 — services</text>
+<text x="999" y="668" class="" style="font-size:11px;">10.99.0.0/24 — WireGuard</text>
+<text x="999" y="687" class="" style="font-size:11px;">100.64.0.0/10 — tailnet (22)</text>
+<text x="999" y="706" class="" style="font-size:11px;">10.244/.245 — DO side</text>
 </svg>
 <figcaption>Whole-network map, 2026-10-20 09:35. Both ingress paths enter through the Verizon LAN: plaintext port forwards, and the encrypted WireGuard tunnel from the DigitalOcean cluster, which is forwarded as UDP 51820 and terminates on the router's <code>wg-remote</code>. Each card lists every host in that subnet; the 10G fabric is a single box because every host reaches the router through it.</figcaption>
 </figure>
@@ -454,6 +471,7 @@ DMZ, so every new WAN port needs a forward here <em>and</em> a dst-nat on the Mi
 <table>
 <thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
 <tbody>
+<tr><td class="mono">.1.250</td><td>core switch</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>second address on the core, on the camera net</td></tr>
 <tr><td class="mono">.1.1</td><td>router (bridge)</td><td class="mono">—</td><td>static</td><td>192.168.1.1, second address on the same bridge</td></tr>
 <tr><td class="mono">.1.61</td><td>Garage cam</td><td class="mono">EC:71:DB:F4:DC:49</td><td>DHCP lease</td><td>Reolink</td></tr>
 <tr><td class="mono">.1.63</td><td>Front cam</td><td class="mono">EC:71:DB:89:D8:8B</td><td>DHCP lease</td><td>Reolink</td></tr>
@@ -471,13 +489,13 @@ Five are the switch fabric, seventeen are fixed infrastructure (printer, k3s nod
 <thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
 <tbody>
 <tr><td class="mono">.5.1</td><td>router · RB5009</td><td class="mono">—</td><td>static</td><td>gateway · BGP 65001 · DNS · WireGuard</td></tr>
-<tr><td class="mono">.5.2</td><td>office switch · CRS310</td><td class="mono">—</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
-<tr><td class="mono">.5.3</td><td>upstairs switch · CRS310</td><td class="mono">—</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
-<tr><td class="mono">.5.4</td><td>core switch · CRS305</td><td class="mono">—</td><td>static</td><td>4×SFP+ 10G</td></tr>
-<tr><td class="mono">.5.5</td><td>upstairs-core · CRS305</td><td class="mono">—</td><td>static</td><td>4×SFP+ 10G; holds the defconf .88.1</td></tr>
+<tr><td class="mono">.5.2</td><td>office switch · CRS310</td><td class="mono">04:F4:1C:E7:24:45</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr><td class="mono">.5.3</td><td>upstairs switch · CRS310</td><td class="mono">04:F4:1C:E6:7C:14</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr><td class="mono">.5.4</td><td>core switch · CRS305</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>4×SFP+ 10G</td></tr>
+<tr><td class="mono">.5.5</td><td>upstairs-core · CRS305</td><td class="mono">D0:EA:11:6B:75:F5</td><td>static</td><td>4×SFP+ 10G; holds the defconf .88.1</td></tr>
 <tr><td class="mono">.5.6</td><td>Brother printer</td><td class="mono">—</td><td>static</td><td>upstairs switch ether6</td></tr>
 <tr><td class="mono">.5.8</td><td>GL-KVM</td><td class="mono">94:83:C4:C4:9C:4D</td><td>static</td><td>tailnet glkvm</td></tr>
-<tr><td class="mono">.5.9</td><td>pite</td><td class="mono">DC:A6:32:25:51:6E</td><td>reservation</td><td>k3s agent (Pi), excluded from announcing</td></tr>
+<tr><td class="mono">.5.9</td><td>pite</td><td class="mono">DC:A6:32:25:51:6E</td><td>reservation</td><td>k3s agent (Pi), excluded from announcing; uplink is router ether8 (to-wifi), not the office switch</td></tr>
 <tr><td class="mono">.5.10</td><td>k3s API VIP</td><td class="mono">—</td><td>MetalLB</td><td>kubernetes-api :6443 — ICMP never answers</td></tr>
 <tr><td class="mono">.5.19</td><td>bigp · Proxmox</td><td class="mono">2C:EA:7F:E7:13:98</td><td>static</td><td>PVE 9.2.2; hosts big, unifi-os, steam, github</td></tr>
 <tr><td class="mono">.5.30</td><td>UniFi OS console</td><td class="mono">BC:24:11:23:B8:A5</td><td>static</td><td>VM on bigp, :11443</td></tr>
@@ -515,6 +533,32 @@ Five are the switch fabric, seventeen are fixed infrastructure (printer, k3s nod
 </tbody>
 </table>
 
+<h2 id="wifi">Wireless attachment</h2>
+<p>Derived from the router's bridge host table (MAC → egress port), <strong>not</strong> from the UniFi controller:
+it shows which segment a device's frames leave through, not signal, channel or which SSID. The office AP's clients
+share the 10G uplink with wired hosts, so they cannot be separated this way.</p>
+<table>
+<thead><tr><th>Router port</th><th>Segment</th><th>Devices seen behind it</th></tr></thead>
+<tbody>
+<tr><td class="mono">ether5</td><td>U7 Lite + U7 Mesh (PoE; mesh links to the Lite)</td><td>11 named clients — secu, eight-pod, livingroom2707, iPhone, UPS, AiDot, wiz, mirror, Garage cam, Side cam, presence sensor — plus 2 unidentified MACs</td></tr>
+<tr><td class="mono">ether8 <em>to-wifi</em></td><td>no LLDP/MNDP neighbour</td><td><strong>pite</strong>, and nothing else</td></tr>
+<tr><td class="mono">ether7</td><td>—</td><td>Front camera (.1.66)</td></tr>
+<tr><td class="mono">ether4</td><td>—</td><td>one unidentified client (.5.187)</td></tr>
+<tr><td class="mono">10GsfpLAN</td><td>through the core and office switches</td><td>U7 Pro XGS and every wired host; its wireless clients are indistinguishable here</td></tr>
+</tbody>
+</table>
+<div class="callout warn">
+<p><strong>pite is not on the office switch.</strong> The runbook says office-switch <code>ether1</code> → pite, but that
+port is down: the office switch only learns pite's MAC on its 10G uplink, and the router egresses pite's frames on
+<code>ether8</code> (<em>to-wifi</em>). It is either on router port 8 or behind a transparent wireless bridge.
+Worth confirming physically — and the guide should be corrected either way.</p>
+</div>
+<div class="callout">
+<p><strong>Two cameras are wireless.</strong> Garage (<code>.1.61</code>) and Side (<code>.1.65</code>) leave through
+the U7 Lite, while the Front cameras and the NVR are wired. The camera subnet is egress-blocked, so this is a
+placement fact rather than a security one.</p>
+</div>
+
 <h2 id="s6">192.168.6.0/24 — MetalLB</h2>
 <table>
 <thead><tr><th>IPv4</th><th>IPv6</th><th>Service</th><th>Ports</th><th>Announce</th><th>Router picks</th><th>WAN</th><th>WireGuard</th></tr></thead>
@@ -544,8 +588,7 @@ Five are the switch fabric, seventeen are fixed infrastructure (printer, k3s nod
 <p class="small">“Router picks” is the selected path, not the set of announcers — for a Cluster VIP every speaker carries it and the router installs one. <code>.6.17</code> and <code>.6.26</code> have no route right now (no ready pod); the pool is a <code>blackhole</code> at distance 250, so they drop rather than leak to the default route.</p>
 
 <h2 id="s88">192.168.88.0/24 — recovery</h2>
-<p>One address on the router (<code>.88.254</code>), kept because <code>upstairs-core</code> still holds its factory-default
-<code>192.168.88.1</code>, and any reset MikroTik comes up there. This is the path back to a bricked switch.</p>
+<p>Two addresses survive: <code>.88.254</code> on the router and the factory-default <code>192.168.88.1</code> still held by <code>upstairs-core</code>. Any reset MikroTik comes up on this subnet, which makes it the path back to a bricked switch.</p>
 
 <h2 id="overlays">Overlays and address families</h2>
 <table>
