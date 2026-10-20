@@ -46,3 +46,6 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          # Same reason as status-design.yaml: the designs ConfigMap is too
+          # large for client-side apply's last-applied annotation.
+          - ServerSideApply=true

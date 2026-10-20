@@ -28,3 +28,6 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # The designs ConfigMap outgrows the 256 KiB last-applied annotation that
+      # client-side apply keeps; server-side apply stores no such copy.
+      - ServerSideApply=true
