@@ -1,0 +1,73 @@
+# Traefik edge alerts (docs/public-edge.md "Troubleshooting"). Grafana has no
+# contact point in git (see lan-dns-alerts.yaml), so this appears in Grafana's
+# alert list and notifies nobody until one exists. Deliberately one rule.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  traefik-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: traefik
+        folder: Alerts
+        interval: 1m
+        rules:
+          # Step 2 makes a replica that cannot load the bouncer plugin exit, so a
+          # restart means a plugin or mount failure until proven otherwise. This is
+          # the 2026-10-16 failure mode in its new, loud shape.
+          - uid: traefik-restarting
+            title: Traefik restarted
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: increase(kube_pod_container_status_restarts_total{namespace="kube-system", container="traefik"}[15m])
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Traefik replica {{ $labels.pod }} restarted'
+              description: >-
+                Check the previous container's log: "failed to create plugin builder" means the
+                plugin source is missing on that node. See docs/public-edge.md "Troubleshooting".
