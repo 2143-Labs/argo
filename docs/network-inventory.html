@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home edge inventory — addresses, ports, reachability</title>
+<style>
+  :root {
+    --bg:#fbfaf7; --fg:#1d1d1f; --muted:#5f6368; --line:#d9d6cf; --panel:#f1efe9;
+    --code:#ece9e1; --accent:#2457c5; --ok:#1f7a4d; --warn:#9a5800; --bad:#b3261e; --info:#5b3fb0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#141517; --fg:#e6e6e3; --muted:#a3a3a0; --line:#34363b; --panel:#1c1e22;
+      --code:#23262b; --accent:#7aa2ff; --ok:#5cc28e; --warn:#e0a34a; --bad:#f2766d; --info:#b49cff;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 82rem; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:2rem; line-height:1.2; margin:0 0 .4rem; }
+  h2 { font-size:1.45rem; margin:3rem 0 .8rem; padding-top:.6rem; border-top:1px solid var(--line); }
+  p, li { max-width: 64rem; }
+  a { color:var(--accent); }
+  code, pre { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size:.88em; }
+  code { background:var(--code); padding:.08em .35em; border-radius:4px; }
+  pre { background:var(--code); padding:1rem 1.1rem; border-radius:8px; overflow-x:auto; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:.8rem 0 1.2rem; font-size:.9rem; }
+  th, td { border:1px solid var(--line); padding:.42rem .55rem; vertical-align:top; text-align:left; }
+  th { background:var(--panel); font-weight:600; }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--panel) 45%, transparent); }
+  td.mono { font-family: ui-monospace, Menlo, monospace; white-space:nowrap; }
+  .meta { color:var(--muted); font-size:.95rem; margin-bottom:1.5rem; }
+  .lede { font-size:1.12rem; max-width:62rem; }
+  .small { font-size:.9rem; color:var(--muted); }
+  .callout { border-left:4px solid var(--accent); background:var(--panel); padding:.8rem 1rem; border-radius:0 8px 8px 0; margin:1rem 0; }
+  .callout.warn { border-color:var(--warn); } .callout.bad { border-color:var(--bad); }
+  .callout.ok { border-color:var(--ok); } .callout.decide { border-color:var(--info); }
+  .callout > :first-child { margin-top:0; } .callout > :last-child { margin-bottom:0; }
+  .pill { display:inline-block; font-size:.75rem; font-weight:600; letter-spacing:.02em; padding:.05rem .5rem;
+          border-radius:999px; border:1px solid currentColor; white-space:nowrap; vertical-align:.1em; }
+  .pill.local { color:var(--info); } .pill.cluster { color:var(--accent); }
+  .pill.wan { color:var(--bad); } .pill.wg { color:var(--ok); } .pill.muted { color:var(--muted); }
+  .legend { display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; align-items:center; font-size:.92rem;
+            background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:.8rem 1rem; margin:1rem 0; }
+  .legend .sw { display:inline-block; width:1.1rem; height:1.1rem; border-radius:4px; border:2px solid var(--line); vertical-align:-.2em; margin-right:.35rem; }
+  .legend .sw.local { border-color:var(--info); border-style:dashed; }
+  .legend .sw.cluster { border-color:var(--accent); }
+  .legend .sw.do { border-color:var(--ok); border-style:dashed; }
+  figure { margin:1.2rem 0; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:.4rem; }
+  svg.diagram { width:100%; height:auto; display:block; background:var(--bg); border:1px solid var(--line); border-radius:10px; }
+  svg .panel { fill:var(--panel); stroke:var(--line); stroke-width:1.2; }
+  svg .inet { fill:var(--panel); stroke:var(--accent); stroke-width:2; }
+  svg .router { fill:var(--panel); stroke:var(--fg); stroke-width:2; }
+  svg .node { fill:var(--bg); stroke:var(--line); stroke-width:1.4; }
+  svg .node.server { stroke:var(--accent); }
+  svg .vip.local { fill:var(--bg); stroke:var(--info); stroke-width:1.5; stroke-dasharray:5 3; }
+  svg .vip.cluster { fill:var(--bg); stroke:var(--accent); stroke-width:1.5; }
+  svg .do { fill:var(--bg); stroke:var(--ok); stroke-width:2; stroke-dasharray:8 5; }
+  svg text { fill:var(--fg); font:13px system-ui, sans-serif; }
+  svg text.title { font-weight:700; font-size:14px; }
+  svg text.muted { fill:var(--muted); font-size:11.5px; }
+  svg text.wan { fill:var(--bad); font-size:10.5px; }
+  svg text.wg { fill:var(--ok); font-size:10.5px; }
+  svg text.wgused { fill:var(--ok); font-weight:700; font-size:10.5px; }
+  svg text.note { fill:var(--muted); font-size:10.5px; }
+  svg text.wglabel { fill:var(--ok); font-weight:600; font-size:12px; }
+  svg .wire { stroke:var(--fg); stroke-width:1.5; fill:none; }
+  svg .wg { stroke:var(--ok); stroke-width:2; stroke-dasharray:7 5; fill:none; }
+  svg .arrowhead { fill:var(--fg); }
+  svg .arrowhead.wg { fill:var(--ok); }
+  svg .arrowhead.wan { fill:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Home edge inventory — addresses, ports, reachability</h1>
+<p class="meta">
+  Owner: John · Live-verified 2026-10-20 06:45 local · Source: <code>kubectl</code> (context <code>closet-as-developer</code>), RouterOS 7.24.5 route and NAT tables, live conntrack, and the <code>2143prod</code> cluster.
+  <br>Lives in <code>argo/docs/network-inventory.html</code>. Regenerate it from the commands at the bottom; do not hand-edit the tables.
+</p>
+
+<p class="lede">
+  Twenty LoadBalancer VIPs across two address families: seven announced by a single node, thirteen by every speaker.
+  Ten face the internet through the router, every one of them is routable from the DigitalOcean cluster over the WireGuard tunnel,
+  and exactly two are actually called that way. The diagram shows the whole edge in one view — what the WAN can reach, what the
+  cluster announces, and where each address physically lives.
+</p>
+
+<div class="legend">
+  <span><span class="sw local"></span><span class="pill local">Local</span> one announcer — the node running a ready pod</span>
+  <span><span class="sw cluster"></span><span class="pill cluster">Cluster</span> every speaker announces it</span>
+  <span><span class="sw do"></span><span class="pill wg">WireGuard</span> routed from DigitalOcean, not hosted</span>
+  <span><span class="pill wan">WAN</span> dst-nat on the router</span>
+</div>
+
+<figure>
+<svg class="diagram" viewBox="0 0 1240 1020" role="img" aria-label="Home edge topology: internet to router to six k3s nodes; twenty VIPs grouped by announcement policy; WireGuard tunnel to the DigitalOcean cluster">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
+    <marker id="arrwg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker>
+    <marker id="arrwan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wan"/></marker>
+  </defs>
+<rect x="420" y="14" width="400" height="46" rx="9" class="inet"/>
+<text x="620" y="36" class="title" text-anchor="middle">Internet — 15 WAN forwards</text>
+<text x="620" y="52" class="muted" text-anchor="middle">10 VIPs + arch .5.76 (monero 18080)</text>
+<path d="M620,60 L620,90" class="wire" marker-end="url(#arrwan)"/>
+<rect x="120" y="92" width="1000" height="104" rx="9" class="router"/>
+<text x="140" y="116" class="title">MikroTik · 192.168.5.1 · RouterOS 7.24.5</text>
+<text x="140" y="136" class="">dst-nat:</text>
+<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.16</text>
+<text x="140" y="154" class="">11753→.6.17 · 3479→.6.18 · 7881→.6.22 · 34197→.6.28 · 25565→.6.29 · 18080→.5.76 (node)</text>
+<text x="140" y="174" class="">BGP 65001 · BFD 3784 · DNS FWD ×6 zones → .6.30 · WireGuard 51820 (10.99.0.1/24)</text>
+<path d="M36,208 L1120,208" class="wire" opacity=".35"/>
+<path d="M620,196 L620,208" class="wire"/>
+<rect x="36" y="236" width="182" height="64" rx="9" class="node server"/>
+<text x="48" y="256" class="" style=" font-weight:700; font-size:13px;">closet .36</text>
+<text x="48" y="273" class="muted">server · control plane</text>
+<text x="48" y="289" class="muted">etcd · 6443 · 5432 · VIPs</text>
+<path d="M127.0,236 L127.0,208" class="wire" opacity=".55"/>
+<rect x="233" y="236" width="182" height="64" rx="9" class="node server"/>
+<text x="245" y="256" class="" style=" font-weight:700; font-size:13px;">arch .76</text>
+<text x="245" y="273" class="muted">server · control plane</text>
+<text x="245" y="289" class="muted">etcd · 6443 · monero 18080</text>
+<path d="M324.0,236 L324.0,208" class="wire" opacity=".55"/>
+<rect x="430" y="236" width="182" height="64" rx="9" class="node server"/>
+<text x="442" y="256" class="" style=" font-weight:700; font-size:13px;">nas .175</text>
+<text x="442" y="273" class="muted">server · control plane</text>
+<text x="442" y="289" class="muted">etcd · 6443 · .125 2nd NIC</text>
+<path d="M521.0,236 L521.0,208" class="wire" opacity=".55"/>
+<rect x="627" y="236" width="182" height="64" rx="9" class="node"/>
+<text x="639" y="256" class="" style=" font-weight:700; font-size:13px;">big .68</text>
+<text x="639" y="273" class="muted">agent · VM on proxmox</text>
+<text x="639" y="289" class="muted">10250 · 179 · 3784 · 8472</text>
+<path d="M718.0,236 L718.0,208" class="wire" opacity=".55"/>
+<rect x="824" y="236" width="182" height="64" rx="9" class="node"/>
+<text x="836" y="256" class="" style=" font-weight:700; font-size:13px;">pite .9</text>
+<text x="836" y="273" class="muted">agent · Raspberry Pi</text>
+<text x="836" y="289" class="muted">labelled excluded — no VIPs</text>
+<path d="M915.0,236 L915.0,208" class="wire" opacity=".55"/>
+<rect x="1021" y="236" width="182" height="64" rx="9" class="node"/>
+<text x="1033" y="256" class="" style=" font-weight:700; font-size:13px;">office .209</text>
+<text x="1033" y="273" class="muted">agent · wifi taint</text>
+<text x="1033" y="289" class="muted">no BGP speaker</text>
+<path d="M1112.0,236 L1112.0,208" class="wire" opacity=".55"/>
+<rect x="36" y="300" width="520" height="342" rx="9" class="panel"/>
+<text x="52" y="324" class="title">ETP Local — one announcer</text>
+<text x="52" y="341" class="muted">only the node running a ready pod announces it</text>
+<rect x="580" y="300" width="560" height="580" rx="9" class="panel"/>
+<text x="596" y="324" class="title">ETP Cluster — every speaker</text>
+<text x="596" y="341" class="muted">all announcing nodes carry it; the router installs one path</text>
+<rect x="52" y="354" width="240" height="62" rx="9" class="vip local"/>
+<text x="62" y="373" class="" style=" font-weight:700; font-size:12.5px;">.6.6  traefik</text>
+<text x="62" y="389" class="muted">80 → web · 443 → websecure</text>
+<text x="62" y="406" class="wan">WAN 80,443</text>
+<text x="131.0" y="406" class="wg">WG</text>
+<text x="152.8" y="406" class="note">→ closet+arch</text>
+<rect x="304" y="354" width="240" height="62" rx="9" class="vip local"/>
+<text x="314" y="373" class="" style=" font-weight:700; font-size:12.5px;">.6.13  stalwart</text>
+<text x="314" y="389" class="muted">25 · 587 · 993</text>
+<text x="314" y="406" class="wan">WAN 25,587,993</text>
+<text x="406.6" y="406" class="wg">WG</text>
+<text x="428.40000000000003" y="406" class="note">→ nas</text>
+<rect x="52" y="426" width="240" height="62" rx="9" class="vip local"/>
+<text x="62" y="445" class="" style=" font-weight:700; font-size:12.5px;">.6.15  ts-voice</text>
+<text x="62" y="461" class="muted">9987/udp</text>
+<text x="62" y="478" class="wan">WAN 9987</text>
+<text x="119.2" y="478" class="wg">WG</text>
+<text x="141.0" y="478" class="note">→ closet</text>
+<rect x="304" y="426" width="240" height="62" rx="9" class="vip local"/>
+<text x="314" y="445" class="" style=" font-weight:700; font-size:12.5px;">.6.16  ts-files</text>
+<text x="314" y="461" class="muted">30033/tcp</text>
+<text x="314" y="478" class="wan">WAN 30033</text>
+<text x="377.1" y="478" class="wg">WG</text>
+<text x="398.90000000000003" y="478" class="note">→ closet</text>
+<rect x="52" y="498" width="240" height="62" rx="9" class="vip local"/>
+<text x="62" y="517" class="" style=" font-weight:700; font-size:12.5px;">.6.18  headscale-stun</text>
+<text x="62" y="533" class="muted">3479/udp</text>
+<text x="62" y="550" class="wan">WAN 3479</text>
+<text x="119.2" y="550" class="wg">WG</text>
+<text x="141.0" y="550" class="note">→ arch</text>
+<rect x="304" y="498" width="240" height="62" rx="9" class="vip local"/>
+<text x="314" y="517" class="" style=" font-weight:700; font-size:12.5px;">.6.28  factorio-game</text>
+<text x="314" y="533" class="muted">34197/udp</text>
+<text x="314" y="550" class="wan">WAN 34197</text>
+<text x="377.1" y="550" class="wg">WG</text>
+<text x="398.90000000000003" y="550" class="note">→ arch</text>
+<rect x="52" y="570" width="240" height="62" rx="9" class="vip local"/>
+<text x="62" y="589" class="" style=" font-weight:700; font-size:12.5px;">.6.29  minecraft-game</text>
+<text x="62" y="605" class="muted">25565/tcp</text>
+<text x="62" y="622" class="wan">WAN 25565</text>
+<text x="125.1" y="622" class="wg">WG</text>
+<text x="146.9" y="622" class="note">→ closet</text>
+<rect x="596" y="354" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="373" class="" style=" font-weight:700; font-size:12.5px;">.6.14  coturn (steam-lobby)</text>
+<text x="606" y="389" class="muted">3478 tcp+udp · 45000–45063/udp</text>
+<text x="606" y="406" class="wan">WAN 3478 + relay</text>
+<text x="710.4" y="406" class="wg">WG</text>
+<text x="732.1999999999999" y="406" class="note">all speakers</text>
+<rect x="848" y="354" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="373" class="" style=" font-weight:700; font-size:12.5px;">.6.17  openrct2-game</text>
+<text x="858" y="389" class="muted">11753/tcp</text>
+<text x="858" y="406" class="wan">WAN 11753</text>
+<text x="921.1" y="406" class="wg">WG</text>
+<text x="942.9" y="406" class="note">all speakers</text>
+<rect x="596" y="426" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="445" class="" style=" font-weight:700; font-size:12.5px;">.6.19  mosquitto</text>
+<text x="606" y="461" class="muted">1883/tcp</text>
+<text x="606" y="478" class="wg">WG</text>
+<text x="627.8" y="478" class="note">all speakers</text>
+<rect x="848" y="426" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="445" class="" style=" font-weight:700; font-size:12.5px;">.6.20  temporal-frontend</text>
+<text x="858" y="461" class="muted">7233→rpc · 7243→http</text>
+<text x="858" y="478" class="wgused">WG · in use</text>
+<text x="932.9" y="478" class="note">all speakers</text>
+<rect x="596" y="498" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="517" class="" style=" font-weight:700; font-size:12.5px;">.6.21  coturn (matrix)</text>
+<text x="606" y="533" class="muted">3478 tcp+udp · 49152–49213/udp</text>
+<text x="606" y="550" class="wg">WG</text>
+<text x="627.8" y="550" class="note">all speakers</text>
+<rect x="848" y="498" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="517" class="" style=" font-weight:700; font-size:12.5px;">.6.22  livekit-server-rtc</text>
+<text x="858" y="533" class="muted">7881/tcp · 50000/udp</text>
+<text x="858" y="550" class="wan">WAN 7881</text>
+<text x="915.2" y="550" class="wg">WG</text>
+<text x="937.0" y="550" class="note">all speakers</text>
+<rect x="596" y="570" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="589" class="" style=" font-weight:700; font-size:12.5px;">.6.23  mimir-lb</text>
+<text x="606" y="605" class="muted">8080/tcp</text>
+<text x="606" y="622" class="wg">WG</text>
+<text x="627.8" y="622" class="note">all speakers</text>
+<rect x="848" y="570" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="589" class="" style=" font-weight:700; font-size:12.5px;">.6.24  loki-push-lb</text>
+<text x="858" y="605" class="muted">3100 → 8080</text>
+<text x="858" y="622" class="wg">WG</text>
+<text x="879.8" y="622" class="note">all speakers</text>
+<rect x="596" y="642" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="661" class="" style=" font-weight:700; font-size:12.5px;">.6.25  syslog-lb</text>
+<text x="606" y="677" class="muted">514/udp → 1514</text>
+<text x="606" y="694" class="wg">WG</text>
+<text x="627.8" y="694" class="note">all speakers</text>
+<rect x="848" y="642" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="661" class="" style=" font-weight:700; font-size:12.5px;">.6.26  frigate</text>
+<text x="858" y="677" class="muted">5000 · 1984 · 8554/tcp · 8555/udp</text>
+<text x="858" y="694" class="wg">WG</text>
+<text x="879.8" y="694" class="note">all speakers</text>
+<rect x="596" y="714" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="733" class="" style=" font-weight:700; font-size:12.5px;">.6.30  lan-dns</text>
+<text x="606" y="749" class="muted">53 tcp+udp → 1053</text>
+<text x="606" y="766" class="wg">WG</text>
+<text x="627.8" y="766" class="note">all speakers</text>
+<rect x="848" y="714" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="733" class="" style=" font-weight:700; font-size:12.5px;">.6.31  seaweedfs-s3-lan</text>
+<text x="858" y="749" class="muted">8333/tcp</text>
+<text x="858" y="766" class="wgused">WG · in use</text>
+<text x="932.9" y="766" class="note">all speakers</text>
+<rect x="596" y="786" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="606" y="805" class="" style=" font-weight:700; font-size:12.5px;">.5.10  kubernetes-api</text>
+<text x="606" y="821" class="muted">6443</text>
+<text x="606" y="838" class="wg">WG</text>
+<text x="627.8" y="838" class="note">all speakers</text>
+<rect x="36" y="902" width="1168" height="112" rx="9" class="do"/>
+<text x="56" y="926" class="title">DigitalOcean cluster (2143prod) — wg0 10.99.0.2/24</text>
+<text x="56" y="946" class="">routes 192.168.5.0/24 + 192.168.6.0/24 into the tunnel · keepalive 25 s · dials john2143.com:51820</text>
+<text x="56" y="968" class="">IN:   haproxy :7233 → .6.20 temporal  ·  haproxy :8333 → .6.31 seaweedfs S3  ·  DNS → router 10.99.0.1:53</text>
+<text x="56" y="990" class="">OUT: closet john2143-com → 10.99.0.2:32040 (mongo via svc externalIP) — 5 established, ~8.6 MB received</text>
+<path d="M1120,150 H1206 V898" class="wg" marker-end="url(#arrwg)"/>
+<text x="1198" y="330" class="wglabel" text-anchor="middle" transform="rotate(90 1198 330)">WireGuard — routed, not hosted</text>
+</svg>
+<figcaption>Live topology, 2026-10-20 06:45. Each VIP box shows its address, service, ports and reachability tags. The router installs one selected path per prefix; ECMP was trialled and reverted (<a href="2026-10-15-fungible-ingress.md">the record</a>).</figcaption>
+</figure>
+
+<h2 id="vips">VIPs</h2>
+<table>
+<thead><tr><th>IPv4</th><th>IPv6</th><th>Service</th><th>Ports</th><th>Announce</th><th>Router picks</th><th>WAN</th><th>WireGuard</th></tr></thead>
+<tbody>
+<tr><td class="mono">.6.6</td><td class="mono">::6</td><td>traefik</td><td class="mono">80 → web · 443 → websecure</td><td><span class="pill local">Local</span> closet+arch</td><td class="mono">closet</td><td><span class="pill wan">80, 443</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.13</td><td class="mono">::13</td><td>stalwart</td><td class="mono">25 · 587 · 993</td><td><span class="pill local">Local</span> nas</td><td class="mono">nas</td><td><span class="pill wan">25, 587, 993</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.14</td><td class="mono">::14</td><td>coturn (steam-lobby)</td><td class="mono">3478 tcp+udp · 45000–45063/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">3478 · 45000–45063/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.15</td><td class="mono">::15</td><td>ts-voice</td><td class="mono">9987/udp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">9987/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.16</td><td class="mono">::16</td><td>ts-files</td><td class="mono">30033/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">30033</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.17</td><td class="mono">::17</td><td>openrct2-game</td><td class="mono">11753/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill wan">11753</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.18</td><td class="mono">::18</td><td>headscale-stun</td><td class="mono">3479/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">3479/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.19</td><td class="mono">::19</td><td>mosquitto</td><td class="mono">1883/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.20</td><td class="mono">—</td><td>temporal-frontend</td><td class="mono">7233→rpc · 7243→http</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
+<tr><td class="mono">.6.21</td><td class="mono">::21</td><td>coturn (matrix)</td><td class="mono">3478 tcp+udp · 49152–49213/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.22</td><td class="mono">::22</td><td>livekit-server-rtc</td><td class="mono">7881/tcp · 50000/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">7881</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.23</td><td class="mono">::23</td><td>mimir-lb</td><td class="mono">8080/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.24</td><td class="mono">::24</td><td>loki-push-lb</td><td class="mono">3100 → 8080</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.25</td><td class="mono">::25</td><td>syslog-lb</td><td class="mono">514/udp → 1514</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.26</td><td class="mono">::26</td><td>frigate</td><td class="mono">5000 · 1984 · 8554/tcp · 8555/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.28</td><td class="mono">::28</td><td>factorio-game</td><td class="mono">34197/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">34197/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.29</td><td class="mono">::29</td><td>minecraft-game</td><td class="mono">25565/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">25565</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.30</td><td class="mono">::30</td><td>lan-dns</td><td class="mono">53 tcp+udp → 1053</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr><td class="mono">.6.31</td><td class="mono">::31</td><td>seaweedfs-s3-lan</td><td class="mono">8333/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
+<tr><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+</tbody>
+</table>
+<p class="small">“Router picks” is the selected path in the routing table, not the set of announcers — for a Cluster VIP every speaker carries it and the router installs one. <code>.6.17</code> (openrct2) and <code>.6.26</code> (frigate) currently have no route because neither has a ready pod; the pool is a <code>blackhole</code> at distance 250, so they drop rather than leak to the default route.</p>
+
+<h2 id="nodes">Nodes</h2>
+<table>
+<thead><tr><th>IP</th><th>Name</th><th>Role</th><th>Ports bound</th><th>Notes</th><th>VIPs</th></tr></thead>
+<tbody>
+<tr><td class="mono">.1</td><td>router</td><td>MikroTik · 192.168.5.1</td><td class="mono">22, 53 (LAN + wg), 51820/udp (WAN), 179 (k8s-nodes), 3784/udp, 8291</td><td>dst-nat · BGP 65001 · DNS FWD ×6 · WG hub</td><td>—</td></tr>
+<tr><td class="mono">.36</td><td>closet</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, 5432, NodePorts</td><td>also the kubectl host</td><td>announces · selected for 17 VIPs</td></tr>
+<tr><td class="mono">.76</td><td>arch</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, NodePorts</td><td>monero 18080 dst-nat'd here</td><td>announces</td></tr>
+<tr><td class="mono">.175</td><td>nas</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, NodePorts</td><td>also .125 on enp7s0; bond0 is .175</td><td>announces · selected for .6.13</td></tr>
+<tr><td class="mono">.68</td><td>big</td><td>agent · VM on proxmox</td><td class="mono">22, 10250, 179, 3784/udp, 8472/udp, 9100, NodePorts</td><td>flaky under load (#77)</td><td>announces</td></tr>
+<tr><td class="mono">.9</td><td>pite</td><td>agent · Raspberry Pi</td><td class="mono">22, 10250, 179, 3784/udp, 8472/udp, 9100</td><td>label: exclude-from-external-load-balancers</td><td>no VIPs</td></tr>
+<tr><td class="mono">.209</td><td>office</td><td>agent · wifi taint</td><td class="mono">22, 10250, 8472/udp, 9100</td><td>179/3784 open but no frr-k8s speaker</td><td>never</td></tr>
+<tr><td class="mono">.19</td><td>proxmox</td><td>host (not k8s)</td><td class="mono">22, 8006</td><td>runs big and github VMs</td><td>—</td></tr>
+</tbody>
+</table>
+<p class="small">Common to every k3s node: <code>10250</code> kubelet, <code>179</code> BGP, <code>3784/udp</code> BFD, <code>8472/udp</code> flannel, <code>9100</code> node_exporter, and the <code>30000–32767</code> NodePort range. Servers add <code>6443</code> and <code>2379–2381</code> etcd.</p>
+
+<h2 id="wg">The WireGuard path</h2>
+<p>
+  One tunnel, one peer. The router terminates <code>wg-remote</code> on <code>10.99.0.1/24</code> (UDP 51820, WAN input rule);
+  the DigitalOcean cluster dials <code>john2143.com:51820</code> and holds <code>10.99.0.2/24</code>. Its <code>wg0</code> carries
+  <em>both</em> LAN subnets, so every VIP and every node IP is routable from that cluster — reachability is limited by what
+  runs there, not by routing. The router does not masquerade the tunnel into the LAN.
+</p>
+<table>
+<thead><tr><th>Direction</th><th>What</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr><td>DO → home</td><td><code>192.168.6.20:7233</code> temporal-frontend</td><td>haproxy <code>home-tunnel-proxy</code> frontend <code>:7233</code>; 2 established</td></tr>
+<tr><td>DO → home</td><td><code>192.168.6.31:8333</code> seaweedfs S3</td><td>haproxy frontend <code>:8333</code>; recent flows</td></tr>
+<tr><td>DO → router</td><td>DNS <code>10.99.0.1:53</code></td><td>input rules for the six split-horizon zones</td></tr>
+<tr><td>home → DO</td><td><code>10.99.0.2:32040</code> mongo (svc <code>mongo-tunnel</code>, externalIP)</td><td>5 established from closet, ~8.6 MB received; <code>john2143-com</code> reads it from a secret</td></tr>
+</tbody>
+</table>
+<div class="callout warn">
+  <p><strong>That is a full LAN route, not a pair of holes.</strong> <code>allowed-ips</code> on the DO side is
+  <code>10.99.0.0/24, 192.168.5.0/24, 192.168.6.0/24</code> and the router forwards without NAT, so any pod on that cluster can
+  address any home VIP or node directly. Only haproxy’s two backends and DNS do. Narrowing the peer to <code>10.99.0.0/24</code>
+  plus two <code>/32</code>s would make the intent explicit; nothing depends on the wider range today except mongo’s return path,
+  which needs <code>10.244.0.0/16</code>.</p>
+</div>
+
+<h2 id="findings">What this shows</h2>
+<div class="callout">
+  <p><strong>Seven VIPs are single-node.</strong> <code>.6.6</code> traefik announces from closet <em>and</em> arch (three replicas),
+  so the public edge survives losing either one. <code>.6.13</code> stalwart is nas-only, <code>.6.15</code>/<code>.6.16</code>/<code>.6.29</code>
+  are closet-only, and <code>.6.18</code>/<code>.6.28</code> are arch-only. Lose that node and the VIP is withdrawn — for the games,
+  that is the session.</p>
+</div>
+<div class="callout">
+  <p><strong>Ten VIPs face the internet, ten do not.</strong> The other ten are LAN, tailnet or WireGuard only — including all of
+  observability (<code>.6.23</code>–<code>.6.25</code>), <code>.6.31</code> seaweedfs, <code>.6.30</code> DNS and <code>.5.10</code> the API.
+  Nothing in that group has an inbound rule, which is the point.</p>
+</div>
+<div class="callout ok">
+  <p><strong>Failure is closed by default.</strong> <code>192.168.6.0/24</code> sits in the routing table as an
+  <code>immediate-gw=blackhole distance=250</code> route. An unannounced VIP drops; it never falls through to the LAN default
+  route. That is why <code>.6.17</code> and <code>.6.26</code> simply time out today instead of answering from the wrong place.</p>
+</div>
+<div class="callout decide">
+  <p><strong>The selected path is lopsided.</strong> With ECMP off, the router prefers closet for 17 of the 19 routed VIPs.
+  That is a routing-table artifact, not a load-balancing policy — arch and nas carry traffic only for what they uniquely announce.
+  If that ever matters, the fix is moving <code>.6.x</code> services to <code>Local</code>, not re-enabling multipath.</p>
+</div>
+
+<h2 id="method">How to re-check</h2>
+<pre><code># VIPs, ports, announcement policy, node ports
+kubectl get svc -A -o json
+kubectl -n kube-system get pods -l app.kubernetes.io/name=traefik -o wide
+
+# which node carries each prefix (selected path), and the WAN forwards
+mikrotik-connect r '/ip route print terse where dst-address~"192.168.6." and active=yes'
+mikrotik-connect r '/ip firewall nat print terse where chain=dstnat'
+
+# listener set on a node
+ssh 192.168.5.36 'sudo -n ss -ltnuH | awk "{print \$1, \$5}" | sort -u'
+
+# WireGuard: both ends, then the live flows
+mikrotik-connect r '/interface wireguard peers print detail'
+kubectl --context 2143prod -n default get deploy wireguard-doks -o yaml
+kubectl --context 2143prod -n default get cm home-tunnel-proxy -o yaml
+mikrotik-connect r '/ip firewall connection print terse where src-address~"10.99" or dst-address~"10.99"'</code></pre>
+
+
+<p class="small">
+  Related: <a href="network-edge.md">network-edge</a> (how the edge is put together) ·
+  <a href="2026-10-15-fungible-ingress.md">2026-10-15-fungible-ingress</a> (the change that made it fungible) ·
+  <a href="node-maintenance.md">node-maintenance</a> (draining a node safely).
+</p>
+
+</main>
+</body>
+</html>
