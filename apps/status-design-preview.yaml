@@ -40,9 +40,22 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: 'status-pr-{{.number}}'
+      ignoreDifferences:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          # Gateway API defaulting (see status-design.yaml).
+          jqPathExpressions:
+            - .spec.parentRefs[].group
+            - .spec.parentRefs[].kind
+            - .spec.rules[].backendRefs[].group
+            - .spec.rules[].backendRefs[].kind
+            - .spec.rules[].backendRefs[].weight
       syncPolicy:
         automated:
           prune: true
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          # Same reason as status-design.yaml: the designs ConfigMap is too
+          # large for client-side apply's last-applied annotation.
+          - ServerSideApply=true

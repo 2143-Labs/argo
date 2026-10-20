@@ -22,9 +22,24 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: status-design
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting: parentRefs gain group/kind, backendRefs gain
+      # group/kind/weight - none present in the chart. Server-side apply diffs
+      # them as drift; matches, filters and hostnames stay authoritative.
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # The designs ConfigMap outgrows the 256 KiB last-applied annotation that
+      # client-side apply keeps; server-side apply stores no such copy.
+      - ServerSideApply=true
