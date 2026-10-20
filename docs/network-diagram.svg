@@ -5,43 +5,130 @@
  -->
 <!-- Title: home Pages: 1 -->
 <svg width="2273pt" height="1514pt"
- viewBox="0.00 0.00 2273.00 1514.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-<style type="text/css">
+ viewBox="0.00 0.00 2273.00 1514.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><style type="text/css">
   text {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     fill: #1d1d1f;
   }
-  .edge path, .edge polygon { stroke: #666b70; fill: #666b70; }
-  .edge.wifi path { stroke: #8a8f94; stroke-dasharray: 2,4; fill: none; }
-  .edge.vip path { stroke: #9a5800; }
-  #graph0 > polygon { fill: transparent; stroke: none; }
-  .cluster > polygon { fill: transparent; stroke: #d9d6cf; }
-  .node.internet ellipse { fill: #eceff1; stroke: #5f6368; stroke-width: 1.6; }
-  .node.net > polygon, .node.net > path { fill: #e8eefb; stroke: #2457c5; stroke-width: 1.6; }
-  .node.srv > polygon, .node.srv > path { fill: #ede8fa; stroke: #5b3fb0; stroke-width: 1.4; }
-  .node.kube > polygon, .node.kube > path { fill: #e2f2e9; stroke: #1f7a4d; stroke-width: 1.4; }
-  .node.cli > polygon, .node.cli > path { fill: #eef0f1; stroke: #8a8f94; stroke-width: 1.2; }
-  .node.cam > polygon, .node.cam > path { fill: #fbe3e3; stroke: #b3261e; stroke-width: 1.4; }
-  .node.ap > polygon, .node.ap > path { fill: #f0e9e4; stroke: #7a5c48; stroke-width: 1.4; }
-  .node.vip > polygon, .node.vip > path { fill: #faedda; stroke: #9a5800; stroke-width: 1.4; }
+  #graph0 > polygon {
+    fill: transparent;
+    stroke: none;
+  }
+  .cluster > polygon {
+    fill: transparent;
+    stroke: #d9d6cf;
+  }
+  .edge path, .edge polygon {
+    stroke: #666b70;
+    fill: #666b70;
+  }
+  .edge.wifi path {
+    stroke: #8a8f94;
+    stroke-dasharray: 2,4;
+    fill: none;
+  }
+  .edge.vip path {
+    stroke: #9a5800;
+  }
+  .edge.vip polygon {
+    stroke: #9a5800;
+    fill: #9a5800;
+  }
+  .node.internet ellipse {
+    fill: #eceff1;
+    stroke: #5f6368;
+    stroke-width: 1.6;
+  }
+  .node.net > polygon, .node.net > path {
+    fill: #e8eefb;
+    stroke: #2457c5;
+    stroke-width: 1.6;
+  }
+  .node.srv > polygon, .node.srv > path {
+    fill: #ede8fa;
+    stroke: #5b3fb0;
+    stroke-width: 1.4;
+  }
+  .node.kube > polygon, .node.kube > path {
+    fill: #e2f2e9;
+    stroke: #1f7a4d;
+    stroke-width: 1.4;
+  }
+  .node.cli > polygon, .node.cli > path {
+    fill: #eef0f1;
+    stroke: #8a8f94;
+    stroke-width: 1.2;
+  }
+  .node.cam > polygon, .node.cam > path {
+    fill: #fbe3e3;
+    stroke: #b3261e;
+    stroke-width: 1.4;
+  }
+  .node.ap > polygon, .node.ap > path {
+    fill: #f0e9e4;
+    stroke: #7a5c48;
+    stroke-width: 1.4;
+  }
+  .node.vip > polygon, .node.vip > path {
+    fill: #faedda;
+    stroke: #9a5800;
+    stroke-width: 1.4;
+  }
   @media (prefers-color-scheme: dark) {
-    text { fill: #e6e6e3; }
-    .cluster > polygon { stroke: #34363b; }
-    .edge path, .edge polygon { stroke: #a3a3a0; fill: #a3a3a0; }
-    .edge.wifi path { stroke: #7d8288; }
-    .edge.vip path { stroke: #e0a34a; }
-    .edge.vip polygon { stroke: #e0a34a; fill: #e0a34a; }
-    .node.internet ellipse { fill: #23262b; stroke: #a3a3a0; }
-    .node.net > polygon, .node.net > path { fill: #1b2540; stroke: #7aa2ff; }
-    .node.srv > polygon, .node.srv > path { fill: #241d3a; stroke: #b49cff; }
-    .node.kube > polygon, .node.kube > path { fill: #14291f; stroke: #5cc28e; }
-    .node.cli > polygon, .node.cli > path { fill: #23262b; stroke: #8f9398; }
-    .node.cam > polygon, .node.cam > path { fill: #33201f; stroke: #f2766d; }
-    .node.ap > polygon, .node.ap > path { fill: #2b2320; stroke: #c9a58c; }
-    .node.vip > polygon, .node.vip > path { fill: #2e2416; stroke: #e0a34a; }
+    text {
+      fill: #e6e6e3;
+    }
+    .cluster > polygon {
+      stroke: #34363b;
+    }
+    .edge path, .edge polygon {
+      stroke: #a3a3a0;
+      fill: #a3a3a0;
+    }
+    .edge.wifi path {
+      stroke: #7d8288;
+    }
+    .edge.vip path {
+      stroke: #e0a34a;
+    }
+    .edge.vip polygon {
+      stroke: #e0a34a;
+      fill: #e0a34a;
+    }
+    .node.internet ellipse {
+      fill: #23262b;
+      stroke: #a3a3a0;
+    }
+    .node.net > polygon, .node.net > path {
+      fill: #1b2540;
+      stroke: #7aa2ff;
+    }
+    .node.srv > polygon, .node.srv > path {
+      fill: #241d3a;
+      stroke: #b49cff;
+    }
+    .node.kube > polygon, .node.kube > path {
+      fill: #14291f;
+      stroke: #5cc28e;
+    }
+    .node.cli > polygon, .node.cli > path {
+      fill: #23262b;
+      stroke: #8f9398;
+    }
+    .node.cam > polygon, .node.cam > path {
+      fill: #33201f;
+      stroke: #f2766d;
+    }
+    .node.ap > polygon, .node.ap > path {
+      fill: #2b2320;
+      stroke: #c9a58c;
+    }
+    .node.vip > polygon, .node.vip > path {
+      fill: #2e2416;
+      stroke: #e0a34a;
+    }
   }
 </style>
-
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1510)">
 <title>home</title>
 <g id="clust1" class="cluster">
