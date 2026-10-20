@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Home edge inventory — addresses, ports, reachability</title>
+<title>Home network inventory — every subnet and host</title>
 <style>
   :root {
     --bg:#fbfaf7; --fg:#1d1d1f; --muted:#5f6368; --line:#d9d6cf; --panel:#f1efe9;
@@ -73,31 +73,189 @@
   svg .arrowhead { fill:var(--fg); }
   svg .arrowhead.wg { fill:var(--ok); }
   svg .arrowhead.wan { fill:var(--accent); }
+
+  svg .fabric { fill:var(--panel); stroke:var(--accent); stroke-width:1.5; }
+  svg text.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:11px; }
+  .counts { display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0 1.5rem; }
+  .counts div { border:1px solid var(--line); border-radius:9px; padding:.5rem .8rem; background:var(--panel); font-size:.9rem; }
+  .counts b { display:block; font-size:1.25rem; line-height:1.2; }
 </style>
 </head>
 <body>
 <main>
 
-<h1>Home edge inventory — addresses, ports, reachability</h1>
+<h1>Home network inventory — every subnet and host</h1>
 <p class="meta">
-  Owner: John · Live-verified 2026-10-20 06:45 local · Source: <code>kubectl</code> (context <code>closet-as-developer</code>), RouterOS 7.24.5 route and NAT tables, live conntrack, and the <code>2143prod</code> cluster.
-  <br>Lives in <code>argo/docs/network-inventory.html</code>. Regenerate it from the commands at the bottom; do not hand-edit the tables.
+  Owner: John · Live-verified 2026-10-20 09:35 local · Source: RouterOS 7.24.5 (DHCP leases, ARP, bridge host tables, routes, BGP), <code>kubectl</code> (context <code>closet-as-developer</code>), <code>tailscale status</code>, and the <code>2143prod</code> cluster.
+  <br>Lives in <code>argo/docs/network-inventory.html</code>. Every host under <code>192.168.0.0/16</code> is listed below; re-derive with the commands at the end.
 </p>
 
+<div class="counts">
+  <div><b>75</b>IPv4 hosts under 192.168.0.0/16</div>
+  <div><b>5</b>on the Verizon LAN</div>
+  <div><b>7</b>cameras / NVR</div>
+  <div><b>42</b>on the switch LAN</div>
+  <div><b>20</b>MetalLB VIPs</div>
+  <div><b>22</b>tailnet devices</div>
+</div>
+
 <p class="lede">
-  Twenty LoadBalancer VIPs across two address families: seven announced by a single node, thirteen by every speaker.
-  Ten face the internet through the router, every one of them is routable from the DigitalOcean cluster over the WireGuard tunnel,
-  and exactly two are actually called that way. The diagram shows the whole edge in one view — what the WAN can reach, what the
-  cluster announces, and where each address physically lives.
+  Three production networks and one recovery net: <code>192.168.0.0/24</code> is the Verizon LAN the ISP sees,
+  <code>192.168.5.0/24</code> is the switched house LAN, <code>192.168.6.0/24</code> is the MetalLB VIP space that has no
+  interface anywhere, and <code>192.168.88.0/24</code> survives only as the factory-default recovery address.
+  <code>192.168.1.0/24</code> carries the cameras. The MikroTik is the only box with a foot on both the WAN side and the LAN.
 </p>
 
 <div class="legend">
-  <span><span class="sw local"></span><span class="pill local">Local</span> one announcer — the node running a ready pod</span>
-  <span><span class="sw cluster"></span><span class="pill cluster">Cluster</span> every speaker announces it</span>
-  <span><span class="sw do"></span><span class="pill wg">WireGuard</span> routed from DigitalOcean, not hosted</span>
-  <span><span class="pill wan">WAN</span> dst-nat on the router</span>
+  <span><span class="sw cluster"></span>router / network boundary</span>
+  <span><span class="sw local"></span>zone card — every host listed</span>
+  <span><span class="sw do"></span>tunnel or overlay</span>
+  <span><span class="pill wan">WAN</span> reachable from the internet</span>
 </div>
 
+<h2 id="map">The network</h2>
+<figure>
+<svg class="diagram" viewBox="0 0 1240 760" role="img" aria-label="Whole-network map: Internet, Verizon LAN, MikroTik, 10G switch fabric, and the four LAN subnets with every host">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker><marker id="a2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker></defs>
+<rect x="30" y="8" width="300" height="34" rx="9" class="inet"/>
+<text x="180" y="30" class="title" text-anchor="middle">Internet</text>
+<path d="M180,42 L180,60" class="wire" marker-end="url(#a2)"/>
+<rect x="30" y="62" width="360" height="150" rx="9" class="panel"/>
+<text x="44" y="84" class="title">192.168.0.0/24 — Verizon LAN</text>
+<text x="44" y="100" class="muted">double NAT · pool .100–.169</text>
+<text x="44" y="122" class="" style="font-size:11.5px;">.0.1  Verizon CR1000B</text>
+<text x="44" y="139" class="" style="font-size:11.5px;">.0.2  MikroTik 2GWAN</text>
+<text x="44" y="156" class="" style="font-size:11.5px;">.0.152  MikroTik 2GWAN (2nd)</text>
+<text x="44" y="173" class="" style="font-size:11.5px;">.0.154  home-pi</text>
+<text x="44" y="190" class="" style="font-size:11.5px;">.0.165  unidentified</text>
+<rect x="410" y="62" width="420" height="150" rx="9" class="panel"/>
+<text x="424" y="84" class="title">MikroTik RB5009 — the boundary</text>
+<text x="424" y="100" class="muted">192.168.0.2 · .5.1 · .1.1 · .88.254</text>
+<text x="424" y="122" class="" style="font-size:11.5px;">BGP 65001 (AS 65000 speakers)</text>
+<text x="424" y="139" class="" style="font-size:11.5px;">BFD 3784 · DNS FWD ×6 → .6.30</text>
+<text x="424" y="156" class="" style="font-size:11.5px;">WireGuard 10.99.0.1/24 · UDP 51820</text>
+<text x="424" y="173" class="" style="font-size:11.5px;">dst-nat 15 rules → .6.x</text>
+<text x="424" y="190" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text>
+<rect x="850" y="62" width="360" height="150" rx="9" class="panel"/>
+<text x="864" y="84" class="title">WireGuard → DigitalOcean</text>
+<text x="864" y="100" class="muted">10.99.0.0/24 · peer1 = 10.99.0.2</text>
+<text x="864" y="122" class="" style="font-size:11.5px;">routes 192.168.5.0/24 + .6.0/24</text>
+<text x="864" y="139" class="" style="font-size:11.5px;">IN  .6.20 temporal :7233</text>
+<text x="864" y="156" class="" style="font-size:11.5px;">IN  .6.31 seaweedfs :8333</text>
+<text x="864" y="173" class="" style="font-size:11.5px;">OUT 10.99.0.2:32040 mongo</text>
+<text x="864" y="190" class="" style="font-size:11.5px;">DNS → router 10.99.0.1:53</text>
+<path d="M390,137 L410,137" class="wire" marker-end="url(#a2)"/>
+<path d="M830,120 L850,120" class="wg" marker-end="url(#a2w)"/>
+<rect x="300" y="240" width="640" height="56" rx="9" class="fabric"/>
+<text x="620" y="262" class="title" text-anchor="middle">10G switch fabric</text>
+<text x="620" y="282" class="muted" text-anchor="middle">core .5.4 → upstairs-core .5.5 → upstairs .5.3 / office .5.2</text>
+<path d="M620,212 L620,240" class="wire" marker-end="url(#a2)"/>
+<path d="M40,320 L1200,320" class="wire" opacity=".4"/>
+<path d="M620,296 L620,320" class="wire"/>
+<path d="M125,320 L125,330" class="wire" opacity=".6"/>
+<rect x="30" y="330" width="190" height="205" rx="9" class="panel"/>
+<text x="44" y="352" class="title">192.168.1.0/24</text>
+<text x="44" y="368" class="muted">cameras · egress blocked</text>
+<text x="44" y="392" class="" style="font-size:11.5px;">.1.1  router (bridge)</text>
+<text x="44" y="411" class="" style="font-size:11.5px;">.1.61  Garage cam</text>
+<text x="44" y="430" class="" style="font-size:11.5px;">.1.63  Front cam</text>
+<text x="44" y="449" class="" style="font-size:11.5px;">.1.64  Front cam</text>
+<text x="44" y="468" class="" style="font-size:11.5px;">.1.65  Side cam</text>
+<text x="44" y="487" class="" style="font-size:11.5px;">.1.66  Front cam</text>
+<text x="44" y="506" class="" style="font-size:11.5px;">.1.67  NVR</text>
+<text x="44" y="526" class="muted">Reolink · no WAN access</text>
+<path d="M430,320 L430,330" class="wire" opacity=".6"/>
+<rect x="235" y="330" width="390" height="400" rx="9" class="panel"/>
+<text x="249" y="352" class="title">192.168.5.0/24 — switch LAN</text>
+<text x="249" y="368" class="muted">42 hosts · statics .1–.49 · DHCP pool .50–.254</text>
+<text x="249" y="392" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
+<text x="249" y="406" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
+<text x="249" y="420" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
+<text x="249" y="434" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
+<text x="249" y="448" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
+<text x="249" y="462" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
+<text x="249" y="476" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
+<text x="249" y="490" class="" style="font-size:10.5px;">.5.9 pite</text>
+<text x="249" y="504" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
+<text x="249" y="518" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
+<text x="249" y="532" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
+<text x="249" y="546" class="" style="font-size:10.5px;">.5.36 closet</text>
+<text x="249" y="560" class="" style="font-size:10.5px;">.5.68 big</text>
+<text x="249" y="574" class="" style="font-size:10.5px;">.5.76 arch</text>
+<text x="249" y="588" class="" style="font-size:10.5px;">.5.122 steam</text>
+<text x="249" y="602" class="" style="font-size:10.5px;">.5.140 secu</text>
+<text x="249" y="616" class="" style="font-size:10.5px;">.5.175 nas</text>
+<text x="249" y="630" class="" style="font-size:10.5px;">.5.209 office</text>
+<text x="249" y="644" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
+<text x="437" y="392" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
+<text x="437" y="406" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
+<text x="437" y="420" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
+<text x="437" y="442" class="" style="font-size:10.5px;">.5.53 unidentified</text>
+<text x="437" y="456" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
+<text x="437" y="470" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
+<text x="437" y="484" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
+<text x="437" y="498" class="" style="font-size:10.5px;">.5.118 vpin</text>
+<text x="437" y="512" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
+<text x="437" y="526" class="" style="font-size:10.5px;">.5.123 mirror</text>
+<text x="437" y="540" class="" style="font-size:10.5px;">.5.124 iPhone</text>
+<text x="437" y="554" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
+<text x="437" y="568" class="" style="font-size:10.5px;">.5.131 unidentified</text>
+<text x="437" y="582" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
+<text x="437" y="596" class="" style="font-size:10.5px;">.5.146 unidentified</text>
+<text x="437" y="610" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
+<text x="437" y="624" class="" style="font-size:10.5px;">.5.164 AiDot</text>
+<text x="437" y="638" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sensor-52f0c8</text>
+<text x="437" y="652" class="" style="font-size:10.5px;">.5.168 AiDot</text>
+<text x="437" y="666" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sensor-6c7088</text>
+<text x="437" y="680" class="" style="font-size:10.5px;">.5.172 unidentified</text>
+<text x="437" y="694" class="" style="font-size:10.5px;">.5.187 unidentified</text>
+<text x="437" y="708" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
+<path d="M805,320 L805,330" class="wire" opacity=".6"/>
+<rect x="640" y="330" width="330" height="240" rx="9" class="panel"/>
+<text x="654" y="352" class="title">192.168.6.0/24 — MetalLB</text>
+<text x="654" y="368" class="muted">20 VIPs · 10 WAN · 10 LAN/WG only</text>
+<text x="654" y="392" class="" style="font-size:10.5px;">.6.6 traefik</text>
+<text x="814" y="392" class="" style="font-size:10.5px;">.6.13 stalwart</text>
+<text x="654" y="406" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
+<text x="814" y="406" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
+<text x="654" y="420" class="" style="font-size:10.5px;">.6.16 ts-files</text>
+<text x="814" y="420" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
+<text x="654" y="434" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
+<text x="814" y="434" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
+<text x="654" y="448" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
+<text x="814" y="448" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
+<text x="654" y="462" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
+<text x="814" y="462" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
+<text x="654" y="476" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
+<text x="814" y="476" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
+<text x="654" y="490" class="" style="font-size:10.5px;">.6.26 frigate</text>
+<text x="814" y="490" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
+<text x="654" y="504" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
+<text x="814" y="504" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
+<text x="654" y="518" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
+<text x="814" y="518" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
+<text x="654" y="560" class="muted">no router interface — BGP /32s only</text>
+<path d="M1097,320 L1097,330" class="wire" opacity=".6"/>
+<rect x="985" y="330" width="225" height="105" rx="9" class="panel"/>
+<text x="999" y="352" class="title">192.168.88.0/24</text>
+<text x="999" y="368" class="muted">recovery / factory default</text>
+<text x="999" y="392" class="" style="font-size:11.5px;">.88.254  router</text>
+<text x="999" y="410" class="muted">upstairs-core still has .88.1</text>
+<rect x="985" y="455" width="225" height="200" rx="9" class="panel"/>
+<text x="999" y="477" class="title">Overlays</text>
+<text x="999" y="493" class="muted">not on the bridge</text>
+<text x="999" y="516" class="" style="font-size:11px;">fd00:1::/64 — node ULA</text>
+<text x="999" y="535" class="" style="font-size:11px;">fd00:6::/64 — MetalLB v6</text>
+<text x="999" y="554" class="" style="font-size:11px;">10.42.0.0/16 — pods</text>
+<text x="999" y="573" class="" style="font-size:11px;">10.43.0.0/16 — services</text>
+<text x="999" y="592" class="" style="font-size:11px;">10.99.0.0/24 — WireGuard</text>
+<text x="999" y="611" class="" style="font-size:11px;">100.64.0.0/10 — tailnet (22)</text>
+<text x="999" y="630" class="" style="font-size:11px;">10.244/.245 — DO side</text>
+</svg>
+<figcaption>Whole-network map, 2026-10-20 09:35. Each card lists every host in that subnet; the 10G fabric is a single box because every host reaches the router through it. Counts and names come from bound DHCP leases plus the static inventory, with liveness confirmed by ARP and ping.</figcaption>
+</figure>
+
+<h2 id="edge">The edge in detail</h2>
 <figure>
 <svg class="diagram" viewBox="0 0 1240 1020" role="img" aria-label="Home edge topology: internet to router to six k3s nodes; twenty VIPs grouped by announcement policy; WireGuard tunnel to the DigitalOcean cluster">
   <defs>
@@ -271,10 +429,90 @@
 <path d="M1120,150 H1206 V898" class="wg" marker-end="url(#arrwg)"/>
 <text x="1198" y="330" class="wglabel" text-anchor="middle" transform="rotate(90 1198 330)">WireGuard — routed, not hosted</text>
 </svg>
-<figcaption>Live topology, 2026-10-20 06:45. Each VIP box shows its address, service, ports and reachability tags. The router installs one selected path per prefix; ECMP was trialled and reverted (<a href="2026-10-15-fungible-ingress.md">the record</a>).</figcaption>
+<figcaption>Router → BGP speakers → VIPs → WireGuard. The router installs one selected path per prefix; ECMP was trialled and reverted (<a href="2026-10-15-fungible-ingress.md">the record</a>).</figcaption>
 </figure>
 
-<h2 id="vips">VIPs</h2>
+<h2 id="s0">192.168.0.0/24 — Verizon LAN (ISP side)</h2>
+<p>Five addresses are in use. Only per-port forwards cross into <code>192.168.0.2</code>; the Verizon router is not a full
+DMZ, so every new WAN port needs a forward here <em>and</em> a dst-nat on the MikroTik.</p>
+<table>
+<thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td class="mono">.0.1</td><td>Verizon CR1000B</td><td class="mono">74:90:BC:79:0A:A4</td><td>static</td><td>ISP gateway; per-port forwards → .0.2</td></tr>
+<tr><td class="mono">.0.2</td><td>MikroTik 2GWAN</td><td class="mono">—</td><td>static</td><td>primary WAN; WireGuard 51820 terminates here</td></tr>
+<tr><td class="mono">.0.152</td><td>MikroTik 2GWAN (2nd)</td><td class="mono">—</td><td>DHCP (D)</td><td>secondary address, unused for forwarding</td></tr>
+<tr><td class="mono">.0.154</td><td>home-pi</td><td class="mono">—</td><td>static</td><td>Attic cache :8280; on the Verizon LAN, outside the MikroTik</td></tr>
+<tr><td class="mono">.0.165</td><td>unidentified</td><td class="mono">46:5C:E3:6B:66:C1</td><td>ARP only</td><td>reached during the snapshot, no lease, silent on ping</td></tr>
+</tbody>
+</table>
+
+<h2 id="s1">192.168.1.0/24 — main LAN / cameras</h2>
+<p>The Reolink cameras. The whole subnet is blocked from WAN egress; <code>secu</code> handles NVR duties on the other LAN.</p>
+<table>
+<thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td class="mono">.1.1</td><td>router (bridge)</td><td class="mono">—</td><td>static</td><td>192.168.1.1, second address on the same bridge</td></tr>
+<tr><td class="mono">.1.61</td><td>Garage cam</td><td class="mono">EC:71:DB:F4:DC:49</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr><td class="mono">.1.63</td><td>Front cam</td><td class="mono">EC:71:DB:89:D8:8B</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr><td class="mono">.1.64</td><td>Front cam</td><td class="mono">EC:71:DB:65:58:A3</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr><td class="mono">.1.65</td><td>Side cam</td><td class="mono">94:B3:F7:18:52:CC</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr><td class="mono">.1.66</td><td>Front cam</td><td class="mono">EC:71:DB:3E:2F:21</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr><td class="mono">.1.67</td><td>NVR</td><td class="mono">EC:71:DB:8B:92:93</td><td>DHCP lease</td><td>Reolink NVR; the only 1.0/24 host answering ARP</td></tr>
+</tbody>
+</table>
+
+<h2 id="s5">192.168.5.0/24 — switch LAN</h2>
+<p>42 hosts. Everything below <code>.50</code> is static and never served by DHCP; the pool is <code>.50–.254</code>.
+Five are the switch fabric, seventeen are fixed infrastructure (printer, k3s nodes, Proxmox, APs, BMC), and twenty are clients and IoT.</p>
+<table>
+<thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td class="mono">.5.1</td><td>router · RB5009</td><td class="mono">—</td><td>static</td><td>gateway · BGP 65001 · DNS · WireGuard</td></tr>
+<tr><td class="mono">.5.2</td><td>office switch · CRS310</td><td class="mono">—</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr><td class="mono">.5.3</td><td>upstairs switch · CRS310</td><td class="mono">—</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr><td class="mono">.5.4</td><td>core switch · CRS305</td><td class="mono">—</td><td>static</td><td>4×SFP+ 10G</td></tr>
+<tr><td class="mono">.5.5</td><td>upstairs-core · CRS305</td><td class="mono">—</td><td>static</td><td>4×SFP+ 10G; holds the defconf .88.1</td></tr>
+<tr><td class="mono">.5.6</td><td>Brother printer</td><td class="mono">—</td><td>static</td><td>upstairs switch ether6</td></tr>
+<tr><td class="mono">.5.8</td><td>GL-KVM</td><td class="mono">94:83:C4:C4:9C:4D</td><td>static</td><td>tailnet glkvm</td></tr>
+<tr><td class="mono">.5.9</td><td>pite</td><td class="mono">DC:A6:32:25:51:6E</td><td>reservation</td><td>k3s agent (Pi), excluded from announcing</td></tr>
+<tr><td class="mono">.5.10</td><td>k3s API VIP</td><td class="mono">—</td><td>MetalLB</td><td>kubernetes-api :6443 — ICMP never answers</td></tr>
+<tr><td class="mono">.5.19</td><td>bigp · Proxmox</td><td class="mono">2C:EA:7F:E7:13:98</td><td>static</td><td>PVE 9.2.2; hosts big, unifi-os, steam, github</td></tr>
+<tr><td class="mono">.5.30</td><td>UniFi OS console</td><td class="mono">BC:24:11:23:B8:A5</td><td>static</td><td>VM on bigp, :11443</td></tr>
+<tr><td class="mono">.5.36</td><td>closet</td><td class="mono">0C:C4:7A:BD:63:3D</td><td>reservation</td><td>k3s server + etcd, postgres, kubectl host</td></tr>
+<tr><td class="mono">.5.68</td><td>big</td><td class="mono">BC:24:11:19:22:F9</td><td>reservation</td><td>k3s agent, VM on bigp</td></tr>
+<tr><td class="mono">.5.76</td><td>arch</td><td class="mono">98:B7:85:23:48:90</td><td>reservation</td><td>k3s server + etcd; monero 18080</td></tr>
+<tr><td class="mono">.5.122</td><td>steam</td><td class="mono">BC:24:11:7B:CE:02</td><td>DHCP lease</td><td>VM on bigp</td></tr>
+<tr><td class="mono">.5.140</td><td>secu</td><td class="mono">00:13:EF:F2:A0:BF</td><td>DHCP lease</td><td>NVR duties</td></tr>
+<tr><td class="mono">.5.175</td><td>nas</td><td class="mono">E8:4D:D0:C1:54:20</td><td>reservation</td><td>k3s server + etcd; also .125 on enp7s0</td></tr>
+<tr><td class="mono">.5.209</td><td>office</td><td class="mono">C4:3D:1A:F3:0E:76</td><td>reservation</td><td>k3s agent (wifi), never a BGP speaker</td></tr>
+<tr><td class="mono">.5.254</td><td>iDRAC · R740</td><td class="mono">2C:EA:7F:7B:12:75</td><td>reservation</td><td>BMC, Redfish, 3-strike IP block</td></tr>
+<tr><td class="mono">.5.171</td><td>U7 Pro XGS</td><td class="mono">90:41:B2:D6:74:DB</td><td>DHCP lease</td><td>office, 10GbE uplink</td></tr>
+<tr><td class="mono">.5.173</td><td>U7 Lite</td><td class="mono">1C:0B:8B:50:FF:7E</td><td>DHCP lease</td><td>router ether5, PoE</td></tr>
+<tr><td class="mono">.5.198</td><td>U7 Mesh</td><td class="mono">8C:ED:E1:EC:89:CA</td><td>DHCP lease</td><td>wireless mesh to the Lite</td></tr>
+<tr><td class="mono">.5.53</td><td>unidentified</td><td class="mono">8C:85:80:DE:BE:A3</td><td>ARP only</td><td>no lease, answers ping</td></tr>
+<tr><td class="mono">.5.59</td><td>Indoorcam</td><td class="mono">04:17:B6:09:EE:95</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.85</td><td>Bedroom-11607</td><td class="mono">F0:B3:EC:7E:31:64</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.112</td><td>LeighanesiPhone</td><td class="mono">10:DA:63:C4:C8:12</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.118</td><td>vpin</td><td class="mono">B8:27:EB:56:F0:27</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.121</td><td>livingroom2707</td><td class="mono">8C:26:AA:BE:80:C4</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.123</td><td>mirror</td><td class="mono">DC:A6:32:0C:FE:5D</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.124</td><td>iPhone</td><td class="mono">BE:B2:F3:CD:84:C3</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.127</td><td>K3B-US-PGA0539A</td><td class="mono">C8:FF:77:57:E0:3D</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.131</td><td>unidentified</td><td class="mono">B0:FC:0D:DE:FB:50</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.132</td><td>wiz_79f13c</td><td class="mono">D8:A0:11:79:F1:3C</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.146</td><td>unidentified</td><td class="mono">54:49:DF:12:BF:49</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.152</td><td>eufyDoorbell</td><td class="mono">04:17:B6:05:DB:D8</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.164</td><td>AiDot</td><td class="mono">D0:CF:13:8C:6D:74</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.165</td><td>akamatis-presence-sensor-52f0c8</td><td class="mono">80:F1:B2:52:F0:C8</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.168</td><td>AiDot</td><td class="mono">D0:CF:13:8D:4E:28</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.170</td><td>akamatis-presence-sensor-6c7088</td><td class="mono">94:A9:90:6C:70:88</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.172</td><td>unidentified</td><td class="mono">00:07:A6:40:E7:4B</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.187</td><td>unidentified</td><td class="mono">30:52:53:09:E1:72</td><td>DHCP lease</td><td></td></tr>
+<tr><td class="mono">.5.246</td><td>eight-pod</td><td class="mono">70:B6:51:00:3B:67</td><td>DHCP lease</td><td></td></tr>
+</tbody>
+</table>
+
+<h2 id="s6">192.168.6.0/24 — MetalLB</h2>
 <table>
 <thead><tr><th>IPv4</th><th>IPv6</th><th>Service</th><th>Ports</th><th>Announce</th><th>Router picks</th><th>WAN</th><th>WireGuard</th></tr></thead>
 <tbody>
@@ -300,69 +538,79 @@
 <tr><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 </tbody>
 </table>
-<p class="small">“Router picks” is the selected path in the routing table, not the set of announcers — for a Cluster VIP every speaker carries it and the router installs one. <code>.6.17</code> (openrct2) and <code>.6.26</code> (frigate) currently have no route because neither has a ready pod; the pool is a <code>blackhole</code> at distance 250, so they drop rather than leak to the default route.</p>
+<p class="small">“Router picks” is the selected path, not the set of announcers — for a Cluster VIP every speaker carries it and the router installs one. <code>.6.17</code> and <code>.6.26</code> have no route right now (no ready pod); the pool is a <code>blackhole</code> at distance 250, so they drop rather than leak to the default route.</p>
 
-<h2 id="nodes">Nodes</h2>
+<h2 id="s88">192.168.88.0/24 — recovery</h2>
+<p>One address on the router (<code>.88.254</code>), kept because <code>upstairs-core</code> still holds its factory-default
+<code>192.168.88.1</code>, and any reset MikroTik comes up there. This is the path back to a bricked switch.</p>
+
+<h2 id="overlays">Overlays and address families</h2>
 <table>
-<thead><tr><th>IP</th><th>Name</th><th>Role</th><th>Ports bound</th><th>Notes</th><th>VIPs</th></tr></thead>
+<thead><tr><th>Range</th><th>Purpose</th><th>Members</th></tr></thead>
 <tbody>
-<tr><td class="mono">.1</td><td>router</td><td>MikroTik · 192.168.5.1</td><td class="mono">22, 53 (LAN + wg), 51820/udp (WAN), 179 (k8s-nodes), 3784/udp, 8291</td><td>dst-nat · BGP 65001 · DNS FWD ×6 · WG hub</td><td>—</td></tr>
-<tr><td class="mono">.36</td><td>closet</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, 5432, NodePorts</td><td>also the kubectl host</td><td>announces · selected for 17 VIPs</td></tr>
-<tr><td class="mono">.76</td><td>arch</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, NodePorts</td><td>monero 18080 dst-nat'd here</td><td>announces</td></tr>
-<tr><td class="mono">.175</td><td>nas</td><td>server · control plane</td><td class="mono">22, 6443, 2379–2381 etcd, 10250, 179, 3784/udp, 7946, 8472/udp, 9100, NodePorts</td><td>also .125 on enp7s0; bond0 is .175</td><td>announces · selected for .6.13</td></tr>
-<tr><td class="mono">.68</td><td>big</td><td>agent · VM on proxmox</td><td class="mono">22, 10250, 179, 3784/udp, 8472/udp, 9100, NodePorts</td><td>flaky under load (#77)</td><td>announces</td></tr>
-<tr><td class="mono">.9</td><td>pite</td><td>agent · Raspberry Pi</td><td class="mono">22, 10250, 179, 3784/udp, 8472/udp, 9100</td><td>label: exclude-from-external-load-balancers</td><td>no VIPs</td></tr>
-<tr><td class="mono">.209</td><td>office</td><td>agent · wifi taint</td><td class="mono">22, 10250, 8472/udp, 9100</td><td>179/3784 open but no frr-k8s speaker</td><td>never</td></tr>
-<tr><td class="mono">.19</td><td>proxmox</td><td>host (not k8s)</td><td class="mono">22, 8006</td><td>runs big and github VMs</td><td>—</td></tr>
+<tr><td class="mono">fd00:1::/64</td><td>node ULA, advertised on the bridge</td><td>closet, arch, nas (static) + stateful DHCPv6 `ula-dhcp`</td></tr>
+<tr><td class="mono">fd00:6::/64</td><td>MetalLB IPv6 pool</td><td>19 v6 twins — every VIP except .6.20</td></tr>
+<tr><td class="mono">10.42.0.0/16</td><td>flannel pod network</td><td>all pods, VXLAN</td></tr>
+<tr><td class="mono">10.43.0.0/16</td><td>k3s service CIDR</td><td>ClusterIPs</td></tr>
+<tr><td class="mono">10.99.0.0/24</td><td>WireGuard tunnel</td><td>router .1, DO cluster .2</td></tr>
+<tr><td class="mono">100.64.0.0/10</td><td>tailnet (headscale)</td><td>22 devices, 16 online</td></tr>
+<tr><td class="mono">10.244.0.0/16</td><td>DO pod network</td><td>reachable only as source 10.99.0.2</td></tr>
+<tr><td class="mono">10.245.0.0/16</td><td>DO service CIDR</td><td>not routed to home</td></tr>
 </tbody>
 </table>
-<p class="small">Common to every k3s node: <code>10250</code> kubelet, <code>179</code> BGP, <code>3784/udp</code> BFD, <code>8472/udp</code> flannel, <code>9100</code> node_exporter, and the <code>30000–32767</code> NodePort range. Servers add <code>6443</code> and <code>2379–2381</code> etcd.</p>
 
-<h2 id="wg">The WireGuard path</h2>
-<p>
-  One tunnel, one peer. The router terminates <code>wg-remote</code> on <code>10.99.0.1/24</code> (UDP 51820, WAN input rule);
-  the DigitalOcean cluster dials <code>john2143.com:51820</code> and holds <code>10.99.0.2/24</code>. Its <code>wg0</code> carries
-  <em>both</em> LAN subnets, so every VIP and every node IP is routable from that cluster — reachability is limited by what
-  runs there, not by routing. The router does not masquerade the tunnel into the LAN.
-</p>
+<h2 id="tailnet">Tailnet</h2>
+<p>22 devices in headscale, 16 online. The subnet router is arch + closet, which is how <code>192.168.6.0/24</code> is
+reachable from a phone on LTE. Six entries are stale by months — safe to prune if they are not yours.</p>
 <table>
-<thead><tr><th>Direction</th><th>What</th><th>Evidence</th></tr></thead>
+<thead><tr><th>Device</th><th>Tailnet IP</th><th>OS</th><th>State</th></tr></thead>
 <tbody>
-<tr><td>DO → home</td><td><code>192.168.6.20:7233</code> temporal-frontend</td><td>haproxy <code>home-tunnel-proxy</code> frontend <code>:7233</code>; 2 established</td></tr>
-<tr><td>DO → home</td><td><code>192.168.6.31:8333</code> seaweedfs S3</td><td>haproxy frontend <code>:8333</code>; recent flows</td></tr>
-<tr><td>DO → router</td><td>DNS <code>10.99.0.1:53</code></td><td>input rules for the six split-horizon zones</td></tr>
-<tr><td>home → DO</td><td><code>10.99.0.2:32040</code> mongo (svc <code>mongo-tunnel</code>, externalIP)</td><td>5 established from closet, ~8.6 MB received; <code>john2143-com</code> reads it from a secret</td></tr>
+<tr><td class="mono">arch</td><td class="mono">100.64.0.1</td><td>linux</td><td>active · direct 192.168.5.76:41641</td></tr>
+<tr><td class="mono">closet</td><td class="mono">100.64.0.2</td><td>linux</td><td>active · direct 192.168.5.36:41641</td></tr>
+<tr><td class="mono">office</td><td class="mono">100.64.0.3</td><td>linux</td><td>online</td></tr>
+<tr><td class="mono">serverkvm</td><td class="mono">100.64.0.4</td><td>linux</td><td>offline · 168 d</td></tr>
+<tr><td class="mono">pite</td><td class="mono">100.64.0.5</td><td>linux</td><td>online (tagged)</td></tr>
+<tr><td class="mono">glkvm</td><td class="mono">100.64.0.6</td><td>linux</td><td>online</td></tr>
+<tr><td class="mono">mullvad-us-vpin-deccam</td><td class="mono">100.64.0.7</td><td>linux</td><td>exit node · idle</td></tr>
+<tr><td class="mono">john-phone</td><td class="mono">100.64.0.8</td><td>iOS</td><td>online</td></tr>
+<tr><td class="mono">github</td><td class="mono">100.64.0.12</td><td>linux</td><td>offline · 1 d</td></tr>
+<tr><td class="mono">desktop-1eg884n</td><td class="mono">100.64.0.13</td><td>windows</td><td>offline · 96 d</td></tr>
+<tr><td class="mono">nas</td><td class="mono">100.64.0.14</td><td>linux</td><td>active · direct 192.168.5.175:41641</td></tr>
+<tr><td class="mono">desktop-pjem2ib</td><td class="mono">100.64.0.17</td><td>windows</td><td>offline · 183 d</td></tr>
+<tr><td class="mono">doks-us-nyc</td><td class="mono">100.64.0.21</td><td>linux</td><td>exit node · idle</td></tr>
+<tr><td class="mono">big</td><td class="mono">100.64.0.24</td><td>linux</td><td>idle</td></tr>
+<tr><td class="mono">secu</td><td class="mono">100.64.0.25</td><td>linux</td><td>online</td></tr>
+<tr><td class="mono">mirror</td><td class="mono">100.64.0.26</td><td>linux</td><td>online</td></tr>
+<tr><td class="mono">desktop-invfan1</td><td class="mono">100.64.0.27</td><td>windows</td><td>offline · 5 d</td></tr>
+<tr><td class="mono">ipad-1</td><td class="mono">100.64.0.28</td><td>iOS</td><td>offline · 2 d</td></tr>
+<tr><td class="mono">mullvad-jp-tokyo-honrat</td><td class="mono">100.64.0.29</td><td>linux</td><td>exit node · idle</td></tr>
+<tr><td class="mono">mullvad-de-dusseldorf-sachor</td><td class="mono">100.64.0.30</td><td>linux</td><td>exit node · idle</td></tr>
+<tr><td class="mono">mullvad-za-johannesburg-spirab</td><td class="mono">100.64.0.31</td><td>linux</td><td>exit node · idle</td></tr>
+<tr><td class="mono">mullvad-ee-tallinn-rapbis</td><td class="mono">100.64.0.32</td><td>linux</td><td>exit node · idle</td></tr>
 </tbody>
 </table>
-<div class="callout warn">
-  <p><strong>That is a full LAN route, not a pair of holes.</strong> <code>allowed-ips</code> on the DO side is
-  <code>10.99.0.0/24, 192.168.5.0/24, 192.168.6.0/24</code> and the router forwards without NAT, so any pod on that cluster can
-  address any home VIP or node directly. Only haproxy’s two backends and DNS do. Narrowing the peer to <code>10.99.0.0/24</code>
-  plus two <code>/32</code>s would make the intent explicit; nothing depends on the wider range today except mongo’s return path,
-  which needs <code>10.244.0.0/16</code>.</p>
-</div>
 
 <h2 id="findings">What this shows</h2>
 <div class="callout">
-  <p><strong>Seven VIPs are single-node.</strong> <code>.6.6</code> traefik announces from closet <em>and</em> arch (three replicas),
-  so the public edge survives losing either one. <code>.6.13</code> stalwart is nas-only, <code>.6.15</code>/<code>.6.16</code>/<code>.6.29</code>
-  are closet-only, and <code>.6.18</code>/<code>.6.28</code> are arch-only. Lose that node and the VIP is withdrawn — for the games,
-  that is the session.</p>
+  <p><strong>Seventy-five IPv4 hosts, and the boundary is one box.</strong> Only five addresses exist on the ISP side;
+  everything else is behind the MikroTik. The Verizon router forwards specific ports only, so the MikroTik's dst-nat
+  table is the single place that decides what the internet can reach.</p>
 </div>
 <div class="callout">
-  <p><strong>Ten VIPs face the internet, ten do not.</strong> The other ten are LAN, tailnet or WireGuard only — including all of
-  observability (<code>.6.23</code>–<code>.6.25</code>), <code>.6.31</code> seaweedfs, <code>.6.30</code> DNS and <code>.5.10</code> the API.
-  Nothing in that group has an inbound rule, which is the point.</p>
+  <p><strong>Twenty of the 42 hosts on the switch LAN are client and IoT devices.</strong> Phones, TVs, a UPS, presence
+  sensors, AiDot and eufy devices, and five MACs with no hostname at all (<code>.5.53</code>, <code>.5.131</code>,
+  <code>.5.146</code>, <code>.5.172</code>, <code>.5.187</code>). They are DHCP, so they are not a misconfiguration —
+  but they are the part of the network with no owner recorded anywhere.</p>
 </div>
-<div class="callout ok">
-  <p><strong>Failure is closed by default.</strong> <code>192.168.6.0/24</code> sits in the routing table as an
-  <code>immediate-gw=blackhole distance=250</code> route. An unannounced VIP drops; it never falls through to the LAN default
-  route. That is why <code>.6.17</code> and <code>.6.26</code> simply time out today instead of answering from the wrong place.</p>
+<div class="callout">
+  <p><strong><code>192.168.6.0/24</code> exists nowhere as an interface.</strong> No router address, no bridge; the router
+  holds a <code>blackhole</code> route for the whole /24 and /32s from BGP. That is why <code>ping</code> to any VIP
+  times out and why an unannounced VIP fails closed instead of ARPing into the void.</p>
 </div>
 <div class="callout decide">
-  <p><strong>The selected path is lopsided.</strong> With ECMP off, the router prefers closet for 17 of the 19 routed VIPs.
-  That is a routing-table artifact, not a load-balancing policy — arch and nas carry traffic only for what they uniquely announce.
-  If that ever matters, the fix is moving <code>.6.x</code> services to <code>Local</code>, not re-enabling multipath.</p>
+  <p><strong>The tailnet has drifted.</strong> <code>desktop-pjem2ib</code> (183 d), <code>serverkvm</code> (168 d) and
+  <code>desktop-1eg884n</code> (96 d) are still listed. Tailnet membership is the operator plane, so pruned devices also
+  shrink what can reach <code>192.168.6.0/24</code> over the subnet route.</p>
 </div>
 
 <h2 id="method">How to re-check</h2>
@@ -385,9 +633,8 @@ mikrotik-connect r '/ip firewall connection print terse where src-address~"10.99
 
 
 <p class="small">
-  Related: <a href="network-edge.md">network-edge</a> (how the edge is put together) ·
-  <a href="2026-10-15-fungible-ingress.md">2026-10-15-fungible-ingress</a> (the change that made it fungible) ·
-  <a href="node-maintenance.md">node-maintenance</a> (draining a node safely).
+  Related: <a href="network-edge.md">network-edge</a> · <a href="2026-10-15-fungible-ingress.md">2026-10-15-fungible-ingress</a> ·
+  <a href="node-maintenance.md">node-maintenance</a> · <a href="lan-dns.md">lan-dns</a>.
 </p>
 
 </main>

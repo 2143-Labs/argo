@@ -8,7 +8,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Adding a Secret](adding-a-secret.md)
 - [LAN and cluster DNS (lan-dns)](lan-dns.md)
 - [Internet edge: Verizon → MikroTik → MetalLB (port forwards, router recovery)](network-edge.md)
-- [Edge inventory: every VIP, its ports and its reachability (diagram)](network-inventory.html)
+- [Network inventory: every subnet and host, with diagrams](network-inventory.html)
 - [Node maintenance: drain, return, add, remove](node-maintenance.md)
 - [Public edge: gating public routes](public-edge.md)
 - [Exposing an Unauthenticated App (humans + federated machines)](exposing-an-unauthenticated-app.md)
