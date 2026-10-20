@@ -10,10 +10,10 @@ spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
     requests:
-      cpu: 500m
+      cpu: 2
       memory: 512Mi
     limits:
-      cpu: 500m
+      cpu: 2
       memory: 512Mi
   storage:
     size: 5Gi
