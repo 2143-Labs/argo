@@ -19,10 +19,13 @@ spec:
                     operator: In
                     values:
                       - nas
+      tolerations:
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute}
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute}
       terminationGracePeriodSeconds: 120
       containers:
       - name: volume
-        image: chrislusf/seaweedfs:4.46
+        image: chrislusf/seaweedfs:4.48
         args:
         - "volume"
         - "-mserver=seaweedfs-master:9333"
