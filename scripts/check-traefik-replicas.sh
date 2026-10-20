@@ -40,8 +40,11 @@ classify() { # host ip port
 
 "${K[@]}" -n kube-system get pods -l app.kubernetes.io/name=traefik -o json \
   | jq -r '.items[] | "\(.metadata.name) \(.status.podIP) \(.spec.nodeName) \(.status.containerStatuses[0].ready)"' > "$tmp/pods"
-"${K[@]}" -n "$ns" get gateway shared-gateway -o json \
-  | jq -r '.spec.listeners[] | select(.protocol == "HTTPS") | .name' > "$tmp/listeners"
+"${K[@]}" -n "$ns" get gateway shared-gateway -o json > "$tmp/gateway"
+jq -r '.spec.listeners[] | select(.protocol == "HTTPS") | .name' "$tmp/gateway" > "$tmp/listeners"
+# The VIP moves with the MetalLB pool; read it from the Gateway, never hardcode it.
+vip=$(jq -r '[.status.addresses[]? | select(.type == "IPAddress" and (.value | contains(":") | not)) | .value] | first // empty' "$tmp/gateway")
+[[ -n $vip ]] || { echo "::error::shared-gateway reports no IPv4 address in .status.addresses" >&2; exit 1; }
 "${K[@]}" get httproute -A -o json > "$tmp/routes"
 
 # One (listener, hostname) pair per HTTPS listener: a hostname that answers
@@ -53,7 +56,7 @@ while read -r l; do
     | unique | .[]' "$tmp/routes")
   chosen=""
   for h in "${cands[@]}"; do
-    [[ "$(classify "$h" 192.168.6.11 443)" == "ROUTED" ]] && { chosen=$h; break; }
+    [[ "$(classify "$h" "$vip" 443)" == "ROUTED" ]] && { chosen=$h; break; }
   done
   if [[ -n "$chosen" ]]; then
     echo "$l $chosen" >> "$tmp/canaries"
@@ -85,6 +88,6 @@ while read -r host; do
   fi
 done < <(awk '{print $2}' "$tmp/results" | sort -u)
 
-echo "checked $(wc -l < "$tmp/pods") replicas x $(wc -l < "$tmp/canaries") listeners ($(awk '{print $2}' "$tmp/canaries" | tr '\n' ' '))"
+echo "vip $vip; checked $(wc -l < "$tmp/pods") replicas x $(wc -l < "$tmp/canaries") listeners ($(awk '{print $2}' "$tmp/canaries" | tr '\n' ' '))"
 [[ "$fail" -eq 0 ]] && echo "traefik replicas agree on every checked hostname"
 exit "$fail"
