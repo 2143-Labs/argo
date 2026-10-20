@@ -90,10 +90,35 @@
   .legend .sw.vip { border-color:var(--warn); background:var(--warn); }
   .legend .dot { display:inline-block; width:.7rem; height:.7rem; border-radius:50%; border:2px solid var(--warn); vertical-align:-.05em; margin-right:.3rem; }
   .legend .dot.full { background:var(--warn); }
+
+  .docnav { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:.4rem; align-items:center;
+            padding:.55rem 0; background:var(--bg); border-bottom:1px solid var(--line); margin-bottom:1.2rem; }
+  .docnav a, .docnav span.here { font-size:.84rem; padding:.22rem .65rem; border-radius:999px;
+            border:1px solid var(--line); text-decoration:none; white-space:nowrap; }
+  .docnav span.here { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
+  .docnav a:hover { background:var(--panel); border-color:var(--accent); }
+  tr:target td { background: color-mix(in srgb, var(--accent) 20%, transparent) !important; }
+  tr:target td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  svg a { cursor:pointer; }
+  svg a:hover rect.vip, svg a:hover rect.fabric { stroke-width:3; }
+  svg a:hover rect.panel { stroke-width:2.4; }
+  svg a:focus-visible rect { outline:2px solid var(--accent); outline-offset:1px; }
+  html { scroll-behavior:smooth; }
+  h2, tr { scroll-margin-top:4.2rem; }
 </style>
 </head>
 <body>
 <main>
+<nav class="docnav" aria-label="Document set">
+  <span class="here">Inventory</span>
+  <a href="#map">Map</a>
+  <a href="#expanded">Expanded diagram</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/network-edge.md">Edge guide</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/node-maintenance.md">Node maintenance</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/lan-dns.md">LAN DNS</a>
+  <a href="ip-hiding-tech.html">Edge design</a>
+  <a href="https://github.com/2143-Labs/argo/tree/main/docs">All docs</a>
+</nav>
 
 <h1>Home network inventory — every subnet and host</h1>
 <p class="meta">
@@ -130,7 +155,7 @@
 
 <h2 id="map">The network</h2>
 <figure>
-<svg class="diagram" viewBox="0 0 1240 840" role="img" aria-label="Whole-network map: WAN and WireGuard enter through Verizon; the MikroTik feeds a 10G switch chain (core, upstairs-core, upstairs, office); every host is colour-coded by class">
+<svg class="diagram" viewBox="0 0 1240 840" role="img" aria-label="Whole-network map: WAN and WireGuard enter through Verizon; the MikroTik feeds a 10G switch chain; every host is colour-coded by class. Each box links to its row in the tables below.">
   <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker><marker id="a2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker></defs>
 <rect x="80" y="8" width="280" height="44" rx="9" class="inet"/>
 <text x="220" y="26" class="title" text-anchor="middle">Internet</text>
@@ -142,52 +167,1369 @@
 <text x="232" y="78" class="" style="font-size:10.5px;">plaintext TCP/UDP</text>
 <path d="M900,52 C830,80 660,78 566,98" class="wg" marker-end="url(#a2w)"/>
 <text x="700" y="70" class="wglabel" style="font-size:10.5px;">WireGuard · UDP 51820 · encrypted</text>
-<rect x="60" y="100" width="560" height="175" rx="9" class="panel"/>
-<text x="74" y="122" class="title">192.168.0.0/24 — Verizon CR1000B</text>
-<text x="74" y="138" class="muted">double NAT · pool .100–.169</text>
-<circle cx="77" cy="156.5" r="3" class="dot-net"/><text x="86" y="160" class="" style="font-size:10.5px;">.0.1  Verizon CR1000B</text>
-<circle cx="77" cy="173.5" r="3" class="dot-net"/><text x="86" y="177" class="" style="font-size:10.5px;">.0.2  MikroTik 2GWAN</text>
-<circle cx="77" cy="190.5" r="3" class="dot-net"/><text x="86" y="194" class="" style="font-size:10.5px;">.0.152  MikroTik 2GWAN (2nd)</text>
-<circle cx="77" cy="207.5" r="3" class="dot-srv"/><text x="86" y="211" class="" style="font-size:10.5px;">.0.154  home-pi</text>
-<circle cx="77" cy="224.5" r="3" class="dot-cli"/><text x="86" y="228" class="" style="font-size:10.5px;">.0.165  unidentified</text>
-<text x="74" y="258" class="muted" style="font-size:9.5px;">forwards 80,443,25,587,993,3478,3479,7881,9987,11753,18080,25565,30033,34197,45000-45063, 51820/udp</text>
-<rect x="720" y="100" width="470" height="175" rx="9" class="panel"/>
-<text x="734" y="122" class="title">MikroTik RB5009 — the boundary</text>
-<text x="734" y="138" class="muted">WAN .0.2 · LAN .5.1 / .1.1 / .88.254</text>
-<text x="734" y="160" class="" style="font-size:11.5px;">dst-nat 15 rules → .6.x VIPs</text>
-<text x="734" y="177" class="" style="font-size:11.5px;">WireGuard 51820 terminates here</text>
-<text x="734" y="194" class="" style="font-size:11.5px;">BGP 65001 · BFD 3784 · DNS FWD ×6</text>
-<text x="734" y="211" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text>
-<text x="734" y="228" class="" style="font-size:11.5px;">tunnel IN  .6.20 :7233 · .6.31 :8333</text>
-<text x="734" y="245" class="" style="font-size:11.5px;">tunnel OUT 10.99.0.2:32040 mongo</text>
-<text x="734" y="262" class="" style="font-size:9.5px;">direct: ether5 U7 Lite · ether8 pite · ether7 cam · ether4 KVM</text>
+<a href="#h-0-1"><rect x="60" y="100" width="560" height="175" rx="9" class="panel"/><text x="74" y="122" class="title">192.168.0.0/24 — Verizon CR1000B</text><text x="74" y="138" class="muted">double NAT · pool .100–.169</text><circle cx="77" cy="156.5" r="3" class="dot-net"/><text x="86" y="160" class="" style="font-size:10.5px;">.0.1  Verizon CR1000B</text><circle cx="77" cy="173.5" r="3" class="dot-net"/><text x="86" y="177" class="" style="font-size:10.5px;">.0.2  MikroTik 2GWAN</text><circle cx="77" cy="190.5" r="3" class="dot-net"/><text x="86" y="194" class="" style="font-size:10.5px;">.0.152  MikroTik 2GWAN (2nd)</text><circle cx="77" cy="207.5" r="3" class="dot-srv"/><text x="86" y="211" class="" style="font-size:10.5px;">.0.154  home-pi</text><circle cx="77" cy="224.5" r="3" class="dot-cli"/><text x="86" y="228" class="" style="font-size:10.5px;">.0.165  unidentified</text><text x="74" y="258" class="muted" style="font-size:9.5px;">forwards 80,443,25,587,993,3478,3479,7881,9987,11753,18080,25565,30033,34197,45000-45063, 51820/udp</text></a>
+<a href="#h-5-1"><rect x="720" y="100" width="470" height="175" rx="9" class="panel"/><text x="734" y="122" class="title">MikroTik RB5009 — the boundary</text><text x="734" y="138" class="muted">WAN .0.2 · LAN .5.1 / .1.1 / .88.254</text><text x="734" y="160" class="" style="font-size:11.5px;">dst-nat 15 rules → .6.x VIPs</text><text x="734" y="177" class="" style="font-size:11.5px;">WireGuard 51820 terminates here</text><text x="734" y="194" class="" style="font-size:11.5px;">BGP 65001 · BFD 3784 · DNS FWD ×6</text><text x="734" y="211" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text><text x="734" y="228" class="" style="font-size:11.5px;">tunnel IN  .6.20 :7233 · .6.31 :8333</text><text x="734" y="245" class="" style="font-size:11.5px;">tunnel OUT 10.99.0.2:32040 mongo</text><text x="734" y="262" class="" style="font-size:9.5px;">direct: ether5 U7 Lite · ether8 pite · ether7 cam · ether4 KVM</text></a>
 <path d="M620,170 L720,170" class="wire" marker-end="url(#a2)"/>
 <text x="624" y="162" class="" style="font-size:10.5px;">dst-nat</text>
 <path d="M620,215 L720,215" class="wg" marker-end="url(#a2w)"/>
 <text x="624" y="207" class="wg" style="font-size:10.5px;">51820 → wg-remote</text>
 <path d="M880,275 L880,290" class="wire" marker-end="url(#a2)"/>
-<rect x="340" y="290" width="200" height="64" rx="9" class="fabric"/>
-<text x="440" y="310" class="title" text-anchor="middle">upstairs .5.3</text>
-<text x="440" y="326" class="muted" text-anchor="middle">CRS310 · 8×1G + 2×SFP+</text>
-<text x="440" y="344" class="muted" text-anchor="middle">bigp 10G · NVR 1G · printer</text>
-<rect x="560" y="290" width="200" height="64" rx="9" class="fabric"/>
-<text x="660" y="310" class="title" text-anchor="middle">upstairs-core .5.5</text>
-<text x="660" y="326" class="muted" text-anchor="middle">CRS305 · 4×SFP+</text>
-<text x="660" y="344" class="muted" text-anchor="middle">closet 10G · arch 2.5G · KVM</text>
-<rect x="780" y="290" width="200" height="64" rx="9" class="fabric"/>
-<text x="880" y="310" class="title" text-anchor="middle">core .5.4</text>
-<text x="880" y="326" class="muted" text-anchor="middle">CRS305 · 4×SFP+</text>
-<text x="880" y="344" class="muted" text-anchor="middle">nas 10G · router mgmt 1G</text>
-<rect x="1000" y="290" width="200" height="64" rx="9" class="fabric"/>
-<text x="1100" y="310" class="title" text-anchor="middle">office .5.2</text>
-<text x="1100" y="326" class="muted" text-anchor="middle">CRS310 · 8×1G + 2×SFP+</text>
-<text x="1100" y="344" class="muted" text-anchor="middle">U7 Pro XGS 10G</text>
+<
+a
+ 
+h
+r
+e
+f
+=
+"
+#
+h
+-
+5
+-
+3
+"
+>
+<
+r
+e
+c
+t
+ 
+x
+=
+"
+3
+4
+0
+"
+ 
+y
+=
+"
+2
+9
+0
+"
+ 
+w
+i
+d
+t
+h
+=
+"
+2
+0
+0
+"
+ 
+h
+e
+i
+g
+h
+t
+=
+"
+6
+4
+"
+ 
+r
+x
+=
+"
+9
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+f
+a
+b
+r
+i
+c
+"
+/
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+4
+4
+0
+"
+ 
+y
+=
+"
+3
+1
+0
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+t
+i
+t
+l
+e
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+u
+p
+s
+t
+a
+i
+r
+s
+ 
+.
+5
+.
+3
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+4
+4
+0
+"
+ 
+y
+=
+"
+3
+2
+6
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+C
+R
+S
+3
+1
+0
+ 
+·
+ 
+8
+×
+1
+G
+ 
++
+ 
+2
+×
+S
+F
+P
++
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+4
+4
+0
+"
+ 
+y
+=
+"
+3
+4
+4
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+b
+i
+g
+p
+ 
+1
+0
+G
+ 
+·
+ 
+N
+V
+R
+ 
+1
+G
+ 
+·
+ 
+p
+r
+i
+n
+t
+e
+r
+<
+/
+t
+e
+x
+t
+>
+<
+/
+a
+>
+<
+a
+ 
+h
+r
+e
+f
+=
+"
+#
+h
+-
+5
+-
+5
+"
+>
+<
+r
+e
+c
+t
+ 
+x
+=
+"
+5
+6
+0
+"
+ 
+y
+=
+"
+2
+9
+0
+"
+ 
+w
+i
+d
+t
+h
+=
+"
+2
+0
+0
+"
+ 
+h
+e
+i
+g
+h
+t
+=
+"
+6
+4
+"
+ 
+r
+x
+=
+"
+9
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+f
+a
+b
+r
+i
+c
+"
+/
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+6
+6
+0
+"
+ 
+y
+=
+"
+3
+1
+0
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+t
+i
+t
+l
+e
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+u
+p
+s
+t
+a
+i
+r
+s
+-
+c
+o
+r
+e
+ 
+.
+5
+.
+5
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+6
+6
+0
+"
+ 
+y
+=
+"
+3
+2
+6
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+C
+R
+S
+3
+0
+5
+ 
+·
+ 
+4
+×
+S
+F
+P
++
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+6
+6
+0
+"
+ 
+y
+=
+"
+3
+4
+4
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+c
+l
+o
+s
+e
+t
+ 
+1
+0
+G
+ 
+·
+ 
+a
+r
+c
+h
+ 
+2
+.
+5
+G
+ 
+·
+ 
+K
+V
+M
+<
+/
+t
+e
+x
+t
+>
+<
+/
+a
+>
+<
+a
+ 
+h
+r
+e
+f
+=
+"
+#
+h
+-
+5
+-
+4
+"
+>
+<
+r
+e
+c
+t
+ 
+x
+=
+"
+7
+8
+0
+"
+ 
+y
+=
+"
+2
+9
+0
+"
+ 
+w
+i
+d
+t
+h
+=
+"
+2
+0
+0
+"
+ 
+h
+e
+i
+g
+h
+t
+=
+"
+6
+4
+"
+ 
+r
+x
+=
+"
+9
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+f
+a
+b
+r
+i
+c
+"
+/
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+8
+8
+0
+"
+ 
+y
+=
+"
+3
+1
+0
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+t
+i
+t
+l
+e
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+c
+o
+r
+e
+ 
+.
+5
+.
+4
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+8
+8
+0
+"
+ 
+y
+=
+"
+3
+2
+6
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+C
+R
+S
+3
+0
+5
+ 
+·
+ 
+4
+×
+S
+F
+P
++
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+8
+8
+0
+"
+ 
+y
+=
+"
+3
+4
+4
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+n
+a
+s
+ 
+1
+0
+G
+ 
+·
+ 
+r
+o
+u
+t
+e
+r
+ 
+m
+g
+m
+t
+ 
+1
+G
+<
+/
+t
+e
+x
+t
+>
+<
+/
+a
+>
+<
+a
+ 
+h
+r
+e
+f
+=
+"
+#
+h
+-
+5
+-
+2
+"
+>
+<
+r
+e
+c
+t
+ 
+x
+=
+"
+1
+0
+0
+0
+"
+ 
+y
+=
+"
+2
+9
+0
+"
+ 
+w
+i
+d
+t
+h
+=
+"
+2
+0
+0
+"
+ 
+h
+e
+i
+g
+h
+t
+=
+"
+6
+4
+"
+ 
+r
+x
+=
+"
+9
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+f
+a
+b
+r
+i
+c
+"
+/
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+1
+1
+0
+0
+"
+ 
+y
+=
+"
+3
+1
+0
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+t
+i
+t
+l
+e
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+o
+f
+f
+i
+c
+e
+ 
+.
+5
+.
+2
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+1
+1
+0
+0
+"
+ 
+y
+=
+"
+3
+2
+6
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+C
+R
+S
+3
+1
+0
+ 
+·
+ 
+8
+×
+1
+G
+ 
++
+ 
+2
+×
+S
+F
+P
++
+<
+/
+t
+e
+x
+t
+>
+<
+t
+e
+x
+t
+ 
+x
+=
+"
+1
+1
+0
+0
+"
+ 
+y
+=
+"
+3
+4
+4
+"
+ 
+c
+l
+a
+s
+s
+=
+"
+m
+u
+t
+e
+d
+"
+ 
+t
+e
+x
+t
+-
+a
+n
+c
+h
+o
+r
+=
+"
+m
+i
+d
+d
+l
+e
+"
+>
+U
+7
+ 
+P
+r
+o
+ 
+X
+G
+S
+ 
+1
+0
+G
+<
+/
+t
+e
+x
+t
+>
+<
+/
+a
+>
 <path d="M780,322 L760,322" class="wire" marker-end="url(#a2)"/>
-<text x="770" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
 <path d="M560,322 L540,322" class="wire" marker-end="url(#a2)"/>
 <path d="M980,322 L1000,322" class="wire" marker-end="url(#a2)"/>
 <text x="890" y="287" class="muted" text-anchor="start" style="font-size:9px;">10G SFP+</text>
 <text x="550" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
+<text x="770" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
 <text x="990" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
 <path d="M40,396 L1200,396" class="wire" opacity=".4"/>
 <path d="M880,354 L880,396" class="wire"/>
@@ -195,92 +1537,92 @@
 <rect x="30" y="406" width="190" height="235" rx="9" class="panel"/>
 <text x="44" y="428" class="title">192.168.1.0/24</text>
 <text x="44" y="444" class="muted">cameras · egress blocked</text>
-<circle cx="47" cy="464.5" r="3" class="dot-net"/><text x="56" y="468" class="" style="font-size:10.5px;">.1.1  router (bridge)</text>
-<circle cx="47" cy="483.5" r="3" class="dot-net"/><text x="56" y="487" class="" style="font-size:10.5px;">.1.250  core switch</text>
-<circle cx="47" cy="502.5" r="3" class="dot-cli"/><text x="56" y="506" class="" style="font-size:10.5px;">.1.61  Garage cam</text>
-<circle cx="47" cy="521.5" r="3" class="dot-cli"/><text x="56" y="525" class="" style="font-size:10.5px;">.1.63  Front cam</text>
-<circle cx="47" cy="540.5" r="3" class="dot-cli"/><text x="56" y="544" class="" style="font-size:10.5px;">.1.64  Front cam</text>
-<circle cx="47" cy="559.5" r="3" class="dot-cli"/><text x="56" y="563" class="" style="font-size:10.5px;">.1.65  Side cam</text>
-<circle cx="47" cy="578.5" r="3" class="dot-cli"/><text x="56" y="582" class="" style="font-size:10.5px;">.1.66  Front cam</text>
-<circle cx="47" cy="597.5" r="3" class="dot-cli"/><text x="56" y="601" class="" style="font-size:10.5px;">.1.67  NVR</text>
+<a href="#h-1-1"><circle cx="47" cy="464.5" r="3" class="dot-net"/><text x="56" y="468" class="" style="font-size:10.5px;">.1.1  router (bridge)</text></a>
+<a href="#h-1-250"><circle cx="47" cy="483.5" r="3" class="dot-net"/><text x="56" y="487" class="" style="font-size:10.5px;">.1.250  core switch</text></a>
+<a href="#h-1-61"><circle cx="47" cy="502.5" r="3" class="dot-cli"/><text x="56" y="506" class="" style="font-size:10.5px;">.1.61  Garage cam</text></a>
+<a href="#h-1-63"><circle cx="47" cy="521.5" r="3" class="dot-cli"/><text x="56" y="525" class="" style="font-size:10.5px;">.1.63  Front cam</text></a>
+<a href="#h-1-64"><circle cx="47" cy="540.5" r="3" class="dot-cli"/><text x="56" y="544" class="" style="font-size:10.5px;">.1.64  Front cam</text></a>
+<a href="#h-1-65"><circle cx="47" cy="559.5" r="3" class="dot-cli"/><text x="56" y="563" class="" style="font-size:10.5px;">.1.65  Side cam</text></a>
+<a href="#h-1-66"><circle cx="47" cy="578.5" r="3" class="dot-cli"/><text x="56" y="582" class="" style="font-size:10.5px;">.1.66  Front cam</text></a>
+<a href="#h-1-67"><circle cx="47" cy="597.5" r="3" class="dot-cli"/><text x="56" y="601" class="" style="font-size:10.5px;">.1.67  NVR</text></a>
 <text x="44" y="626" class="muted">Reolink · no WAN access</text>
 <path d="M430,396 L430,406" class="wire" opacity=".6"/>
 <rect x="235" y="406" width="390" height="400" rx="9" class="panel"/>
 <text x="249" y="428" class="title">192.168.5.0/24 — switch LAN</text>
 <text x="249" y="444" class="muted">42 hosts · statics .1–.49 · DHCP pool .50–.254</text>
-<circle cx="252" cy="464.5" r="3" class="dot-net"/><text x="261" y="468" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
-<circle cx="252" cy="478.5" r="3" class="dot-net"/><text x="261" y="482" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
-<circle cx="252" cy="492.5" r="3" class="dot-net"/><text x="261" y="496" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
-<circle cx="252" cy="506.5" r="3" class="dot-net"/><text x="261" y="510" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
-<circle cx="252" cy="520.5" r="3" class="dot-net"/><text x="261" y="524" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
-<circle cx="252" cy="534.5" r="3" class="dot-cli"/><text x="261" y="538" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
-<circle cx="252" cy="548.5" r="3" class="dot-srv"/><text x="261" y="552" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
-<circle cx="252" cy="562.5" r="3" class="dot-kube"/><text x="261" y="566" class="" style="font-size:10.5px;">.5.9 pite</text>
-<circle cx="252" cy="576.5" r="3" class="dot-vip"/><text x="261" y="580" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
-<circle cx="252" cy="590.5" r="3" class="dot-srv"/><text x="261" y="594" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
-<circle cx="252" cy="604.5" r="3" class="dot-srv"/><text x="261" y="608" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
-<circle cx="252" cy="618.5" r="3" class="dot-kube"/><text x="261" y="622" class="" style="font-size:10.5px;">.5.36 closet</text>
-<circle cx="252" cy="632.5" r="3" class="dot-kube"/><text x="261" y="636" class="" style="font-size:10.5px;">.5.68 big</text>
-<circle cx="252" cy="646.5" r="3" class="dot-kube"/><text x="261" y="650" class="" style="font-size:10.5px;">.5.76 arch</text>
-<circle cx="252" cy="660.5" r="3" class="dot-srv"/><text x="261" y="664" class="" style="font-size:10.5px;">.5.122 steam</text>
-<circle cx="252" cy="674.5" r="3" class="dot-srv"/><text x="261" y="678" class="" style="font-size:10.5px;">.5.140 secu</text>
-<circle cx="252" cy="688.5" r="3" class="dot-kube"/><text x="261" y="692" class="" style="font-size:10.5px;">.5.175 nas</text>
-<circle cx="252" cy="702.5" r="3" class="dot-kube"/><text x="261" y="706" class="" style="font-size:10.5px;">.5.209 office</text>
-<circle cx="252" cy="716.5" r="3" class="dot-srv"/><text x="261" y="720" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
-<circle cx="440" cy="464.5" r="3" class="dot-net"/><text x="449" y="468" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
-<circle cx="440" cy="478.5" r="3" class="dot-net"/><text x="449" y="482" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
-<circle cx="440" cy="492.5" r="3" class="dot-net"/><text x="449" y="496" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
-<circle cx="440" cy="514.5" r="3" class="dot-cli"/><text x="449" y="518" class="" style="font-size:10.5px;">.5.53 unidentified</text>
-<circle cx="440" cy="528.5" r="3" class="dot-cli"/><text x="449" y="532" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
-<circle cx="440" cy="542.5" r="3" class="dot-cli"/><text x="449" y="546" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
-<circle cx="440" cy="556.5" r="3" class="dot-cli"/><text x="449" y="560" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
-<circle cx="440" cy="570.5" r="3" class="dot-cli"/><text x="449" y="574" class="" style="font-size:10.5px;">.5.118 vpin</text>
-<circle cx="440" cy="584.5" r="3" class="dot-cli"/><text x="449" y="588" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
-<circle cx="440" cy="598.5" r="3" class="dot-cli"/><text x="449" y="602" class="" style="font-size:10.5px;">.5.123 mirror</text>
-<circle cx="440" cy="612.5" r="3" class="dot-cli"/><text x="449" y="616" class="" style="font-size:10.5px;">.5.124 iPhone</text>
-<circle cx="440" cy="626.5" r="3" class="dot-cli"/><text x="449" y="630" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
-<circle cx="440" cy="640.5" r="3" class="dot-cli"/><text x="449" y="644" class="" style="font-size:10.5px;">.5.131 unidentified</text>
-<circle cx="440" cy="654.5" r="3" class="dot-cli"/><text x="449" y="658" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
-<circle cx="440" cy="668.5" r="3" class="dot-cli"/><text x="449" y="672" class="" style="font-size:10.5px;">.5.146 unidentified</text>
-<circle cx="440" cy="682.5" r="3" class="dot-cli"/><text x="449" y="686" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
-<circle cx="440" cy="696.5" r="3" class="dot-cli"/><text x="449" y="700" class="" style="font-size:10.5px;">.5.164 AiDot</text>
-<circle cx="440" cy="710.5" r="3" class="dot-cli"/><text x="449" y="714" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sens…</text>
-<circle cx="440" cy="724.5" r="3" class="dot-cli"/><text x="449" y="728" class="" style="font-size:10.5px;">.5.168 AiDot</text>
-<circle cx="440" cy="738.5" r="3" class="dot-cli"/><text x="449" y="742" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sens…</text>
-<circle cx="440" cy="752.5" r="3" class="dot-cli"/><text x="449" y="756" class="" style="font-size:10.5px;">.5.172 unidentified</text>
-<circle cx="440" cy="766.5" r="3" class="dot-cli"/><text x="449" y="770" class="" style="font-size:10.5px;">.5.187 unidentified</text>
-<circle cx="440" cy="780.5" r="3" class="dot-cli"/><text x="449" y="784" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
+<a href="#h-5-1"><circle cx="252" cy="464.5" r="3" class="dot-net"/><text x="261" y="468" class="" style="font-size:10.5px;">.5.1 router · RB5009</text></a>
+<a href="#h-5-2"><circle cx="252" cy="478.5" r="3" class="dot-net"/><text x="261" y="482" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text></a>
+<a href="#h-5-3"><circle cx="252" cy="492.5" r="3" class="dot-net"/><text x="261" y="496" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text></a>
+<a href="#h-5-4"><circle cx="252" cy="506.5" r="3" class="dot-net"/><text x="261" y="510" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text></a>
+<a href="#h-5-5"><circle cx="252" cy="520.5" r="3" class="dot-net"/><text x="261" y="524" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text></a>
+<a href="#h-5-6"><circle cx="252" cy="534.5" r="3" class="dot-cli"/><text x="261" y="538" class="" style="font-size:10.5px;">.5.6 Brother printer</text></a>
+<a href="#h-5-8"><circle cx="252" cy="548.5" r="3" class="dot-srv"/><text x="261" y="552" class="" style="font-size:10.5px;">.5.8 GL-KVM</text></a>
+<a href="#h-5-9"><circle cx="252" cy="562.5" r="3" class="dot-kube"/><text x="261" y="566" class="" style="font-size:10.5px;">.5.9 pite</text></a>
+<a href="#h-5-10"><circle cx="252" cy="576.5" r="3" class="dot-vip"/><text x="261" y="580" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text></a>
+<a href="#h-5-19"><circle cx="252" cy="590.5" r="3" class="dot-srv"/><text x="261" y="594" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text></a>
+<a href="#h-5-30"><circle cx="252" cy="604.5" r="3" class="dot-srv"/><text x="261" y="608" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text></a>
+<a href="#h-5-36"><circle cx="252" cy="618.5" r="3" class="dot-kube"/><text x="261" y="622" class="" style="font-size:10.5px;">.5.36 closet</text></a>
+<a href="#h-5-68"><circle cx="252" cy="632.5" r="3" class="dot-kube"/><text x="261" y="636" class="" style="font-size:10.5px;">.5.68 big</text></a>
+<a href="#h-5-76"><circle cx="252" cy="646.5" r="3" class="dot-kube"/><text x="261" y="650" class="" style="font-size:10.5px;">.5.76 arch</text></a>
+<a href="#h-5-122"><circle cx="252" cy="660.5" r="3" class="dot-srv"/><text x="261" y="664" class="" style="font-size:10.5px;">.5.122 steam</text></a>
+<a href="#h-5-140"><circle cx="252" cy="674.5" r="3" class="dot-srv"/><text x="261" y="678" class="" style="font-size:10.5px;">.5.140 secu</text></a>
+<a href="#h-5-175"><circle cx="252" cy="688.5" r="3" class="dot-kube"/><text x="261" y="692" class="" style="font-size:10.5px;">.5.175 nas</text></a>
+<a href="#h-5-209"><circle cx="252" cy="702.5" r="3" class="dot-kube"/><text x="261" y="706" class="" style="font-size:10.5px;">.5.209 office</text></a>
+<a href="#h-5-254"><circle cx="252" cy="716.5" r="3" class="dot-srv"/><text x="261" y="720" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text></a>
+<a href="#h-5-171"><circle cx="440" cy="464.5" r="3" class="dot-net"/><text x="449" y="468" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text></a>
+<a href="#h-5-173"><circle cx="440" cy="478.5" r="3" class="dot-net"/><text x="449" y="482" class="" style="font-size:10.5px;">.5.173 U7 Lite</text></a>
+<a href="#h-5-198"><circle cx="440" cy="492.5" r="3" class="dot-net"/><text x="449" y="496" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text></a>
+<a href="#h-5-53"><circle cx="440" cy="514.5" r="3" class="dot-cli"/><text x="449" y="518" class="" style="font-size:10.5px;">.5.53 unidentified</text></a>
+<a href="#h-5-59"><circle cx="440" cy="528.5" r="3" class="dot-cli"/><text x="449" y="532" class="" style="font-size:10.5px;">.5.59 Indoorcam</text></a>
+<a href="#h-5-85"><circle cx="440" cy="542.5" r="3" class="dot-cli"/><text x="449" y="546" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text></a>
+<a href="#h-5-112"><circle cx="440" cy="556.5" r="3" class="dot-cli"/><text x="449" y="560" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text></a>
+<a href="#h-5-118"><circle cx="440" cy="570.5" r="3" class="dot-cli"/><text x="449" y="574" class="" style="font-size:10.5px;">.5.118 vpin</text></a>
+<a href="#h-5-121"><circle cx="440" cy="584.5" r="3" class="dot-cli"/><text x="449" y="588" class="" style="font-size:10.5px;">.5.121 livingroom2707</text></a>
+<a href="#h-5-123"><circle cx="440" cy="598.5" r="3" class="dot-cli"/><text x="449" y="602" class="" style="font-size:10.5px;">.5.123 mirror</text></a>
+<a href="#h-5-124"><circle cx="440" cy="612.5" r="3" class="dot-cli"/><text x="449" y="616" class="" style="font-size:10.5px;">.5.124 iPhone</text></a>
+<a href="#h-5-127"><circle cx="440" cy="626.5" r="3" class="dot-cli"/><text x="449" y="630" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text></a>
+<a href="#h-5-131"><circle cx="440" cy="640.5" r="3" class="dot-cli"/><text x="449" y="644" class="" style="font-size:10.5px;">.5.131 unidentified</text></a>
+<a href="#h-5-132"><circle cx="440" cy="654.5" r="3" class="dot-cli"/><text x="449" y="658" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text></a>
+<a href="#h-5-146"><circle cx="440" cy="668.5" r="3" class="dot-cli"/><text x="449" y="672" class="" style="font-size:10.5px;">.5.146 unidentified</text></a>
+<a href="#h-5-152"><circle cx="440" cy="682.5" r="3" class="dot-cli"/><text x="449" y="686" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text></a>
+<a href="#h-5-164"><circle cx="440" cy="696.5" r="3" class="dot-cli"/><text x="449" y="700" class="" style="font-size:10.5px;">.5.164 AiDot</text></a>
+<a href="#h-5-165"><circle cx="440" cy="710.5" r="3" class="dot-cli"/><text x="449" y="714" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sens…</text></a>
+<a href="#h-5-168"><circle cx="440" cy="724.5" r="3" class="dot-cli"/><text x="449" y="728" class="" style="font-size:10.5px;">.5.168 AiDot</text></a>
+<a href="#h-5-170"><circle cx="440" cy="738.5" r="3" class="dot-cli"/><text x="449" y="742" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sens…</text></a>
+<a href="#h-5-172"><circle cx="440" cy="752.5" r="3" class="dot-cli"/><text x="449" y="756" class="" style="font-size:10.5px;">.5.172 unidentified</text></a>
+<a href="#h-5-187"><circle cx="440" cy="766.5" r="3" class="dot-cli"/><text x="449" y="770" class="" style="font-size:10.5px;">.5.187 unidentified</text></a>
+<a href="#h-5-246"><circle cx="440" cy="780.5" r="3" class="dot-cli"/><text x="449" y="784" class="" style="font-size:10.5px;">.5.246 eight-pod</text></a>
 <path d="M805,396 L805,406" class="wire" opacity=".6"/>
 <rect x="640" y="406" width="330" height="240" rx="9" class="panel"/>
 <text x="654" y="428" class="title">192.168.6.0/24 — MetalLB</text>
 <text x="654" y="444" class="muted">20 VIPs · filled = Cluster · ring = Local</text>
-<circle cx="657" cy="464.5" r="3" class="ring"/><text x="666" y="468" class="" style="font-size:10.5px;">.6.6 traefik</text>
-<circle cx="817" cy="464.5" r="3" class="ring"/><text x="826" y="468" class="" style="font-size:10.5px;">.6.13 stalwart</text>
-<circle cx="657" cy="478.5" r="3" class="dot-vip"/><text x="666" y="482" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
-<circle cx="817" cy="478.5" r="3" class="ring"/><text x="826" y="482" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
-<circle cx="657" cy="492.5" r="3" class="ring"/><text x="666" y="496" class="" style="font-size:10.5px;">.6.16 ts-files</text>
-<circle cx="817" cy="492.5" r="3" class="dot-vip"/><text x="826" y="496" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
-<circle cx="657" cy="506.5" r="3" class="ring"/><text x="666" y="510" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
-<circle cx="817" cy="506.5" r="3" class="dot-vip"/><text x="826" y="510" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
-<circle cx="657" cy="520.5" r="3" class="dot-vip"/><text x="666" y="524" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
-<circle cx="817" cy="520.5" r="3" class="dot-vip"/><text x="826" y="524" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
-<circle cx="657" cy="534.5" r="3" class="dot-vip"/><text x="666" y="538" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
-<circle cx="817" cy="534.5" r="3" class="dot-vip"/><text x="826" y="538" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
-<circle cx="657" cy="548.5" r="3" class="dot-vip"/><text x="666" y="552" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
-<circle cx="817" cy="548.5" r="3" class="dot-vip"/><text x="826" y="552" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
-<circle cx="657" cy="562.5" r="3" class="dot-vip"/><text x="666" y="566" class="" style="font-size:10.5px;">.6.26 frigate</text>
-<circle cx="817" cy="562.5" r="3" class="ring"/><text x="826" y="566" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
-<circle cx="657" cy="576.5" r="3" class="ring"/><text x="666" y="580" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
-<circle cx="817" cy="576.5" r="3" class="dot-vip"/><text x="826" y="580" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
-<circle cx="657" cy="590.5" r="3" class="dot-vip"/><text x="666" y="594" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
-<circle cx="817" cy="590.5" r="3" class="dot-vip"/><text x="826" y="594" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
+<a href="#vip-6-6"><circle cx="657" cy="464.5" r="3" class="ring"/><text x="666" y="468" class="" style="font-size:10.5px;">.6.6 traefik</text></a>
+<a href="#vip-6-13"><circle cx="817" cy="464.5" r="3" class="ring"/><text x="826" y="468" class="" style="font-size:10.5px;">.6.13 stalwart</text></a>
+<a href="#vip-6-14"><circle cx="657" cy="478.5" r="3" class="dot-vip"/><text x="666" y="482" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text></a>
+<a href="#vip-6-15"><circle cx="817" cy="478.5" r="3" class="ring"/><text x="826" y="482" class="" style="font-size:10.5px;">.6.15 ts-voice</text></a>
+<a href="#vip-6-16"><circle cx="657" cy="492.5" r="3" class="ring"/><text x="666" y="496" class="" style="font-size:10.5px;">.6.16 ts-files</text></a>
+<a href="#vip-6-17"><circle cx="817" cy="492.5" r="3" class="dot-vip"/><text x="826" y="496" class="" style="font-size:10.5px;">.6.17 openrct2-game</text></a>
+<a href="#vip-6-18"><circle cx="657" cy="506.5" r="3" class="ring"/><text x="666" y="510" class="" style="font-size:10.5px;">.6.18 headscale-stun</text></a>
+<a href="#vip-6-19"><circle cx="817" cy="506.5" r="3" class="dot-vip"/><text x="826" y="510" class="" style="font-size:10.5px;">.6.19 mosquitto</text></a>
+<a href="#vip-6-20"><circle cx="657" cy="520.5" r="3" class="dot-vip"/><text x="666" y="524" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text></a>
+<a href="#vip-6-21"><circle cx="817" cy="520.5" r="3" class="dot-vip"/><text x="826" y="524" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text></a>
+<a href="#vip-6-22"><circle cx="657" cy="534.5" r="3" class="dot-vip"/><text x="666" y="538" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text></a>
+<a href="#vip-6-23"><circle cx="817" cy="534.5" r="3" class="dot-vip"/><text x="826" y="538" class="" style="font-size:10.5px;">.6.23 mimir-lb</text></a>
+<a href="#vip-6-24"><circle cx="657" cy="548.5" r="3" class="dot-vip"/><text x="666" y="552" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text></a>
+<a href="#vip-6-25"><circle cx="817" cy="548.5" r="3" class="dot-vip"/><text x="826" y="552" class="" style="font-size:10.5px;">.6.25 syslog-lb</text></a>
+<a href="#vip-6-26"><circle cx="657" cy="562.5" r="3" class="dot-vip"/><text x="666" y="566" class="" style="font-size:10.5px;">.6.26 frigate</text></a>
+<a href="#vip-6-28"><circle cx="817" cy="562.5" r="3" class="ring"/><text x="826" y="566" class="" style="font-size:10.5px;">.6.28 factorio-game</text></a>
+<a href="#vip-6-29"><circle cx="657" cy="576.5" r="3" class="ring"/><text x="666" y="580" class="" style="font-size:10.5px;">.6.29 minecraft-game</text></a>
+<a href="#vip-6-30"><circle cx="817" cy="576.5" r="3" class="dot-vip"/><text x="826" y="580" class="" style="font-size:10.5px;">.6.30 lan-dns</text></a>
+<a href="#vip-6-31"><circle cx="657" cy="590.5" r="3" class="dot-vip"/><text x="666" y="594" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text></a>
+<a href="#vip-5-10"><circle cx="817" cy="590.5" r="3" class="dot-vip"/><text x="826" y="594" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text></a>
 <text x="654" y="636" class="muted">no router interface — BGP /32s only</text>
 <path d="M1097,396 L1097,406" class="wire" opacity=".6"/>
 <rect x="985" y="406" width="225" height="125" rx="9" class="panel"/>
 <text x="999" y="428" class="title">192.168.88.0/24</text>
 <text x="999" y="444" class="muted">recovery / factory default</text>
-<circle cx="1002" cy="464.5" r="3" class="dot-net"/><text x="1011" y="468" class="" style="font-size:10.5px;">.88.254  router</text>
-<circle cx="1002" cy="482.5" r="3" class="dot-net"/><text x="1011" y="486" class="" style="font-size:10.5px;">.88.1  upstairs-core</text>
+<a href="#s88"><circle cx="1002" cy="464.5" r="3" class="dot-net"/><text x="1011" y="468" class="" style="font-size:10.5px;">.88.254  router</text></a>
+<a href="#s88"><circle cx="1002" cy="482.5" r="3" class="dot-net"/><text x="1011" y="486" class="" style="font-size:10.5px;">.88.1  upstairs-core</text></a>
 <text x="999" y="512" class="muted">both keep the defconf address</text>
 <rect x="985" y="546" width="225" height="200" rx="9" class="panel"/>
 <text x="999" y="568" class="title">Overlays</text>
@@ -494,11 +1836,11 @@ DMZ, so every new WAN port needs a forward here <em>and</em> a dst-nat on the Mi
 <table>
 <thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td class="mono">.0.1</td><td>Verizon CR1000B</td><td class="mono">74:90:BC:79:0A:A4</td><td>static</td><td>ISP gateway; per-port forwards → .0.2</td></tr>
-<tr><td class="mono">.0.2</td><td>MikroTik 2GWAN</td><td class="mono">—</td><td>static</td><td>primary WAN; WireGuard 51820 terminates here</td></tr>
-<tr><td class="mono">.0.152</td><td>MikroTik 2GWAN (2nd)</td><td class="mono">—</td><td>DHCP (D)</td><td>secondary address, unused for forwarding</td></tr>
-<tr><td class="mono">.0.154</td><td>home-pi</td><td class="mono">—</td><td>static</td><td>Attic cache :8280; on the Verizon LAN, outside the MikroTik</td></tr>
-<tr><td class="mono">.0.165</td><td>unidentified</td><td class="mono">46:5C:E3:6B:66:C1</td><td>ARP only</td><td>reached during the snapshot, no lease, silent on ping</td></tr>
+<tr id="h-0-1"><td class="mono">.0.1</td><td>Verizon CR1000B</td><td class="mono">74:90:BC:79:0A:A4</td><td>static</td><td>ISP gateway; per-port forwards → .0.2</td></tr>
+<tr id="h-0-2"><td class="mono">.0.2</td><td>MikroTik 2GWAN</td><td class="mono">—</td><td>static</td><td>primary WAN; WireGuard 51820 terminates here</td></tr>
+<tr id="h-0-152"><td class="mono">.0.152</td><td>MikroTik 2GWAN (2nd)</td><td class="mono">—</td><td>DHCP (D)</td><td>secondary address, unused for forwarding</td></tr>
+<tr id="h-0-154"><td class="mono">.0.154</td><td>home-pi</td><td class="mono">—</td><td>static</td><td>Attic cache :8280; on the Verizon LAN, outside the MikroTik</td></tr>
+<tr id="h-0-165"><td class="mono">.0.165</td><td>unidentified</td><td class="mono">46:5C:E3:6B:66:C1</td><td>ARP only</td><td>reached during the snapshot, no lease, silent on ping</td></tr>
 </tbody>
 </table>
 
@@ -507,14 +1849,14 @@ DMZ, so every new WAN port needs a forward here <em>and</em> a dst-nat on the Mi
 <table>
 <thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td class="mono">.1.250</td><td>core switch</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>second address on the core, on the camera net</td></tr>
-<tr><td class="mono">.1.1</td><td>router (bridge)</td><td class="mono">—</td><td>static</td><td>192.168.1.1, second address on the same bridge</td></tr>
-<tr><td class="mono">.1.61</td><td>Garage cam</td><td class="mono">EC:71:DB:F4:DC:49</td><td>DHCP lease</td><td>Reolink</td></tr>
-<tr><td class="mono">.1.63</td><td>Front cam</td><td class="mono">EC:71:DB:89:D8:8B</td><td>DHCP lease</td><td>Reolink</td></tr>
-<tr><td class="mono">.1.64</td><td>Front cam</td><td class="mono">EC:71:DB:65:58:A3</td><td>DHCP lease</td><td>Reolink</td></tr>
-<tr><td class="mono">.1.65</td><td>Side cam</td><td class="mono">94:B3:F7:18:52:CC</td><td>DHCP lease</td><td>Reolink</td></tr>
-<tr><td class="mono">.1.66</td><td>Front cam</td><td class="mono">EC:71:DB:3E:2F:21</td><td>DHCP lease</td><td>Reolink</td></tr>
-<tr><td class="mono">.1.67</td><td>NVR</td><td class="mono">EC:71:DB:8B:92:93</td><td>DHCP lease</td><td>Reolink NVR; the only 1.0/24 host answering ARP</td></tr>
+<tr id="h-1-250"><td class="mono">.1.250</td><td>core switch</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>second address on the core, on the camera net</td></tr>
+<tr id="h-1-1"><td class="mono">.1.1</td><td>router (bridge)</td><td class="mono">—</td><td>static</td><td>192.168.1.1, second address on the same bridge</td></tr>
+<tr id="h-1-61"><td class="mono">.1.61</td><td>Garage cam</td><td class="mono">EC:71:DB:F4:DC:49</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr id="h-1-63"><td class="mono">.1.63</td><td>Front cam</td><td class="mono">EC:71:DB:89:D8:8B</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr id="h-1-64"><td class="mono">.1.64</td><td>Front cam</td><td class="mono">EC:71:DB:65:58:A3</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr id="h-1-65"><td class="mono">.1.65</td><td>Side cam</td><td class="mono">94:B3:F7:18:52:CC</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr id="h-1-66"><td class="mono">.1.66</td><td>Front cam</td><td class="mono">EC:71:DB:3E:2F:21</td><td>DHCP lease</td><td>Reolink</td></tr>
+<tr id="h-1-67"><td class="mono">.1.67</td><td>NVR</td><td class="mono">EC:71:DB:8B:92:93</td><td>DHCP lease</td><td>Reolink NVR; the only 1.0/24 host answering ARP</td></tr>
 </tbody>
 </table>
 
@@ -524,48 +1866,48 @@ Five are the switch fabric, seventeen are fixed infrastructure (printer, k3s nod
 <table>
 <thead><tr><th>IP</th><th>Host</th><th>MAC</th><th>Source</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td class="mono">.5.1</td><td>router · RB5009</td><td class="mono">—</td><td>static</td><td>gateway · BGP 65001 · DNS · WireGuard</td></tr>
-<tr><td class="mono">.5.2</td><td>office switch · CRS310</td><td class="mono">04:F4:1C:E7:24:45</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
-<tr><td class="mono">.5.3</td><td>upstairs switch · CRS310</td><td class="mono">04:F4:1C:E6:7C:14</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
-<tr><td class="mono">.5.4</td><td>core switch · CRS305</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>4×SFP+ 10G</td></tr>
-<tr><td class="mono">.5.5</td><td>upstairs-core · CRS305</td><td class="mono">D0:EA:11:6B:75:F5</td><td>static</td><td>4×SFP+ 10G; holds the defconf .88.1</td></tr>
-<tr><td class="mono">.5.6</td><td>Brother printer</td><td class="mono">—</td><td>static</td><td>upstairs switch ether6</td></tr>
-<tr><td class="mono">.5.8</td><td>GL-KVM</td><td class="mono">94:83:C4:C4:9C:4D</td><td>static</td><td>tailnet glkvm</td></tr>
-<tr><td class="mono">.5.9</td><td>pite</td><td class="mono">DC:A6:32:25:51:6E</td><td>reservation</td><td>k3s agent (Pi), excluded from announcing; uplink is router ether8 (to-wifi), not the office switch</td></tr>
-<tr><td class="mono">.5.10</td><td>k3s API VIP</td><td class="mono">—</td><td>MetalLB</td><td>kubernetes-api :6443 — ICMP never answers</td></tr>
-<tr><td class="mono">.5.19</td><td>bigp · Proxmox</td><td class="mono">2C:EA:7F:E7:13:98</td><td>static</td><td>PVE 9.2.2; hosts big, unifi-os, steam, github</td></tr>
-<tr><td class="mono">.5.30</td><td>UniFi OS console</td><td class="mono">BC:24:11:23:B8:A5</td><td>static</td><td>VM on bigp, :11443</td></tr>
-<tr><td class="mono">.5.36</td><td>closet</td><td class="mono">0C:C4:7A:BD:63:3D</td><td>reservation</td><td>k3s server + etcd, postgres, kubectl host</td></tr>
-<tr><td class="mono">.5.68</td><td>big</td><td class="mono">BC:24:11:19:22:F9</td><td>reservation</td><td>k3s agent, VM on bigp</td></tr>
-<tr><td class="mono">.5.76</td><td>arch</td><td class="mono">98:B7:85:23:48:90</td><td>reservation</td><td>k3s server + etcd; monero 18080</td></tr>
-<tr><td class="mono">.5.122</td><td>steam</td><td class="mono">BC:24:11:7B:CE:02</td><td>DHCP lease</td><td>VM on bigp</td></tr>
-<tr><td class="mono">.5.140</td><td>secu</td><td class="mono">00:13:EF:F2:A0:BF</td><td>DHCP lease</td><td>NVR duties</td></tr>
-<tr><td class="mono">.5.175</td><td>nas</td><td class="mono">E8:4D:D0:C1:54:20</td><td>reservation</td><td>k3s server + etcd; also .125 on enp7s0</td></tr>
-<tr><td class="mono">.5.209</td><td>office</td><td class="mono">C4:3D:1A:F3:0E:76</td><td>reservation</td><td>k3s agent (wifi), never a BGP speaker</td></tr>
-<tr><td class="mono">.5.254</td><td>iDRAC · R740</td><td class="mono">2C:EA:7F:7B:12:75</td><td>reservation</td><td>BMC, Redfish, 3-strike IP block</td></tr>
-<tr><td class="mono">.5.171</td><td>U7 Pro XGS</td><td class="mono">90:41:B2:D6:74:DB</td><td>DHCP lease</td><td>office, 10GbE uplink</td></tr>
-<tr><td class="mono">.5.173</td><td>U7 Lite</td><td class="mono">1C:0B:8B:50:FF:7E</td><td>DHCP lease</td><td>router ether5, PoE</td></tr>
-<tr><td class="mono">.5.198</td><td>U7 Mesh</td><td class="mono">8C:ED:E1:EC:89:CA</td><td>DHCP lease</td><td>wireless mesh to the Lite</td></tr>
-<tr><td class="mono">.5.53</td><td>unidentified</td><td class="mono">8C:85:80:DE:BE:A3</td><td>ARP only</td><td>no lease, answers ping</td></tr>
-<tr><td class="mono">.5.59</td><td>Indoorcam</td><td class="mono">04:17:B6:09:EE:95</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.85</td><td>Bedroom-11607</td><td class="mono">F0:B3:EC:7E:31:64</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.112</td><td>LeighanesiPhone</td><td class="mono">10:DA:63:C4:C8:12</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.118</td><td>vpin</td><td class="mono">B8:27:EB:56:F0:27</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.121</td><td>livingroom2707</td><td class="mono">8C:26:AA:BE:80:C4</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.123</td><td>mirror</td><td class="mono">DC:A6:32:0C:FE:5D</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.124</td><td>iPhone</td><td class="mono">BE:B2:F3:CD:84:C3</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.127</td><td>K3B-US-PGA0539A</td><td class="mono">C8:FF:77:57:E0:3D</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.131</td><td>unidentified</td><td class="mono">B0:FC:0D:DE:FB:50</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.132</td><td>wiz_79f13c</td><td class="mono">D8:A0:11:79:F1:3C</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.146</td><td>unidentified</td><td class="mono">54:49:DF:12:BF:49</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.152</td><td>eufyDoorbell</td><td class="mono">04:17:B6:05:DB:D8</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.164</td><td>AiDot</td><td class="mono">D0:CF:13:8C:6D:74</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.165</td><td>akamatis-presence-sensor-52f0c8</td><td class="mono">80:F1:B2:52:F0:C8</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.168</td><td>AiDot</td><td class="mono">D0:CF:13:8D:4E:28</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.170</td><td>akamatis-presence-sensor-6c7088</td><td class="mono">94:A9:90:6C:70:88</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.172</td><td>unidentified</td><td class="mono">00:07:A6:40:E7:4B</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.187</td><td>unidentified</td><td class="mono">30:52:53:09:E1:72</td><td>DHCP lease</td><td></td></tr>
-<tr><td class="mono">.5.246</td><td>eight-pod</td><td class="mono">70:B6:51:00:3B:67</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-1"><td class="mono">.5.1</td><td>router · RB5009</td><td class="mono">—</td><td>static</td><td>gateway · BGP 65001 · DNS · WireGuard</td></tr>
+<tr id="h-5-2"><td class="mono">.5.2</td><td>office switch · CRS310</td><td class="mono">04:F4:1C:E7:24:45</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr id="h-5-3"><td class="mono">.5.3</td><td>upstairs switch · CRS310</td><td class="mono">04:F4:1C:E6:7C:14</td><td>static</td><td>8×1G + 2×SFP+</td></tr>
+<tr id="h-5-4"><td class="mono">.5.4</td><td>core switch · CRS305</td><td class="mono">D0:EA:11:70:B9:EF</td><td>static</td><td>4×SFP+ 10G</td></tr>
+<tr id="h-5-5"><td class="mono">.5.5</td><td>upstairs-core · CRS305</td><td class="mono">D0:EA:11:6B:75:F5</td><td>static</td><td>4×SFP+ 10G; holds the defconf .88.1</td></tr>
+<tr id="h-5-6"><td class="mono">.5.6</td><td>Brother printer</td><td class="mono">—</td><td>static</td><td>upstairs switch ether6</td></tr>
+<tr id="h-5-8"><td class="mono">.5.8</td><td>GL-KVM</td><td class="mono">94:83:C4:C4:9C:4D</td><td>static</td><td>tailnet glkvm</td></tr>
+<tr id="h-5-9"><td class="mono">.5.9</td><td>pite</td><td class="mono">DC:A6:32:25:51:6E</td><td>reservation</td><td>k3s agent (Pi), excluded from announcing; uplink is router ether8 (to-wifi), not the office switch</td></tr>
+<tr id="h-5-10"><td class="mono">.5.10</td><td>k3s API VIP</td><td class="mono">—</td><td>MetalLB</td><td>kubernetes-api :6443 — ICMP never answers</td></tr>
+<tr id="h-5-19"><td class="mono">.5.19</td><td>bigp · Proxmox</td><td class="mono">2C:EA:7F:E7:13:98</td><td>static</td><td>PVE 9.2.2; hosts big, unifi-os, steam, github</td></tr>
+<tr id="h-5-30"><td class="mono">.5.30</td><td>UniFi OS console</td><td class="mono">BC:24:11:23:B8:A5</td><td>static</td><td>VM on bigp, :11443</td></tr>
+<tr id="h-5-36"><td class="mono">.5.36</td><td>closet</td><td class="mono">0C:C4:7A:BD:63:3D</td><td>reservation</td><td>k3s server + etcd, postgres, kubectl host</td></tr>
+<tr id="h-5-68"><td class="mono">.5.68</td><td>big</td><td class="mono">BC:24:11:19:22:F9</td><td>reservation</td><td>k3s agent, VM on bigp</td></tr>
+<tr id="h-5-76"><td class="mono">.5.76</td><td>arch</td><td class="mono">98:B7:85:23:48:90</td><td>reservation</td><td>k3s server + etcd; monero 18080</td></tr>
+<tr id="h-5-122"><td class="mono">.5.122</td><td>steam</td><td class="mono">BC:24:11:7B:CE:02</td><td>DHCP lease</td><td>VM on bigp</td></tr>
+<tr id="h-5-140"><td class="mono">.5.140</td><td>secu</td><td class="mono">00:13:EF:F2:A0:BF</td><td>DHCP lease</td><td>NVR duties</td></tr>
+<tr id="h-5-175"><td class="mono">.5.175</td><td>nas</td><td class="mono">E8:4D:D0:C1:54:20</td><td>reservation</td><td>k3s server + etcd; also .125 on enp7s0</td></tr>
+<tr id="h-5-209"><td class="mono">.5.209</td><td>office</td><td class="mono">C4:3D:1A:F3:0E:76</td><td>reservation</td><td>k3s agent (wifi), never a BGP speaker</td></tr>
+<tr id="h-5-254"><td class="mono">.5.254</td><td>iDRAC · R740</td><td class="mono">2C:EA:7F:7B:12:75</td><td>reservation</td><td>BMC, Redfish, 3-strike IP block</td></tr>
+<tr id="h-5-171"><td class="mono">.5.171</td><td>U7 Pro XGS</td><td class="mono">90:41:B2:D6:74:DB</td><td>DHCP lease</td><td>office, 10GbE uplink</td></tr>
+<tr id="h-5-173"><td class="mono">.5.173</td><td>U7 Lite</td><td class="mono">1C:0B:8B:50:FF:7E</td><td>DHCP lease</td><td>router ether5, PoE</td></tr>
+<tr id="h-5-198"><td class="mono">.5.198</td><td>U7 Mesh</td><td class="mono">8C:ED:E1:EC:89:CA</td><td>DHCP lease</td><td>wireless mesh to the Lite</td></tr>
+<tr id="h-5-53"><td class="mono">.5.53</td><td>unidentified</td><td class="mono">8C:85:80:DE:BE:A3</td><td>ARP only</td><td>no lease, answers ping</td></tr>
+<tr id="h-5-59"><td class="mono">.5.59</td><td>Indoorcam</td><td class="mono">04:17:B6:09:EE:95</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-85"><td class="mono">.5.85</td><td>Bedroom-11607</td><td class="mono">F0:B3:EC:7E:31:64</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-112"><td class="mono">.5.112</td><td>LeighanesiPhone</td><td class="mono">10:DA:63:C4:C8:12</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-118"><td class="mono">.5.118</td><td>vpin</td><td class="mono">B8:27:EB:56:F0:27</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-121"><td class="mono">.5.121</td><td>livingroom2707</td><td class="mono">8C:26:AA:BE:80:C4</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-123"><td class="mono">.5.123</td><td>mirror</td><td class="mono">DC:A6:32:0C:FE:5D</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-124"><td class="mono">.5.124</td><td>iPhone</td><td class="mono">BE:B2:F3:CD:84:C3</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-127"><td class="mono">.5.127</td><td>K3B-US-PGA0539A</td><td class="mono">C8:FF:77:57:E0:3D</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-131"><td class="mono">.5.131</td><td>unidentified</td><td class="mono">B0:FC:0D:DE:FB:50</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-132"><td class="mono">.5.132</td><td>wiz_79f13c</td><td class="mono">D8:A0:11:79:F1:3C</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-146"><td class="mono">.5.146</td><td>unidentified</td><td class="mono">54:49:DF:12:BF:49</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-152"><td class="mono">.5.152</td><td>eufyDoorbell</td><td class="mono">04:17:B6:05:DB:D8</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-164"><td class="mono">.5.164</td><td>AiDot</td><td class="mono">D0:CF:13:8C:6D:74</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-165"><td class="mono">.5.165</td><td>akamatis-presence-sensor-52f0c8</td><td class="mono">80:F1:B2:52:F0:C8</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-168"><td class="mono">.5.168</td><td>AiDot</td><td class="mono">D0:CF:13:8D:4E:28</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-170"><td class="mono">.5.170</td><td>akamatis-presence-sensor-6c7088</td><td class="mono">94:A9:90:6C:70:88</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-172"><td class="mono">.5.172</td><td>unidentified</td><td class="mono">00:07:A6:40:E7:4B</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-187"><td class="mono">.5.187</td><td>unidentified</td><td class="mono">30:52:53:09:E1:72</td><td>DHCP lease</td><td></td></tr>
+<tr id="h-5-246"><td class="mono">.5.246</td><td>eight-pod</td><td class="mono">70:B6:51:00:3B:67</td><td>DHCP lease</td><td></td></tr>
 </tbody>
 </table>
 
@@ -599,26 +1941,26 @@ placement fact rather than a security one.</p>
 <table>
 <thead><tr><th>IPv4</th><th>IPv6</th><th>Service</th><th>Ports</th><th>Announce</th><th>Router picks</th><th>WAN</th><th>WireGuard</th></tr></thead>
 <tbody>
-<tr><td class="mono">.6.6</td><td class="mono">::6</td><td>traefik</td><td class="mono">80 → web · 443 → websecure</td><td><span class="pill local">Local</span> closet+arch</td><td class="mono">closet</td><td><span class="pill wan">80, 443</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.13</td><td class="mono">::13</td><td>stalwart</td><td class="mono">25 · 587 · 993</td><td><span class="pill local">Local</span> nas</td><td class="mono">nas</td><td><span class="pill wan">25, 587, 993</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.14</td><td class="mono">::14</td><td>coturn (steam-lobby)</td><td class="mono">3478 tcp+udp · 45000–45063/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">3478 · 45000–45063/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.15</td><td class="mono">::15</td><td>ts-voice</td><td class="mono">9987/udp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">9987/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.16</td><td class="mono">::16</td><td>ts-files</td><td class="mono">30033/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">30033</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.17</td><td class="mono">::17</td><td>openrct2-game</td><td class="mono">11753/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill wan">11753</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.18</td><td class="mono">::18</td><td>headscale-stun</td><td class="mono">3479/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">3479/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.19</td><td class="mono">::19</td><td>mosquitto</td><td class="mono">1883/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.20</td><td class="mono">—</td><td>temporal-frontend</td><td class="mono">7233→rpc · 7243→http</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
-<tr><td class="mono">.6.21</td><td class="mono">::21</td><td>coturn (matrix)</td><td class="mono">3478 tcp+udp · 49152–49213/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.22</td><td class="mono">::22</td><td>livekit-server-rtc</td><td class="mono">7881/tcp · 50000/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">7881</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.23</td><td class="mono">::23</td><td>mimir-lb</td><td class="mono">8080/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.24</td><td class="mono">::24</td><td>loki-push-lb</td><td class="mono">3100 → 8080</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.25</td><td class="mono">::25</td><td>syslog-lb</td><td class="mono">514/udp → 1514</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.26</td><td class="mono">::26</td><td>frigate</td><td class="mono">5000 · 1984 · 8554/tcp · 8555/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.28</td><td class="mono">::28</td><td>factorio-game</td><td class="mono">34197/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">34197/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.29</td><td class="mono">::29</td><td>minecraft-game</td><td class="mono">25565/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">25565</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.30</td><td class="mono">::30</td><td>lan-dns</td><td class="mono">53 tcp+udp → 1053</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr><td class="mono">.6.31</td><td class="mono">::31</td><td>seaweedfs-s3-lan</td><td class="mono">8333/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
-<tr><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-6"><td class="mono">.6.6</td><td class="mono">::6</td><td>traefik</td><td class="mono">80 → web · 443 → websecure</td><td><span class="pill local">Local</span> closet+arch</td><td class="mono">closet</td><td><span class="pill wan">80, 443</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-13"><td class="mono">.6.13</td><td class="mono">::13</td><td>stalwart</td><td class="mono">25 · 587 · 993</td><td><span class="pill local">Local</span> nas</td><td class="mono">nas</td><td><span class="pill wan">25, 587, 993</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-14"><td class="mono">.6.14</td><td class="mono">::14</td><td>coturn (steam-lobby)</td><td class="mono">3478 tcp+udp · 45000–45063/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">3478 · 45000–45063/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-15"><td class="mono">.6.15</td><td class="mono">::15</td><td>ts-voice</td><td class="mono">9987/udp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">9987/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-16"><td class="mono">.6.16</td><td class="mono">::16</td><td>ts-files</td><td class="mono">30033/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">30033</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-17"><td class="mono">.6.17</td><td class="mono">::17</td><td>openrct2-game</td><td class="mono">11753/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill wan">11753</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-18"><td class="mono">.6.18</td><td class="mono">::18</td><td>headscale-stun</td><td class="mono">3479/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">3479/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-19"><td class="mono">.6.19</td><td class="mono">::19</td><td>mosquitto</td><td class="mono">1883/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-20"><td class="mono">.6.20</td><td class="mono">—</td><td>temporal-frontend</td><td class="mono">7233→rpc · 7243→http</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
+<tr id="vip-6-21"><td class="mono">.6.21</td><td class="mono">::21</td><td>coturn (matrix)</td><td class="mono">3478 tcp+udp · 49152–49213/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-22"><td class="mono">.6.22</td><td class="mono">::22</td><td>livekit-server-rtc</td><td class="mono">7881/tcp · 50000/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">7881</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-23"><td class="mono">.6.23</td><td class="mono">::23</td><td>mimir-lb</td><td class="mono">8080/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-24"><td class="mono">.6.24</td><td class="mono">::24</td><td>loki-push-lb</td><td class="mono">3100 → 8080</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-25"><td class="mono">.6.25</td><td class="mono">::25</td><td>syslog-lb</td><td class="mono">514/udp → 1514</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-26"><td class="mono">.6.26</td><td class="mono">::26</td><td>frigate</td><td class="mono">5000 · 1984 · 8554/tcp · 8555/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-28"><td class="mono">.6.28</td><td class="mono">::28</td><td>factorio-game</td><td class="mono">34197/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">34197/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-29"><td class="mono">.6.29</td><td class="mono">::29</td><td>minecraft-game</td><td class="mono">25565/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">25565</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-30"><td class="mono">.6.30</td><td class="mono">::30</td><td>lan-dns</td><td class="mono">53 tcp+udp → 1053</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-31"><td class="mono">.6.31</td><td class="mono">::31</td><td>seaweedfs-s3-lan</td><td class="mono">8333/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
+<tr id="vip-5-10"><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 </tbody>
 </table>
 <p class="small">“Router picks” is the selected path, not the set of announcers — for a Cluster VIP every speaker carries it and the router installs one. <code>.6.17</code> and <code>.6.26</code> have no route right now (no ready pod); the pool is a <code>blackhole</code> at distance 250, so they drop rather than leak to the default route.</p>
