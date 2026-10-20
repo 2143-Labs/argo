@@ -481,7 +481,7 @@ wireless associations inferred from the AP's uplink port, because the controller
 credentials I do not read.</p>
 <ul>
   <li><a href="network-diagram.svg"><strong>network-diagram.svg</strong></a> — rendered, 2273 × 1514 pt</li>
-  <li><a href="network-diagram.dot">network-diagram.dot</a> — source; re-render with <code>dot -Tsvg network-diagram.dot -o network-diagram.svg</code></li>
+  <li><a href="network-diagram.dot">network-diagram.dot</a> — source; re-render with the shared renderer, which injects this page's palette: <code>nix shell nixpkgs#graphviz -c dot -Tsvg docs/network-diagram.dot | ./scripts/render-network-diagram.py &gt; docs/network-diagram.svg</code></li>
 </ul>
 <figure>
   <a href="network-diagram.svg"><img src="network-diagram.svg" alt="Expanded port-level network diagram" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px"></a>

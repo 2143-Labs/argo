@@ -5,6 +5,11 @@ public port, and how to get back into the router when something breaks. The
 forward tables below are the record of state that lives on the two routers, not
 in this repository: update them in the same change that edits a router.
 
+**Live state:** the current VIPs, ports and switch topology are in
+[network-inventory.html](network-inventory.html) (flat map) and
+[network-diagram.svg](network-diagram.svg) (port level). This guide owns the
+procedure; the inventory owns the numbers.
+
 ## Path
 
 ```

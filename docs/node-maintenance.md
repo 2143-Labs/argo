@@ -2,6 +2,8 @@
 
 How a k3s node leaves and rejoins the edge without router edits and without dropping more connections than necessary. Background and verification: [2026-10-15-fungible-ingress.md](2026-10-15-fungible-ingress.md).
 
+**Which node announces what right now:** [network-inventory.html](network-inventory.html) carries the per-VIP placement and the switch ports; this guide is the procedure.
+
 ## How traffic reaches a node
 
 - Every k3s node except office (its `wifi` taint keeps the MetalLB DaemonSets off) runs a MetalLB speaker (`metallb-speaker` + `metallb-frr-k8s` DaemonSets) that peers with the MikroTik over BGP. The router has **one** listener, connection `metallb-speakers` for `192.168.5.0/24`; it accepts a session only from addresses in its firewall address-list `k8s-nodes`, only from AS 65000, and only service /32s and /128s (filter chain `metallb-in`).
