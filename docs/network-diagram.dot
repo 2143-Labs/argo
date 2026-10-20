@@ -1,0 +1,115 @@
+digraph home {
+  rankdir=LR; splines=polyline; nodesep=0.35; ranksep=0.75; bgcolor=white; fontname="Helvetica";
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=8, color="#555555"];
+  internet [shape=ellipse, label="Internet", fillcolor="#e0e0e0", peripheries=2, fontsize=11];
+  verizon [label="Verizon CR1000B\n192.168.0.1\nper-port forwards", fillcolor="#ffcc80"];
+  homepi [label="home-pi\nAttic :8280\n192.168.0.154", fillcolor="#e6defb"];
+  router [label="ROUTER RB5009UPr+S+\n.0.2 WAN · .5.1 · .1.1 · .88.254\nBGP 65001 · BFD 3784 · WireGuard 51820\ndst-nat 15 rules · DNS FWD ×6", fillcolor="#dbe4fb", penwidth=2, fontsize=11];
+  internet -> verizon [label=" coax"];
+  verizon -> router [label=" 1GbE 2GWAN"];
+  verizon -> homepi [label=" 1GbE"];
+
+  // ---- switch chain (LLDP-confirmed) ----
+  core [label="CORE  CRS305-1G-4S+\n192.168.5.4 (+ .1.250)\n4×SFP+ 10G", fillcolor="#fff2b8", penwidth=2, fontsize=11];
+  ucore [label="UPSTAIRS-CORE  CRS305-1G-4S+\n192.168.5.5 (+ .88.1)\n4×SFP+ 10G", fillcolor="#fff2b8", penwidth=2, fontsize=11];
+  upstairs [label="UPSTAIRS  CRS310-8G+2S+\n192.168.5.3\n8×1G + 2×SFP+", fillcolor="#fff2b8", penwidth=2, fontsize=11];
+  office [label="OFFICE  CRS310-8G+2S+\n192.168.5.2\n8×1G + 2×SFP+", fillcolor="#fff2b8", penwidth=2, fontsize=11];
+  router -> core [label=" 10GsfpLAN ↔ sfp-sfpplus4  10G"];
+  router -> core [label=" pi ↔ ether1  1G mgmt", style=dashed, color=gray, weight=0];
+  core -> ucore [label=" sfp-sfpplus2 ↔ sfp-sfpplus2  10G"];
+  core -> office [label=" sfp-sfpplus3 ↔ sfp-sfpplus2  10G"];
+  ucore -> upstairs [label=" sfp-sfpplus4 ↔ sfp-sfpplus1  10G"];
+
+  // ---- directly attached to the router ----
+  u7lite [label="U7 Lite AP\n192.168.5.173\nrouter ether5 · PoE", fillcolor="#d7ccc8"];
+  pite [label="pite · k3s agent\n192.168.5.9\nrouter ether8 (to-wifi)", fillcolor="#d9f0e4"];
+  cam_driveway [label="Front Driveway cam\n192.168.1.66\nrouter ether7", fillcolor="#ffcdd2"];
+  jetkvm [label="JetKVM (unconfirmed)\n192.168.5.187\nrouter ether4", fillcolor="#eceff1"];
+  router -> u7lite [label=" ether5 1G PoE"];
+  router -> pite [label=" ether8 1G"];
+  router -> cam_driveway [label=" ether7 1G"];
+  router -> jetkvm [label=" ether4 1G"];
+
+  // ---- servers on switch ports (MAC-table confirmed) ----
+  nas [label="nas · k3s server/etcd\n192.168.5.175\nZFS · Attic", fillcolor="#d9f0e4"];
+  closet [label="closet · k3s server/etcd\n192.168.5.36\npostgres · kubectl host", fillcolor="#d9f0e4"];
+  arch [label="arch · k3s server/etcd\n192.168.5.76\nmonero 18080", fillcolor="#d9f0e4"];
+  glkvm [label="GL-KVM\n192.168.5.8", fillcolor="#e6defb"];
+  bigp [label="bigp · Proxmox PVE 9.2.2\n192.168.5.19", fillcolor="#e6defb"];
+  big [label="big · k3s agent (VM)\n192.168.5.68", fillcolor="#d9f0e4"];
+  brother [label="Brother printer\n192.168.5.6", fillcolor="#eceff1"];
+  nvr [label="Reolink NVR (PoE)\n192.168.1.67", fillcolor="#ffcdd2"];
+  u7proxgs [label="U7 Pro XGS AP\n192.168.5.171\noffice sfp-sfpplus1 10G", fillcolor="#d7ccc8"];
+  u7mesh [label="U7 Mesh AP\n192.168.5.198", fillcolor="#d7ccc8"];
+  core -> nas [label=" sfp-sfpplus1 10G"];
+  ucore -> closet [label=" sfp-sfpplus1 10G"];
+  ucore -> arch [label=" sfp-sfpplus3 (2.5G NIC)"];
+  ucore -> glkvm [label=" ether1 1G PoE"];
+  upstairs -> bigp [label=" sfp-sfpplus2 10G"];
+  bigp -> big [label=" VM (bridged)"];
+  upstairs -> brother [label=" ether6 100M"];
+  upstairs -> nvr [label=" ether1 1G PoE"];
+  office -> u7proxgs [label=" sfp-sfpplus1 10G"];
+  u7lite -> u7mesh [label=" mesh ~-67 dBm", style=dotted];
+
+  // ---- cameras behind the NVR ----
+  cam_gate [label="Front Gate cam\n192.168.1.64", fillcolor="#ffcdd2"];
+  cam_porch [label="Front Porch cam\n192.168.1.63", fillcolor="#ffcdd2"];
+  nvr -> cam_gate [label=" PoE"];
+  nvr -> cam_porch [label=" PoE"];
+
+  // ---- wireless clients confirmed behind ether5 (U7 Lite + Mesh) ----
+  subgraph cluster_wl { label="WiFi via U7 Lite / Mesh (confirmed by router port ether5)"; style=dashed; color=gray; fontsize=9;
+  wl_secu [label="secu\n192.168.5.140", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_secu [style=dotted, color=gray, weight=0];
+  wl_garage_cam [label="Garage cam\n192.168.1.61", fillcolor="#ffcdd2", width=1.3];
+  u7lite -> wl_garage_cam [style=dotted, color=gray, weight=0];
+  wl_side_cam [label="Side cam\n192.168.1.65", fillcolor="#ffcdd2", width=1.3];
+  u7lite -> wl_side_cam [style=dotted, color=gray, weight=0];
+  wl_eight_pod [label="eight-pod\n192.168.5.246", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_eight_pod [style=dotted, color=gray, weight=0];
+  wl_livingroom [label="livingroom\n192.168.5.121", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_livingroom [style=dotted, color=gray, weight=0];
+  wl_iphone [label="iPhone\n192.168.5.124", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_iphone [style=dotted, color=gray, weight=0];
+  wl_ups [label="UPS\n192.168.5.127", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_ups [style=dotted, color=gray, weight=0];
+  wl_aidot [label="AiDot\n192.168.5.164", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_aidot [style=dotted, color=gray, weight=0];
+  wl_wiz [label="WiZ\n192.168.5.132", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_wiz [style=dotted, color=gray, weight=0];
+  wl_mirror [label="mirror\n192.168.5.123", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_mirror [style=dotted, color=gray, weight=0];
+  wl_presence [label="presence\n192.168.5.165", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_presence [style=dotted, color=gray, weight=0];
+  wl_unknown [label="unknown\n192.168.5.146", fillcolor="#eceff1", width=1.3];
+  u7lite -> wl_unknown [style=dotted, color=gray, weight=0];
+  }
+
+  // ---- office AP clients (association not separable without the controller) ----
+  subgraph cluster_off { label="WiFi via U7 Pro XGS (inferred: shares the 10G uplink with wired hosts)"; style=dashed; color=gray; fontsize=9;
+  of_office_k3s_agent [label="office k3s agent\n192.168.5.209", fillcolor="#d9f0e4", width=1.3];
+  u7proxgs -> of_office_k3s_agent [style=dotted, color=gray, weight=0];
+  of_eufy_doorbell [label="eufy doorbell\n192.168.5.152", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_eufy_doorbell [style=dotted, color=gray, weight=0];
+  of_indoorcam [label="Indoorcam\n192.168.5.59", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_indoorcam [style=dotted, color=gray, weight=0];
+  of_vpin [label="vpin\n192.168.5.118", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_vpin [style=dotted, color=gray, weight=0];
+  of_bedroom [label="Bedroom\n192.168.5.85", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_bedroom [style=dotted, color=gray, weight=0];
+  of_leighanesiphone [label="LeighanesiPhone\n192.168.5.112", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_leighanesiphone [style=dotted, color=gray, weight=0];
+  of_presence [label="presence\n192.168.5.170", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_presence [style=dotted, color=gray, weight=0];
+  of_aidot [label="AiDot\n192.168.5.168", fillcolor="#eceff1", width=1.3];
+  u7proxgs -> of_aidot [style=dotted, color=gray, weight=0];
+  }
+
+  // ---- VIPs ----
+  vipc [label="MetalLB — Cluster (13)\n.6.14 coturn   .6.17 openrct2   .6.19 mosquitto\n.6.20 temporal   .6.21 coturn   .6.22 livekit\n.6.23 mimir   .6.24 loki   .6.25 syslog\n.6.26 frigate   .6.30 lan-dns   .6.31 seaweedfs\n.5.10 kubernetes-api :6443", fillcolor="#f7e3c7", fontsize=9];
+  vipl [label="MetalLB — Local (7)\n.6.6 traefik   .6.13 stalwart\n.6.15 ts-voice   .6.16 ts-files\n.6.18 stun   .6.28 factorio   .6.29 minecraft", fillcolor="#f7e3c7", fontsize=9];
+  router -> vipc [label=" BGP 65001 (all speakers)", style=dashed, color="#9a5800"];
+  router -> vipl [label=" BGP 65001 (one node each)", style=dashed, color="#9a5800"];
+}

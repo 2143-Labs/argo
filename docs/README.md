@@ -9,6 +9,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [LAN and cluster DNS (lan-dns)](lan-dns.md)
 - [Internet edge: Verizon → MikroTik → MetalLB (port forwards, router recovery)](network-edge.md)
 - [Network inventory: every subnet and host, with diagrams](network-inventory.html)
+- [Expanded port-level diagram (Graphviz source)](network-diagram.dot) · [rendered](network-diagram.svg)
 - [Node maintenance: drain, return, add, remove](node-maintenance.md)
 - [Public edge: gating public routes](public-edge.md)
 - [Exposing an Unauthenticated App (humans + federated machines)](exposing-an-unauthenticated-app.md)

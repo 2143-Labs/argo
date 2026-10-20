@@ -130,7 +130,7 @@
 
 <h2 id="map">The network</h2>
 <figure>
-<svg class="diagram" viewBox="0 0 1240 820" role="img" aria-label="Whole-network map: the internet and the DigitalOcean cluster enter through the Verizon LAN; hosts are colour-coded as networking, kube, server, client and MetalLB VIP">
+<svg class="diagram" viewBox="0 0 1240 840" role="img" aria-label="Whole-network map: WAN and WireGuard enter through Verizon; the MikroTik feeds a 10G switch chain (core, upstairs-core, upstairs, office); every host is colour-coded by class">
   <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker><marker id="a2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker></defs>
 <rect x="80" y="8" width="280" height="44" rx="9" class="inet"/>
 <text x="220" y="26" class="title" text-anchor="middle">Internet</text>
@@ -144,7 +144,7 @@
 <text x="700" y="70" class="wglabel" style="font-size:10.5px;">WireGuard · UDP 51820 · encrypted</text>
 <rect x="60" y="100" width="560" height="175" rx="9" class="panel"/>
 <text x="74" y="122" class="title">192.168.0.0/24 — Verizon CR1000B</text>
-<text x="74" y="138" class="muted">the only door in · per-port forwards to .0.2</text>
+<text x="74" y="138" class="muted">double NAT · pool .100–.169</text>
 <circle cx="77" cy="156.5" r="3" class="dot-net"/><text x="86" y="160" class="" style="font-size:10.5px;">.0.1  Verizon CR1000B</text>
 <circle cx="77" cy="173.5" r="3" class="dot-net"/><text x="86" y="177" class="" style="font-size:10.5px;">.0.2  MikroTik 2GWAN</text>
 <circle cx="77" cy="190.5" r="3" class="dot-net"/><text x="86" y="194" class="" style="font-size:10.5px;">.0.152  MikroTik 2GWAN (2nd)</text>
@@ -160,117 +160,138 @@
 <text x="734" y="211" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text>
 <text x="734" y="228" class="" style="font-size:11.5px;">tunnel IN  .6.20 :7233 · .6.31 :8333</text>
 <text x="734" y="245" class="" style="font-size:11.5px;">tunnel OUT 10.99.0.2:32040 mongo</text>
+<text x="734" y="262" class="" style="font-size:9.5px;">direct: ether5 U7 Lite · ether8 pite · ether7 cam · ether4 KVM</text>
 <path d="M620,170 L720,170" class="wire" marker-end="url(#a2)"/>
 <text x="624" y="162" class="" style="font-size:10.5px;">dst-nat</text>
 <path d="M620,215 L720,215" class="wg" marker-end="url(#a2w)"/>
 <text x="624" y="207" class="wg" style="font-size:10.5px;">51820 → wg-remote</text>
-<path d="M955,275 L955,300" class="wire" marker-end="url(#a2)"/>
-<rect x="720" y="300" width="470" height="56" rx="9" class="fabric"/>
-<text x="955" y="322" class="title" text-anchor="middle">10G switch fabric</text>
-<text x="955" y="342" class="muted" text-anchor="middle">core .5.4 → upstairs-core .5.5 → upstairs .5.3 / office .5.2</text>
-<path d="M40,380 L1200,380" class="wire" opacity=".4"/>
-<path d="M955,356 L955,380" class="wire"/>
-<path d="M125,380 L125,390" class="wire" opacity=".6"/>
-<rect x="30" y="390" width="190" height="235" rx="9" class="panel"/>
-<text x="44" y="412" class="title">192.168.1.0/24</text>
-<text x="44" y="428" class="muted">cameras · egress blocked</text>
-<circle cx="47" cy="448.5" r="3" class="dot-net"/><text x="56" y="452" class="" style="font-size:10.5px;">.1.1  router (bridge)</text>
-<circle cx="47" cy="467.5" r="3" class="dot-net"/><text x="56" y="471" class="" style="font-size:10.5px;">.1.250  core switch</text>
-<circle cx="47" cy="486.5" r="3" class="dot-cli"/><text x="56" y="490" class="" style="font-size:10.5px;">.1.61  Garage cam</text>
-<circle cx="47" cy="505.5" r="3" class="dot-cli"/><text x="56" y="509" class="" style="font-size:10.5px;">.1.63  Front cam</text>
-<circle cx="47" cy="524.5" r="3" class="dot-cli"/><text x="56" y="528" class="" style="font-size:10.5px;">.1.64  Front cam</text>
-<circle cx="47" cy="543.5" r="3" class="dot-cli"/><text x="56" y="547" class="" style="font-size:10.5px;">.1.65  Side cam</text>
-<circle cx="47" cy="562.5" r="3" class="dot-cli"/><text x="56" y="566" class="" style="font-size:10.5px;">.1.66  Front cam</text>
-<circle cx="47" cy="581.5" r="3" class="dot-cli"/><text x="56" y="585" class="" style="font-size:10.5px;">.1.67  NVR</text>
-<text x="44" y="610" class="muted">Reolink · no WAN access</text>
-<path d="M430,380 L430,390" class="wire" opacity=".6"/>
-<rect x="235" y="390" width="390" height="400" rx="9" class="panel"/>
-<text x="249" y="412" class="title">192.168.5.0/24 — switch LAN</text>
-<text x="249" y="428" class="muted">42 hosts · statics .1–.49 · DHCP pool .50–.254</text>
-<circle cx="252" cy="448.5" r="3" class="dot-net"/><text x="261" y="452" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
-<circle cx="252" cy="462.5" r="3" class="dot-net"/><text x="261" y="466" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
-<circle cx="252" cy="476.5" r="3" class="dot-net"/><text x="261" y="480" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
-<circle cx="252" cy="490.5" r="3" class="dot-net"/><text x="261" y="494" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
-<circle cx="252" cy="504.5" r="3" class="dot-net"/><text x="261" y="508" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
-<circle cx="252" cy="518.5" r="3" class="dot-cli"/><text x="261" y="522" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
-<circle cx="252" cy="532.5" r="3" class="dot-srv"/><text x="261" y="536" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
-<circle cx="252" cy="546.5" r="3" class="dot-kube"/><text x="261" y="550" class="" style="font-size:10.5px;">.5.9 pite</text>
-<circle cx="252" cy="560.5" r="3" class="dot-vip"/><text x="261" y="564" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
-<circle cx="252" cy="574.5" r="3" class="dot-srv"/><text x="261" y="578" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
-<circle cx="252" cy="588.5" r="3" class="dot-srv"/><text x="261" y="592" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
-<circle cx="252" cy="602.5" r="3" class="dot-kube"/><text x="261" y="606" class="" style="font-size:10.5px;">.5.36 closet</text>
-<circle cx="252" cy="616.5" r="3" class="dot-kube"/><text x="261" y="620" class="" style="font-size:10.5px;">.5.68 big</text>
-<circle cx="252" cy="630.5" r="3" class="dot-kube"/><text x="261" y="634" class="" style="font-size:10.5px;">.5.76 arch</text>
-<circle cx="252" cy="644.5" r="3" class="dot-srv"/><text x="261" y="648" class="" style="font-size:10.5px;">.5.122 steam</text>
-<circle cx="252" cy="658.5" r="3" class="dot-srv"/><text x="261" y="662" class="" style="font-size:10.5px;">.5.140 secu</text>
-<circle cx="252" cy="672.5" r="3" class="dot-kube"/><text x="261" y="676" class="" style="font-size:10.5px;">.5.175 nas</text>
-<circle cx="252" cy="686.5" r="3" class="dot-kube"/><text x="261" y="690" class="" style="font-size:10.5px;">.5.209 office</text>
-<circle cx="252" cy="700.5" r="3" class="dot-srv"/><text x="261" y="704" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
-<circle cx="440" cy="448.5" r="3" class="dot-net"/><text x="449" y="452" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
-<circle cx="440" cy="462.5" r="3" class="dot-net"/><text x="449" y="466" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
-<circle cx="440" cy="476.5" r="3" class="dot-net"/><text x="449" y="480" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
-<circle cx="440" cy="498.5" r="3" class="dot-cli"/><text x="449" y="502" class="" style="font-size:10.5px;">.5.53 unidentified</text>
-<circle cx="440" cy="512.5" r="3" class="dot-cli"/><text x="449" y="516" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
-<circle cx="440" cy="526.5" r="3" class="dot-cli"/><text x="449" y="530" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
-<circle cx="440" cy="540.5" r="3" class="dot-cli"/><text x="449" y="544" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
-<circle cx="440" cy="554.5" r="3" class="dot-cli"/><text x="449" y="558" class="" style="font-size:10.5px;">.5.118 vpin</text>
-<circle cx="440" cy="568.5" r="3" class="dot-cli"/><text x="449" y="572" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
-<circle cx="440" cy="582.5" r="3" class="dot-cli"/><text x="449" y="586" class="" style="font-size:10.5px;">.5.123 mirror</text>
-<circle cx="440" cy="596.5" r="3" class="dot-cli"/><text x="449" y="600" class="" style="font-size:10.5px;">.5.124 iPhone</text>
-<circle cx="440" cy="610.5" r="3" class="dot-cli"/><text x="449" y="614" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
-<circle cx="440" cy="624.5" r="3" class="dot-cli"/><text x="449" y="628" class="" style="font-size:10.5px;">.5.131 unidentified</text>
-<circle cx="440" cy="638.5" r="3" class="dot-cli"/><text x="449" y="642" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
-<circle cx="440" cy="652.5" r="3" class="dot-cli"/><text x="449" y="656" class="" style="font-size:10.5px;">.5.146 unidentified</text>
-<circle cx="440" cy="666.5" r="3" class="dot-cli"/><text x="449" y="670" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
-<circle cx="440" cy="680.5" r="3" class="dot-cli"/><text x="449" y="684" class="" style="font-size:10.5px;">.5.164 AiDot</text>
-<circle cx="440" cy="694.5" r="3" class="dot-cli"/><text x="449" y="698" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sens…</text>
-<circle cx="440" cy="708.5" r="3" class="dot-cli"/><text x="449" y="712" class="" style="font-size:10.5px;">.5.168 AiDot</text>
-<circle cx="440" cy="722.5" r="3" class="dot-cli"/><text x="449" y="726" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sens…</text>
-<circle cx="440" cy="736.5" r="3" class="dot-cli"/><text x="449" y="740" class="" style="font-size:10.5px;">.5.172 unidentified</text>
-<circle cx="440" cy="750.5" r="3" class="dot-cli"/><text x="449" y="754" class="" style="font-size:10.5px;">.5.187 unidentified</text>
-<circle cx="440" cy="764.5" r="3" class="dot-cli"/><text x="449" y="768" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
-<path d="M805,380 L805,390" class="wire" opacity=".6"/>
-<rect x="640" y="390" width="330" height="240" rx="9" class="panel"/>
-<text x="654" y="412" class="title">192.168.6.0/24 — MetalLB</text>
-<text x="654" y="428" class="muted">20 VIPs · filled = Cluster · ring = Local</text>
-<circle cx="657" cy="448.5" r="3" class="ring"/><text x="666" y="452" class="" style="font-size:10.5px;">.6.6 traefik</text>
-<circle cx="817" cy="448.5" r="3" class="ring"/><text x="826" y="452" class="" style="font-size:10.5px;">.6.13 stalwart</text>
-<circle cx="657" cy="462.5" r="3" class="dot-vip"/><text x="666" y="466" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
-<circle cx="817" cy="462.5" r="3" class="ring"/><text x="826" y="466" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
-<circle cx="657" cy="476.5" r="3" class="ring"/><text x="666" y="480" class="" style="font-size:10.5px;">.6.16 ts-files</text>
-<circle cx="817" cy="476.5" r="3" class="dot-vip"/><text x="826" y="480" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
-<circle cx="657" cy="490.5" r="3" class="ring"/><text x="666" y="494" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
-<circle cx="817" cy="490.5" r="3" class="dot-vip"/><text x="826" y="494" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
-<circle cx="657" cy="504.5" r="3" class="dot-vip"/><text x="666" y="508" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
-<circle cx="817" cy="504.5" r="3" class="dot-vip"/><text x="826" y="508" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
-<circle cx="657" cy="518.5" r="3" class="dot-vip"/><text x="666" y="522" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
-<circle cx="817" cy="518.5" r="3" class="dot-vip"/><text x="826" y="522" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
-<circle cx="657" cy="532.5" r="3" class="dot-vip"/><text x="666" y="536" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
-<circle cx="817" cy="532.5" r="3" class="dot-vip"/><text x="826" y="536" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
-<circle cx="657" cy="546.5" r="3" class="dot-vip"/><text x="666" y="550" class="" style="font-size:10.5px;">.6.26 frigate</text>
-<circle cx="817" cy="546.5" r="3" class="ring"/><text x="826" y="550" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
-<circle cx="657" cy="560.5" r="3" class="ring"/><text x="666" y="564" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
-<circle cx="817" cy="560.5" r="3" class="dot-vip"/><text x="826" y="564" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
-<circle cx="657" cy="574.5" r="3" class="dot-vip"/><text x="666" y="578" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
-<circle cx="817" cy="574.5" r="3" class="dot-vip"/><text x="826" y="578" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
-<text x="654" y="620" class="muted">no router interface — BGP /32s only</text>
-<path d="M1097,380 L1097,390" class="wire" opacity=".6"/>
-<rect x="985" y="390" width="225" height="125" rx="9" class="panel"/>
-<text x="999" y="412" class="title">192.168.88.0/24</text>
-<text x="999" y="428" class="muted">recovery / factory default</text>
-<circle cx="1002" cy="448.5" r="3" class="dot-net"/><text x="1011" y="452" class="" style="font-size:10.5px;">.88.254  router</text>
-<circle cx="1002" cy="466.5" r="3" class="dot-net"/><text x="1011" y="470" class="" style="font-size:10.5px;">.88.1  upstairs-core</text>
-<text x="999" y="496" class="muted">both keep the defconf address</text>
-<rect x="985" y="530" width="225" height="200" rx="9" class="panel"/>
-<text x="999" y="552" class="title">Overlays</text>
-<text x="999" y="568" class="muted">not on the bridge</text>
-<text x="999" y="592" class="" style="font-size:11px;">fd00:1::/64 — node ULA</text>
-<text x="999" y="611" class="" style="font-size:11px;">fd00:6::/64 — MetalLB v6</text>
-<text x="999" y="630" class="" style="font-size:11px;">10.42.0.0/16 — pods</text>
-<text x="999" y="649" class="" style="font-size:11px;">10.43.0.0/16 — services</text>
-<text x="999" y="668" class="" style="font-size:11px;">10.99.0.0/24 — WireGuard</text>
-<text x="999" y="687" class="" style="font-size:11px;">100.64.0.0/10 — tailnet (22)</text>
-<text x="999" y="706" class="" style="font-size:11px;">10.244/.245 — DO side</text>
+<path d="M880,275 L880,290" class="wire" marker-end="url(#a2)"/>
+<rect x="340" y="290" width="200" height="64" rx="9" class="fabric"/>
+<text x="440" y="310" class="title" text-anchor="middle">upstairs .5.3</text>
+<text x="440" y="326" class="muted" text-anchor="middle">CRS310 · 8×1G + 2×SFP+</text>
+<text x="440" y="344" class="muted" text-anchor="middle">bigp 10G · NVR 1G · printer</text>
+<rect x="560" y="290" width="200" height="64" rx="9" class="fabric"/>
+<text x="660" y="310" class="title" text-anchor="middle">upstairs-core .5.5</text>
+<text x="660" y="326" class="muted" text-anchor="middle">CRS305 · 4×SFP+</text>
+<text x="660" y="344" class="muted" text-anchor="middle">closet 10G · arch 2.5G · KVM</text>
+<rect x="780" y="290" width="200" height="64" rx="9" class="fabric"/>
+<text x="880" y="310" class="title" text-anchor="middle">core .5.4</text>
+<text x="880" y="326" class="muted" text-anchor="middle">CRS305 · 4×SFP+</text>
+<text x="880" y="344" class="muted" text-anchor="middle">nas 10G · router mgmt 1G</text>
+<rect x="1000" y="290" width="200" height="64" rx="9" class="fabric"/>
+<text x="1100" y="310" class="title" text-anchor="middle">office .5.2</text>
+<text x="1100" y="326" class="muted" text-anchor="middle">CRS310 · 8×1G + 2×SFP+</text>
+<text x="1100" y="344" class="muted" text-anchor="middle">U7 Pro XGS 10G</text>
+<path d="M780,322 L760,322" class="wire" marker-end="url(#a2)"/>
+<text x="770" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
+<path d="M560,322 L540,322" class="wire" marker-end="url(#a2)"/>
+<path d="M980,322 L1000,322" class="wire" marker-end="url(#a2)"/>
+<text x="890" y="287" class="muted" text-anchor="start" style="font-size:9px;">10G SFP+</text>
+<text x="550" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
+<text x="990" y="318" class="muted" text-anchor="middle" style="font-size:9px;">10G</text>
+<path d="M40,396 L1200,396" class="wire" opacity=".4"/>
+<path d="M880,354 L880,396" class="wire"/>
+<path d="M125,396 L125,406" class="wire" opacity=".6"/>
+<rect x="30" y="406" width="190" height="235" rx="9" class="panel"/>
+<text x="44" y="428" class="title">192.168.1.0/24</text>
+<text x="44" y="444" class="muted">cameras · egress blocked</text>
+<circle cx="47" cy="464.5" r="3" class="dot-net"/><text x="56" y="468" class="" style="font-size:10.5px;">.1.1  router (bridge)</text>
+<circle cx="47" cy="483.5" r="3" class="dot-net"/><text x="56" y="487" class="" style="font-size:10.5px;">.1.250  core switch</text>
+<circle cx="47" cy="502.5" r="3" class="dot-cli"/><text x="56" y="506" class="" style="font-size:10.5px;">.1.61  Garage cam</text>
+<circle cx="47" cy="521.5" r="3" class="dot-cli"/><text x="56" y="525" class="" style="font-size:10.5px;">.1.63  Front cam</text>
+<circle cx="47" cy="540.5" r="3" class="dot-cli"/><text x="56" y="544" class="" style="font-size:10.5px;">.1.64  Front cam</text>
+<circle cx="47" cy="559.5" r="3" class="dot-cli"/><text x="56" y="563" class="" style="font-size:10.5px;">.1.65  Side cam</text>
+<circle cx="47" cy="578.5" r="3" class="dot-cli"/><text x="56" y="582" class="" style="font-size:10.5px;">.1.66  Front cam</text>
+<circle cx="47" cy="597.5" r="3" class="dot-cli"/><text x="56" y="601" class="" style="font-size:10.5px;">.1.67  NVR</text>
+<text x="44" y="626" class="muted">Reolink · no WAN access</text>
+<path d="M430,396 L430,406" class="wire" opacity=".6"/>
+<rect x="235" y="406" width="390" height="400" rx="9" class="panel"/>
+<text x="249" y="428" class="title">192.168.5.0/24 — switch LAN</text>
+<text x="249" y="444" class="muted">42 hosts · statics .1–.49 · DHCP pool .50–.254</text>
+<circle cx="252" cy="464.5" r="3" class="dot-net"/><text x="261" y="468" class="" style="font-size:10.5px;">.5.1 router · RB5009</text>
+<circle cx="252" cy="478.5" r="3" class="dot-net"/><text x="261" y="482" class="" style="font-size:10.5px;">.5.2 office switch · CRS310</text>
+<circle cx="252" cy="492.5" r="3" class="dot-net"/><text x="261" y="496" class="" style="font-size:10.5px;">.5.3 upstairs switch · CRS310</text>
+<circle cx="252" cy="506.5" r="3" class="dot-net"/><text x="261" y="510" class="" style="font-size:10.5px;">.5.4 core switch · CRS305</text>
+<circle cx="252" cy="520.5" r="3" class="dot-net"/><text x="261" y="524" class="" style="font-size:10.5px;">.5.5 upstairs-core · CRS305</text>
+<circle cx="252" cy="534.5" r="3" class="dot-cli"/><text x="261" y="538" class="" style="font-size:10.5px;">.5.6 Brother printer</text>
+<circle cx="252" cy="548.5" r="3" class="dot-srv"/><text x="261" y="552" class="" style="font-size:10.5px;">.5.8 GL-KVM</text>
+<circle cx="252" cy="562.5" r="3" class="dot-kube"/><text x="261" y="566" class="" style="font-size:10.5px;">.5.9 pite</text>
+<circle cx="252" cy="576.5" r="3" class="dot-vip"/><text x="261" y="580" class="" style="font-size:10.5px;">.5.10 k3s API VIP</text>
+<circle cx="252" cy="590.5" r="3" class="dot-srv"/><text x="261" y="594" class="" style="font-size:10.5px;">.5.19 bigp · Proxmox</text>
+<circle cx="252" cy="604.5" r="3" class="dot-srv"/><text x="261" y="608" class="" style="font-size:10.5px;">.5.30 UniFi OS console</text>
+<circle cx="252" cy="618.5" r="3" class="dot-kube"/><text x="261" y="622" class="" style="font-size:10.5px;">.5.36 closet</text>
+<circle cx="252" cy="632.5" r="3" class="dot-kube"/><text x="261" y="636" class="" style="font-size:10.5px;">.5.68 big</text>
+<circle cx="252" cy="646.5" r="3" class="dot-kube"/><text x="261" y="650" class="" style="font-size:10.5px;">.5.76 arch</text>
+<circle cx="252" cy="660.5" r="3" class="dot-srv"/><text x="261" y="664" class="" style="font-size:10.5px;">.5.122 steam</text>
+<circle cx="252" cy="674.5" r="3" class="dot-srv"/><text x="261" y="678" class="" style="font-size:10.5px;">.5.140 secu</text>
+<circle cx="252" cy="688.5" r="3" class="dot-kube"/><text x="261" y="692" class="" style="font-size:10.5px;">.5.175 nas</text>
+<circle cx="252" cy="702.5" r="3" class="dot-kube"/><text x="261" y="706" class="" style="font-size:10.5px;">.5.209 office</text>
+<circle cx="252" cy="716.5" r="3" class="dot-srv"/><text x="261" y="720" class="" style="font-size:10.5px;">.5.254 iDRAC · R740</text>
+<circle cx="440" cy="464.5" r="3" class="dot-net"/><text x="449" y="468" class="" style="font-size:10.5px;">.5.171 U7 Pro XGS</text>
+<circle cx="440" cy="478.5" r="3" class="dot-net"/><text x="449" y="482" class="" style="font-size:10.5px;">.5.173 U7 Lite</text>
+<circle cx="440" cy="492.5" r="3" class="dot-net"/><text x="449" y="496" class="" style="font-size:10.5px;">.5.198 U7 Mesh</text>
+<circle cx="440" cy="514.5" r="3" class="dot-cli"/><text x="449" y="518" class="" style="font-size:10.5px;">.5.53 unidentified</text>
+<circle cx="440" cy="528.5" r="3" class="dot-cli"/><text x="449" y="532" class="" style="font-size:10.5px;">.5.59 Indoorcam</text>
+<circle cx="440" cy="542.5" r="3" class="dot-cli"/><text x="449" y="546" class="" style="font-size:10.5px;">.5.85 Bedroom-11607</text>
+<circle cx="440" cy="556.5" r="3" class="dot-cli"/><text x="449" y="560" class="" style="font-size:10.5px;">.5.112 LeighanesiPhone</text>
+<circle cx="440" cy="570.5" r="3" class="dot-cli"/><text x="449" y="574" class="" style="font-size:10.5px;">.5.118 vpin</text>
+<circle cx="440" cy="584.5" r="3" class="dot-cli"/><text x="449" y="588" class="" style="font-size:10.5px;">.5.121 livingroom2707</text>
+<circle cx="440" cy="598.5" r="3" class="dot-cli"/><text x="449" y="602" class="" style="font-size:10.5px;">.5.123 mirror</text>
+<circle cx="440" cy="612.5" r="3" class="dot-cli"/><text x="449" y="616" class="" style="font-size:10.5px;">.5.124 iPhone</text>
+<circle cx="440" cy="626.5" r="3" class="dot-cli"/><text x="449" y="630" class="" style="font-size:10.5px;">.5.127 K3B-US-PGA0539A</text>
+<circle cx="440" cy="640.5" r="3" class="dot-cli"/><text x="449" y="644" class="" style="font-size:10.5px;">.5.131 unidentified</text>
+<circle cx="440" cy="654.5" r="3" class="dot-cli"/><text x="449" y="658" class="" style="font-size:10.5px;">.5.132 wiz_79f13c</text>
+<circle cx="440" cy="668.5" r="3" class="dot-cli"/><text x="449" y="672" class="" style="font-size:10.5px;">.5.146 unidentified</text>
+<circle cx="440" cy="682.5" r="3" class="dot-cli"/><text x="449" y="686" class="" style="font-size:10.5px;">.5.152 eufyDoorbell</text>
+<circle cx="440" cy="696.5" r="3" class="dot-cli"/><text x="449" y="700" class="" style="font-size:10.5px;">.5.164 AiDot</text>
+<circle cx="440" cy="710.5" r="3" class="dot-cli"/><text x="449" y="714" class="" style="font-size:10.5px;">.5.165 akamatis-presence-sens…</text>
+<circle cx="440" cy="724.5" r="3" class="dot-cli"/><text x="449" y="728" class="" style="font-size:10.5px;">.5.168 AiDot</text>
+<circle cx="440" cy="738.5" r="3" class="dot-cli"/><text x="449" y="742" class="" style="font-size:10.5px;">.5.170 akamatis-presence-sens…</text>
+<circle cx="440" cy="752.5" r="3" class="dot-cli"/><text x="449" y="756" class="" style="font-size:10.5px;">.5.172 unidentified</text>
+<circle cx="440" cy="766.5" r="3" class="dot-cli"/><text x="449" y="770" class="" style="font-size:10.5px;">.5.187 unidentified</text>
+<circle cx="440" cy="780.5" r="3" class="dot-cli"/><text x="449" y="784" class="" style="font-size:10.5px;">.5.246 eight-pod</text>
+<path d="M805,396 L805,406" class="wire" opacity=".6"/>
+<rect x="640" y="406" width="330" height="240" rx="9" class="panel"/>
+<text x="654" y="428" class="title">192.168.6.0/24 — MetalLB</text>
+<text x="654" y="444" class="muted">20 VIPs · filled = Cluster · ring = Local</text>
+<circle cx="657" cy="464.5" r="3" class="ring"/><text x="666" y="468" class="" style="font-size:10.5px;">.6.6 traefik</text>
+<circle cx="817" cy="464.5" r="3" class="ring"/><text x="826" y="468" class="" style="font-size:10.5px;">.6.13 stalwart</text>
+<circle cx="657" cy="478.5" r="3" class="dot-vip"/><text x="666" y="482" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text>
+<circle cx="817" cy="478.5" r="3" class="ring"/><text x="826" y="482" class="" style="font-size:10.5px;">.6.15 ts-voice</text>
+<circle cx="657" cy="492.5" r="3" class="ring"/><text x="666" y="496" class="" style="font-size:10.5px;">.6.16 ts-files</text>
+<circle cx="817" cy="492.5" r="3" class="dot-vip"/><text x="826" y="496" class="" style="font-size:10.5px;">.6.17 openrct2-game</text>
+<circle cx="657" cy="506.5" r="3" class="ring"/><text x="666" y="510" class="" style="font-size:10.5px;">.6.18 headscale-stun</text>
+<circle cx="817" cy="506.5" r="3" class="dot-vip"/><text x="826" y="510" class="" style="font-size:10.5px;">.6.19 mosquitto</text>
+<circle cx="657" cy="520.5" r="3" class="dot-vip"/><text x="666" y="524" class="" style="font-size:10.5px;">.6.20 temporal-frontend</text>
+<circle cx="817" cy="520.5" r="3" class="dot-vip"/><text x="826" y="524" class="" style="font-size:10.5px;">.6.21 coturn (matrix)</text>
+<circle cx="657" cy="534.5" r="3" class="dot-vip"/><text x="666" y="538" class="" style="font-size:10.5px;">.6.22 livekit-server-rtc</text>
+<circle cx="817" cy="534.5" r="3" class="dot-vip"/><text x="826" y="538" class="" style="font-size:10.5px;">.6.23 mimir-lb</text>
+<circle cx="657" cy="548.5" r="3" class="dot-vip"/><text x="666" y="552" class="" style="font-size:10.5px;">.6.24 loki-push-lb</text>
+<circle cx="817" cy="548.5" r="3" class="dot-vip"/><text x="826" y="552" class="" style="font-size:10.5px;">.6.25 syslog-lb</text>
+<circle cx="657" cy="562.5" r="3" class="dot-vip"/><text x="666" y="566" class="" style="font-size:10.5px;">.6.26 frigate</text>
+<circle cx="817" cy="562.5" r="3" class="ring"/><text x="826" y="566" class="" style="font-size:10.5px;">.6.28 factorio-game</text>
+<circle cx="657" cy="576.5" r="3" class="ring"/><text x="666" y="580" class="" style="font-size:10.5px;">.6.29 minecraft-game</text>
+<circle cx="817" cy="576.5" r="3" class="dot-vip"/><text x="826" y="580" class="" style="font-size:10.5px;">.6.30 lan-dns</text>
+<circle cx="657" cy="590.5" r="3" class="dot-vip"/><text x="666" y="594" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text>
+<circle cx="817" cy="590.5" r="3" class="dot-vip"/><text x="826" y="594" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text>
+<text x="654" y="636" class="muted">no router interface — BGP /32s only</text>
+<path d="M1097,396 L1097,406" class="wire" opacity=".6"/>
+<rect x="985" y="406" width="225" height="125" rx="9" class="panel"/>
+<text x="999" y="428" class="title">192.168.88.0/24</text>
+<text x="999" y="444" class="muted">recovery / factory default</text>
+<circle cx="1002" cy="464.5" r="3" class="dot-net"/><text x="1011" y="468" class="" style="font-size:10.5px;">.88.254  router</text>
+<circle cx="1002" cy="482.5" r="3" class="dot-net"/><text x="1011" y="486" class="" style="font-size:10.5px;">.88.1  upstairs-core</text>
+<text x="999" y="512" class="muted">both keep the defconf address</text>
+<rect x="985" y="546" width="225" height="200" rx="9" class="panel"/>
+<text x="999" y="568" class="title">Overlays</text>
+<text x="999" y="584" class="muted">not on the bridge</text>
+<text x="999" y="608" class="" style="font-size:11px;">fd00:1::/64 — node ULA</text>
+<text x="999" y="627" class="" style="font-size:11px;">fd00:6::/64 — MetalLB v6</text>
+<text x="999" y="646" class="" style="font-size:11px;">10.42.0.0/16 — pods</text>
+<text x="999" y="665" class="" style="font-size:11px;">10.43.0.0/16 — services</text>
+<text x="999" y="684" class="" style="font-size:11px;">10.99.0.0/24 — WireGuard</text>
+<text x="999" y="703" class="" style="font-size:11px;">100.64.0.0/10 — tailnet (22)</text>
+<text x="999" y="722" class="" style="font-size:11px;">10.244/.245 — DO side</text>
 </svg>
 <figcaption>Whole-network map, 2026-10-20 09:35. Both ingress paths enter through the Verizon LAN: plaintext port forwards, and the encrypted WireGuard tunnel from the DigitalOcean cluster, which is forwarded as UDP 51820 and terminates on the router's <code>wg-remote</code>. Each card lists every host in that subnet; the 10G fabric is a single box because every host reaches the router through it.</figcaption>
 </figure>
@@ -450,6 +471,21 @@
 <text x="1198" y="330" class="wglabel" text-anchor="middle" transform="rotate(90 1198 330)">WireGuard — routed, not hosted</text>
 </svg>
 <figcaption>Router → BGP speakers → VIPs → WireGuard. The router installs one selected path per prefix; ECMP was trialled and reverted (<a href="2026-10-15-fungible-ingress.md">the record</a>).</figcaption>
+</figure>
+
+<h2 id="expanded">Expanded diagram (port-level)</h2>
+<p>The map above is the summary. The same live data is also in a Graphviz graph for panning and zooming:
+every switch port, every server attachment, and each wireless client behind its AP.
+Solid edges are confirmed (LLDP neighbour tables or a MAC learned on that switch port); dotted edges are
+wireless associations inferred from the AP's uplink port, because the controller's per-client view needs
+credentials I do not read.</p>
+<ul>
+  <li><a href="network-diagram.svg"><strong>network-diagram.svg</strong></a> — rendered, 2273 × 1514 pt</li>
+  <li><a href="network-diagram.dot">network-diagram.dot</a> — source; re-render with <code>dot -Tsvg network-diagram.dot -o network-diagram.svg</code></li>
+</ul>
+<figure>
+  <a href="network-diagram.svg"><img src="network-diagram.svg" alt="Expanded port-level network diagram" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px"></a>
+  <figcaption>Click to open full size. The switch chain is <code>router → core → upstairs-core → upstairs</code>, with the office switch on core and the servers on the ports the MAC tables put them on.</figcaption>
 </figure>
 
 <h2 id="s0">192.168.0.0/24 — Verizon LAN (ISP side)</h2>
