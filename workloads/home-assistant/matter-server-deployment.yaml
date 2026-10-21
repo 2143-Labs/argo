@@ -35,9 +35,89 @@ spec:
                     operator: In
                     values:
                       - general
+      initContainers:
+        - name: fabric-guard
+          image: ghcr.io/home-assistant-libs/python-matter-server@sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a
+          command:
+            - python
+            - -c
+            - |
+              import glob, json, os, shutil, sys
+              import chip.native
+              from chip.ChipStack import ChipStack
+              from chip.CertificateAuthority import CertificateAuthorityManager
+
+              DATA = "/data"
+              WORK = "/tmp/fabric-guard"
+
+              counts = {}
+              for path in sorted(glob.glob(os.path.join(DATA, "*.json"))):
+                  base = os.path.basename(path)
+                  if base == "chip.json":
+                      continue
+                  try:
+                      counts[base] = len(json.load(open(path)).get("nodes") or {})
+                  except Exception as exc:
+                      print("FATAL: %s is unreadable (%s) - the server cannot load it either"
+                            % (base, exc), flush=True)
+                      sys.exit(1)
+
+              populated = {k: v for k, v in counts.items() if v > 0}
+              if not populated:
+                  print("fabric-guard OK: no commissioned nodes on disk", flush=True)
+                  os._exit(0)
+
+              kvs = os.path.join(DATA, "chip.json")
+              if not os.path.exists(kvs):
+                  print("FATAL: %d commissioned node(s) on disk but chip.json is missing"
+                        % sum(populated.values()), flush=True)
+                  sys.exit(1)
+
+              os.makedirs(WORK, exist_ok=True)
+              shutil.copy(kvs, os.path.join(WORK, "chip.json"))
+              chip.native.Init(999)
+              stack = ChipStack(persistentStoragePath=os.path.join(WORK, "chip.json"),
+                                enableServerInteractions=False)
+              mgr = CertificateAuthorityManager(chipStack=stack)
+              mgr.LoadAuthoritiesFromStorage()
+              if not mgr.activeCaList or not mgr.activeCaList[0].adminList:
+                  print("FATAL: chip.json holds no fabric authority - a new fabric would orphan"
+                        " %d node(s)" % sum(populated.values()), flush=True)
+                  os._exit(1)
+              ctrl = mgr.activeCaList[0].adminList[0].NewController(
+                  paaTrustStorePath=os.path.join(DATA, "credentials"))
+              fabric = ctrl.GetCompressedFabricId()
+              target = "%d.json" % fabric
+              if counts.get(target, 0) > 0:
+                  print("fabric-guard OK: fabric=%d nodes=%d" % (fabric, counts[target]), flush=True)
+                  os._exit(0)
+              print("FATAL: this server's fabric is %d but the commissioned nodes are in %s -"
+                    " starting now would orphan them; restore the volume instead"
+                    % (fabric, sorted(populated)), flush=True)
+              os._exit(1)
+          env:
+            - name: HOME
+              value: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
       containers:
         - name: matter-server
-          image: ghcr.io/home-assistant-libs/python-matter-server:stable
+          image: ghcr.io/home-assistant-libs/python-matter-server@sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a
           ports:
             - containerPort: 5580
               name: ws
@@ -66,6 +146,6 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: matter-server-data-aug7
+            claimName: matter-server-data-oct17
         - name: tmp
           emptyDir: {}
