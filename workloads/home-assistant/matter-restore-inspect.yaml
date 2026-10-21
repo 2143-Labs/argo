@@ -66,6 +66,8 @@ spec:
       env:
         - name: HOME
           value: /tmp
+        - name: CHIP_CONFIG_DIR
+          value: /tmp
       volumeMounts:
         - name: restore
           mountPath: /restore
