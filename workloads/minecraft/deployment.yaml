@@ -189,7 +189,7 @@ spec:
               name: data
           resources:
             requests:
-              cpu: "2"
+              cpu: "1"
               memory: 8Gi
             # 8G heap plus room for metaspace, JIT code cache and Netty direct
             # buffers. Deliberately above the heap so the JVM OOMs before the
