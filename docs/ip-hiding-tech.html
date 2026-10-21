@@ -74,10 +74,28 @@
   svg .arrowhead { fill:var(--fg); }
   svg .arrowhead.wg { fill:var(--ok); }
   .small { font-size:.9rem; color:var(--muted); }
+
+  .docnav { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:.4rem; align-items:center;
+            padding:.55rem 0; background:var(--bg); border-bottom:1px solid var(--line); margin-bottom:1.2rem; }
+  .docnav a, .docnav span.here { font-size:.84rem; padding:.22rem .65rem; border-radius:999px;
+            border:1px solid var(--line); text-decoration:none; white-space:nowrap; }
+  .docnav span.here { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
+  .docnav a:hover { background:var(--panel); border-color:var(--accent); }
+  html { scroll-behavior:smooth; }
+  h2, tr { scroll-margin-top:4.2rem; }
 </style>
 </head>
 <body>
 <main>
+<nav class="docnav" aria-label="Document set">
+  <a href="network-inventory.html">Inventory</a>
+  <a href="network-diagram.svg">Expanded diagram</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/network-edge.md">Edge guide</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/node-maintenance.md">Node maintenance</a>
+  <a href="https://github.com/2143-Labs/argo/blob/main/docs/lan-dns.md">LAN DNS</a>
+  <span class="here">Edge design</span>
+  <a href="https://github.com/2143-Labs/argo/tree/main/docs">All docs</a>
+</nav>
 
 <h1>IP hiding &amp; self-hosted edge — north star</h1>
 <p class="meta">
