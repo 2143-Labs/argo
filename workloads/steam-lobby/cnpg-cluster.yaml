@@ -4,7 +4,34 @@ metadata:
   name: steam-lobby-db
   namespace: steam-lobby
 spec:
-  instances: 1
+  instances: 2
+  primaryUpdateMethod: switchover
+  affinity:
+    enablePodAntiAffinity: true
+    # Required: the copies must never share a node, or the second copy is no
+    # protection at all.
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      # arch is excluded because its Longhorn disk cannot provision new
+      # volumes: 91 GiB free against a 25% floor of 111 GiB, and 242 GiB of
+      # storageReserved on a 442 GiB disk. Remove this rule if arch's disk is
+      # ever freed.
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+      # Preferred only: a required "big or closet" rule would stop the
+      # operator from recreating a lost instance on nas.
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [big, closet]
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
     requests:
