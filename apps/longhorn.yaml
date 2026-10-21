@@ -41,6 +41,10 @@ spec:
           # different node when one goes away. Long enough to cover routine
           # node reboots without churning rebuild traffic.
           replicaReplenishmentWaitInterval: 1800
+          # Cap simultaneous replica rebuilds per node (built-in default 5;
+          # this cluster had been hand-set to 10 through the UI). Only affects
+          # replicated volumes — longhorn-cnpg runs one copy and never rebuilds.
+          concurrentReplicaRebuildPerNodeLimit: 5
           # Backup target — NFS to the NAS. If unreachable, only new backup
           # uploads are affected; live volumes are untouched.
           backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
