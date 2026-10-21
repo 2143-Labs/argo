@@ -49,7 +49,7 @@ The server also logs `Loaded N nodes from stored configuration` at startup, and 
 
 Longhorn has no in-place revert; a restore creates a new volume.
 
-1. Declare a `longhorn.io/v1beta2` `Volume` with `spec.fromBackup` set to the backup's `status.url`, `spec.size` as the backup's `status.volumeSize` **quoted** (the webhook rejects `5Gi`), `numberOfReplicas: 3`, `frontend: blockdev`, `dataEngine: v1`, `accessMode: rwo`, and the label `recurring-job-group.longhorn.io/default: enabled`. Omit `spec.image` so the volume takes the cluster default engine.
+1. Declare a `longhorn.io/v1beta2` `Volume` with `spec.fromBackup` set to the backup's `status.url`, `spec.size` as the backup's `status.volumeSize` **quoted** (the webhook rejects `5Gi`), `numberOfReplicas: 3`, `frontend: blockdev`, `dataEngine: v1`, `accessMode: rwo`, the label `recurring-job-group.longhorn.io/default: enabled`, and **`backup-volume` set to the volume's own name**. A restored volume inherits `backup-volume` from the volume it came from; Longhorn derives every Backup CR's `backup-volume` from that label and then refuses the backup when it does not equal the snapshot's volume (`snapshot volume name X and label volume name Y does not match`). Get this wrong and the volume silently stops being backed up — it still joins the group and still produces snapshots. Omit `spec.image` so the volume takes the cluster default engine.
 2. Declare a static PV/PVC pair on the `longhorn-static` class with `csi.volumeHandle` equal to the volume name and `persistentVolumeReclaimPolicy: Retain`. Use the volume's exact byte count as capacity, not a rounded `5Gi`.
 3. Prove the volume before cutting over: mount it read-only in a throwaway pod and run the same fabric-id computation the guard uses. A populated node file plus a fabric id that matches it is the gate; anything else means the backup predates the fabric.
 4. Point `claimName` at the new PVC and let Argo sync.
@@ -60,4 +60,6 @@ Current chain: volume/PV/PVC `matter-server-data-oct17`, restored 2026-10-17. Th
 
 ## Backups
 
-The volume carries `recurring-job-group.longhorn.io/default: enabled`, which puts it in the `nightly-backup` RecurringJob (`0 3 * * *`, `retain: 30`) declared in `workloads/storage/longhorn-backup-job.yaml`. A volume without that label is outside every backup — check the label first if `lastBackupAt` stays empty.
+The volume carries `recurring-job-group.longhorn.io/default: enabled`, which puts it in the `nightly-backup` RecurringJob (`0 3 * * *`, `retain: 30`) declared in `workloads/storage/longhorn-backup-job.yaml`. A volume without that label is outside every backup — check the label first if `lastBackupAt` stays empty, then check `backup-volume`.
+
+Stuck `InProgress` Backup CRs are worse than failures: `backup-concurrent-limit` is 2, so a few jobs that can never finish block the queue for every volume. If backups stop cluster-wide, list `kubectl -n longhorn-system get backups.longhorn.io`, delete the ones wedged at `progress: 0` (`auto-cleanup-when-delete-backup` is `false`, so this cannot delete anything from the store), and check the `backup-volume` labels before waiting for the next run.
