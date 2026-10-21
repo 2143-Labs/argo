@@ -5,6 +5,11 @@ metadata:
   namespace: longhorn-system
   labels:
     recurring-job-group.longhorn.io/default: enabled
+    # Longhorn derives each Backup CR's `backup-volume` label from this one and
+    # then rejects the backup when it does not equal the volume's own name. A
+    # restored volume inherits its parent's name here, which is why backups were
+    # rejected from 2026-10-18 on.
+    backup-volume: matter-server-data-oct17
 spec:
   size: "5001707520"
   fromBackup: "nfs://192.168.5.175:/?backup=backup-00bc57bb3d464dcd&volume=pvc-10554d43-5955-4cb3-875a-e9300e6800a6"
