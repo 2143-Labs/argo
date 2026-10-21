@@ -14,6 +14,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Public edge: gating public routes](public-edge.md)
 - [Exposing an Unauthenticated App (humans + federated machines)](exposing-an-unauthenticated-app.md)
 - [Longhorn iSCSI Recovery](longhorn-iscsi-recovery.md)
+- [Matter server: fabric, restore and the start-up guard](matter-server.md)
 
 ## Records
 
