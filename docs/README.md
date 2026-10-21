@@ -6,6 +6,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 
 - [Adding a New Workload](adding-a-workload.md)
 - [Adding a Secret](adding-a-secret.md)
+- [Adding a CNPG Database](adding-a-cnpg-database.md)
 - [LAN and cluster DNS (lan-dns)](lan-dns.md)
 - [Internet edge: Verizon → MikroTik → MetalLB (port forwards, router recovery)](network-edge.md)
 - [Network inventory: every subnet and host, with diagrams](network-inventory.html)
