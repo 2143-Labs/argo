@@ -16,35 +16,51 @@ spec:
     - name: inspect
       image: ghcr.io/home-assistant-libs/python-matter-server@sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a
       command:
-        - python
+        - sh
         - -c
         - |
-          import glob, json, os, time
-          data = "/data"
-          for path in sorted(glob.glob(os.path.join(data, "*.json"))):
-              base = os.path.basename(path)
-              mtime = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(path)))
-              try:
-                  doc = json.load(open(path))
-              except Exception as exc:
-                  print(f"{base}: unreadable ({exc})")
-                  continue
-              if base == "chip.json":
-                  keys = list(doc)
-                  fab = [k for k in keys if k.startswith("f/")]
-                  print(f"chip.json: {mtime} {len(keys)} keys, {len(fab)} fabric-scoped, first={keys[:4]}")
-              else:
-                  print(f"{base}: {mtime} nodes={len(doc.get('nodes') or {})}")
+          set -u
+          echo "=== source volume ==="
+          ls -la /restore
+          if [ -d /restore/credentials ]; then echo "credentials/ present: $(ls /restore/credentials | wc -l) files"; else echo "credentials/: absent"; fi
+          echo "=== chip.json shape ==="
+          python - <<'PY'
+          import json, base64, hashlib
+          d = json.load(open('/restore/chip.json'))
+          for area in sorted(d):
+              inner = d[area]
+              if isinstance(inner, dict):
+                  fab = [k for k in inner if k.startswith('f/')]
+                  print(f"{area}: {len(inner)} keys, {len(fab)} fabric-scoped {sorted(fab)}")
+                  for k in sorted(inner):
+                      v = inner[k]
+                      raw = base64.b64decode(v) if area == 'sdk-config' and isinstance(v, str) else str(v).encode()
+                      print(f"   {k:26s} {len(raw):5d}B {hashlib.sha256(raw).hexdigest()[:16]}")
+          PY
+          echo "=== rehearsal on a copy (restored volume stays read-only) ==="
+          mkdir -p /tmp/data
+          cp -a /restore/. /tmp/data/ 2>/dev/null || true
+          timeout 75 python -m matter_server.server --storage-path /tmp/data --port 5581 \
+            --listen-address 127.0.0.1 --disable-server-interactions --log-level info > /tmp/server.log 2>&1
+          echo "=== server log (filtered) ==="
+          grep -E "Loaded|Fabric|CertificateAuthority|Commission|Traceback|ERROR|CRITICAL|Waiting" /tmp/server.log | head -40
+          echo "=== log tail ==="
+          tail -15 /tmp/server.log
       securityContext:
         allowPrivilegeEscalation: false
         capabilities:
           drop: [ALL]
         readOnlyRootFilesystem: true
       volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: restore
+          mountPath: /restore
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
   volumes:
-    - name: data
+    - name: restore
       persistentVolumeClaim:
         claimName: matter-server-data-oct17
+        readOnly: true
+    - name: tmp
+      emptyDir: {}
