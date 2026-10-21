@@ -51,12 +51,18 @@ spec:
           compactor:
             retention_enabled: true
             delete_request_store: s3
-          chunksCache:
-            allocatedMemory: 4096
         write:
           podAnnotations:
             reloader.stakater.com/auto: "true"
           replicas: 2
+          # Request matches the 14-day p95 (517 Mi). The limit contains a
+          # repeat of the 2026-10-06 S3 outage, where write peaked at 11.6 Gi,
+          # so the pod is killed instead of the node running out.
+          resources:
+            requests:
+              memory: 512Mi
+            limits:
+              memory: 8Gi
           persistence:
             storageClass: longhorn-1
             size: 20Gi
@@ -85,6 +91,12 @@ spec:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
+                - weight: 50
+                  preference:
+                    matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: ["arch"]
           topologySpreadConstraints:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
@@ -97,6 +109,11 @@ spec:
           podAnnotations:
             reloader.stakater.com/auto: "true"
           replicas: 2
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 2Gi
           extraArgs:
             - "-config.expand-env=true"
           extraEnv:
@@ -122,6 +139,12 @@ spec:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
+                - weight: 50
+                  preference:
+                    matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: ["arch"]
           topologySpreadConstraints:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
@@ -134,6 +157,13 @@ spec:
           podAnnotations:
             reloader.stakater.com/auto: "true"
           replicas: 2
+          # backend held 7.6 Gi for 32 h on 2026-10-03..05 (compaction-era
+          # plateau); p50 is 182 Mi.
+          resources:
+            requests:
+              memory: 512Mi
+            limits:
+              memory: 8Gi
           persistence:
             storageClass: longhorn
             size: 10Gi
@@ -162,6 +192,12 @@ spec:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
+                - weight: 50
+                  preference:
+                    matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: ["arch"]
           topologySpreadConstraints:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
@@ -181,22 +217,28 @@ spec:
                         operator: In
                         values: ["big"]
         chunksCache:
+          # Chart default; set explicitly because 4096 used to sit here under
+          # the wrong key and was silently ignored.
+          allocatedMemory: 8192
+          # Required, not preferred: as preferred they drifted onto closet
+          # during the 2026-10-14 big reboot and stayed. While big is down
+          # these pods stay Pending; Loki is expected to fall back to direct
+          # S3 reads (slower) — that fallback is unverified, so the gate below
+          # requires a working query.
           affinity:
             nodeAffinity:
-              preferredDuringSchedulingIgnoredDuringExecution:
-                - weight: 100
-                  preference:
-                    matchExpressions:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
         resultsCache:
           affinity:
             nodeAffinity:
-              preferredDuringSchedulingIgnoredDuringExecution:
-                - weight: 100
-                  preference:
-                    matchExpressions:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
