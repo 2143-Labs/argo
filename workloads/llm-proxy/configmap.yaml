@@ -20,6 +20,31 @@ data:
         litellm_params:
           model: "ollama/*"
           api_base: "http://office.ts.2143.me:11434"
+      # Gemma 4 on the same office Ollama. The `ollama/*` wildcard above
+      # already routes these names, but wildcard deployments carry no
+      # per-model metadata, so OMP's /model/info discovery cannot see the
+      # real context window or vision support. Explicit entries fix that.
+      # Gemma 4 capabilities on office (from `ollama show`): completion,
+      # vision, tools, thinking. e2b/e4b = 131072 ctx; 12b/26b/31b = 262144.
+      - model_name: "ollama/gemma4:e4b"
+        model_info:
+          supports_vision: true
+          supports_function_calling: true
+          max_input_tokens: 131072
+        litellm_params:
+          model: "ollama/gemma4:e4b"
+          api_base: "http://office.ts.2143.me:11434"
+      # Class route: every other gemma4 tag (e2b, 12b, 26b, 31b, latest) and
+      # any future one. 131072 is the conservative shared bound; the larger
+      # tags advertise 262144 but are not pinned here.
+      - model_name: "ollama/gemma4:*"
+        model_info:
+          supports_vision: true
+          supports_function_calling: true
+          max_input_tokens: 131072
+        litellm_params:
+          model: "ollama/gemma4:*"
+          api_base: "http://office.ts.2143.me:11434"
       # Google Gemini
       - model_name: "gemini/*"
         litellm_params:
