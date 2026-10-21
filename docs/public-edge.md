@@ -50,6 +50,21 @@ Example: `workloads/anubis-status/`, `workloads/gateway/status-route.yaml`.
 
 Non-HTTP surfaces (mail 25/587/993, TURN, game servers, MQTT, TLS-passthrough listeners such as `temporal-grpc-mtls` and `turn-john2143-passthrough`) get no edge gate: CrowdSec reads only Traefik's HTTP access log.
 
+## Troubleshooting
+
+The bouncer plugin comes from a pinned copy on each control-plane node, defined once in `dotfiles/nixos/modules/k3s-server.nix`: the pods mount that store path, and the same directory is readable on the node at `/etc/traefik-plugins/crowdsec-bouncer-traefik-plugin`. Traefik runs with `abortOnPluginFailure`, so a replica that cannot load it exits instead of serving without it.
+
+Node identity has two halves that can disagree. `--node-ip` fixes the Node's `InternalIP` (what the kubelet reports). The address pod traffic actually uses is the annotation `flannel.alpha.coreos.com/public-ipv6`, which flannel picks from the interface when it starts — on a host holding several global IPv6 addresses (DHCPv6 lease, SLAAC, temporary/privacy ones) it can pick a different one from the address `--node-ip` names. Measured 2026-10-21: arch's `InternalIP` is its EUI-64 SLAAC address while its annotation is the `fd00:1::5` DHCPv6 lease, and pite has the same shape (`::2`). Both hosts hold both addresses, so the mesh works. When debugging, compare FDB destinations against the **annotation**, never `ip -6 addr` and never the InternalIP.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| A Traefik pod is in CrashLoopBackOff and its previous log says `failed to create plugin builder` | Plugin source missing or broken on that node | `ls /etc/traefik-plugins/crowdsec-bouncer-traefik-plugin/.traefik.yml` on the node; rebuild that node |
+| A Traefik pod is stuck in ContainerCreating with a hostPath type error | The node has not been rebuilt since the plugin was added or bumped | Rebuild the node; when bumping the plugin, rebuild arch and nas before closet |
+| A host sometimes returns Traefik's own 404 (19-byte `text/plain` body, `x-content-type-options: nosniff`) while other requests work | One replica has no router for it | Per replica: Mimir `sum by(instance) (rate(traefik_service_requests_total[5m])) / sum by(instance) (rate(traefik_entrypoint_requests_total[5m]))` — a value under 0.2 is the bad one, and `kubectl -n kube-system get pods -o wide` maps `instance` to a pod. Restart only that pod. No alert ships for this symptom; the query is the check. |
+| Cross-node pod IPv6 fails for one or two nodes after some node's IPv6 address changed | Each node writes its flannel FDB entry for a peer when its own flannel starts, and those entries do not reliably follow a peer's new `public-ipv6` | On every node compare `bridge fdb show dev flannel-v6.1` destinations against the peers' `flannel.alpha.coreos.com/public-ipv6` annotations, then restart `k3s` on the stale nodes (or `bridge fdb replace <VtepMAC> dev flannel-v6.1 dst <new address>`). Changing any node's address therefore means restarting k3s everywhere. |
+
+The `traefik-restarting` alert reads `kube_pod_container_status_restarts_total` from kube-state-metrics. Check that Mimir is ingesting that scrape before trusting silence: on 2026-10-21 its ingesters were rejecting writes (`failed pushing to ingester mimir-1: context deadline exceeded` in the Alloy logs) and held 2 of the 9 kube-system container series, so a restart on a replica without a series raises nothing.
+
 ## Keep this file current
 
 Board task #4 (public-edge reputation-primary gating, 2143 Labs AI Tasks) changes these gates. Every step of it that lands updates this file and `scripts/route-gate-exemptions.txt` in the same commit.

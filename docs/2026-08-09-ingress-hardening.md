@@ -8,6 +8,8 @@
 > **Correction 2026-10-13:** §5 "the LAN IP is used (exempt from rate limit only)" is backwards. Nothing is exempt from the rate limits; LAN, tailnet and the household WAN address are exempt from CrowdSec (`clientTrustedIps`).
 >
 > **Correction 2026-10-13:** §6 says `underscoreHeadersStrategy: reject` activates once the chart allows Traefik ≥ 3.7.6. Traefik is 3.7.8 and supports it, but it is set nowhere (not in the live args, not in dotfiles); the default is `keep`.
+>
+> **Correction 2026-10-21:** §2 says the bouncer plugin is fetched through `experimental.plugins`; it is now loaded from a pinned local copy (`experimental.localPlugins`, source in `dotfiles/nixos/modules/k3s-server.nix`) with `abortOnPluginFailure: true`. See [public-edge.md](public-edge.md#troubleshooting).
 
 **Status: COMPLETE and verified.** Public web surfaces have request-level telemetry (traefik JSON access logs → Loki), per-IP rate limiting, a per-IP in-flight cap, and a CrowdSec WAF (LAPI + agent + AppSec + traefik plugin bouncer) that bans abusive IPs with 403 and blocks known exploits inline. The 15 routes listed in §3 carry the full 3-filter chain; the routes added in the 2026-09-18 pass (§7) carry either the full chain or the bouncer alone. The 10 internal `*.ts.2143.me` routes remain LAN-only via the pre-existing `lan-only` middleware.
 

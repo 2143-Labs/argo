@@ -15,7 +15,7 @@ It does **not** apply to non-HTTP protocols (gRPC passthrough, raw TCP/UDP, mail
 Those never pass through oauth2-proxy and need native JWT or mTLS support in the app.
 
 > Versions this guide was verified against: oauth2-proxy **v7.15.4**, Pocket ID
-> **v2.14.0**, SPIRE **v1.15.3**, Traefik **3.7.8** (k3s). Several steps depend on
+> **v2.14.0**, SPIRE **v1.15.3**, Traefik **3.7.13** (k3s). Several steps depend on
 > specific behaviour of those versions. Re-check the [evidence list](#evidence)
 > whenever one of them is upgraded.
 
@@ -422,8 +422,8 @@ on the machine host with explicit rules: one `PathPrefix` (plus `method:` where 
 matters) per allowed endpoint. Anything unmatched then gets a 404 from Traefik
 before it reaches a proxy. Default: the whole app, gated by the floor.
 
-> Traefik 3.7.8 gives a `PathPrefix` rule priority `10000 + 100 × len(path)` and
-> `PathPrefix /` priority 1 (`pkg/provider/kubernetes/gateway/httproute.go`,
+> Traefik 3.7.13 gives a `PathPrefix` rule priority `10000 + 100 × len(path)` and
+> `PathPrefix /` priority 1 (`pkg/provider/kubernetes/gateway/httproute.go:792-808`,
 > `buildPathRule`), so every specific prefix wins over `/`.
 
 ## 5. Gateway listeners and DNS
@@ -547,9 +547,11 @@ Human host:
 - A Pocket ID user in neither group → refused at Pocket ID login.
 - Member of `-users` → **200** on `/`, **403** on `/admin`. Reloading `/` afterwards
   must still work without a new login, which proves the 403 did not clear the session.
-- With a `-users` (non-admin) session, none of `/ADMIN`, `//admin`, `/x/../admin`,
-  `/%61dmin`, `/admin/` nor any other admin alias the app serves returns 200; each
-  must give 403 or 404. Repeat on the machine host for every per-domain prefix.
+- With a `-users` (non-admin) session, `//admin`, `/x/../admin`, `/%61dmin` and `/admin/`
+  reach the admin rule (Traefik cleans and decodes the path before routing, see
+  [evidence](#evidence)) and must give 403. `/ADMIN` and any other admin alias the app
+  serves reach the `/` rule and the app itself, so each must give 403 or 404, never 200.
+  Repeat on the machine host for every per-domain prefix.
 - Member of `-admins` → **200** on `/admin`.
 - Opening `/admin` with no session → **401** (see limits below).
 
@@ -617,5 +619,8 @@ Behaviour this guide depends on, with the source it was read from:
   per (SPIFFE ID, audience) until about half the TTL; default JWT-SVID TTL is 5m;
   the OIDC discovery provider serves `/.well-known/openid-configuration` and `/keys`
   only.
-- Traefik v3.7.8: ForwardAuth sends the configured `address` including its query
-  string (`pkg/middlewares/auth/forward.go:166`); path-rule priority as in §4c.
+- Traefik v3.7.13: ForwardAuth sends the configured `address` including its query
+  string (`pkg/middlewares/auth/forward.go:166`); path-rule priority as in §4c; entrypoints
+  remove `/./`, `/../` and repeated slashes (`sanitizePath`, default true:
+  `pkg/config/static/entrypoints.go:103,115`, applied in `pkg/server/server_entrypoint_tcp.go:693`)
+  and decode unreserved percent-encodings (`normalizePath`, `:697`, `:991`) before routing.
