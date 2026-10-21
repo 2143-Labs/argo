@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: matter-restore-inspect
+  namespace: default
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: big
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+    - name: inspect
+      image: ghcr.io/home-assistant-libs/python-matter-server@sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a
+      command:
+        - python
+        - -c
+        - |
+          import glob, json, os, time
+          data = "/data"
+          for path in sorted(glob.glob(os.path.join(data, "*.json"))):
+              base = os.path.basename(path)
+              mtime = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(path)))
+              try:
+                  doc = json.load(open(path))
+              except Exception as exc:
+                  print(f"{base}: unreadable ({exc})")
+                  continue
+              if base == "chip.json":
+                  keys = list(doc)
+                  fab = [k for k in keys if k.startswith("f/")]
+                  print(f"chip.json: {mtime} {len(keys)} keys, {len(fab)} fabric-scoped, first={keys[:4]}")
+              else:
+                  print(f"{base}: {mtime} nodes={len(doc.get('nodes') or {})}")
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
+        readOnlyRootFilesystem: true
+      volumeMounts:
+        - name: data
+          mountPath: /data
+          readOnly: true
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: matter-server-data-oct17
