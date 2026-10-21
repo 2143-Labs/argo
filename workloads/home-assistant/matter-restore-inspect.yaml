@@ -74,10 +74,14 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+        - name: chipcfg
+          mountPath: /data
   volumes:
     - name: restore
       persistentVolumeClaim:
         claimName: matter-server-data-oct17
         readOnly: true
     - name: tmp
+      emptyDir: {}
+    - name: chipcfg
       emptyDir: {}
