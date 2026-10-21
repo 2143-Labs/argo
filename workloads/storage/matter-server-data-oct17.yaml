@@ -1,0 +1,15 @@
+apiVersion: longhorn.io/v1beta2
+kind: Volume
+metadata:
+  name: matter-server-data-oct17
+  namespace: longhorn-system
+  labels:
+    recurring-job-group.longhorn.io/default: enabled
+spec:
+  size: "5001707520"
+  fromBackup: "nfs://192.168.5.175:/?backup=backup-00bc57bb3d464dcd&volume=pvc-10554d43-5955-4cb3-875a-e9300e6800a6"
+  numberOfReplicas: 3
+  frontend: blockdev
+  dataEngine: v1
+  accessMode: rwo
+  dataLocality: best-effort
