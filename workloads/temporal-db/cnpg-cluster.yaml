@@ -3,18 +3,41 @@ kind: Cluster
 metadata:
   name: temporal-db
 spec:
-  # Single instance: temporal-db-5's Longhorn volumes are faulted beyond
-  # recovery (node outage). One healthy instance keeps Temporal's DB up;
-  # scale back to 2 with fresh volumes once the old ones are recreated.
-  instances: 1
+  # Two copies. temporal-db-5's Longhorn volumes were faulted beyond recovery
+  # by the 2026-10-06 node outage; those volumes are deleted, so this instance
+  # is a fresh clone of the current primary.
+  instances: 2
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  # Guaranteed QoS: request == limit for CPU and memory. 1 core is 2.8x the
+  # observed p99 (0.36) and double the 500m ceiling that throttled it; 1Gi is
+  # 3.4x the observed memory peak (298Mi). Guaranteed pins oom_score_adj at
+  # -997, so node pressure kills other pods first.
   resources:
     requests:
-      cpu: 2
-      memory: 512Mi
+      cpu: 1
+      memory: 1Gi
     limits:
-      cpu: 2
-      memory: 512Mi
+      cpu: 1
+      memory: 1Gi
+  primaryUpdateMethod: switchover
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [big, closet]
   storage:
     size: 5Gi
     storageClass: longhorn-cnpg
