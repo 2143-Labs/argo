@@ -1,0 +1,97 @@
+# https://docs.john2143.com — the editor SPA, its REST API and the /yjs
+# WebSocket, all on one origin.
+#
+# Two gate classes on one host (docs/public-edge.md): the API carries .docx
+# bytes (/api/rooms/:id/seed, up to 100 MB) and the WebSocket upgrade, so both
+# use class B — Coraza body inspection misreads document bodies and would ban
+# remote editors. The browser surface stays class A. Traefik ranks PathPrefix
+# rules by path length, so both specific prefixes win over `/`.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: casual-docs
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
+  hostnames:
+    - docs.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/
+        - path:
+            type: PathPrefix
+            value: /yjs
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer-noappsec
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: casual-docs
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: casual-docs
+          port: 80
+---
+# http://docs.john2143.com -> https, one hop. Separate route because
+# gateway/john2143-http-to-https is at the Gateway API cap of 16 hostnames.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: casual-docs-http-to-https
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+  hostnames:
+    - docs.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

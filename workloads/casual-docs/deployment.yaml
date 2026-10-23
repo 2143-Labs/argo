@@ -1,0 +1,109 @@
+# Casual Docs (github.com/CasualOffice/docs) — self-hosted .docx editor with
+# real-time co-editing. One container serves the SPA, the REST API and the
+# Hocuspocus/Yjs WebSocket on /yjs, all same-origin on :8080. Predecessors of
+# the upstream Dockerfile: it is the same image that backs the project's own
+# demo, so no host-specific build is needed.
+#
+# Single replica, on purpose: rooms are in-memory Y.Docs with no Redis and no
+# sticky sessions here, so a second replica would split co-editing sessions
+# across pods. `Recreate` guarantees only one copy exists during an upgrade.
+# Restarts drop live rooms — documents live in the browser (IndexedDB) and in
+# the share link, not on the server.
+#
+# No PVC and no secret: share-link mode (the default) keeps no server-side
+# documents, and the admin panel (CASUAL_ADMIN_USERNAME/JWT_SECRET) is left off.
+# Add CASUAL_STORAGE=local plus a /data volume only if per-user file storage
+# (WOPI / personal mode) is ever enabled.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casual-docs
+  namespace: default
+  labels:
+    app: casual-docs
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: casual-docs
+  template:
+    metadata:
+      labels:
+        app: casual-docs
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        # The image runs as `casual` (uid/gid 999). runAsNonRoot cannot verify a
+        # named image user, so the numeric id is stated explicitly.
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: casual-docs
+          # Upstream only publishes `latest`, which moved with 0.0.5 on
+          # 2026-07-07. Pin the digest so a restart cannot silently change the
+          # editor; bump both fields together.
+          image: docker.io/casualoffice/docs:0.0.5@sha256:9502ddc61f55ce10f55421d5602521844273ce6e650aa35057d401069fbd0bad
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: CASUAL_FILE_EXT
+              value: ".docx"
+          # /health is the server's own liveness endpoint and does not touch the
+          # room registry (GET /api/rooms does).
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              # Measured 94MiB idle with 2.75% CPU after a cold SPA load and a
+              # room create. The cap covers one 100 MB seed/snapshot buffer plus
+              # a few live rooms; the API rejects uploads over 100 MB.
+              cpu: "1"
+              memory: 768Mi
