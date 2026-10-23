@@ -220,6 +220,17 @@ spec:
                       - key: kubernetes.io/hostname
                         operator: In
                         values: ["big"]
+        # Required for the caches to reach Guaranteed QoS: every container in
+        # a pod needs request == limit, and the exporter sidecar otherwise
+        # keeps them Burstable no matter what the memcached container sets.
+        memcachedExporter:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
         chunksCache:
           # 5 GiB of cache inside a 6 GiB pod: the chart's default request is
           # 1.2x allocatedMemory, and memcached must stay below its own limit
