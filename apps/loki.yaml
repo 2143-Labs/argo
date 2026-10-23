@@ -54,11 +54,12 @@ spec:
         write:
           podAnnotations:
             reloader.stakater.com/auto: "true"
-          # TEMPORARY 2026-10-21: the ingester WAL-replay storm after the unclean
-          # shutdown pinned 56 of 64 cores on `big`, starving the container runtime
-          # and blocking every other workload on that node. Restore to 2 once the
-          # databases are recovered and the node is calm.
-          replicas: 0
+          # Restored 2026-10-23: was 0 from 2026-10-21 after the ingester
+          # WAL-replay storm pinned 56 of 64 cores on `big`. Both stated
+          # preconditions now hold — all six CNPG clusters are 2/2 healthy and
+          # the node is calm — and the S3 backend answers 403 in ~33 ms from
+          # in-cluster, so replay can flush instead of spinning.
+          replicas: 2
           # Request matches the 14-day p95 (517 Mi). The limit contains a
           # repeat of the 2026-10-06 S3 outage, where write peaked at 11.6 Gi,
           # so the pod is killed instead of the node running out.
