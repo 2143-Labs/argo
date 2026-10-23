@@ -221,9 +221,20 @@ spec:
                         operator: In
                         values: ["big"]
         chunksCache:
-          # Chart default; set explicitly because 4096 used to sit here under
-          # the wrong key and was silently ignored.
-          allocatedMemory: 8192
+          # 5 GiB of cache inside a 6 GiB pod: the chart's default request is
+          # 1.2x allocatedMemory, and memcached must stay below its own limit
+          # or it is OOM-killed instead of evicting.
+          allocatedMemory: 5120
+          # Guaranteed QoS: request == limit for cpu and memory. That keeps
+          # oom_score_adj at -997 so the cache is the last thing killed when
+          # big is short of memory, at the cost of a hard 1-core cap.
+          resources:
+            requests:
+              cpu: 1
+              memory: 6Gi
+            limits:
+              cpu: 1
+              memory: 6Gi
           # Required, not preferred: as preferred they drifted onto closet
           # during the 2026-10-14 big reboot and stayed. While big is down
           # these pods stay Pending; Loki is expected to fall back to direct
