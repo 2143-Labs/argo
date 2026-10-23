@@ -70,20 +70,16 @@ spec:
       labels:
         app: minecraft
     spec:
-      # Prefers closet, as a soft preference only (2026-10-04: this replaced the
-      # hard nodeSelector pin to big; factorio's identical closet preference was
-      # removed in the same change). The scheduler still falls back to any node
-      # that can fit the 8Gi request, so a full closet degrades to big rather
-      # than leaving the pod Pending. big was the original pin because it was
-      # the only node with room for an 8G-heap GregTech pack: closet sat at 95%
-      # of requested memory, arch allocates only 16Gi, nas had ~5Gi free, office
-      # is wifi-only (its PVC keeps it off), pite is arm64.
+      # Hard-pinned to closet: this is a game server and closet is the gaming
+      # PC (2026-10-23). Required, not preferred — a busy or rebooting closet
+      # leaves the pod Pending rather than moving it to another machine, which
+      # is the intent. Resources below are Guaranteed so the kernel kills it
+      # last if closet ever runs short.
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
@@ -177,7 +173,7 @@ spec:
             - name: SKIP_GENERIC_PACK_UPDATE_CHECK
               value: "true"
             - name: MEMORY
-              value: "8G"
+              value: "7G"
             - name: INIT_MEMORY
               value: "2G"
           ports:
@@ -188,14 +184,18 @@ spec:
             - mountPath: /data
               name: data
           resources:
+            # Guaranteed: request == limit for cpu and memory, so the pod keeps
+            # oom_score_adj -997 and is evicted last. 7G heap (MEMORY above)
+            # plus ~1Gi for metaspace, JIT code cache and Netty buffers fits in
+            # the 8Gi limit; the live working set was 7.44Gi under the old 8G
+            # heap. 2 CPU is below the observed 3.08-core load — the server
+            # throttles above it, which is what closet can reserve.
             requests:
-              cpu: "1"
+              cpu: "2"
               memory: 8Gi
-            # 8G heap plus room for metaspace, JIT code cache and Netty direct
-            # buffers. Deliberately above the heap so the JVM OOMs before the
-            # kernel OOM-kills the container.
             limits:
-              memory: 12Gi
+              cpu: "2"
+              memory: 8Gi
           # First boot applies the pack, verifies Forge and generates a
           # skyblock world across 164 mods; startup can take many minutes.
           # tcpSocket is only a liveness approximation - the listener binds
