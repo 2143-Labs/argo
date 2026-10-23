@@ -1,0 +1,299 @@
+# Share helper for docs.john2143.com/share.
+#
+# The markdown/text editor has no Share button: only the .docx surface can
+# mint a co-editing link, and a markdown room can only be joined by URL
+# (`/?room=<id>&kind=markdown&backend=wss://<host>/yjs`). This is a 60-line
+# static page that POSTs /api/rooms and redirects to exactly that URL, so a
+# markdown link is one click instead of an API call and a hand-built string.
+#
+# Why a second container instead of a page in the SPA: the docs image serves
+# its own build and its SPA fallback owns every unknown HTML path, so there is
+# no way to add a route without rebuilding that image. nginx-unprivileged is
+# read-only for the operator and serves exactly one path.
+#
+# Not for .docx: the editor's own File > Share already does that (and handles
+# the room password prompt).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: casual-docs-share
+  namespace: default
+  labels:
+    app: casual-docs-share
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+      root /usr/share/nginx/html;
+      absolute_redirect off;
+
+      add_header X-Content-Type-Options nosniff always;
+      add_header Referrer-Policy no-referrer always;
+
+      # The helper page. Everything else on this container is a 404.
+      location = /share {
+        default_type text/html;
+        charset utf-8;
+        try_files /index.html =404;
+      }
+      location = /share/ {
+        return 308 /share;
+      }
+      location / {
+        return 404;
+      }
+    }
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>New co-editing link — Casual Docs</title>
+      <style>
+        :root { color-scheme: light dark; }
+        body {
+          margin: 0; min-height: 100vh; display: grid; place-items: center;
+          font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+          background: #f6f7f9; color: #111418;
+        }
+        main { width: min(560px, 92vw); padding: 32px; }
+        h1 { font-size: 1.5rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+        p.lede { margin: 0 0 24px; color: #5b6470; }
+        .choices { display: flex; gap: 12px; flex-wrap: wrap; }
+        button, a.open {
+          font: inherit; padding: 12px 18px; border-radius: 10px; cursor: pointer;
+          border: 1px solid #d6dae0; background: #fff; color: inherit;
+          text-decoration: none; display: inline-block;
+        }
+        button:hover, a.open:hover { border-color: #9aa4b2; }
+        button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+        button.primary:hover { background: #1a5fd0; }
+        small { display: block; color: #6b7684; font-size: 0.78rem; }
+        button.primary small { color: #dbe6ff; }
+        #status { min-height: 1.5em; margin: 20px 0 0; color: #5b6470; }
+        #status.error { color: #b42318; }
+        #result { margin-top: 16px; }
+        #link {
+          width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem;
+          border: 1px solid #d6dae0; border-radius: 8px; background: #fff; color: inherit;
+        }
+        .actions { display: flex; gap: 10px; margin-top: 10px; }
+        footer { margin-top: 28px; font-size: 0.82rem; color: #6b7684; }
+        @media (prefers-color-scheme: dark) {
+          body { background: #0f1216; color: #e8eaed; }
+          p.lede, #status, footer { color: #9aa4b2; }
+          button, a.open, #link { background: #171b21; border-color: #2b323b; }
+          button.primary { background: #2f81f7; border-color: #2f81f7; color: #fff; }
+        }
+      </style>
+    </head>
+    <body>
+    <main>
+      <h1>New co-editing link</h1>
+      <p class="lede">
+        Creates a fresh room on this server and opens the editor in it. The first
+        person to type seeds the document; everyone with the link edits together.
+      </p>
+
+      <div class="choices">
+        <button class="primary" data-kind="markdown">Markdown<small>source + live preview</small></button>
+        <button data-kind="text">Plain text<small>.txt, no formatting</small></button>
+      </div>
+
+      <p id="status" role="status" aria-live="polite"></p>
+
+      <div id="result" hidden>
+        <input id="link" readonly aria-label="Co-editing link">
+        <div class="actions">
+          <button id="copy" class="primary">Copy link</button>
+          <a id="open" class="open" href="#">Open editor</a>
+        </div>
+      </div>
+
+      <footer>
+        Rooms are held in memory: when the last person leaves, the document is
+        dropped and the link stops working. Use Download in the editor to keep a copy.
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var status = document.getElementById('status');
+        var result = document.getElementById('result');
+        var link = document.getElementById('link');
+        var copy = document.getElementById('copy');
+        var open = document.getElementById('open');
+
+        // The editor reads the WS endpoint from the URL; same host, so derive it.
+        var backend = 'wss://' + location.host + '/yjs';
+
+        function setStatus(text, isError) {
+          status.textContent = text;
+          status.className = isError ? 'error' : '';
+        }
+
+        function create(kind) {
+          setStatus('Creating room…', false);
+          result.hidden = true;
+          fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}'
+          }).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          }).then(function (body) {
+            if (!body || !body.roomId) throw new Error('no room id');
+            var url = location.origin + '/?room=' + encodeURIComponent(body.roomId) +
+                      '&kind=' + encodeURIComponent(kind) +
+                      '&backend=' + encodeURIComponent(backend);
+            link.value = url;
+            open.href = url;
+            result.hidden = false;
+            history.replaceState(null, '', '/share?kind=' + encodeURIComponent(kind));
+            setStatus('Room created. Share this link — it is the only key to the room.', false);
+            link.select();
+          }).catch(function (err) {
+            setStatus('Could not create a room: ' + err.message, true);
+          });
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-kind]'), function (btn) {
+          btn.addEventListener('click', function () { create(btn.getAttribute('data-kind')); });
+        });
+
+        copy.addEventListener('click', function () {
+          var done = function () { setStatus('Link copied.', false); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link.value).then(done, function () { link.select(); });
+          } else {
+            link.select();
+            document.execCommand('copy');
+            done();
+          }
+        });
+
+        // Bookmarkable one-click form: /share?auto=1&kind=markdown
+        var params = new URLSearchParams(location.search);
+        if (params.get('auto') === '1') {
+          create(params.get('kind') === 'text' ? 'text' : 'markdown');
+        }
+      })();
+    </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casual-docs-share
+  namespace: default
+  labels:
+    app: casual-docs-share
+spec:
+  revisionHistoryLimit: 1
+  replicas: 1
+  selector:
+    matchLabels:
+      app: casual-docs-share
+  template:
+    metadata:
+      labels:
+        app: casual-docs-share
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: nginx
+          image: docker.io/nginxinc/nginx-unprivileged:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: html
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            # nginx-unprivileged puts its pid and every temp path under /tmp.
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /share
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /share
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: conf
+          configMap:
+            name: casual-docs-share
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: html
+          configMap:
+            name: casual-docs-share
+            items:
+              - key: index.html
+                path: index.html
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: casual-docs-share
+  namespace: default
+  labels:
+    app: casual-docs-share
+spec:
+  type: ClusterIP
+  selector:
+    app: casual-docs-share
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

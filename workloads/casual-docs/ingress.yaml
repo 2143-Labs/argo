@@ -46,6 +46,33 @@ spec:
           kind: Service
           name: casual-docs
           port: 80
+    # One-click markdown/text co-editing links (workloads/casual-docs/share-helper.yaml).
+    # Traefik ranks PathPrefix by length, so /share wins over the catch-all below.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /share
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: casual-docs-share
+          port: 80
     - matches:
         - path:
             type: PathPrefix
