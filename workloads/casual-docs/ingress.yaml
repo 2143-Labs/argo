@@ -46,12 +46,16 @@ spec:
           kind: Service
           name: casual-docs
           port: 80
-    # One-click markdown/text co-editing links (workloads/casual-docs/share-helper.yaml).
-    # Traefik ranks PathPrefix by length, so /share wins over the catch-all below.
+    # Helper pages from workloads/casual-docs/share-helper.yaml: /share mints a
+    # markdown/text room, /history packages this browser's version history.
+    # Traefik ranks PathPrefix by length, so both win over the catch-all below.
     - matches:
         - path:
             type: PathPrefix
             value: /share
+        - path:
+            type: PathPrefix
+            value: /history
       filters:
         - type: ExtensionRef
           extensionRef:
