@@ -728,6 +728,8 @@ spec:
             items:
               - key: index.html
                 path: index.html
+              - key: history.html
+                path: history.html
         - name: tmp
           emptyDir: {}
 ---
