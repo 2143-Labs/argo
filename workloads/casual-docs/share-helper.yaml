@@ -40,6 +40,13 @@ data:
       location = /share/ {
         return 308 /share;
       }
+
+      # Version-history export page.
+      location = /history {
+        default_type text/html;
+        charset utf-8;
+        try_files /history.html =404;
+      }
       location / {
         return 404;
       }
@@ -116,6 +123,7 @@ data:
       <footer>
         Rooms are held in memory: when the last person leaves, the document is
         dropped and the link stops working. Use Download in the editor to keep a copy.
+        <br>Need a record of how a document evolved? <a href="/history">Export version history →</a>
       </footer>
     </main>
 
@@ -182,6 +190,442 @@ data:
           create(params.get('kind') === 'text' ? 'text' : 'markdown');
         }
       })();
+    </script>
+    </body>
+    </html>
+  history.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Export version history — Casual Docs</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0; min-height: 100vh; display: grid; place-items: center;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #f6f7f9; color: #111418;
+      }
+      main { width: min(720px, 92vw); padding: 32px 0; }
+      h1 { font-size: 1.5rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+      p.lede { margin: 0 0 22px; color: #5b6470; }
+      label.field { display: block; font-size: .82rem; color: #5b6470; margin-bottom: 6px; }
+      select {
+        width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px;
+        border: 1px solid #d6dae0; border-radius: 8px; background: #fff; color: inherit;
+      }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+      button {
+        font: inherit; padding: 11px 16px; border-radius: 10px; cursor: pointer;
+        border: 1px solid #d6dae0; background: #fff; color: inherit;
+      }
+      button:hover:not(:disabled) { border-color: #9aa4b2; }
+      button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+      button.primary:hover:not(:disabled) { background: #1a5fd0; }
+      button:disabled { opacity: .45; cursor: not-allowed; }
+      #status { min-height: 1.5em; margin: 16px 0 0; color: #5b6470; }
+      #status.error { color: #b42318; }
+      #preview { margin-top: 20px; border-top: 1px solid #e3e6ea; }
+      .vrow {
+        display: grid; grid-template-columns: 1fr auto; gap: 4px 16px;
+        padding: 10px 0; border-bottom: 1px solid #e3e6ea; font-size: .9rem;
+      }
+      .vrow .kind { color: #5b6470; font-size: .8rem; }
+      .vrow .meta { color: #6b7684; font-size: .8rem; text-align: right; font-variant-numeric: tabular-nums; }
+      footer { margin-top: 28px; font-size: .82rem; color: #6b7684; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+      a { color: #1f6feb; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0f1216; color: #e8eaed; }
+        p.lede, #status, footer, .vrow .kind, .vrow .meta, label.field { color: #9aa4b2; }
+        button, select { background: #171b21; border-color: #2b323b; }
+        button.primary { background: #2f81f7; border-color: #2f81f7; color: #fff; }
+        #preview, .vrow { border-color: #232a33; }
+        a { color: #64a8ff; }
+      }
+    </style>
+    </head>
+    <body>
+    <main>
+      <h1>Export version history</h1>
+      <p class="lede">
+        Packages the snapshots the editor keeps <em>in this browser</em> into a report you
+        can hand to a reviewer: every version, its timestamp, author label, SHA-256 hash
+        and a line diff against the version before it.
+      </p>
+
+      <label class="field" for="doc">Document</label>
+      <select id="doc" disabled><option>Looking for saved versions…</option></select>
+
+      <div class="actions">
+        <button id="html" class="primary" disabled>Download HTML report</button>
+        <button id="json" disabled>Download JSON</button>
+      </div>
+
+      <p id="status" role="status" aria-live="polite"></p>
+      <div id="preview"></div>
+
+      <footer>
+        Snapshots are captured when the document is saved and about every 10 minutes while
+        it is open. Co-editing rooms skip the automatic capture; named versions still work
+        there. Records live in this browser profile only — export before clearing site
+        data. <a href="/share">New co-editing link →</a>
+      </footer>
+    </main>
+
+    <script>
+    (function () {
+      'use strict';
+
+      var DB_NAME = 'casual-docs';
+      var STORE = 'versions';
+
+      var docSelect = document.getElementById('doc');
+      var htmlBtn = document.getElementById('html');
+      var jsonBtn = document.getElementById('json');
+      var statusEl = document.getElementById('status');
+      var preview = document.getElementById('preview');
+
+      var groups = new Map();  // docId -> versions[]
+      var current = null;
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text || '';
+        statusEl.className = isError ? 'error' : '';
+      }
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function iso(ms) { try { return new Date(ms).toISOString(); } catch (e) { return ''; } }
+
+      function pad(n) { return n < 10 ? '0' + n : String(n); }
+      function stamp(ms) {
+        var d = new Date(ms);
+        return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) +
+               '_' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + 'Z';
+      }
+      function safeName(s) { return String(s).replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 60) || 'document'; }
+
+      function openDb() {
+        return new Promise(function (resolve, reject) {
+          var req = indexedDB.open(DB_NAME);
+          req.onsuccess = function () { resolve(req.result); };
+          req.onerror = function () { reject(req.error || new Error('IndexedDB unavailable')); };
+        });
+      }
+
+      function readAllVersions() {
+        return openDb().then(function (db) {
+          if (!db.objectStoreNames.contains(STORE)) { db.close(); return []; }
+          return new Promise(function (resolve, reject) {
+            var tx = db.transaction(STORE, 'readonly');
+            var req = tx.objectStore(STORE).getAll();
+            req.onsuccess = function () { resolve(req.result || []); };
+            req.onerror = function () { reject(req.error); };
+            tx.oncomplete = function () { db.close(); };
+          });
+        });
+      }
+
+      async function sha256Hex(text) {
+        var bytes = new TextEncoder().encode(text);
+        var buf = await crypto.subtle.digest('SHA-256', bytes);
+        return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+          return b.toString(16).padStart(2, '0');
+        }).join('');
+      }
+
+      // ── ProseMirror JSON → plain text ─────────────────────────────────────────
+      // Good enough to read a document's evolution: block breaks, list markers,
+      // table cells as "a | b". Formatting (bold/italic) is intentionally dropped.
+      function pmText(doc) {
+        var out = [];
+        function walk(node, depth, bullet) {
+          if (!node) return;
+          if (node.type === 'text') { out.push(node.text || ''); return; }
+          if (node.type === 'hardBreak') { out.push('\n'); return; }
+          var kids = node.content || [];
+          var i;
+          switch (node.type) {
+            case 'paragraph':
+            case 'heading':
+              for (i = 0; i < kids.length; i++) walk(kids[i], depth, null);
+              out.push('\n');
+              if (node.type === 'heading') out.push('\n');
+              return;
+            case 'listItem':
+              out.push('\n' + new Array(depth + 1).join('  ') + (bullet || '- '));
+              for (i = 0; i < kids.length; i++) walk(kids[i], depth + 1, null);
+              return;
+            case 'bulletList':
+            case 'orderedList':
+              for (i = 0; i < kids.length; i++) {
+                walk(kids[i], depth, node.type === 'orderedList' ? (i + 1) + '. ' : '- ');
+              }
+              return;
+            case 'tableRow':
+              out.push('\n| ');
+              for (i = 0; i < kids.length; i++) {
+                if (i) out.push(' | ');
+                walk(kids[i], depth, null);
+              }
+              out.push(' |');
+              return;
+            case 'doc':
+            case 'table':
+            case 'tableCell':
+            case 'tableHeader':
+            case 'blockquote':
+            default:
+              for (i = 0; i < kids.length; i++) walk(kids[i], depth, null);
+          }
+        }
+        walk(doc, 0, null);
+        return out.join('').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+      }
+
+      // ── line diff (LCS) ──────────────────────────────────────────────────────
+      function diffLines(before, after) {
+        var A = before.split('\n'), B = after.split('\n');
+        var n = A.length, m = B.length;
+        if (n > 1500 || m > 1500) return null;  // pathological: show the text instead
+        var width = m + 1;
+        var dp = new Uint32Array((n + 1) * width);
+        for (var i = n - 1; i >= 0; i--) {
+          for (var j = m - 1; j >= 0; j--) {
+            dp[i * width + j] = A[i] === B[j]
+              ? dp[(i + 1) * width + j + 1] + 1
+              : Math.max(dp[(i + 1) * width + j], dp[i * width + j + 1]);
+          }
+        }
+        var out = [];
+        var a = 0, b = 0;
+        while (a < n && b < m) {
+          if (A[a] === B[b]) { out.push([' ', A[a]]); a++; b++; }
+          else if (dp[(a + 1) * width + b] >= dp[a * width + b + 1]) { out.push(['-', A[a]]); a++; }
+          else { out.push(['+', B[b]]); b++; }
+        }
+        while (a < n) out.push(['-', A[a++]]);
+        while (b < m) out.push(['+', B[b++]]);
+        return out;
+      }
+
+      function diffStats(diff) {
+        var added = 0, removed = 0;
+        diff.forEach(function (row) {
+          if (row[0] === '+') added++;
+          else if (row[0] === '-') removed++;
+        });
+        return { added: added, removed: removed };
+      }
+
+      // ── build the export ─────────────────────────────────────────────────────
+      async function buildExport(versions) {
+        // Oldest first: savedAt, then id as the stable tiebreaker.
+        var ordered = versions.slice().sort(function (x, y) {
+          return (x.savedAt - y.savedAt) || ((x.id || 0) - (y.id || 0));
+        });
+        var prevHash = 'GENESIS';
+        var prevText = '';
+        var rows = [];
+        for (var k = 0; k < ordered.length; k++) {
+          var v = ordered[k];
+          var snapshot = JSON.stringify(v.data);
+          var sha = await sha256Hex(snapshot);
+          var chain = await sha256Hex(prevHash + '|' + sha + '|' + v.savedAt);
+          var text = pmText(v.data);
+          var diff = k === 0 ? null : diffLines(prevText, text);
+          rows.push({
+            id: v.id, kind: v.kind, name: v.name, author: v.author || null,
+            savedAt: v.savedAt, savedAtIso: iso(v.savedAt),
+            size: v.size || snapshot.length, sha256: sha, chain: chain,
+            sourceFormat: v.sourceFormat || null, text: text, diff: diff,
+            diffStats: diff ? diffStats(diff) : null,
+            data: v.data
+          });
+          prevHash = chain;
+          prevText = text;
+        }
+        return rows;
+      }
+
+      function reportHtml(docId, rows) {
+        var now = new Date();
+        var range = rows.length
+          ? iso(rows[0].savedAt) + ' → ' + iso(rows[rows.length - 1].savedAt)
+          : '—';
+        var body = rows.map(function (r, idx) {
+          var diffBlock = '';
+          if (r.diff === null && idx > 0) {
+            diffBlock = '<p class="note">Document too long to diff; full text below.</p>' +
+              '<pre class="text">' + esc(r.text) + '</pre>';
+          } else if (r.diff) {
+            var lines = r.diff.map(function (row) {
+              var cls = row[0] === '+' ? 'add' : (row[0] === '-' ? 'del' : 'ctx');
+              var marker = row[0] === ' ' ? '  ' : row[0] + ' ';
+              return '<span class="' + cls + '">' + esc(marker + row[1]) + '</span>';
+            }).join('\n');
+            diffBlock = '<pre class="diff">' + lines + '</pre>' +
+              '<p class="note">' + r.diffStats.added + ' line(s) added, ' +
+              r.diffStats.removed + ' line(s) removed, compared with the previous version.</p>';
+          } else {
+            diffBlock = '<pre class="text">' + esc(r.text) + '</pre>';
+          }
+          return '<section class="v">' +
+            '<h2>#' + (idx + 1) + ' — ' + esc(r.savedAtIso) + '</h2>' +
+            '<table class="meta">' +
+              '<tr><th>Label</th><td>' + esc(r.name || (r.kind === 'manual' ? 'Named version' : 'Auto-saved')) + '</td></tr>' +
+              '<tr><th>Kind</th><td>' + esc(r.kind) + '</td></tr>' +
+              '<tr><th>Author (self-declared)</th><td>' + esc(r.author || '—') + '</td></tr>' +
+              '<tr><th>Snapshot size</th><td>' + esc(r.size) + ' bytes</td></tr>' +
+              '<tr><th>SHA-256 (snapshot)</th><td><code>' + esc(r.sha256) + '</code></td></tr>' +
+              '<tr><th>Chain hash</th><td><code>' + esc(r.chain) + '</code></td></tr>' +
+            '</table>' +
+            diffBlock +
+            '</section>';
+        }).join('\n');
+
+        return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">' +
+          '<title>Revision history — ' + esc(docId) + '</title>' +
+          '<style>' +
+          'body{font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:860px;margin:40px auto;padding:0 20px;color:#111418;background:#fff}' +
+          'h1{font-size:1.6rem;margin:0 0 4px}h2{font-size:1.05rem;margin:36px 0 8px}code{font-family:ui-monospace,Menlo,monospace;font-size:.8rem;word-break:break-all}' +
+          '.cover{color:#5b6470;margin-bottom:26px}.caveat{border:1px solid #e3e6ea;border-radius:10px;padding:14px 18px;background:#f8f9fb;font-size:.88rem;color:#3c4553}' +
+          '.caveat h3{margin:0 0 6px;font-size:.9rem;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}' +
+          'table.meta{border-collapse:collapse;font-size:.86rem;margin:10px 0 14px}table.meta th{text-align:left;color:#5b6470;font-weight:500;padding:2px 18px 2px 0;white-space:nowrap;vertical-align:top}' +
+          'table.meta td{padding:2px 0}' +
+          'pre.diff,pre.text{font-family:ui-monospace,Menlo,monospace;font-size:.78rem;line-height:1.5;padding:12px 14px;border-radius:8px;background:#f8f9fb;border:1px solid #e3e6ea;overflow-x:auto;white-space:pre-wrap}' +
+          'pre.diff span{display:block}pre.diff .add{background:#e8f7ec;color:#14532d}pre.diff .del{background:#fdecec;color:#7f1d1d}pre.diff .ctx{color:#3c4553}' +
+          '.note{font-size:.8rem;color:#6b7684;margin:6px 0 0}' +
+          '.v{page-break-inside:avoid}' +
+          '@media print{body{margin:0}pre.diff,pre.text{border-color:#ccc}.caveat{background:#fff}}' +
+          '</style></head><body>' +
+          '<h1>Revision history</h1>' +
+          '<p class="cover"><strong>Document:</strong> <code>' + esc(docId) + '</code><br>' +
+          '<strong>Versions:</strong> ' + rows.length + '<br>' +
+          '<strong>Covered period:</strong> ' + esc(range) + '<br>' +
+          '<strong>Exported:</strong> ' + esc(now.toISOString()) + ' from ' + esc(location.origin) + '</p>' +
+          '<div class="caveat"><h3>What this record is — and is not</h3>' +
+          '<p>Each entry is a full document snapshot the editor captured on the author\'s machine. ' +
+          'Timestamps come from that machine\'s clock; the author label is self-declared. ' +
+          'The SHA-256 hashes let you check that a snapshot was not altered after export, and the chain ' +
+          'hash links each entry to the one before it — verify them against the JSON export.</p>' +
+          '<p>This is evidence of a <em>writing process</em>: the document evolving over time. It does not ' +
+          'prove who typed the text, and it cannot by itself establish whether text was produced with AI assistance.</p></div>' +
+          body +
+          '</body></html>';
+      }
+
+      function download(filename, text, mime) {
+        var blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      }
+
+      // ── UI ───────────────────────────────────────────────────────────────────
+      function renderDocs() {
+        var ids = Array.from(groups.keys()).sort(function (a, b) {
+          var la = groups.get(a)[groups.get(a).length - 1].savedAt;
+          var lb = groups.get(b)[groups.get(b).length - 1].savedAt;
+          return lb - la;
+        });
+        if (!ids.length) {
+          docSelect.innerHTML = '<option>No saved versions found in this browser</option>';
+          setStatus('No version history in this browser profile. Open a document in the editor, ' +
+            'let it save, and come back. Nothing has been read or sent anywhere.', false);
+          return;
+        }
+        docSelect.innerHTML = ids.map(function (id) {
+          var list = groups.get(id);
+          return '<option value="' + esc(id) + '">' + esc(id) + ' — ' + list.length + ' version(s)</option>';
+        }).join('');
+        docSelect.disabled = false;
+        selectDoc(ids[0]);
+      }
+
+      function selectDoc(docId) {
+        current = { docId: docId, versions: groups.get(docId).slice() };
+        htmlBtn.disabled = false;
+        jsonBtn.disabled = false;
+        var ordered = current.versions.slice().sort(function (a, b) {
+          return (b.savedAt - a.savedAt) || ((b.id || 0) - (a.id || 0));
+        });
+        preview.innerHTML = ordered.map(function (v) {
+          return '<div class="vrow"><div>' + esc(v.name || (v.kind === 'manual' ? 'Named version' : 'Auto-saved')) +
+            '<div class="kind">' + esc(v.kind) + (v.author ? ' · ' + esc(v.author) : '') + '</div></div>' +
+            '<div class="meta">' + esc(iso(v.savedAt).replace('T', ' ').replace('.000Z', 'Z')) +
+            '<br>' + esc(v.size || '') + ' bytes</div></div>';
+        }).join('');
+        setStatus(current.versions.length + ' version(s) for ' + docId + '.', false);
+      }
+
+      docSelect.addEventListener('change', function () { selectDoc(docSelect.value); });
+
+      htmlBtn.addEventListener('click', async function () {
+        if (!current) return;
+        htmlBtn.disabled = true;
+        setStatus('Hashing snapshots and building the report…', false);
+        try {
+          var rows = await buildExport(current.versions);
+          download('revision-history-' + safeName(current.docId) + '-' + stamp(Date.now()) + '.html',
+            reportHtml(current.docId, rows), 'text/html;charset=utf-8');
+          setStatus('Report downloaded: ' + rows.length + ' version(s). The JSON export carries the raw snapshots.', false);
+        } catch (err) {
+          setStatus('Export failed: ' + (err && err.message ? err.message : err), true);
+        }
+        htmlBtn.disabled = false;
+      });
+
+      jsonBtn.addEventListener('click', async function () {
+        if (!current) return;
+        jsonBtn.disabled = true;
+        setStatus('Hashing snapshots…', false);
+        try {
+          var rows = await buildExport(current.versions);
+          var payload = {
+            schema: 'casual-docs.version-history/1',
+            exportedAt: new Date().toISOString(),
+            origin: location.origin,
+            document: { docId: current.docId, versionCount: rows.length },
+            versions: rows.map(function (r) {
+              return {
+                id: r.id, kind: r.kind, name: r.name, author: r.author,
+                savedAt: r.savedAt, savedAtIso: r.savedAtIso, size: r.size,
+                sha256: r.sha256, chain: r.chain, sourceFormat: r.sourceFormat,
+                data: r.data
+              };
+            })
+          };
+          download('revision-history-' + safeName(current.docId) + '-' + stamp(Date.now()) + '.json',
+            JSON.stringify(payload, null, 2), 'application/json');
+          setStatus('JSON downloaded. Verify with: sha256(JSON.stringify(version.data)) must equal version.sha256.', false);
+        } catch (err) {
+          setStatus('Export failed: ' + (err && err.message ? err.message : err), true);
+        }
+        jsonBtn.disabled = false;
+      });
+
+      readAllVersions().then(function (all) {
+        all.forEach(function (v) {
+          if (!v || !v.docId) return;
+          if (!groups.has(v.docId)) groups.set(v.docId, []);
+          groups.get(v.docId).push(v);
+        });
+        renderDocs();
+      }).catch(function (err) {
+        setStatus('Could not read this browser\'s version history: ' +
+          (err && err.message ? err.message : err), true);
+        docSelect.innerHTML = '<option>Unavailable</option>';
+      });
+    })();
     </script>
     </body>
     </html>
