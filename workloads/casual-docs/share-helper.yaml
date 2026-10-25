@@ -647,6 +647,12 @@ spec:
     metadata:
       labels:
         app: casual-docs-share
+      # The pages and the nginx server block both live in ConfigMap
+      # casual-docs-share. A mounted file updates in place, but nginx only reads
+      # default.conf at start, so a content change needs a restart. Reloader is
+      # installed cluster-wide (same pattern as asciinema).
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       automountServiceAccountToken: false
       securityContext:
