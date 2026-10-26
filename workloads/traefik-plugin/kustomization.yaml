@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: crowdsec-bouncer-plugin-src
+    files:
+      - plugin.tar.gz
