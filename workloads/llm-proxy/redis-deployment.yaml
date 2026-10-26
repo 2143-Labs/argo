@@ -44,8 +44,10 @@ spec:
               mountPath: /data
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
+              # Measured 7m CPU / 6Mi. Request matches --maxmemory 256mb so it
+              # can never outgrow its own request; limits are unchanged.
+              cpu: 50m
+              memory: 256Mi
             limits:
               cpu: 200m
               memory: 512Mi

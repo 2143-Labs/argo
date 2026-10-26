@@ -66,8 +66,10 @@ spec:
               cpu: 500m
               memory: 512Mi
             requests:
-              cpu: 500m
-              memory: 512Mi
+              # Measured 1m CPU / 18Mi. The old 500m/512Mi (== limits) kept nas
+              # at 92% CPU requests and blocked litellm-db-1 from scheduling.
+              cpu: 150m
+              memory: 256Mi
       volumes:
         - name: pocket-id-data
           persistentVolumeClaim:
