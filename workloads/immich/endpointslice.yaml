@@ -1,5 +1,11 @@
-# Direct endpoint to the Immich server running on the NAS (tailnet IP 100.64.0.14:2283).
+# Direct endpoint to the Immich server running on the NAS (LAN address :2283).
 # No proxy pod needed — traffic flows Traefik → NAS directly.
+# This used to be the NAS tailnet IP (100.64.0.14), which made a same-LAN
+# request hairpin out through tailscale and back: whenever a node fell back to
+# a DERP relay or its tailnet was down, the requester stalled and
+# immich-proxy's 1s liveness probe killed it (416 restarts in 11 days).
+# Immich listens on 0.0.0.0, and .175 is a client-id-pinned DHCP lease
+# (nixos/nas-configuration.nix:203); unifi-os uses the same LAN-IP pattern.
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
@@ -9,7 +15,7 @@ metadata:
 addressType: IPv4
 endpoints:
   - addresses:
-      - "100.64.0.14"
+      - "192.168.5.175"
     conditions:
       ready: true
 ports:
