@@ -6,7 +6,7 @@ spec:
   # Two copies. temporal-db-5's Longhorn volumes were faulted beyond recovery
   # by the 2026-10-06 node outage; those volumes are deleted, so this instance
   # is a fresh clone of the current primary.
-  instances: 2
+  instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   # Guaranteed QoS: request == limit for CPU and memory. 1 core is 2.8x the
   # observed p99 (0.36) and double the 500m ceiling that throttled it; 1Gi is
