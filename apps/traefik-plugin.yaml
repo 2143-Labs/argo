@@ -18,3 +18,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      # Client-side apply stores the whole manifest in the
+      # kubectl.kubernetes.io/last-applied-configuration annotation, which is
+      # capped at 256 KiB; this ConfigMap is ~505 KB of base64. SSA does not
+      # write that annotation.
+      - ServerSideApply=true
