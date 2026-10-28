@@ -76,9 +76,9 @@ spec:
                 endpoint {
                   url = "http://mimir.observability.svc:8080/api/v1/push"
                 }
-                // Every home series is labelled so it is distinguishable from DOKS
-                // (cluster="doks") and the status droplet (cluster="do") in one store.
-                external_labels = { cluster = "home" }
+                // No cluster label on home series: adding one doubled every series
+                // and hit Mimir's 500k per-tenant limit (2026-10-28). Home is the
+                // series without a cluster label; DOKS is cluster="doks", status-1 cluster="do".
               }
 
               // kubelet + cAdvisor per node (role=node → <internalIP>:10250)
