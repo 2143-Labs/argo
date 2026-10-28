@@ -1,0 +1,6 @@
+apiVersion: v2
+name: rots-web
+description: ROTS (bevy2025) WASM web client; prod and per-PR previews, scale-to-zero via KEDA HTTP
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

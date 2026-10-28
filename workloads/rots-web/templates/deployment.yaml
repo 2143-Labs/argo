@@ -1,0 +1,70 @@
+# python3 http.server on :8000 serving the wasm-bindgen build (bevy2025 flake
+# `packages.staticWebserver`). No `replicas`: the ScaledObject owns it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-web
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: rots-web
+spec:
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-web
+  template:
+    metadata:
+      labels:
+        app: rots-web
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: rots-web
+          image: "{{ .Values.image.repository }}:{{ required "image.tag is required" .Values.image.tag }}"
+          # The tags (webserver-wasm-latest / -pr-<N>) are moving targets that CI
+          # overwrites; Always makes each cold start pick up the newest build.
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3

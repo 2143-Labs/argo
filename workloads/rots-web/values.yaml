@@ -1,0 +1,8 @@
+# All four are set by apps/rots-web.yaml (prod) or apps/rots-web-preview.yaml
+# (one per bevy2025 PR); the templates fail to render if any is empty.
+namespace: ""   # rots-web (prod) or rots-pr-<N>
+host: ""        # rots.john2143.com or rots-<N>.john2143.com
+routeName: ""   # unique in `default`: rots-web or rots-pr-<N>
+image:
+  repository: ghcr.io/2143-labs/bevy2025
+  tag: ""       # webserver-wasm-latest or webserver-wasm-pr-<N>

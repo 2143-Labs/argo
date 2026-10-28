@@ -1,0 +1,8 @@
+# Owned by the Application so closing a PR prunes the namespace too. Argo's
+# CreateNamespace=true would otherwise leave an empty namespace behind.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: rots-web

@@ -1,0 +1,41 @@
+# ROTS (bevy2025) web client at https://rots.john2143.com, serving CI's
+# webserver-wasm-latest tag (built on every push to bevy2025 main). Scale-to-zero
+# via KEDA HTTP. Previews are separate (see rots-web-preview.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rots-web
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/rots-web
+    helm:
+      parameters:
+        - { name: namespace, value: rots-web }
+        - { name: host, value: rots.john2143.com }
+        - { name: routeName, value: rots-web }
+        - { name: image.tag, value: webserver-wasm-latest }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rots-web
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

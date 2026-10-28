@@ -1,0 +1,15 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: rots-web
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  target:
+    service: rots-web
+    port: 80
+  rules:
+    - hosts:
+        - "{{ required "host is required" .Values.host }}"
+  scalingMetric:
+    concurrency:
+      targetValue: 10

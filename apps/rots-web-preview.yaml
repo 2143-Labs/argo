@@ -1,0 +1,61 @@
+# One Application per open PR in 2143-Labs/bevy2025, served at
+# https://rots-{N}.john2143.com.
+#
+# The chart lives here (workloads/rots-web), not in bevy2025: the AppProject does
+# not allow that repo as a source. The image is CI's webserver-wasm-pr-<N> tag
+# (bevy2025 build_nix.yml, same-repo PRs only), so a PR has no image until its CI
+# runs. Closing the PR prunes the namespace and routes. Pattern copied from
+# status-design-preview.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rots-web-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: bevy2025
+          tokenRef: { secretName: github-token, key: token }
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'rots-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/rots-web
+        helm:
+          parameters:
+            - { name: namespace, value: 'rots-pr-{{.number}}' }
+            - { name: host, value: 'rots-{{.number}}.john2143.com' }
+            - { name: routeName, value: 'rots-pr-{{.number}}' }
+            - { name: image.tag, value: 'webserver-wasm-pr-{{.number}}' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'rots-pr-{{.number}}'
+      ignoreDifferences:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          # Gateway API defaulting (see status-design.yaml).
+          jqPathExpressions:
+            - .spec.parentRefs[].group
+            - .spec.parentRefs[].kind
+            - .spec.rules[].backendRefs[].group
+            - .spec.rules[].backendRefs[].kind
+            - .spec.rules[].backendRefs[].weight
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
