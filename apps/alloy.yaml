@@ -15,6 +15,15 @@ spec:
       releaseName: alloy
       values: |
         alloy:
+          # Basic-auth password for status-1's /metrics (Caddy basic_auth, user
+          # "scraper"); rendered from OpenBao by workloads/secrets/observability-status-scraper.yaml.
+          extraEnv:
+            - name: STATUS_METRICS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: status-scraper
+                  key: password
+                  optional: true
           configMap:
             create: true
             content: |
@@ -67,6 +76,9 @@ spec:
                 endpoint {
                   url = "http://mimir.observability.svc:8080/api/v1/push"
                 }
+                // Every home series is labelled so it is distinguishable from DOKS
+                // (cluster="doks") and the status droplet (cluster="do") in one store.
+                external_labels = { cluster = "home" }
               }
 
               // kubelet + cAdvisor per node (role=node → <internalIP>:10250)
@@ -257,6 +269,24 @@ spec:
                 scrape_interval = "30s"
                 tls_config {
                   server_name = "openbao.ts.2143.me"
+                }
+                forward_to      = [prometheus.remote_write.mimir.receiver]
+                clustering {
+                  enabled = true
+                }
+              }
+
+              // status-1 droplet host metrics, pulled from home over its public 443
+              // behind Caddy basic_auth. Nothing on the droplet dials home.
+              prometheus.scrape "status_droplet" {
+                targets         = [{ __address__ = "status-origin.2143.me", cluster = "do", site = "tor1", node = "status-1" }]
+                job_name        = "status-1"
+                scheme          = "https"
+                metrics_path    = "/metrics"
+                scrape_interval = "30s"
+                basic_auth {
+                  username = "scraper"
+                  password = sys.env("STATUS_METRICS_PASSWORD")
                 }
                 forward_to      = [prometheus.remote_write.mimir.receiver]
                 clustering {

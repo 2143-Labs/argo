@@ -49,9 +49,9 @@ postgres client + tunnel`, `allowed-address=10.99.0.2/32,10.244.0.0/16`,
 interface `wg-remote`, listen UDP 51820. `wireguard-doks` masquerades onto
 `wg0`, so home sees every DO pod as `10.99.0.2`.
 
-The tunnel carries three things. (Until 2026-09-24 this said it carried
+The tunnel carries five things. (Until 2026-09-24 this said it carried
 "exactly one thing — reaching PostgreSQL and MongoDB"; the Temporal allow was
-added that day.)
+added that day, and the Mimir and Loki allows on 2026-10-28.)
 
 - DO → home `192.168.5.36:5432`, closet PostgreSQL — `chain=forward` accept
   `wg: doks -> postgres`. No consumer right now: the DO `openfront-pro*`
@@ -62,6 +62,13 @@ added that day.)
 - home → DO `10.99.0.2:32040`, DO MongoDB through the ClusterIP Service
   `mongo-tunnel`, consumed by `john2143-com-worker-209`. No router rule is
   needed: `10.99.0.0/24` is a connected route on `wg-remote`.
+- DO → home `192.168.6.23:8080`, Mimir push (`observability/mimir-lb`) —
+  accept `wg: doks -> mimir` (added 2026-10-28). Consumer: DOKS
+  `default/alloy`, which remote-writes every DOKS metric with
+  `cluster="doks"`.
+- DO → home `192.168.6.24:3100`, Loki push (`observability/loki-push-lb`,
+  the gateway) — accept `wg: doks -> loki` (added 2026-10-28). Consumer: DOKS
+  `default/alloy`, which ships pod and nginx ingress logs (Tor excluded).
 
 Everything else arriving from the tunnel hits `wg: deny tunnel traffic not
 allowed above` and is dropped and logged (`wg-drop`). A new allow goes
