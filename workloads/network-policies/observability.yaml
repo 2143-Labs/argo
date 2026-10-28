@@ -75,6 +75,17 @@ spec:
         - ipBlock: {cidr: 10.42.6.1/32}
     - from:
         - podSelector: {}
+    # DOKS Alloy pushing over WireGuard (router rules `wg: doks -> mimir` /
+    # `wg: doks -> loki`). When the VIP lands on the node that also runs the
+    # endpoint, kube-proxy does not SNAT and the source stays 10.99.0.2, so
+    # the SNAT allowance above misses it (observed: loki-gateway on closet
+    # rejected every DOKS push). 8080 is the container port of both
+    # loki-gateway and mimir's nginx.
+    - from:
+        - ipBlock: {cidr: 10.99.0.2/32}
+      ports:
+        - port: 8080
+          protocol: TCP
     # Traefik -> grafana, and Traefik's OTLP trace export -> alloy.
     # NOTE: policy ports are the *container* ports on the destination pod, not
     # the Service ports. Grafana's Service publishes 80 but its container
