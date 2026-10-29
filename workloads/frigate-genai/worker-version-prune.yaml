@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: temporal-worker-version-prune
+  namespace: default
+  labels: {app: frigate-genai}
+spec:
+  # Temporal never deletes drained worker versions below its 100-per-deployment cap,
+  # and each one costs metric series. Keep the newest 3 per deployment, plus whatever
+  # is current or ramping; delete only versions whose drainage status is "drained".
+  schedule: "17 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: prune
+              image: temporalio/admin-tools:1.32.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -u
+                  ADDR=temporal-frontend.default.svc.cluster.local:7233
+                  KEEP=3
+                  FAIL=0
+                  for NS in default john2143-com; do
+                    DEPS=$(temporal worker deployment list --address $ADDR --namespace $NS -o json | awk -F'"' '/"name":/{print $4}')
+                    for DEP in $DEPS; do
+                      J=$(temporal worker deployment describe --name "$DEP" --address $ADDR --namespace $NS -o json) || { echo "describe $NS/$DEP failed"; FAIL=1; continue; }
+                      MGR=$(echo "$J" | awk -F'"' '/"managerIdentity":/{print $4}')
+                      CUR=$(echo "$J" | awk -F'"' '/"currentVersionBuildID":/{print $4}')
+                      RAMP=$(echo "$J" | awk -F'"' '/"rampingVersionBuildID":/{print $4}')
+                      # one line per version: createTime buildID drainageStatus, newest first
+                      echo "$J" | awk -F'"' '/"BuildID":/{b=$4} /"drainageStatus":/{d=$4} /"createTime":/{if (b!="") {print $4, b, d; b=""}}' \
+                        | sort -r | awk -v k=$KEEP 'NR>k' | while read -r _ BID DRAIN; do
+                          [ "$BID" = "$CUR" ] && continue
+                          [ "$BID" = "$RAMP" ] && continue
+                          [ "$DRAIN" = "drained" ] || continue
+                          if temporal worker deployment delete-version --deployment-name "$DEP" --build-id "$BID" \
+                               ${MGR:+--identity "$MGR"} --address $ADDR --namespace $NS; then
+                            echo "deleted $NS/$DEP $BID"
+                          else
+                            echo "delete $NS/$DEP $BID failed"
+                            touch /tmp/fail
+                          fi
+                        done
+                    done
+                  done
+                  [ -e /tmp/fail ] && FAIL=1
+                  exit $FAIL

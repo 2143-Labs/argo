@@ -37,6 +37,13 @@ spec:
             capabilities:
               drop: ["ALL"]
         server:
+          # One "__versioned__" value instead of one series set per frigate-genai build.
+          # Per-version series grew ~3,000 per deploy and pushed Mimir over 500k series
+          # (2026-10-28); stale ones stay until matching restarts (temporalio/temporal#9945).
+          # Also disables per-queue backlog gauges for VERSIONED queues; nothing reads them.
+          dynamicConfig:
+            metrics.breakdownByBuildID:
+              - value: false
           config:
             persistence:
               defaultStore: default
