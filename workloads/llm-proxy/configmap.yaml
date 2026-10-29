@@ -20,63 +20,77 @@ data:
         litellm_params:
           model: "ollama/*"
           api_base: "http://office.ts.2143.me:11434"
-      # Gemma 4 family on the same office Ollama. Explicit per-tag entries
-      # rather than an `ollama/gemma4:*` wildcard: litellm's /model_info
-      # wildcard expansion (expand_wildcard_deployments_for_model_info ->
-      # get_known_models_from_wildcard) treats the text before `*` as a
-      # prefix and fabricates names like `ollama/gemma4:llama2`, which OMP's
+      # Gemma 4 family on the same office Ollama. These MUST use the
+      # `ollama_chat/` provider, not `ollama/`: litellm's `ollama/` prefix is
+      # the *completion* provider and posts to Ollama's /api/generate, which
+      # flattens the whole conversation into a single `### System:` /
+      # `### User:` blob (no chat framing, no turn markers) and silently drops
+      # `tools`. Gemma 4's chat framing and tool channel only exist on
+      # /api/chat — the tags ship `TEMPLATE {{ .Prompt }}` + `RENDERER gemma4`,
+      # and the renderer is only applied on the chat path. On /api/generate an
+      # agent system prompt therefore reaches the model as raw text with no
+      # tool definitions, and it answers with invented pseudo-tool-call text
+      # or bare JSON envelopes like {"response": "..."}.
+      # `ollama_chat/` forwards full messages, `tools` and `think` to
+      # /api/chat (litellm/llms/ollama/chat/transformation.py).
+      # Explicit per-tag entries rather than an `ollama_chat/gemma4:*`
+      # wildcard: litellm's /model_info wildcard expansion
+      # (expand_wildcard_deployments_for_model_info ->
+      # get_known_models_from_wildcard) treats the text before `*` as a prefix
+      # and fabricates names like `ollama_chat/gemma4:llama2`, which OMP's
       # discovery would then offer as selectable models. The `ollama/*`
-      # wildcard above still routes any gemma4 tag not pinned here.
+      # wildcard above is completion-only, so pin any new gemma4 tag here
+      # rather than relying on it.
       # Capabilities from `ollama show` on office: completion, vision, tools,
       # thinking (e2b/e4b/12b/latest also advertise audio). Context is the
       # tag's native window: 131072 for e2b/e4b/latest, 262144 for the rest.
-      - model_name: "ollama/gemma4:e4b"
+      - model_name: "ollama_chat/gemma4:e4b"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
         litellm_params:
-          model: "ollama/gemma4:e4b"
+          model: "ollama_chat/gemma4:e4b"
           api_base: "http://office.ts.2143.me:11434"
-      - model_name: "ollama/gemma4:e2b"
+      - model_name: "ollama_chat/gemma4:e2b"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
         litellm_params:
-          model: "ollama/gemma4:e2b"
+          model: "ollama_chat/gemma4:e2b"
           api_base: "http://office.ts.2143.me:11434"
-      - model_name: "ollama/gemma4:12b"
+      - model_name: "ollama_chat/gemma4:12b"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
         litellm_params:
-          model: "ollama/gemma4:12b"
+          model: "ollama_chat/gemma4:12b"
           api_base: "http://office.ts.2143.me:11434"
-      - model_name: "ollama/gemma4:26b"
+      - model_name: "ollama_chat/gemma4:26b"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
         litellm_params:
-          model: "ollama/gemma4:26b"
+          model: "ollama_chat/gemma4:26b"
           api_base: "http://office.ts.2143.me:11434"
-      - model_name: "ollama/gemma4:31b"
+      - model_name: "ollama_chat/gemma4:31b"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
         litellm_params:
-          model: "ollama/gemma4:31b"
+          model: "ollama_chat/gemma4:31b"
           api_base: "http://office.ts.2143.me:11434"
-      - model_name: "ollama/gemma4:latest"
+      - model_name: "ollama_chat/gemma4:latest"
         model_info:
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
         litellm_params:
-          model: "ollama/gemma4:latest"
+          model: "ollama_chat/gemma4:latest"
           api_base: "http://office.ts.2143.me:11434"
       # Google Gemini
       - model_name: "gemini/*"
