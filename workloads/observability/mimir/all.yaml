@@ -101,6 +101,12 @@ data:
     blocks_storage:
       s3:
         bucket_name: mimir-blocks
+      # Write idle series to a block as soon as an ingester holds 200k in memory
+      # (limit is 250k per ingester: 500k per user / 2 ingesters). Without this,
+      # series that stopped receiving samples count against the limit until the
+      # next 2 h block boundary; on 2026-10-28 that caused hours of rejections.
+      tsdb:
+        early_head_compaction_min_in_memory_series: 200000
     ruler_storage:
       s3:
         bucket_name: mimir-rules
