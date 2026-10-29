@@ -233,3 +233,12 @@ Open items:
   cleaner and never deleted.
 - **Loki's 55–90d gap is unresolved.** Logs reach back ~60d. Data from before 2026-07-29 is
   still not reachable, and the 90d policy starts deleting only from ~2026-10-27.
+
+## 2026-10-29 addendum: Temporal cardinality
+
+On 2026-10-28 Mimir exceeded its 250k-per-ingester series share, and samples were rejected for several hours. Temporal accounted for about 153k live series, roughly 3k for each frigate-genai worker version (108 versions reporting). Matching never drops a version's series once it has seen it (temporalio/temporal#9945).
+Two fixes:
+- Dynamic config `metrics.breakdownByBuildID: false` collapses `worker_version` to `__versioned__`. It is set in `apps/temporal.yaml`.
+- CronJob `temporal-worker-version-prune` runs hourly in `workloads/frigate-genai/` and keeps the newest 3 drained versions per worker deployment.
+
+Mimir early head compaction at 200k in-memory series per ingester is added separately.
