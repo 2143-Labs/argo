@@ -1,11 +1,13 @@
 # One Application per open PR in 2143-Labs/bevy2025, served at
-# https://rots-{N}.john2143.com.
+# https://rots-{N}.john2143.com: web client, rots-authserver + a 1-instance CNPG
+# database, and one game server (wss /ws/0, native UDP
+# 192.168.6.33:25000+4*(N%1000); PR numbers equal mod 1000 collide, accepted).
 #
 # The chart lives here (workloads/rots-web), not in bevy2025: the AppProject does
-# not allow that repo as a source. The image is CI's webserver-wasm-pr-<N> tag
-# (bevy2025 build_nix.yml, same-repo PRs only), so a PR has no image until its CI
-# runs. Closing the PR prunes the namespace and routes. Pattern copied from
-# status-design-preview.
+# not allow that repo as a source. The images are CI's webserver-wasm-pr-<N> and
+# gameserver-pr-<N> tags (bevy2025 build_nix.yml, same-repo PRs only), so a PR has
+# no image until its CI runs. Closing the PR prunes the namespace (database
+# included) and routes. Pattern copied from status-design-preview.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -39,7 +41,17 @@ spec:
             - { name: namespace, value: 'rots-pr-{{.number}}' }
             - { name: host, value: 'rots-{{.number}}.john2143.com' }
             - { name: routeName, value: 'rots-pr-{{.number}}' }
+            - { name: publicUrl, value: 'https://rots-{{.number}}.john2143.com' }
             - { name: image.tag, value: 'webserver-wasm-pr-{{.number}}' }
+            - { name: authserver.secretKey, value: john2143-com/rots-preview/rots-authserver-secret }
+            - { name: authserver.disabledProviders, value: discord }
+            - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}' }
+            - { name: gameserver.replicas, value: '1' }
+            # .number is a string in the pullRequest generator, hence atoi.
+            - { name: gameserver.udpPortBase, value: '{{ add 25000 (mul 4 (mod (atoi .number) 1000)) }}' }
+            - { name: gameserver.lbIP, value: 192.168.6.33 }
+            - { name: gameserver.lbIPv6, value: 'fd00:6::33' }
+            - { name: gameserver.shareKey, value: rots-preview }
       destination:
         server: https://kubernetes.default.svc
         namespace: 'rots-pr-{{.number}}'

@@ -1,0 +1,58 @@
+# rots-authserver's database. CNPG renders Secret <clusterName>-app (key `uri`),
+# which authserver.yaml reads as DATABASE_URL. docs/adding-a-cnpg-database.md.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.db.clusterName }}
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  {{- if .Values.db.protect }}
+  annotations:
+    # An Argo prune must never delete the prod database. Remove it only by hand.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  {{- end }}
+spec:
+  instances: {{ .Values.db.instances }}
+  # Promote a replica before touching the primary; `restart` deletes it in place
+  # and forces a Longhorn detach/attach.
+  primaryUpdateMethod: switchover
+  affinity:
+    enablePodAntiAffinity: true
+    # Required: the copies must never share a node, or the second copy is no
+    # protection at all.
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      # arch's Longhorn disk cannot provision new volumes (below the 25% floor).
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+      # Preferred only: a required rule would stop the operator from recreating
+      # a lost instance on the remaining node.
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [big, nas]
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  storage:
+    size: {{ .Values.db.size }}
+    storageClass: {{ .Values.db.storageClass }}
+  walStorage:
+    size: {{ .Values.db.walSize }}
+    storageClass: {{ .Values.db.storageClass }}
+  bootstrap:
+    initdb:
+      database: rots
+      owner: rots

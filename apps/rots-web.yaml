@@ -1,6 +1,7 @@
-# ROTS (bevy2025) web client at https://rots.john2143.com, serving CI's
-# webserver-wasm-latest tag (built on every push to bevy2025 main). Scale-to-zero
-# via KEDA HTTP. Previews are separate (see rots-web-preview.yaml).
+# ROTS (bevy2025) production at https://rots.john2143.com, namespace rots-prod:
+# web client (CI's webserver-wasm-latest, scale-to-zero via KEDA HTTP),
+# rots-authserver + its CNPG database, and 4 game servers (wss /ws/<i>, native
+# UDP 192.168.6.32:29000-29003). Previews are separate (see rots-web-preview.yaml).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -16,13 +17,23 @@ spec:
     path: workloads/rots-web
     helm:
       parameters:
-        - { name: namespace, value: rots-web }
+        - { name: namespace, value: rots-prod }
         - { name: host, value: rots.john2143.com }
         - { name: routeName, value: rots-web }
+        - { name: publicUrl, value: 'https://rots.john2143.com' }
         - { name: image.tag, value: webserver-wasm-latest }
+        - { name: authserver.secretKey, value: john2143-com/rots-prod/rots-authserver-secret }
+        - { name: db.instances, value: '2' }
+        - { name: db.protect, value: 'true' }
+        - { name: gameserver.tag, value: gameserver-latest }
+        - { name: gameserver.replicas, value: '4' }
+        - { name: gameserver.udpPortBase, value: '29000' }
+        - { name: gameserver.lbIP, value: 192.168.6.32 }
+        - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
+        - { name: gameserver.shareKey, value: rots-prod }
   destination:
     server: https://kubernetes.default.svc
-    namespace: rots-web
+    namespace: rots-prod
   ignoreDifferences:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
