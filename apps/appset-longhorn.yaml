@@ -1,0 +1,51 @@
+# Nonprod-only Longhorn. Prod stays on the legacy apps/longhorn.yaml: the chart
+# ships a helm pre-delete hook (Job longhorn-uninstall), so Argo keeps
+# PreDelete finalizers on the prod Application and deleting it — which the
+# Step 6.0 cutover does — would run the uninstall Job against prod. Until that
+# is solved, the ApplicationSet selects only env=nonprod. Both envs read
+# workloads/longhorn/values-<env>.yaml; prod's legacy file keeps its inline
+# copy (identical to values-prod.yaml, proven by scripts/chart-values-equiv.sh).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-longhorn
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            env: nonprod
+  template:
+    metadata:
+      name: 'longhorn-{{ index .metadata.labels "env" }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      sources:
+        - chart: longhorn
+          repoURL: https://charts.longhorn.io
+          targetRevision: 1.12.1
+          helm:
+            releaseName: longhorn
+            valueFiles:
+              - '$values/workloads/longhorn/values-{{ index .metadata.labels "env" }}.yaml'
+        - repoURL: https://github.com/2143-Labs/argo.git
+          targetRevision: HEAD
+          ref: values
+      destination:
+        server: '{{ .server }}'
+        namespace: longhorn-system
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
