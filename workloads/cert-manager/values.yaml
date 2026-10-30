@@ -1,0 +1,4 @@
+# Prod defaults. Argo auto-detects this chart and uses values.yaml when no
+# valueFiles are given (legacy Application); the ApplicationSet passes
+# values-<env>.yaml.
+acmeIssuers: true

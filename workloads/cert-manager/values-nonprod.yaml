@@ -1,0 +1,3 @@
+# Nonprod has no ACME: *.dev.john2143.com is a static self-signed pair
+# (Secret nonprod-dev-tls, seeded by bigp-tofu/bin/nonprod-rebuild.sh).
+acmeIssuers: false

@@ -1,3 +1,4 @@
+{{- if .Values.acmeIssuers }}
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -77,3 +78,4 @@ spec:
                 name: shared-gateway
                 namespace: default
                 sectionName: acme-http
+{{- end }}
