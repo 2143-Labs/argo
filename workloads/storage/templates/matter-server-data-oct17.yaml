@@ -1,3 +1,4 @@
+{{- if .Values.prodOnly }}
 apiVersion: longhorn.io/v1beta2
 kind: Volume
 metadata:
@@ -18,3 +19,4 @@ spec:
   dataEngine: v1
   accessMode: rwo
   dataLocality: best-effort
+{{- end }}

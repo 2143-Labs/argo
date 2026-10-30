@@ -1,0 +1,2 @@
+# nonprod: the four StorageClasses only.
+prodOnly: false

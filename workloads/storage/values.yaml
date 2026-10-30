@@ -1,0 +1,3 @@
+# Prod defaults (legacy Application reads values.yaml).
+# prodOnly: longhorn-backup-job.yaml and matter-server-data-oct17.yaml.
+prodOnly: true
