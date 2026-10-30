@@ -1,0 +1,79 @@
+# Converted from apps/gateway-api-crds.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `gateway-api-crds` on prod
+# (name unchanged, re-adopts via tracking-id) and `gateway-api-crds-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-gateway-api-crds
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'gateway-api-crds{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+      annotations:
+        # Install Gateway API CRDs before gateway/workload routes.
+        argocd.argoproj.io/sync-wave: "-5"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kubernetes-sigs/gateway-api.git
+        targetRevision: v1.6.2
+        path: config/crd/standard
+        # TCPRoute moved into the standard channel in v1.6.2 with v1alpha2
+        # served=false. Traefik 3.7.8 (k3s bundled) runs with
+        # --providers.kubernetesgateway.experimentalchannel=true and watches
+        # v1alpha2.TCPRoute; when that informer can never sync, Traefik's entire
+        # Gateway provider stays dead -- no routers, no certificates, so every
+        # host falls back to Traefik's default cert. The experimental-channel
+        # CRD serves v1 *and* v1alpha2, so it is installed separately by
+        # apps/gateway-api-crds-tcproutes.yaml. Do not "tidy" this exclusion
+        # away: doing so re-breaks every newly started Traefik replica.
+        # The safe-upgrades ValidatingAdmissionPolicy is excluded too: its rule
+        # denies UPDATEing a gateway.networking.k8s.io CRD from channel=standard
+        # to channel=experimental, which is exactly what the experimental
+        # tcproutes install does. Upstream's own denial message names uninstalling
+        # the policy as the procedure for installing experimental CRDs.
+        directory:
+          exclude: "{gateway.networking.k8s.io_tcproutes.yaml,gateway.networking.k8s.io_vap_safeupgrades.yaml}"
+      destination:
+        server: '{{ .server }}'
+        namespace: default
+      ignoreDifferences:
+        - group: apiextensions.k8s.io
+          kind: CustomResourceDefinition
+          jsonPointers:
+            # Bundle-version annotations must advance with the CRD upgrade.
+            - /metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration
+            - /status
+        - group: admissionregistration.k8s.io
+          kind: ValidatingAdmissionPolicy
+          jqPathExpressions:
+            - .metadata.annotations
+            - .status
+        - group: admissionregistration.k8s.io
+          kind: ValidatingAdmissionPolicyBinding
+          jqPathExpressions:
+            - .metadata.annotations
+            - .status
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - RespectIgnoreDifferences=true
+
+          - ServerSideApply=true
