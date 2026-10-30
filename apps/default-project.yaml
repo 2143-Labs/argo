@@ -32,6 +32,12 @@ spec:
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
+    # nonprod cluster on bigp (Secret argocd/nonprod, label env=nonprod).
+    # Registered via np1 while bootstrapping, then via the API VIP.
+    - namespace: '*'
+      server: https://192.168.7.2:6443
+    - namespace: '*'
+      server: https://192.168.5.40:6443
   clusterResourceWhitelist:
     - group: ''
       kind: Namespace
