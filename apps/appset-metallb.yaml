@@ -1,0 +1,58 @@
+# Converted from apps/metallb.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `metallb` on prod
+# (name unchanged, re-adopts via tracking-id) and `metallb-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-metallb
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'metallb{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      source:
+        chart: metallb
+        repoURL: https://metallb.github.io/metallb
+        targetRevision: 0.16.1
+        helm:
+          releaseName: metallb
+          values: |
+            speaker:
+              tolerations:
+                - key: pi
+                  operator: Exists
+                  effect: NoSchedule
+            # Subchart values nest under "frr-k8s:" (hyphen), NOT "frrk8s:" —
+            # the parent chart only accepts enabled/external/namespace there.
+            frr-k8s:
+              frrk8s:
+                tolerations:
+                  - key: pi
+                    operator: Exists
+                    effect: NoSchedule
+      destination:
+        server: '{{ .server }}'
+        namespace: metallb-system
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
