@@ -1,0 +1,42 @@
+# Converted from apps/metallb-config.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `metallb-config` on prod
+# (name unchanged, re-adopts via tracking-id) and `metallb-config-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-metallb-config
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'metallb-config{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/metallb
+        helm:
+          valueFiles:
+            - 'values-{{ index .metadata.labels "env" }}.yaml'
+      destination:
+        server: '{{ .server }}'
+        namespace: metallb-system
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
