@@ -5,8 +5,9 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 192.168.6.10-192.168.6.200
-  - fd00:6::10-fd00:6::ff
+  {{- range .Values.pools.services }}
+  - {{ . }}
+  {{- end }}
 ---
 # The ingress VIP pair (WAN/LAN entry point, Traefik). Exactly one address per
 # family so the dual-stack Traefik Service gets both from one pool without
@@ -19,8 +20,9 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 192.168.6.6-192.168.6.6
-  - fd00:6::6-fd00:6::6
+  {{- range .Values.pools.ingress }}
+  - {{ . }}
+  {{- end }}
   autoAssign: false
 ---
 apiVersion: metallb.io/v1beta1
@@ -30,5 +32,5 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 192.168.5.10-192.168.5.10
+  - {{ .Values.apiVip }}-{{ .Values.apiVip }}
   autoAssign: false

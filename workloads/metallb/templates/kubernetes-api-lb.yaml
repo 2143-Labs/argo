@@ -5,7 +5,7 @@ metadata:
   namespace: default
   annotations:
     metallb.io/address-pool: control-plane-vip
-    metallb.io/loadBalancerIPs: "192.168.5.10"
+    metallb.io/loadBalancerIPs: {{ .Values.apiVip | quote }}
 spec:
   type: LoadBalancer
   ports:
@@ -23,15 +23,11 @@ metadata:
     endpointslice.kubernetes.io/managed-by: custom
 addressType: IPv4
 endpoints:
-  - addresses: ["192.168.5.36"]
+  {{- range .Values.controlPlaneNodes }}
+  - addresses: [{{ . | quote }}]
     conditions:
       ready: true
-  - addresses: ["192.168.5.76"]
-    conditions:
-      ready: true
-  - addresses: ["192.168.5.175"]
-    conditions:
-      ready: true
+  {{- end }}
 ports:
   - port: 6443
     protocol: TCP

@@ -1,0 +1,15 @@
+# bigp nonprod cluster (np1-3). Same BGP peer/BFD/advertisement as prod;
+# the router admits 192.168.7.0/24 /32s, 192.168.7.2/32 and fd00:7::/64 /128s
+# (routing filter metallb-in).
+pools:
+  services:
+    - 192.168.7.10-192.168.7.200
+    - fd00:7::10-fd00:7::ff
+  ingress:
+    - 192.168.7.7-192.168.7.7
+    - fd00:7::7-fd00:7::7
+apiVip: 192.168.7.2
+controlPlaneNodes:
+  - 192.168.5.40
+  - 192.168.5.41
+  - 192.168.5.42

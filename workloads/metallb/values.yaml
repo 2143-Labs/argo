@@ -1,0 +1,14 @@
+# Prod defaults: Argo uses values.yaml for the legacy Application (no
+# valueFiles); the ApplicationSet passes values-<env>.yaml.
+pools:
+  services:
+    - 192.168.6.10-192.168.6.200
+    - fd00:6::10-fd00:6::ff
+  ingress:
+    - 192.168.6.6-192.168.6.6
+    - fd00:6::6-fd00:6::6
+apiVip: 192.168.5.10
+controlPlaneNodes:
+  - 192.168.5.36
+  - 192.168.5.76
+  - 192.168.5.175

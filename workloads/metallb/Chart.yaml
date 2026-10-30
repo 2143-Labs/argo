@@ -1,0 +1,5 @@
+apiVersion: v2
+name: metallb-config
+description: MetalLB pools, BGP peer and the control-plane API VIP (per cluster)
+version: 0.1.0
+type: application
