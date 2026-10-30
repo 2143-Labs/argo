@@ -1,0 +1,44 @@
+# Converted from apps/kube-state-metrics.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `kube-state-metrics` on prod
+# (name unchanged, re-adopts via tracking-id) and `kube-state-metrics-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-kube-state-metrics
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'kube-state-metrics{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      source:
+        chart: kube-state-metrics
+        repoURL: https://prometheus-community.github.io/helm-charts
+        targetRevision: 8.4.2
+        helm:
+          releaseName: kube-state-metrics
+      destination:
+        server: '{{ .server }}'
+        namespace: kube-state-metrics
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
