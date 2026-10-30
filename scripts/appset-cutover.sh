@@ -12,10 +12,13 @@
 # Every managed resource's uid is recorded before B and must be identical
 # after C. Any failure stops with instructions; nothing is auto-rolled back.
 #
-# Usage: scripts/appset-cutover.sh <app>
+# Usage: scripts/appset-cutover.sh <app> [--resume-c]
+#   --resume-c: B already succeeded (legacy file deleted on main, Application
+#   NotFound, uids recorded); run only C against the recorded uids.
 # Env: CTX (default closet-as-admin)
 set -euo pipefail
 app="$1"
+resume_c="${2:-}"
 ctx="${CTX:-closet-as-admin}"
 k=(kubectl --context "$ctx")
 cd "$(git rev-parse --show-toplevel)"
@@ -24,7 +27,12 @@ appset="apps/appset-$app.yaml"
 state="/tmp/appset-cutover-$app"
 mkdir -p "$state"
 
+if [ "$resume_c" = "--resume-c" ]; then
+  [ ! -f "$legacy" ] || { echo "--resume-c but $legacy still exists" >&2; exit 1; }
+  [ -s "$state/uids.before" ] || { echo "--resume-c but no $state/uids.before" >&2; exit 1; }
+else
 [ -f "$legacy" ] || { echo "no $legacy" >&2; exit 1; }
+fi
 [ -f "$appset" ] || { echo "no $appset" >&2; exit 1; }
 [ -z "$(git status --porcelain -- . ":!$appset")" ] || { echo "working tree not clean apart from $appset" >&2; exit 1; }
 
@@ -50,6 +58,8 @@ wait_for() { # wait_for <seconds> <description> <command...>
 }
 refresh_root() { "${k[@]}" -n argocd annotate application app-of-apps argocd.argoproj.io/refresh=normal --overwrite >/dev/null; }
 
+ssh-add -l >/dev/null 2>&1 || { echo "ssh agent has no identities — git push would fail mid-cutover" >&2; exit 1; }
+if [ "$resume_c" != "--resume-c" ]; then
 echo "== $app: pre-flight"
 st="$(app_json | python3 -c 'import json,sys;s=json.load(sys.stdin)["status"];print(s["sync"]["status"], s["health"]["status"])')"
 [ "$st" = "Synced Healthy" ] || { echo "$app is '$st', not 'Synced Healthy' — fix first" >&2; exit 1; }
@@ -77,6 +87,12 @@ resources_after_b() { while read -r ref uid; do
 resources_after_b > "$state/uids.afterB"
 diff "$state/uids.before" "$state/uids.afterB" || { echo "GATE B FAILED: workloads changed. Roll back: git revert HEAD && push" >&2; exit 1; }
 echo "   gate B ok: Application gone, all uids unchanged"
+fi
+resources_after_b() { while read -r ref uid; do
+    IFS=/ read -r res ns name <<<"$ref"
+    now="$("${k[@]}" get "$res" "$name" ${ns:+-n "$ns"} -o jsonpath='{.metadata.uid}' 2>/dev/null || echo MISSING)"
+    echo "$ref $now"
+  done < "$state/uids.before"; }
 
 echo "== $app: commit C (add ApplicationSet)"
 git add "$appset"
