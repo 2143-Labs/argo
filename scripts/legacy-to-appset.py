@@ -29,6 +29,12 @@ spec = spec.replace("server: https://kubernetes.default.svc", "server: '{{ .serv
 if "{{" in spec.replace("'{{ .server }}'", ""):
     sys.exit("legacy spec already contains '{{' — would be read as a Go template; handle by hand")
 
+# metadata.annotations (e.g. sync-wave) carry over verbatim into the template.
+ann = ""
+am = re.search(r"^  annotations:\n((?:    .*\n|\s*\n)+)", src[:m.start()], re.M)
+if am:
+    ann = "      annotations:\n" + "".join("    " + l if l.strip() else "\n" for l in am.group(1).splitlines(keepends=True))
+
 body = "".join("    " + line if line.strip() else "\n" for line in spec.splitlines(keepends=True))
 
 out = f"""# Converted from apps/{app}.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
@@ -57,7 +63,7 @@ spec:
       name: '{app}{{{{ if ne (index .metadata.labels "env") "prod" }}}}-{{{{ index .metadata.labels "env" }}}}{{{{ end }}}}'
       labels:
         env: '{{{{ index .metadata.labels "env" }}}}'
-    spec:
+{ann}    spec:
 {body}"""
 open(f"apps/appset-{app}.yaml", "w").write(out)
 print(f"wrote apps/appset-{app}.yaml")
