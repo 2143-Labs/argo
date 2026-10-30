@@ -1,0 +1,43 @@
+# Converted from apps/reloader.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `reloader` on prod
+# (name unchanged, re-adopts via tracking-id) and `reloader-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-reloader
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'reloader{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      source:
+        chart: reloader
+        repoURL: https://stakater.github.io/stakater-charts
+        targetRevision: 2.2.17
+        helm:
+          releaseName: reloader
+      destination:
+        server: '{{ .server }}'
+        namespace: reloader
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
