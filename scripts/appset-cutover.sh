@@ -61,6 +61,8 @@ refresh_root() { "${k[@]}" -n argocd annotate application app-of-apps argocd.arg
 ssh-add -l >/dev/null 2>&1 || { echo "ssh agent has no identities — git push would fail mid-cutover" >&2; exit 1; }
 if [ "$resume_c" != "--resume-c" ]; then
 echo "== $app: pre-flight"
+pd="$(app_json | python3 -c 'import json,sys;print(" ".join(f for f in json.load(sys.stdin)["metadata"].get("finalizers",[]) if "delete-finalizer" in f))')"
+[ -z "$pd" ] || { echo "$app carries $pd: deleting the Application would run its pre/post-delete hooks. Do not cut over; make it a nonprod-only ApplicationSet instead." >&2; exit 1; }
 st="$(app_json | python3 -c 'import json,sys;s=json.load(sys.stdin)["status"];print(s["sync"]["status"], s["health"]["status"])')"
 [ "$st" = "Synced Healthy" ] || { echo "$app is '$st', not 'Synced Healthy' — fix first" >&2; exit 1; }
 resources_uids > "$state/uids.before"
