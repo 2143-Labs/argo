@@ -1,0 +1,50 @@
+# Converted from apps/cert-manager.yaml (bigp nonprod plan, Step 6.0); spec verbatim.
+# One Application per cluster labelled env=prod|nonprod: `cert-manager` on prod
+# (name unchanged, re-adopts via tracking-id) and `cert-manager-nonprod`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-cert-manager
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [prod, nonprod]
+  template:
+    metadata:
+      name: 'cert-manager{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
+      labels:
+        env: '{{ index .metadata.labels "env" }}'
+    spec:
+      project: default
+      source:
+        chart: cert-manager
+        repoURL: https://charts.jetstack.io
+        targetRevision: v1.21.2
+        helm:
+          releaseName: cert-manager
+          values: |
+            installCRDs: true
+            extraArgs:
+              - --enable-gateway-api=true
+              - --dns01-recursive-nameservers=1.1.1.1:53,8.8.8.8:53
+              - --dns01-recursive-nameservers-only
+      destination:
+        server: '{{ .server }}'
+        namespace: cert-manager
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
