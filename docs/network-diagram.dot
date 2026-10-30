@@ -7,7 +7,7 @@ digraph home {
   homepi [class="srv", label="home-pi\nAttic :8280\n192.168.0.154"];
   router [class="net", penwidth=2, fontsize=11, label="ROUTER RB5009UPr+S+\n.0.2 WAN · .5.1 · .1.1 · .88.254\nBGP 65001 · BFD 3784 · WireGuard 51820\ndst-nat 15 rules · DNS FWD ×6"];
   internet -> verizon [label=" coax"];
-  verizon -> router [label=" 1GbE 2GWAN"];
+  verizon -> router [label=" 2.5G 2GWAN"];
   verizon -> homepi [label=" 1GbE"];
 
   // ---- switch chain (LLDP-confirmed both ways) ----
@@ -16,20 +16,20 @@ digraph home {
   upstairs [class="net", penwidth=2, fontsize=11, label="UPSTAIRS  CRS310-8G+2S+\n192.168.5.3\n8×1G + 2×SFP+"];
   office [class="net", penwidth=2, fontsize=11, label="OFFICE  CRS310-8G+2S+\n192.168.5.2\n8×1G + 2×SFP+"];
   router -> core [label=" 10GsfpLAN ↔ sfp-sfpplus4  10G"];
-  router -> core [label=" pi ↔ ether1  1G mgmt", style=dashed, weight=0];
+  router -> core [label=" core-poe ↔ ether1  1G PoE + mgmt", style=dashed, weight=0];
   core -> ucore [label=" sfp-sfpplus2 ↔ sfp-sfpplus2  10G"];
   core -> office [label=" sfp-sfpplus3 ↔ sfp-sfpplus2  10G"];
   ucore -> upstairs [label=" sfp-sfpplus4 ↔ sfp-sfpplus1  10G"];
 
   // ---- directly attached to the router ----
-  u7lite [class="ap", label="U7 Lite AP\n192.168.5.173\nrouter ether5 · PoE"];
-  pite [class="kube", label="pite · k3s agent\n192.168.5.9\nrouter ether8 (to-wifi)"];
-  cam_driveway [class="cam", label="Front Driveway cam\n192.168.1.66\nrouter ether7"];
-  jetkvm [class="cli", label="JetKVM (unconfirmed)\n192.168.5.187\nrouter ether4"];
-  router -> u7lite [label=" ether5 1G PoE"];
-  router -> pite [label=" ether8 1G"];
-  router -> cam_driveway [label=" ether7 1G"];
-  router -> jetkvm [label=" ether4 1G"];
+  u7lite [class="ap", label="U7 Lite AP\n192.168.5.173\nrouter u7-lite (ether5) · PoE"];
+  pite [class="kube", label="pite · k3s agent\n192.168.5.9\nrouter pite (ether8)"];
+  cam_driveway [class="cam", label="Front Driveway cam\n192.168.1.66\nrouter cam-front (ether7)"];
+  jetkvm [class="cli", label="JetKVM\n192.168.5.187\nrouter jetkvm (ether4)"];
+  router -> u7lite [label=" u7-lite (ether5) 1G PoE"];
+  router -> pite [label=" pite (ether8) 1G"];
+  router -> cam_driveway [label=" cam-front (ether7) 1G"];
+  router -> jetkvm [label=" jetkvm (ether4) 100M"];
 
   // ---- servers on switch ports (MAC-table confirmed) ----
   nas [class="kube", label="nas · k3s server/etcd\n192.168.5.175\nZFS · Attic"];
@@ -42,16 +42,20 @@ digraph home {
   nvr [class="cam", label="Reolink NVR (PoE)\n192.168.1.67"];
   u7proxgs [class="ap", label="U7 Pro XGS AP\n192.168.5.171\noffice sfp-sfpplus1 10G"];
   u7mesh [class="ap", label="U7 Mesh AP\n192.168.5.198"];
+  vpin [class="srv", label="vpin · Mullvad exit (Pi)\n192.168.5.118"];
+  bedroom [class="cli", label="Bedroom lightswitch\n192.168.5.85"];
   core -> nas [label=" sfp-sfpplus1 10G"];
   ucore -> closet [label=" sfp-sfpplus1 10G"];
-  ucore -> arch [label=" sfp-sfpplus3 (2.5G NIC)"];
-  ucore -> glkvm [label=" ether1 1G PoE"];
-  upstairs -> bigp [label=" sfp-sfpplus2 10G"];
+  ucore -> arch [label=" sfp-sfpplus3 10G"];
+  ucore -> glkvm [label=" ether1 1G"];
+  upstairs -> bigp [label=" sfp-sfpplus2 10G (+ ether2 LOM, ether5 iDRAC)"];
   bigp -> big [label=" VM (bridged)"];
   upstairs -> brother [label=" ether6 100M"];
-  upstairs -> nvr [label=" ether1 1G PoE"];
+  upstairs -> nvr [label=" ether1 1G"];
+  upstairs -> bedroom [label=" ether4 1G"];
+  upstairs -> vpin [label=" ether8 100M"];
   office -> u7proxgs [label=" sfp-sfpplus1 10G"];
-  u7lite -> u7mesh [class="wifi", label=" mesh ~-67 dBm", style=dotted];
+  u7lite -> u7mesh [class="wifi", label=" mesh, pinned ~-61 dBm", style=dotted];
 
   cam_gate [class="cam", label="Front Gate cam\n192.168.1.64"];
   cam_porch [class="cam", label="Front Porch cam\n192.168.1.63"];
@@ -92,10 +96,6 @@ digraph home {
   u7proxgs -> of_eufy_doorbell [class="wifi", style=dotted, weight=0];
   of_indoorcam [class="cli", label="Indoorcam\n192.168.5.59", width=1.3];
   u7proxgs -> of_indoorcam [class="wifi", style=dotted, weight=0];
-  of_vpin [class="cli", label="vpin\n192.168.5.118", width=1.3];
-  u7proxgs -> of_vpin [class="wifi", style=dotted, weight=0];
-  of_bedroom [class="cli", label="Bedroom\n192.168.5.85", width=1.3];
-  u7proxgs -> of_bedroom [class="wifi", style=dotted, weight=0];
   of_leighanesiphone [class="cli", label="LeighanesiPhone\n192.168.5.112", width=1.3];
   u7proxgs -> of_leighanesiphone [class="wifi", style=dotted, weight=0];
   of_presence [class="cli", label="presence\n192.168.5.170", width=1.3];
