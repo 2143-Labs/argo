@@ -33,9 +33,8 @@ resources_uids() { # kind/ns/name uid for every resource the app tracks
   app_json | python3 -c '
 import json,sys
 for r in json.load(sys.stdin)["status"].get("resources",[]):
-    print(r.get("group",""), r["kind"], r.get("namespace",""), r["name"])' |
-  while read -r group kind ns name; do
-    [ -z "$name" ] && { name="$ns"; ns=""; }
+    print("|".join([r.get("group",""), r["kind"], r.get("namespace",""), r["name"]]))' |
+  while IFS='|' read -r group kind ns name; do
     res="$kind${group:+.$group}"
     uid="$("${k[@]}" get "$res" "$name" ${ns:+-n "$ns"} -o jsonpath='{.metadata.uid}' 2>/dev/null || echo MISSING)"
     echo "$res/$ns/$name $uid"
