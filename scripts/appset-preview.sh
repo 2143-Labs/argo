@@ -28,6 +28,25 @@ if src.get("helm", {}).get("valueFiles") == ["values-prod.yaml"] and "helm" not 
     if not src["helm"]:
         src.pop("helm")
     print("note: ignoring the Shape B helm.valueFiles [values-prod.yaml]")
+# Upstream-chart Shape B: sources[0] is the legacy source with inline values
+# replaced by $values/<dir>/values-prod.yaml (equivalence proven by
+# chart-values-equiv.sh), sources[1] is the `ref: values` repo.
+if "sources" in got and "source" in want:
+    s0, s1 = got["sources"]
+    if s1 != {"repoURL": "https://github.com/2143-Labs/argo.git", "targetRevision": "HEAD", "ref": "values"}:
+        sys.exit(f"FAIL: unexpected second source {s1}")
+    vf = s0.get("helm", {}).pop("valueFiles", [])
+    if len(vf) != 1 or not vf[0].startswith("$values/") or not vf[0].endswith("/values-prod.yaml"):
+        sys.exit(f"FAIL: unexpected valueFiles {vf}")
+    w = json.loads(json.dumps(want))
+    w["source"].get("helm", {}).pop("values", None)
+    if not w["source"].get("helm"):
+        w["source"].pop("helm", None)
+    if not s0.get("helm"):
+        s0.pop("helm", None)
+    got.pop("sources"); got["source"] = s0
+    want = w
+    print(f"note: multi-source; compared sources[0] minus {vf[0]} against legacy source minus inline values")
 if got != want:
     print("FAIL: spec differs")
     print("live:", json.dumps(want, indent=1, sort_keys=True))
