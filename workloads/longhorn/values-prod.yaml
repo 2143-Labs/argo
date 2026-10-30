@@ -1,0 +1,95 @@
+# The pre-upgrade-checker is a helm pre-upgrade hook Job. Argo
+# applies hooks in a PreSync wave BEFORE the chart's ServiceAccount
+# exists, so the Job fails to create with "serviceaccount
+# longhorn-service-account not found". Upstream's values.yaml
+# comment literally tells GitOps users to disable it. We keep
+# upgradeVersionCheck enabled — that runs in the manager Pod after
+# the SA exists, so it's not affected by the same race.
+preUpgradeChecker:
+  jobEnabled: false
+  upgradeVersionCheck: true
+defaultSettings:
+  # Default disk path on labeled nodes. Both closet and arch have
+  # /mnt/longhorn pre-prepared (see arch-hardware-configuration.nix
+  # for arch's mount; closet uses the existing /mnt/sda1).
+  # Nas uses /var/lib/longhorn (ext4 on /dev/sda6) — set via
+  # Longhorn node CRD after boot.
+  defaultDataPath: /mnt/longhorn
+  defaultReplicaCount: 3
+  # Automatically force-delete Deployment pods on a down node so
+  # RWO PVCs release and volumes reattach to replacement pods on
+  # healthy nodes. Without this, pods stay Terminating indefinitely
+  # and services are stuck until the node returns (or manual cleanup).
+  nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+  # Wait this many seconds before triggering a replica rebuild on a
+  # different node when one goes away. Long enough to cover routine
+  # node reboots without churning rebuild traffic.
+  replicaReplenishmentWaitInterval: 1800
+  # Cap simultaneous replica rebuilds per node (built-in default 5;
+  # this cluster had been hand-set to 10 through the UI). Only affects
+  # replicated volumes — longhorn-cnpg runs one copy and never rebuilds.
+  concurrentReplicaRebuildPerNodeLimit: 5
+  # Backup target — NFS to the NAS. If unreachable, only new backup
+  # uploads are affected; live volumes are untouched.
+  backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
+  backupTargetCredentialSecret: ""
+  # Longhorn tolerates seated/wifi/pi with operator Equal "true". Only `pi`
+  # is live today. Wifi-only nodes are tainted wifi=no-network-storage, which
+  # these tolerations deliberately do NOT match, so Longhorn never runs on a
+  # wifi node (see workloads/wifi-node-policy). Never tolerate `wifi` with
+  # operator Exists here. Changing this setting is refused while any volume
+  # is attached, so it is intentionally left as-is.
+  taintToleration: "seated=true:NoSchedule; wifi=true:NoSchedule; pi=true:NoSchedule"
+longhornManager:
+  tolerations:
+    - key: seated
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: wifi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: pi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+longhornDriver:
+  tolerations:
+    - key: seated
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: wifi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: pi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+longhornUI:
+  tolerations:
+    - key: seated
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: wifi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: pi
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+persistence:
+  # We ship our own StorageClass in workloads/storage/.
+  defaultClass: false
+  defaultClassReplicaCount: 3
+ingress:
+  enabled: false
+# 1.12.1 renders internal NetworkPolicies by default. k3s enforces
+# NetworkPolicy (kube-router), and a mis-scoped policy here can fault
+# volumes mid-upgrade. Keep the new restriction off; revisit separately.
+networkPolicies:
+  restrictInternalTraffic: false

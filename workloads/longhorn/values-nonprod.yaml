@@ -1,0 +1,19 @@
+# bigp nonprod (np1-3, 200 G /mnt/longhorn each). Same as values-prod.yaml
+# minus prod-only items: no NFS backup target, no seated/wifi/pi tolerations
+# (nonprod nodes carry no taints).
+preUpgradeChecker:
+  jobEnabled: false
+  upgradeVersionCheck: true
+defaultSettings:
+  defaultDataPath: /mnt/longhorn
+  defaultReplicaCount: 3
+  nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+  replicaReplenishmentWaitInterval: 1800
+  concurrentReplicaRebuildPerNodeLimit: 5
+persistence:
+  defaultClass: false
+  defaultClassReplicaCount: 3
+ingress:
+  enabled: false
+networkPolicies:
+  restrictInternalTraffic: false
