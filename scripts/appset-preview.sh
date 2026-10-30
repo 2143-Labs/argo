@@ -19,7 +19,15 @@ prod = [i for i in items if i["metadata"]["name"] == app]
 if len(prod) != 1:
     sys.exit(f"FAIL: generated {names}, expected exactly one '{app}'")
 want = live["spec"]
-got = prod[0]["spec"]
+got = json.loads(json.dumps(prod[0]["spec"]))
+# Shape B: the only permitted difference is helm.valueFiles == [values-prod.yaml]
+# (values-prod.yaml must equal the chart's values.yaml — gate A checked that).
+src = got.get("source", {})
+if src.get("helm", {}).get("valueFiles") == ["values-prod.yaml"] and "helm" not in want.get("source", {}):
+    src["helm"].pop("valueFiles")
+    if not src["helm"]:
+        src.pop("helm")
+    print("note: ignoring the Shape B helm.valueFiles [values-prod.yaml]")
 if got != want:
     print("FAIL: spec differs")
     print("live:", json.dumps(want, indent=1, sort_keys=True))

@@ -7,12 +7,17 @@ copied byte-for-byte as the ApplicationSet template; only
 env-aware. Text-level transform (no YAML round-trip) so comments, ordering
 and block scalars survive exactly.
 
-Usage: scripts/legacy-to-appset.py <app>
+Shape B (--values): the app is a chart in-repo (dir -> chart) whose
+`source.path` gains `helm.valueFiles: [values-<env>.yaml]`. Requires a
+single `source:` with `path:` and no existing `helm:` block.
+
+Usage: scripts/legacy-to-appset.py <app> [--values]
 """
 import re
 import sys
 
 app = sys.argv[1]
+shape_b = "--values" in sys.argv[2:]
 src = open(f"apps/{app}.yaml").read()
 
 m = re.search(r"^spec:\n", src, re.M)
@@ -26,7 +31,7 @@ n = spec.count("server: https://kubernetes.default.svc")
 if n != 1:
     sys.exit(f"expected exactly one destination server line, found {n}")
 spec = spec.replace("server: https://kubernetes.default.svc", "server: '{{ .server }}'")
-if "{{" in spec.replace("'{{ .server }}'", ""):
+if "{{" in re.sub(r"'values-\{\{ index \.metadata\.labels \"env\" \}\}\.yaml'", "", spec).replace("'{{ .server }}'", ""):
     sys.exit("legacy spec already contains '{{' — would be read as a Go template; handle by hand")
 
 # metadata.annotations (e.g. sync-wave) carry over verbatim into the template.
@@ -34,6 +39,14 @@ ann = ""
 am = re.search(r"^  annotations:\n((?:    .*\n|\s*\n)+)", src[:m.start()], re.M)
 if am:
     ann = "      annotations:\n" + "".join("    " + l if l.strip() else "\n" for l in am.group(1).splitlines(keepends=True))
+
+if shape_b:
+    if spec.count("source:") != 1 or "helm:" in spec:
+        sys.exit("--values needs exactly one source: and no helm: block")
+    pm = re.search(r"^(  source:\n(?:    .*\n)*?)(    path: (\S+)\n)", spec, re.M)
+    if not pm:
+        sys.exit("--values: no source.path")
+    spec = spec[:pm.end()] + "    helm:\n      valueFiles:\n        - 'values-{{ index .metadata.labels \"env\" }}.yaml'\n" + spec[pm.end():]
 
 body = "".join("    " + line if line.strip() else "\n" for line in spec.splitlines(keepends=True))
 
