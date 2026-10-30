@@ -34,7 +34,7 @@ spec:
                       - general
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:v1.100.1
+          image: ghcr.io/berriai/litellm:v1.106.6
           ports:
             - containerPort: 4000
               protocol: TCP
@@ -47,14 +47,16 @@ spec:
             # The litellm-logfilter ConfigMap key is imported as
             # `sitecustomize` at interpreter startup (see the /etc/litellm-pyfilter
             # mount below). Remove this prefix, that mount and the ConfigMap key
-            # once the litellm image carries upstream PR #37728.
+            # only when a released image carries the aggregation fix for
+            # BerriAI/litellm#37629: PR #37728 was closed unmerged, so re-check
+            # on every image bump.
             - name: PYTHONPATH
               value: "/etc/litellm-pyfilter:/usr/lib/python3.13/site-packages"
             # Migrations run at startup on purpose. They were disabled on
             # 2026-09-07 (commit 03cff79) because the boot-time migrate was slow
             # enough that the liveness probe killed the pod in a loop; the
-            # startupProbe below (600s grace) is what actually fixed that, and it
-            # is still in place.
+            # startupProbe below (3600s grace) is what actually fixed that, and
+            # it is still in place.
             #
             # Keeping them disabled is what broke 2026-09-13..16: the v1.92.0 ->
             # v1.100.1 bump left 29 migrations unapplied, so every spend, budget
@@ -62,6 +64,11 @@ spec:
             # schema was migrated by hand. The image is the only thing that
             # carries the schema version, so the schema has to move with it —
             # including when the image-bump bot updates this file.
+            #
+            # v1.100.1 -> v1.106.6 (2026-10-30) carries 52 new migrations. The
+            # v2 migration resolver is the default now and the image exits
+            # non-zero when database setup fails, so the two CLI flags that used
+            # to select those behaviours were removed.
             # `false` (not deletion) so it also overrides any inherited value.
             - name: DISABLE_SCHEMA_UPDATE
               value: "false"
@@ -70,7 +77,11 @@ spec:
             # prisma process killed mid-migration leaves a failed migration in
             # the ledger that blocks every later boot.
             - name: LITELLM_PRISMA_COMMAND_TIMEOUT
-              value: "900"
+              value: "1800"
+            # A 52-migration catch-up can outlive the 600s default lock wait
+            # while the sibling replica holds the migration lock.
+            - name: LITELLM_MIGRATION_LOCK_TIMEOUT
+              value: "1800"
             - name: CHATGPT_TOKEN_DIR
               value: /litellm/chatgpt
             # CNPG's authoritative credential: this cluster defines a managed role
@@ -104,18 +115,12 @@ spec:
           command:
             - sh
             - "-c"
-            # --use_v2_migration_resolver avoids the v1 resolver's diff-and-force
-            # recovery, which the vendor warns thrashes schemas when two versions
-            # contend for one DB during a rolling deploy.
-            # --enforce_prisma_migration_check makes a failed migration exit
-            # non-zero; without it LiteLLM logs a warning and starts anyway,
-            # which is how the drift above went unnoticed.
-            - "apk add --no-cache py3-pillow && sed -i 's/if billable_users and billable_users > 5:/if False:/' /app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0 --use_v2_migration_resolver --enforce_prisma_migration_check"
+            - "apk add --no-cache py3-pillow && sed -i 's/if billable_users and billable_users > 5:/if False:/' /app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py && exec litellm --config /app/config.yaml --port 4000 --host 0.0.0.0"
           startupProbe:
             httpGet:
               path: /health/liveliness
               port: 4000
-            failureThreshold: 60
+            failureThreshold: 360
             periodSeconds: 10
             timeoutSeconds: 5
           resources:
