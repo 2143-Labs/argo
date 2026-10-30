@@ -115,21 +115,21 @@ data:
       # Claude Code on the Claude Max subscription — OAuth passthrough, per
       # docs.litellm.ai/docs/tutorials/claude_code_max_subscription.
       #
-      # Header flow (all verified against the pinned image ghcr.io/berriai/litellm:v1.100.1):
+      # Header flow (all verified against the pinned image ghcr.io/berriai/litellm:v1.106.6):
       #   Claude Code sends  Authorization: Bearer sk-ant-oat...   (subscription token)
       #                 and  x-litellm-api-key: Bearer sk-...      (proxy key)
       #   * user_api_key_auth prefers `x-litellm-api-key` over Authorization
-      #     (SpecialHeaders.custom_litellm_api_key, proxy/_types.py:4229;
-      #      get_api_key() branch order, proxy/auth/user_api_key_auth.py:657).
+      #     (SpecialHeaders.custom_litellm_api_key, proxy/_types.py;
+      #      get_api_key() branch order, proxy/auth/user_api_key_auth.py).
       #   * clean_headers keeps the OAuth Authorization because litellm did NOT
-      #     authenticate with it (proxy/litellm_pre_call_utils.py:911).
+      #     authenticate with it (proxy/litellm_pre_call_utils.py).
       #   * add_provider_specific_headers_to_request scopes it to the anthropic
-      #     provider only (proxy/litellm_pre_call_utils.py:3151, called at :1863).
+      #     provider only (proxy/litellm_pre_call_utils.py).
       #   * optionally_handle_anthropic_oauth rewrites it to
       #     `Authorization: Bearer <token>`, adds
       #     `anthropic-beta: oauth-2025-04-20` and
       #     `anthropic-dangerous-direct-browser-access: true`
-      #     (llms/anthropic/common_utils.py:92).
+      #     (llms/anthropic/common_utils.py).
       # Do NOT set general_settings.forward_client_headers_to_llm_api for this —
       # it is not needed (the OAuth path above is unconditional) and it would
       # forward every client `x-*` header upstream.
@@ -138,28 +138,46 @@ data:
       # for 1M-context models (verified in claude-code 2.1.280: picker values
       # `claude-opus-4-8[1m]`, `claude-sonnet-5[1m]`). The longer pattern wins the
       # specificity sort in PatternMatchRouter
-      # (litellm/router_utils/pattern_match_deployments.py:36) and its capture
+      # (litellm/router_utils/pattern_match_deployments.py) and its capture
       # group replaces the `*` in litellm_params.model, so the suffix is stripped:
       #   claude-opus-4-8[1m] -> anthropic/claude-opus-4-8
       #   claude-opus-5-5    -> anthropic/claude-opus-5-5
       #
-      # Deliberately NO `api_key`: when the client sends an `sk-ant-oat*`
-      # Authorization header, optionally_handle_anthropic_oauth
-      # (llms/anthropic/common_utils.py:92) takes THAT token and strips any
-      # api_key from the request, so the subscription pays.
+      # Fail-closed on purpose: these groups exist only for the official
+      # Claude Code client, which always sends an `sk-ant-oat*` Authorization
+      # header. optionally_handle_anthropic_oauth (llms/anthropic/common_utils.py)
+      # replaces this literal with that token, so the subscription pays; with no
+      # client OAuth token the literal is sent as x-api-key and Anthropic
+      # answers 401. That is deliberate: the previous behaviour fell back to the
+      # pod's platform ANTHROPIC_API_KEY silently, so a misconfigured or expired
+      # client billed API usage without saying so. Non-Claude-Code clients (OMP)
+      # use the separate `claude-api-*` group below.
       #
-      # Be aware of the fallback: with no client OAuth token, litellm resolves
-      # the credential from the environment instead
-      # (AnthropicModelInfo.get_api_key = `api_key or
-      # get_secret_str("ANTHROPIC_API_KEY")`, common_utils.py:805-808), i.e. the
-      # pod's platform key. That keeps API-key clients working on these names;
-      # Assumptions §2 has the fail-closed variant if you would rather error.
+      # `/v1/messages/count_tokens` cannot carry the client OAuth token (the
+      # endpoint builds its request from the body only), so it hits the same 401
+      # and LiteLLM falls back to a local token estimate
+      # (proxy_server.py count_request_tokens -> count_source: local_estimate).
+      # Claude Code still gets a count; it is an estimate, not Anthropic's.
       - model_name: "claude-*[1m]"
         litellm_params:
           model: "anthropic/claude-*"
+          api_key: "oauth-only"
       - model_name: "claude-*"
         litellm_params:
           model: "anthropic/claude-*"
+          api_key: "oauth-only"
+      # API-key route for non-Claude-Code clients (OMP). The distinct prefix is
+      # load-bearing: an exact `claude-opus-*` deployment would win the exact
+      # match over these patterns and capture Claude Code's own requests, and
+      # the API key would pay for them. `claude-api-*` is longer than
+      # `claude-*`, and patterns sort by descending length
+      # (PatternUtils.calculate_pattern_specificity), so it wins. Capture
+      # substitution turns `claude-api-opus-5-5` into
+      # `anthropic/claude-opus-5-5`.
+      - model_name: "claude-api-*"
+        litellm_params:
+          model: "anthropic/claude-*"
+          api_key: "os.environ/ANTHROPIC_API_KEY"
       # OpenAI
       - model_name: "openai/*"
         litellm_params:
@@ -254,9 +272,10 @@ data:
   # are tool-call turns where DeepSeek thinking is off, so the same messages
   # re-warn on every request: measured 2026-09-16, 5101 of 6115 proxy log lines
   # in one hour (83%) were this one message, which buried real warnings.
-  # Upstream bug, open: BerriAI/litellm#37629; fix in PR #37728 (aggregate to
-  # one warning per request) is unmerged and not in the pinned image
-  # ghcr.io/berriai/litellm:v1.100.1.
+  # Upstream issue BerriAI/litellm#37629 was closed on 2026-10-20 without the
+  # aggregation fix: PR #37728 was closed unmerged and the per-message warning
+  # is still present in the pinned image ghcr.io/berriai/litellm:v1.106.6
+  # (litellm/llms/deepseek/chat/transformation.py, _fill_reasoning_content).
   #
   # Scope: drops ONLY that one message, from litellm's `LiteLLM` logger. The
   # placeholder substitution is untouched, so DeepSeek receives exactly the
