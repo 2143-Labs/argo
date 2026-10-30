@@ -28,7 +28,7 @@ data:
                 datasourceUid: mimir
                 model:
                   editorMode: code
-                  expr: increase(kube_pod_container_status_restarts_total{namespace="stalwart"}[15m])
+                  expr: increase(kube_pod_container_status_restarts_total{cluster="", namespace="stalwart"}[15m])
                   instant: true
                   intervalMs: 60000
                   maxDataPoints: 43200
@@ -86,7 +86,7 @@ data:
                 datasourceUid: loki
                 model:
                   editorMode: code
-                  expr: sum(count_over_time({namespace="stalwart"} |= "security.ip-blocked" [15m]))
+                  expr: sum(count_over_time({cluster="home", namespace="stalwart"} |= "security.ip-blocked" [15m]))
                   queryType: range
                   intervalMs: 60000
                   maxDataPoints: 43200

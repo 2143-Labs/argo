@@ -63,3 +63,24 @@ spec:
       port: 514
       targetPort: 1514
       protocol: UDP
+---
+# OTLP gRPC receiver for the nonprod cluster's alloy (bigp nonprod, egress
+# allowlisted to this address only). Tempo itself stays ClusterIP.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo-otlp-lb
+  namespace: observability
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.6.27,fd00:6::27"
+spec:
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/instance: tempo
+    app.kubernetes.io/name: tempo
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317

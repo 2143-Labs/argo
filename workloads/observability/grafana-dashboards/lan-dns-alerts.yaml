@@ -30,7 +30,7 @@ data:
                 datasourceUid: mimir
                 model:
                   editorMode: code
-                  expr: kube_deployment_status_replicas_available{namespace="lan-dns", deployment="lan-dns"}
+                  expr: kube_deployment_status_replicas_available{cluster="", namespace="lan-dns", deployment="lan-dns"}
                   instant: true
                   intervalMs: 60000
                   maxDataPoints: 43200
@@ -89,7 +89,7 @@ data:
                 datasourceUid: loki
                 model:
                   editorMode: code
-                  expr: sum(count_over_time({job="mikrotik", level="warning"} |= "lan-dns down" [15m]))
+                  expr: sum(count_over_time({cluster="home", job="mikrotik", level="warning"} |= "lan-dns down" [15m]))
                   queryType: instant
                   intervalMs: 60000
                   maxDataPoints: 43200
