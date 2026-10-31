@@ -1,0 +1,5 @@
+# nonprod: prod OpenBao through prod Traefik (.6.6:443 allowlisted in the
+# bigp PVE firewall). openbao.ts.2143.me is excluded from nonprod split-horizon.
+server: https://openbao.ts.2143.me
+path: nonprod
+auth: appRole

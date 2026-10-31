@@ -1,0 +1,5 @@
+apiVersion: v2
+name: external-secrets-store
+description: ClusterSecretStore openbao (per-env server/path/auth)
+version: 0.1.0
+type: application

@@ -1,0 +1,4 @@
+# Prod defaults (legacy Application reads values.yaml).
+server: http://openbao-eso.openbao.svc:8210
+path: consumers
+auth: kubernetes
