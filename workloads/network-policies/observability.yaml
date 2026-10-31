@@ -21,6 +21,10 @@
 #     endpoints are unauthenticated LAN-facing ports, so this does not widen
 #     access beyond what they already had; it is recorded here so nobody thinks
 #     the VIP is pod-isolated.
+#   * status-design/status-design (the status gallery's `live` sidecar) -> mimir
+#     8080 every 30 s, see the rule below. Its pod-to-VIP traffic is not always
+#     NATed, so the SNAT allowance does not carry it. Gallery only: PR previews
+#     (status-pr-*) are deliberately excluded.
 #
 # Egress beyond the B1 baseline, and why it is unavoidable. Both entries are
 # 192.168.5.0/24 restricted to a single port, because that is all the cluster
@@ -83,6 +87,22 @@ spec:
     # loki-gateway and mimir's nginx.
     - from:
         - ipBlock: {cidr: 10.99.0.2/32}
+      ports:
+        - port: 8080
+          protocol: TCP
+    # The status gallery's `live` sidecar (status-design) reads Mimir every 30 s
+    # to build /estate-live.json. Its pod-to-VIP traffic is not always NATed
+    # (observed 2026-10-31 on arch: ~50 % refused via the VIP, 100 % refused
+    # pod-direct), so the NAT allowance above does not cover it. Gallery only:
+    # PR previews (status-pr-*) are deliberately excluded and fall back to the
+    # committed snapshot instead.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: status-design
+          podSelector:
+            matchLabels:
+              app: status-design
       ports:
         - port: 8080
           protocol: TCP
