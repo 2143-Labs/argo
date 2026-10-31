@@ -1,7 +1,7 @@
 # One Application per open PR in 2143-Labs/bevy2025, served at
 # https://rots-{N}.john2143.com: web client, rots-authserver + a 1-instance CNPG
 # database, and one game server (wss /ws/0, native UDP
-# 192.168.6.33:30000+4*(N%1000), i.e. 30000-33999; PR numbers equal mod 1000 collide, accepted).
+# 192.168.6.33:31000+4*(N%1000), i.e. 31000-34999; PR numbers equal mod 1000 collide, accepted).
 #
 # The chart lives here (workloads/rots-web), not in bevy2025: the AppProject does
 # not allow that repo as a source. The images are CI's webserver-wasm-pr-<N> and
@@ -48,7 +48,7 @@ spec:
             - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}' }
             - { name: gameserver.replicas, value: '1' }
             # .number is a string in the pullRequest generator, hence atoi.
-            - { name: gameserver.udpPortBase, value: '{{ add 30000 (mul 4 (mod (atoi .number) 1000)) }}' }
+            - { name: gameserver.udpPortBase, value: '{{ add 31000 (mul 4 (mod (atoi .number) 1000)) }}' }
             - { name: gameserver.lbIP, value: 192.168.6.33 }
             - { name: gameserver.lbIPv6, value: 'fd00:6::33' }
             - { name: gameserver.shareKey, value: rots-preview }

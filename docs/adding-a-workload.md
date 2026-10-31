@@ -210,7 +210,7 @@ Notes:
 | lan-dns (53 → k8s_gateway) | 192.168.6.30 | fd00:6::30 |
 | seaweedfs-s3-lan (S3 8333, WireGuard/LAN) | 192.168.6.31 | fd00:6::31 |
 | rots-prod gameserver UDP (36000-36003; 4 Services share it via `allow-shared-ip: rots-prod`) | 192.168.6.32 | fd00:6::32 |
-| rots-preview gameservers UDP (30000-33999; every `rots-pr-*` shares it via `allow-shared-ip: rots-preview`) | 192.168.6.33 | fd00:6::33 |
+| rots-preview gameservers UDP (31000-34999; every `rots-pr-*` shares it via `allow-shared-ip: rots-preview`) | 192.168.6.33 | fd00:6::33 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
 **Free:** v4 `192.168.6.10`, `.12`, `.27` and `192.168.6.34–.200` (`.201–.254` reserved
