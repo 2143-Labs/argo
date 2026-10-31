@@ -1,0 +1,281 @@
+# bigp nonprod alloy: same pipeline as values-prod.yaml, shipping to PROD
+# Loki/Mimir/Tempo over their LoadBalancer IPs (.6.24:3100, .6.23:8080,
+# .6.27:4317 — allowlisted in the bigp PVE firewall), labelled
+# cluster="nonprod". Prod-only scrapes (temporal, observability stack, keda,
+# openbao, status droplet) and the MikroTik syslog receiver are removed; their
+# targets exist only in prod.
+alloy:
+  configMap:
+    create: true
+    content: |
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+      }
+
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.home.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      loki.source.kubernetes_events "events" {
+        forward_to = [loki.write.home.receiver]
+        job_name   = "kube-events"
+        log_format = "json"
+        clustering {
+          enabled = true
+        }
+      }
+
+      loki.write "home" {
+        endpoint {
+          url = "http://192.168.6.24:3100/loki/api/v1/push"
+        }
+        external_labels = { cluster = "nonprod" }
+      }
+
+      // ── Metrics: remote write to Mimir ──
+      prometheus.remote_write "mimir" {
+        endpoint {
+          url = "http://192.168.6.23:8080/api/v1/push"
+        }
+        // nonprod series are labelled; prod (home) series carry no cluster
+        // label, which is what the prod alert rules select with cluster="".
+        external_labels = { cluster = "nonprod" }
+      }
+
+      // kubelet + cAdvisor per node (role=node → <internalIP>:10250)
+      discovery.kubernetes "nodes" {
+        role = "node"
+      }
+
+      prometheus.scrape "kubelet" {
+        targets           = discovery.kubernetes.nodes.targets
+        job_name          = "kubelet"
+        scheme            = "https"
+        metrics_path      = "/metrics"
+        scrape_interval   = "30s"
+        bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        tls_config {
+          insecure_skip_verify = true
+        }
+        forward_to = [prometheus.relabel.kubelet_metrics.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      prometheus.relabel "kubelet_metrics" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "apiserver_.*|etcd_.*|scheduler_.*|workqueue_.*|rest_client_.*|go_.*|process_.*|grpc_.*|kubernetes_feature_.*|node_namespace_.*"
+          action        = "drop"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
+      }
+
+      prometheus.scrape "cadvisor" {
+        targets           = discovery.kubernetes.nodes.targets
+        job_name          = "cadvisor"
+        scheme            = "https"
+        metrics_path      = "/metrics/cadvisor"
+        scrape_interval   = "30s"
+        bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        tls_config {
+          insecure_skip_verify = true
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      // kube-state-metrics (deployed in Step 2)
+      discovery.kubernetes "ksm" {
+        role = "pod"
+        namespaces {
+          names = ["kube-state-metrics"]
+        }
+      }
+
+      prometheus.scrape "ksm" {
+        targets         = discovery.kubernetes.ksm.targets
+        job_name        = "kube-state-metrics"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.remote_write.mimir.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      // traefik (kube-system, metrics port 9100 declared)
+      discovery.kubernetes "traefik" {
+        role = "pod"
+        namespaces {
+          names = ["kube-system"]
+        }
+        selectors {
+          role  = "pod"
+          label = "app.kubernetes.io/name=traefik"
+        }
+      }
+
+      discovery.relabel "traefik" {
+        targets = discovery.kubernetes.traefik.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_number"]
+          regex         = "9100"
+          action        = "keep"
+        }
+      }
+
+      prometheus.scrape "traefik" {
+        targets         = discovery.relabel.traefik.output
+        job_name        = "traefik"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.remote_write.mimir.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+
+
+
+      // ── Traces: OTLP receiver → batch → Tempo ──
+      otelcol.receiver.otlp "traces" {
+        grpc {
+          endpoint = "0.0.0.0:4317"
+        }
+        http {
+          endpoint = "0.0.0.0:4318"
+        }
+        output {
+          traces  = [otelcol.processor.batch.traces.input]
+          metrics = [otelcol.processor.batch.metrics.input]
+        }
+      }
+
+      otelcol.processor.batch "traces" {
+        output {
+          traces = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      otelcol.processor.batch "metrics" {
+        output {
+          metrics = [otelcol.exporter.otlphttp.mimir.input]
+        }
+      }
+
+      otelcol.exporter.otlphttp "mimir" {
+        client {
+          endpoint = "http://192.168.6.23:8080/otlp"
+          tls {
+            insecure = true
+          }
+        }
+      }
+
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "192.168.6.27:4317"
+          tls {
+            insecure = true
+          }
+        }
+      }
+
+      // -- Node systemd journal (k3s, kubelet, sshd, postgres, ...) --
+      loki.relabel "journal" {
+        forward_to = []
+        rule {
+          source_labels = ["__journal__systemd_unit"]
+          target_label  = "unit"
+        }
+        rule {
+          source_labels = ["__journal__hostname"]
+          target_label  = "host"
+        }
+        rule {
+          source_labels = ["__journal_priority_keyword"]
+          target_label  = "level"
+        }
+        rule {
+          target_label = "job"
+          replacement  = "node-journal"
+        }
+      }
+
+      loki.source.journal "node" {
+        path          = "/var/log/journal"
+        max_age       = "12h"
+        // job is set by the relabel rule: this component forces
+        // job=<component id> over `labels`.
+        relabel_rules = loki.relabel.journal.rules
+        forward_to    = [loki.write.home.receiver]
+      }
+
+  clustering:
+    enabled: true
+    name: alloy
+  enableReporting: false
+  storagePath: /var/lib/alloy
+  mounts:
+    extra:
+      - name: positions
+        mountPath: /var/lib/alloy
+      - name: journal
+        mountPath: /var/log/journal
+        readOnly: true
+      - name: machine-id
+        mountPath: /etc/machine-id
+        readOnly: true
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+controller:
+  volumes:
+    extra:
+      - name: positions
+        hostPath:
+          path: /var/lib/alloy
+          type: DirectoryOrCreate
+      - name: journal
+        hostPath:
+          path: /var/log/journal
+          type: Directory
+      - name: machine-id
+        hostPath:
+          path: /etc/machine-id
+          type: File
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 2Gi
