@@ -47,6 +47,15 @@ if "sources" in got and "source" in want:
     got.pop("sources"); got["source"] = s0
     want = w
     print(f"note: multi-source; compared sources[0] minus {vf[0]} against legacy source minus inline values")
+# Go omitempty drops `group: ""` in generated ignoreDifferences; an empty and
+# an absent group are the same (core API group) to Argo's diff normaliser.
+def norm(spec):
+    spec = json.loads(json.dumps(spec))
+    for d in spec.get("ignoreDifferences", []):
+        if d.get("group") == "":
+            d.pop("group")
+    return spec
+got, want = norm(got), norm(want)
 if got != want:
     print("FAIL: spec differs")
     print("live:", json.dumps(want, indent=1, sort_keys=True))
