@@ -1,28 +1,15 @@
+{{- if .Values.prodOnly }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: matrix-tuwunel
+  name: grafana-route
   namespace: default
 spec:
-  hostnames:
-    - matrix.2143.me
   parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: shared-gateway
-      namespace: default
-      sectionName: 2143-me-wildcard-https
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
+  hostnames: [grafana.john2143.com]
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /voice
-      backendRefs:
-        - group: ""
-          kind: Service
-          name: heorot-voice-relay
-          namespace: matrix
-          port: 8088
     - matches:
         - path:
             type: PathPrefix
@@ -44,8 +31,7 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - group: ""
-          kind: Service
-          name: tuwunel-conduwuit
-          namespace: matrix
-          port: 8008
+        - name: grafana
+          namespace: observability
+          port: 80
+{{- end }}

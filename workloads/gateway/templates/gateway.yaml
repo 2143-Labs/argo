@@ -22,7 +22,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: john2143-com-wildcard-tls
+            name: {{ .Values.certOverride | default "john2143-com-wildcard-tls" }}
       allowedRoutes:
         namespaces:
           from: Same
@@ -42,7 +42,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: john2143-com-wildcard-tls
+            name: {{ .Values.certOverride | default "john2143-com-wildcard-tls" }}
       allowedRoutes:
         namespaces:
           from: Selector
@@ -64,7 +64,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: 2143-me-wildcard-tls
+            name: {{ .Values.certOverride | default "2143-me-wildcard-tls" }}
       allowedRoutes:
         namespaces:
           from: Selector
@@ -85,7 +85,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: ts-2143-me-wildcard-tls
+            name: {{ .Values.certOverride | default "ts-2143-me-wildcard-tls" }}
       allowedRoutes:
         namespaces:
           from: Selector
@@ -138,7 +138,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: mm-b-hero-rehab-tls
+            name: {{ .Values.certOverride | default "mm-b-hero-rehab-tls" }}
       allowedRoutes:
         namespaces:
           from: Same
@@ -178,7 +178,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: aross-studio-wildcard-tls
+            name: {{ .Values.certOverride | default "aross-studio-wildcard-tls" }}
       allowedRoutes:
         namespaces:
           from: Same
@@ -192,7 +192,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: balabusta-homes-tls
+            name: {{ .Values.certOverride | default "balabusta-homes-tls" }}
       allowedRoutes:
         namespaces:
           from: Same
@@ -205,7 +205,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: balabusta-homes-tls
+            name: {{ .Values.certOverride | default "balabusta-homes-tls" }}
       allowedRoutes:
         namespaces:
           from: Same
@@ -219,7 +219,7 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: chess-dsstar-us-tls
+            name: {{ .Values.certOverride | default "chess-dsstar-us-tls" }}
       allowedRoutes:
         namespaces:
           from: Same

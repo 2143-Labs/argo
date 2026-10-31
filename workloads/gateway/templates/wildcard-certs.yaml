@@ -1,3 +1,4 @@
+{{- if .Values.prodOnly }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -105,3 +106,4 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - chess.dsstar.us
+{{- end }}

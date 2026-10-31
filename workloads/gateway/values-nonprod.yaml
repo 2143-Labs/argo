@@ -1,0 +1,6 @@
+# bigp nonprod: same listeners/sectionNames as prod, every certificateRef
+# points at the static *.dev.john2143.com pair (Secret nonprod-dev-tls,
+# seeded by bigp-tofu/bin/nonprod-rebuild.sh). Only gateway.yaml +
+# security-middlewares.yaml + lan-only-middleware.yaml render.
+prodOnly: false
+certOverride: nonprod-dev-tls

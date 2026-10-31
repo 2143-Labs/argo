@@ -1,0 +1,2 @@
+# Prod defaults (legacy Application reads values.yaml).
+prodOnly: true

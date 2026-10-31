@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gateway
+description: shared-gateway listeners, middlewares and (prod-only) routes/certs
+version: 0.1.0
+type: application

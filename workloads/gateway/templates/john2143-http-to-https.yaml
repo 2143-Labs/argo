@@ -1,3 +1,4 @@
+{{- if .Values.prodOnly }}
 # Plain HTTP hits the acme-http listener (port 8000). Without a matching HTTPRoute,
 # Traefik returns 404 for hosts that only define HTTPS listeners. Redirect browsers
 # and bookmarks that use http:// to https://. ACME HTTP-01 uses more specific paths
@@ -38,3 +39,4 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+{{- end }}
