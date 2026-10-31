@@ -33,6 +33,13 @@ spec:
           name: crowdsec-lapi-secrets
           jsonPointers:
             - /data
+        # the chart also stamps a checksum of that random secret on the pod
+        # template, which would roll LAPI on every sync.
+        - group: apps
+          kind: Deployment
+          name: crowdsec-lapi
+          jsonPointers:
+            - /spec/template/metadata/annotations/checksum~1lapi-secret
       syncPolicy:
         automated:
           prune: true
