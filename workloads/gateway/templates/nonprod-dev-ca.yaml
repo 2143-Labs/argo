@@ -1,0 +1,24 @@
+{{- if .Values.prodOnly }}
+# Public CA for the bigp nonprod cluster's static *.dev.john2143.com /
+# au-dev.2143.me cert (private key: dotfiles secrets/nonprod-dev-tls.age).
+# BackendTLSPolicy below validates nonprod Traefik against it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nonprod-dev-ca
+  namespace: default
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIBwDCCAWagAwIBAgIUPbzAUtWXZVLQEf2gEwOtrwCu9I8wCgYIKoZIzj0EAwIw
+    HTEbMBkGA1UEAwwSKi5kZXYuam9objIxNDMuY29tMB4XDTI2MTAzMDEzNTEyMloX
+    DTM2MTAyNzEzNTEyMlowHTEbMBkGA1UEAwwSKi5kZXYuam9objIxNDMuY29tMFkw
+    EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcENh+COa/bv48W6wvHxxNjR9Gps9ISMu
+    pCK03oaSw+UbbDYX6QhHgzBmPRnU5daocvSZ3nOCCjUarNC4qsgTXqOBgzCBgDAd
+    BgNVHQ4EFgQU2ok/i8apqtYFt+axtMufEP2hQWYwHwYDVR0jBBgwFoAU2ok/i8ap
+    qtYFt+axtMufEP2hQWYwDwYDVR0TAQH/BAUwAwEB/zAtBgNVHREEJjAkghIqLmRl
+    di5qb2huMjE0My5jb22CDmF1LWRldi4yMTQzLm1lMAoGCCqGSM49BAMCA0gAMEUC
+    IBhA0Z+ZH9flnWido7Ryh6SqsI4ylFJgyP04p/oOVpQcAiEAs6MtK5ofu/xahDOZ
+    nuS9Iwn3Xm+VKb+Oxh6SxyMQakQ=
+    -----END CERTIFICATE-----
+{{- end }}

@@ -40,6 +40,21 @@ spec:
     - "*.john2143.com"
     - "john2143.com"
 ---
+# *.dev.john2143.com — prod terminates TLS for the bigp nonprod cluster and
+# re-encrypts to it (dev-route.yaml). One label only: a.dev.john2143.com.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-dev-john2143-com
+  namespace: default
+spec:
+  secretName: wildcard-dev-john2143-com-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.dev.john2143.com"
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

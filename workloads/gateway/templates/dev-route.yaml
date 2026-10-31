@@ -1,0 +1,90 @@
+{{- if .Values.prodOnly }}
+# *.dev.john2143.com and au-dev.2143.me -> bigp nonprod cluster Traefik
+# (192.168.7.7). Prod terminates TLS (public LE certs) and re-encrypts to
+# nonprod, validated against nonprod-dev-ca. The BackendTLSPolicies are
+# mandatory: from Traefik v3.7.15 port 443 no longer implies HTTPS.
+# Selectorless Service + custom EndpointSlice, same pattern as
+# workloads/metallb/templates/kubernetes-api-lb.yaml.
+{{- range $name, $host := dict "nonprod-traefik" "gateway.dev.john2143.com" "nonprod-traefik-2143me" "au-dev.2143.me" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: default
+spec:
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: {{ $name }}
+  namespace: default
+  labels:
+    kubernetes.io/service-name: {{ $name }}
+    endpointslice.kubernetes.io/managed-by: custom
+addressType: IPv4
+endpoints:
+  - addresses: ["192.168.7.7"]
+    conditions:
+      ready: true
+ports:
+  - name: https
+    port: 443
+    protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: {{ $name }}
+  namespace: default
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: {{ $name }}
+  validation:
+    # SNI and verified name; covered by the static cert's SANs.
+    hostname: {{ $host }}
+    caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: nonprod-dev-ca
+{{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dev-to-nonprod
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: dev-john2143-wildcard-https
+  hostnames:
+    - "*.dev.john2143.com"
+  rules:
+    - backendRefs:
+        - name: nonprod-traefik
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dev-to-nonprod-au
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: 2143-me-wildcard-https
+  hostnames:
+    - au-dev.2143.me
+  rules:
+    - backendRefs:
+        - name: nonprod-traefik-2143me
+          port: 443
+{{- end }}

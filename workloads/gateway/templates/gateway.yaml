@@ -76,6 +76,21 @@ spec:
                   - default
                   - pocket-id
                   - stalwart
+    # *.dev.john2143.com: prod routes it to the bigp nonprod cluster
+    # (dev-route.yaml); nonprod serves the same hostnames on its own Traefik.
+    - name: dev-john2143-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.dev.john2143.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.certOverride | default "wildcard-dev-john2143-com-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same
     - name: ts-2143-me-wildcard-https
       protocol: HTTPS
       port: 8443
