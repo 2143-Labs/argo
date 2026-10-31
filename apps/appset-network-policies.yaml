@@ -19,6 +19,15 @@ spec:
             - key: env
               operator: In
               values: [prod, nonprod]
+  # nonprod has no keda namespace (keda is prod-only), so skip its policies
+  # there. templatePatch keeps the prod Application spec unchanged.
+  templatePatch: |
+    {{- if ne (index .metadata.labels "env") "prod" }}
+    spec:
+      source:
+        directory:
+          exclude: keda.yaml
+    {{- end }}
   template:
     metadata:
       name: 'network-policies{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
