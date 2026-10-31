@@ -19,6 +19,29 @@ spec:
             - key: env
               operator: In
               values: [prod, nonprod]
+  # nonprod renders crowdsec-lapi-secrets from the chart, whose values come
+  # from randAscii/randAlphaNum (its `lookup` fallback is empty under Argo).
+  # Without this, every refresh produces new data, selfHeal re-applies it,
+  # reloader restarts LAPI/appsec, forever. Keep the first-created data.
+  # Prod uses the ExternalSecret and is unaffected (spec unchanged).
+  templatePatch: |
+    {{- if ne (index .metadata.labels "env") "prod" }}
+    spec:
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: crowdsec-lapi-secrets
+          jsonPointers:
+            - /data
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+    {{- end }}
   template:
     metadata:
       name: 'crowdsec{{ if ne (index .metadata.labels "env") "prod" }}-{{ index .metadata.labels "env" }}{{ end }}'
