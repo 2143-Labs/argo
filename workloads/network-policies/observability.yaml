@@ -90,6 +90,20 @@ spec:
       ports:
         - port: 8080
           protocol: TCP
+    # bigp nonprod nodes (np1-3) shipping their Alloy telemetry to prod via
+    # loki-push-lb/mimir-lb/tempo-otlp-lb. Same no-SNAT case as DOKS above
+    # when the endpoint pod runs on the node the VIP lands on (loki-gateway on
+    # closet rejected every nonprod push, 2026-10-30). 8080: loki-gateway and
+    # mimir's nginx; 4317: tempo OTLP gRPC. Harmless in nonprod's own copy.
+    - from:
+        - ipBlock: {cidr: 192.168.5.40/32}
+        - ipBlock: {cidr: 192.168.5.41/32}
+        - ipBlock: {cidr: 192.168.5.42/32}
+      ports:
+        - port: 8080
+          protocol: TCP
+        - port: 4317
+          protocol: TCP
     # The status gallery's `live` sidecar (status-design) reads Mimir every 30 s
     # to build /estate-live.json. Its pod-to-VIP traffic is not always NATed
     # (observed 2026-10-31 on arch: ~50 % refused via the VIP, 100 % refused
