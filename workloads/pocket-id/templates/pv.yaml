@@ -1,3 +1,4 @@
+{{- if .Values.restoredPV }}
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -18,3 +19,4 @@ spec:
     volumeAttributes:
       numberOfReplicas: "2"
       staleReplicaTimeout: "20"
+{{- end }}

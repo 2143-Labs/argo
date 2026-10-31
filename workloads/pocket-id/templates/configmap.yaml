@@ -5,7 +5,7 @@ metadata:
   namespace: pocket-id
 data:
   ANALYTICS_DISABLED: "false"
-  APP_URL: https://au.2143.me
+  APP_URL: https://{{ .Values.host }}
   AUDIT_LOG_RETENTION_DAYS: "90"
   DISABLE_RATE_LIMITING: "true"
   FILE_BACKEND: filesystem

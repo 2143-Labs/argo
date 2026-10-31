@@ -1,0 +1,5 @@
+host: au.2143.me
+# Bind the PVC to the restored Longhorn volume (prod data, 2026).
+restoredPV: true
+# Prod gets the ExternalSecret from the `secrets` app.
+renderExternalSecret: false

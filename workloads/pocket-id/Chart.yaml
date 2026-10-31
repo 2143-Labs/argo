@@ -1,0 +1,5 @@
+apiVersion: v2
+name: pocket-id
+description: Pocket-ID OIDC provider (prod au.2143.me, nonprod au-dev.2143.me)
+version: 0.1.0
+type: application

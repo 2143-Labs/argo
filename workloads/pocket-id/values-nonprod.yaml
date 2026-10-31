@@ -1,0 +1,5 @@
+# bigp nonprod: empty instance after every rebuild. Dynamic longhorn-3 PVC.
+# ENCRYPTION_KEY from OpenBao nonprod/john2143-com/pocket-id/pocket-id-secrets.
+host: au-dev.2143.me
+restoredPV: false
+renderExternalSecret: true

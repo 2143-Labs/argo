@@ -9,7 +9,7 @@ spec:
       namespace: default
       sectionName: 2143-me-wildcard-https
   hostnames:
-    - au.2143.me
+    - {{ .Values.host | quote }}
   rules:
     - matches:
         - path:
