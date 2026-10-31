@@ -1,8 +1,14 @@
 # Owned by the Application so closing a PR prunes the namespace too. Argo's
 # CreateNamespace=true would otherwise leave an empty namespace behind.
+# With db.protect (prod) the namespace is kept on prune/delete as well: pruning
+# it would delete the CNPG Cluster inside it despite the Cluster's own annotation.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ required "namespace is required" .Values.namespace }}
   labels:
     app.kubernetes.io/part-of: rots-web
+  {{- if .Values.db.protect }}
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  {{- end }}

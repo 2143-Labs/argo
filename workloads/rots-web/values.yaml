@@ -1,8 +1,36 @@
-# All four are set by apps/rots-web.yaml (prod) or apps/rots-web-preview.yaml
+# Every empty string is set by apps/rots-web.yaml (prod) or apps/rots-web-preview.yaml
 # (one per bevy2025 PR); the templates fail to render if any is empty.
-namespace: ""   # rots-web (prod) or rots-pr-<N>
+namespace: ""   # rots-prod (prod) or rots-pr-<N>
 host: ""        # rots.john2143.com or rots-<N>.john2143.com
 routeName: ""   # unique in `default`: rots-web or rots-pr-<N>
+publicUrl: ""   # https://rots.john2143.com or https://rots-<N>.john2143.com; ticket audience
 image:
   repository: ghcr.io/2143-labs/bevy2025
-  tag: ""       # webserver-wasm-latest or webserver-wasm-pr-<N>
+  tag: ""       # web client: webserver-wasm-latest or webserver-wasm-pr-<N>
+
+authserver:
+  # Same image everywhere: rots-authserver CI pushes server-latest on every master build.
+  image: ghcr.io/2143-labs/rots-authserver:server-latest
+  # OpenBao path rendered into Secret rots-authserver-secret (externalsecret.yaml):
+  # john2143-com/rots-prod/rots-authserver-secret (prod) or
+  # john2143-com/rots-preview/rots-authserver-secret (every preview).
+  secretKey: ""
+  # DISABLED_PROVIDERS: "" (prod) or "discord" (previews; Discord redirect URIs are exact).
+  disabledProviders: ""
+
+db:
+  clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app
+  instances: 1          # 2 (prod) or 1 (previews)
+  size: 2Gi
+  walSize: 1Gi
+  storageClass: longhorn-cnpg
+  protect: false        # true (prod): Prune=false,Delete=false on the Cluster and Namespace
+
+gameserver:
+  tag: ""          # gameserver-latest (prod) or gameserver-pr-<N>
+  replicas: 1      # 4 (prod) or 1 (previews)
+  slots: 4         # UDP ports reserved per environment; replicas may not exceed it
+  udpPortBase: 0   # 29000 (prod) or 25000 + 4*(N % 1000) (previews)
+  lbIP: ""         # 192.168.6.32 (prod) or 192.168.6.33 (previews)
+  lbIPv6: ""       # fd00:6::32 (prod) or fd00:6::33 (previews)
+  shareKey: ""     # metallb.io/allow-shared-ip: rots-prod (prod) or rots-preview (previews)

@@ -1,0 +1,109 @@
+# rots-authserver: accounts, sessions and game tickets. Always on (game servers
+# fetch its public key at startup). Served at https://<host>/auth; the HTTPRoute
+# strips /auth, so the app serves /api/v1/... at its root.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-authserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-authserver
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-authserver
+  template:
+    metadata:
+      labels:
+        app: rots-authserver
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: rots-authserver
+          image: {{ required "authserver.image is required" .Values.authserver.image }}
+          # server-latest is a moving tag that CI overwrites.
+          imagePullPolicy: Always
+          # clap subcommand (Action::Server) is required.
+          args: ["server"]
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: PUBLIC_URL
+              value: {{ required "publicUrl is required" .Values.publicUrl | quote }}
+            - name: STEAM_APP_ID
+              value: "4346770"
+            - name: DISABLED_PROVIDERS
+              value: {{ .Values.authserver.disabledProviders | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.clusterName }}-app
+                  key: uri
+            - name: RUST_LOG
+              value: info
+          # TICKET_SIGNING_KEY and the provider credentials (externalsecret.yaml).
+          envFrom:
+            - secretRef:
+                name: rots-authserver-secret
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-authserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-authserver
+spec:
+  type: ClusterIP
+  selector:
+    app: rots-authserver
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http

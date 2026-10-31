@@ -51,6 +51,8 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 | LiveKit WebRTC TCP (TCP only) | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` | `.6.22` | matrix/livekit-server-rtc |
 | factorio | 34197 | `factorio (udp/34197) -> .6.28` | `.6.28` | factorio-game |
 | mc | 25565 | `minecraft (tcp/25565) -> .6.29` | `.6.29` | minecraft-game |
+| rots prod (**pending**: add by hand once `rots-gs-*-udp` show EXTERNAL-IP) | 29000-29003 | `rots prod gameservers (udp/29000-29003) -> .6.32` | `.6.32` | `rots-prod/rots-gs-<i>-udp` |
+| rots previews (**pending**, as above; UDP only. The range covers the `mc` 25565 and dead 25555 entries, so give those TCP-only or split this range if Verizon rejects the overlap) | 25000-28999 | `rots previews gameservers (udp/25000-28999) -> .6.33` | `.6.33` | `rots-pr-<N>/rots-gs-0-udp`, port `25000+4*(N%1000)` |
 | monero | 18080 | `monero p2p (tcp/18080) -> .5.76` | `192.168.5.76` | Monero on arch (bare metal) |
 | wg | 51820 | none: input rule `wireguard remote access` | the router | `wg-remote` tunnel to the DigitalOcean cluster |
 | attic local | 8280 | none (goes to home-pi) | `192.168.0.154` | Attic cache used by the Hetzner nodes |

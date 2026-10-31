@@ -1,0 +1,189 @@
+# ROTS game servers. Pod i is reached two ways:
+#   - browsers: wss://<host>/ws/<i> (HTTPRoute -> Service rots-gs-<i>, TCP 25565;
+#     server/src/websocket.rs binds TCP on the game port)
+#   - native clients: udp <lbIP>:<udpPortBase + i> (Service rots-gs-<i>-udp)
+# Every connection carries a game ticket the server verifies against the
+# authserver's public key (fetched once at startup from ROTS_AUTH_URL).
+{{- $ns := required "namespace is required" .Values.namespace }}
+{{- $gs := .Values.gameserver }}
+{{- $replicas := int $gs.replicas }}
+{{- $slots := int $gs.slots }}
+{{- $base := int $gs.udpPortBase }}
+{{- if gt $replicas $slots }}
+{{- fail (printf "gameserver.replicas (%d) exceeds gameserver.slots (%d)" $replicas $slots) }}
+{{- end }}
+{{- if or (lt $base 1) (gt (add $base $slots -1) 65535) }}
+{{- fail (printf "gameserver.udpPortBase (%d) must leave %d ports within 1-65535" $base $slots) }}
+{{- end }}
+{{- $lbIP := required "gameserver.lbIP is required" $gs.lbIP }}
+{{- $lbIPv6 := required "gameserver.lbIPv6 is required" $gs.lbIPv6 }}
+{{- $shareKey := required "gameserver.shareKey is required" $gs.shareKey }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rots-gameserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-gameserver
+spec:
+  serviceName: rots-gameserver
+  replicas: {{ $replicas }}
+  # Pods are independent servers; never make pod 3 wait on pod 0.
+  podManagementPolicy: Parallel
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-gameserver
+  template:
+    metadata:
+      labels:
+        app: rots-gameserver
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: rots-gameserver
+          image: "{{ .Values.image.repository }}:{{ required "gameserver.tag is required" $gs.tag }}"
+          # gameserver-latest / gameserver-pr-<N> are moving tags that CI overwrites.
+          imagePullPolicy: Always
+          # Config::load_from_main_dir writes config.yaml into the cwd.
+          workingDir: /data
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: ROTS_BIND_IP
+              value: "0.0.0.0"
+            - name: ROTS_PORT
+              value: "25565"
+            - name: ROTS_AUTH_URL
+              value: "http://rots-authserver.{{ $ns }}.svc"
+            - name: ROTS_TICKET_AUDIENCE
+              value: {{ required "publicUrl is required" .Values.publicUrl | quote }}
+            - name: RUST_LOG
+              value: info
+          ports:
+            - containerPort: 25565
+              protocol: UDP
+              name: game-udp
+            - containerPort: 25565
+              protocol: TCP
+              name: game-ws
+            - containerPort: 25566
+              protocol: TCP
+              name: health
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+
+          # The server retries the authserver public-key fetch for up to ~120s
+          # before it starts listening; give it that long before liveness applies.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 5
+            failureThreshold: 36
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            failureThreshold: 6
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+# Governing (headless) Service for the StatefulSet; gives each pod stable DNS.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-gameserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-gameserver
+spec:
+  clusterIP: None
+  selector:
+    app: rots-gameserver
+  ports:
+    - port: 25565
+      targetPort: 25565
+      protocol: TCP
+      name: game-ws
+{{- range $i := until $replicas }}
+---
+# WebSocket backend for /ws/{{ $i }} (httproute.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-gs-{{ $i }}
+  namespace: {{ $ns }}
+  labels:
+    app: rots-gameserver
+spec:
+  type: ClusterIP
+  selector:
+    statefulset.kubernetes.io/pod-name: rots-gameserver-{{ $i }}
+  ports:
+    - port: 80
+      targetPort: 25565
+      protocol: TCP
+      name: game-ws
+---
+# Native UDP for pod {{ $i }}. Every LB Service in this environment (and, for
+# previews, in every rots-pr-* namespace) shares one VIP via allow-shared-ip;
+# MetalLB only shares across differing selectors with externalTrafficPolicy: Cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-gs-{{ $i }}-udp
+  namespace: {{ $ns }}
+  labels:
+    app: rots-gameserver
+  annotations:
+    metallb.io/loadBalancerIPs: "{{ $lbIP }},{{ $lbIPv6 }}"
+    metallb.io/allow-shared-ip: {{ $shareKey | quote }}
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  externalTrafficPolicy: Cluster
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies: [IPv4, IPv6]
+  selector:
+    statefulset.kubernetes.io/pod-name: rots-gameserver-{{ $i }}
+  ports:
+    - port: {{ add $base $i }}
+      targetPort: 25565
+      protocol: UDP
+      name: game-udp
+{{- end }}

@@ -209,10 +209,12 @@ Notes:
 | minecraft-game | 192.168.6.29 | fd00:6::29 |
 | lan-dns (53 → k8s_gateway) | 192.168.6.30 | fd00:6::30 |
 | seaweedfs-s3-lan (S3 8333, WireGuard/LAN) | 192.168.6.31 | fd00:6::31 |
+| rots-prod gameserver UDP (29000-29003; 4 Services share it via `allow-shared-ip: rots-prod`) | 192.168.6.32 | fd00:6::32 |
+| rots-preview gameservers UDP (25000-28999; every `rots-pr-*` shares it via `allow-shared-ip: rots-preview`) | 192.168.6.33 | fd00:6::33 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.10`, `.12`, `.27` and `192.168.6.32–.200` (`.201–.254` reserved
-headroom); v6 `fd00:6::11`, `::12`, `::20`, `::27`, `::2a–::2f`, `::32–::ff`. Never
+**Free:** v4 `192.168.6.10`, `.12`, `.27` and `192.168.6.34–.200` (`.201–.254` reserved
+headroom); v6 `fd00:6::11`, `::12`, `::20`, `::27`, `::2a–::2f`, `::34–::ff`. Never
 reuse an in-use address; a collision surfaces as `AllocationFailed: address also
 in use by <ns>/<svc>`.
 
