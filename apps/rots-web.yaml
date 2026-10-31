@@ -1,7 +1,7 @@
 # ROTS (bevy2025) production at https://rots.john2143.com, namespace rots-prod:
 # web client (CI's webserver-wasm-latest, scale-to-zero via KEDA HTTP),
 # rots-authserver + its CNPG database, and 4 game servers (wss /ws/<i>, native
-# UDP 192.168.6.32:35000-35003). Previews are separate (see rots-web-preview.yaml).
+# UDP 192.168.6.32:36000-36003). Previews are separate (see rots-web-preview.yaml).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -27,7 +27,7 @@ spec:
         - { name: db.protect, value: 'true' }
         - { name: gameserver.tag, value: gameserver-latest }
         - { name: gameserver.replicas, value: '4' }
-        - { name: gameserver.udpPortBase, value: '35000' }
+        - { name: gameserver.udpPortBase, value: '36000' }
         - { name: gameserver.lbIP, value: 192.168.6.32 }
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
         - { name: gameserver.shareKey, value: rots-prod }
