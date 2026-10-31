@@ -17,6 +17,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Longhorn iSCSI Recovery](longhorn-iscsi-recovery.md)
 - [Matter server: fabric, restore and the start-up guard](matter-server.md)
 - [k3s store paths: why GC must not break a node](k3s-store-paths.md)
+- [Multi-cluster: prod + bigp nonprod, ApplicationSet cutover](multi-cluster.md)
 
 ## Records
 
