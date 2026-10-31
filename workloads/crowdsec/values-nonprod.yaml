@@ -1,0 +1,42 @@
+# bigp nonprod. Identical to values-prod.yaml except secrets.externalSecret.
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+# nonprod: no secrets.externalSecret — the chart generates its own
+# crowdsec-lapi-secrets (nonprod is rebuilt weekly; no OpenBao dependency).
+agent:
+  enabled: false
+  hostVarLog: true
+  container_runtime: containerd
+  acquisition:
+    - namespace: kube-system
+      podName: "traefik-*"
+      program: traefik
+appsec:
+  enabled: true
+  acquisitions:
+    - source: appsec
+      listen_addr: "0.0.0.0:7422"
+      path: /
+      appsec_config: crowdsecurity/crs-vpatch
+      labels:
+        type: appsec
+  configs:
+    crs-vpatch.yaml: |
+      name: crowdsecurity/crs-vpatch
+      default_remediation: ban
+      #log_level: debug
+      outofband_rules:
+        - crowdsecurity/crs
+      inband_rules:
+        - crowdsecurity/base-config
+        - crowdsecurity/vpatch-*
+  env:
+    - name: COLLECTIONS
+      value: "crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-crs"
+lapi:
+  replicas: 1
+  persistentVolume:
+    data:
+      storageClassName: longhorn-2
+    config:
+      storageClassName: longhorn-2
