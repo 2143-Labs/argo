@@ -30,7 +30,7 @@ gameserver:
   tag: ""          # gameserver-latest (prod) or gameserver-pr-<N>
   replicas: 1      # 4 (prod) or 1 (previews)
   slots: 4         # UDP ports reserved per environment; replicas may not exceed it
-  udpPortBase: 0   # 35000 (prod) or 30000 + 4*(N % 1000) (previews)
+  udpPortBase: 0   # 36000 (prod) or 30000 + 4*(N % 1000) (previews)
   lbIP: ""         # 192.168.6.32 (prod) or 192.168.6.33 (previews)
   lbIPv6: ""       # fd00:6::32 (prod) or fd00:6::33 (previews)
   shareKey: ""     # metallb.io/allow-shared-ip: rots-prod (prod) or rots-preview (previews)

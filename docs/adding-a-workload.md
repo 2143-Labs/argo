@@ -209,7 +209,7 @@ Notes:
 | minecraft-game | 192.168.6.29 | fd00:6::29 |
 | lan-dns (53 → k8s_gateway) | 192.168.6.30 | fd00:6::30 |
 | seaweedfs-s3-lan (S3 8333, WireGuard/LAN) | 192.168.6.31 | fd00:6::31 |
-| rots-prod gameserver UDP (35000-35003; 4 Services share it via `allow-shared-ip: rots-prod`) | 192.168.6.32 | fd00:6::32 |
+| rots-prod gameserver UDP (36000-36003; 4 Services share it via `allow-shared-ip: rots-prod`) | 192.168.6.32 | fd00:6::32 |
 | rots-preview gameservers UDP (30000-33999; every `rots-pr-*` shares it via `allow-shared-ip: rots-preview`) | 192.168.6.33 | fd00:6::33 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
