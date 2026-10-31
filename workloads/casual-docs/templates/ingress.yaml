@@ -14,9 +14,9 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: john2143-wildcard-https
+      sectionName: {{ .Values.sectionName }}
   hostnames:
-    - docs.john2143.com
+    - {{ .Values.host }}
   rules:
     - matches:
         - path:
@@ -115,7 +115,7 @@ spec:
     - name: shared-gateway
       sectionName: acme-http
   hostnames:
-    - docs.john2143.com
+    - {{ .Values.host }}
   rules:
     - matches:
         - path:

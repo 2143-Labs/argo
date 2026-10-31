@@ -1,0 +1,5 @@
+apiVersion: v2
+name: casual-docs
+description: casual-docs editor (prod docs.john2143.com, nonprod docs.dev.john2143.com)
+version: 0.1.0
+type: application
