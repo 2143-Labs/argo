@@ -185,7 +185,7 @@
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-403.55" font-family="Helvetica,sans-Serif" font-size="11.00">ROUTER RB5009UPr+S+</text>
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-390.05" font-family="Helvetica,sans-Serif" font-size="11.00">.0.2 WAN · .5.1 · .1.1 · .88.254</text>
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-376.55" font-family="Helvetica,sans-Serif" font-size="11.00">BGP 65001 · BFD 3784 · WireGuard 51820</text>
-<text xml:space="preserve" text-anchor="middle" x="489.06" y="-363.05" font-family="Helvetica,sans-Serif" font-size="11.00">dst&#45;nat 15 rules · DNS FWD ×6</text>
+<text xml:space="preserve" text-anchor="middle" x="489.06" y="-363.05" font-family="Helvetica,sans-Serif" font-size="11.00">dst&#45;nat 18 rules · DNS FWD ×6</text>
 </g>
 <!-- verizon&#45;&gt;router -->
 <g id="edge2" class="edge">
@@ -279,36 +279,37 @@
 <!-- vipc -->
 <g id="node45" class="node vip">
 <title>vipc</title>
-<path fill="white" stroke="black" d="M1030.93,-267.75C1030.93,-267.75 822.93,-267.75 822.93,-267.75 816.93,-267.75 810.93,-261.75 810.93,-255.75 810.93,-255.75 810.93,-204.25 810.93,-204.25 810.93,-198.25 816.93,-192.25 822.93,-192.25 822.93,-192.25 1030.93,-192.25 1030.93,-192.25 1036.93,-192.25 1042.93,-198.25 1042.93,-204.25 1042.93,-204.25 1042.93,-255.75 1042.93,-255.75 1042.93,-261.75 1036.93,-267.75 1030.93,-267.75"/>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-255.2" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Cluster (13)</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-243.95" font-family="Helvetica,sans-Serif" font-size="9.00">.6.14 coturn &#160;&#160;.6.17 openrct2 &#160;&#160;.6.19 mosquitto</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-232.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.20 temporal &#160;&#160;.6.21 coturn &#160;&#160;.6.22 livekit</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-221.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.23 mimir &#160;&#160;.6.24 loki &#160;&#160;.6.25 syslog</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-210.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.26 frigate &#160;&#160;.6.30 lan&#45;dns &#160;&#160;.6.31 seaweedfs</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-198.95" font-family="Helvetica,sans-Serif" font-size="9.00">.5.10 kubernetes&#45;api :6443</text>
+<path fill="white" stroke="black" d="M1030.93,-267.38C1030.93,-267.38 822.93,-267.38 822.93,-267.38 816.93,-267.38 810.93,-261.38 810.93,-255.38 810.93,-255.38 810.93,-192.62 810.93,-192.62 810.93,-186.62 816.93,-180.62 822.93,-180.62 822.93,-180.62 1030.93,-180.62 1030.93,-180.62 1036.93,-180.62 1042.93,-186.62 1042.93,-192.62 1042.93,-192.62 1042.93,-255.38 1042.93,-255.38 1042.93,-261.38 1036.93,-267.38 1030.93,-267.38"/>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-254.82" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Cluster (15)</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-243.57" font-family="Helvetica,sans-Serif" font-size="9.00">.6.14 coturn &#160;&#160;.6.17 openrct2 &#160;&#160;.6.19 mosquitto</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-232.32" font-family="Helvetica,sans-Serif" font-size="9.00">.6.20 temporal &#160;&#160;.6.21 coturn &#160;&#160;.6.22 livekit</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-221.07" font-family="Helvetica,sans-Serif" font-size="9.00">.6.23 mimir &#160;&#160;.6.24 loki &#160;&#160;.6.25 syslog</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-209.82" font-family="Helvetica,sans-Serif" font-size="9.00">.6.26 frigate &#160;&#160;.6.30 lan&#45;dns &#160;&#160;.6.31 seaweedfs</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-198.57" font-family="Helvetica,sans-Serif" font-size="9.00">.6.32 rots&#45;prod &#160;&#160;.6.33 rots&#45;preview</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-187.32" font-family="Helvetica,sans-Serif" font-size="9.00">.5.10 kubernetes&#45;api :6443</text>
 </g>
 <!-- router&#45;&gt;vipc -->
 <g id="edge45" class="edge vip">
 <title>router&#45;&gt;vipc</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M567.24,-355.04C603.63,-339.97 639.18,-325.25 639.18,-325.25 639.18,-325.25 723.1,-297.38 800.14,-271.79"/>
-<polygon fill="black" stroke="black" points="801.13,-275.14 809.52,-268.67 798.92,-268.5 801.13,-275.14"/>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M567.24,-355.04C603.63,-339.97 639.18,-325.25 639.18,-325.25 639.18,-325.25 722.81,-295.72 799.74,-268.56"/>
+<polygon fill="black" stroke="black" points="800.85,-271.88 809.11,-265.25 798.52,-265.28 800.85,-271.88"/>
 <text xml:space="preserve" text-anchor="middle" x="711.56" y="-327.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (all speakers)</text>
 </g>
 <!-- vipl -->
 <g id="node46" class="node vip">
 <title>vipl</title>
-<path fill="white" stroke="black" d="M1021.18,-167.5C1021.18,-167.5 832.68,-167.5 832.68,-167.5 826.68,-167.5 820.68,-161.5 820.68,-155.5 820.68,-155.5 820.68,-126.5 820.68,-126.5 820.68,-120.5 826.68,-114.5 832.68,-114.5 832.68,-114.5 1021.18,-114.5 1021.18,-114.5 1027.18,-114.5 1033.18,-120.5 1033.18,-126.5 1033.18,-126.5 1033.18,-155.5 1033.18,-155.5 1033.18,-161.5 1027.18,-167.5 1021.18,-167.5"/>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-154.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-143.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-132.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-121.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
+<path fill="white" stroke="black" d="M1021.18,-155.5C1021.18,-155.5 832.68,-155.5 832.68,-155.5 826.68,-155.5 820.68,-149.5 820.68,-143.5 820.68,-143.5 820.68,-114.5 820.68,-114.5 820.68,-108.5 826.68,-102.5 832.68,-102.5 832.68,-102.5 1021.18,-102.5 1021.18,-102.5 1027.18,-102.5 1033.18,-108.5 1033.18,-114.5 1033.18,-114.5 1033.18,-143.5 1033.18,-143.5 1033.18,-149.5 1027.18,-155.5 1021.18,-155.5"/>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-142.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-131.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-109.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
 </g>
 <!-- router&#45;&gt;vipl -->
 <g id="edge46" class="edge vip">
 <title>router&#45;&gt;vipl</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M528.07,-355.2C572.26,-318.24 639.18,-262.25 639.18,-262.25 639.18,-262.25 810.93,-180 810.93,-180 810.93,-180 821.28,-176.49 835.76,-171.58"/>
-<polygon fill="black" stroke="black" points="836.6,-174.99 844.94,-168.47 834.35,-168.36 836.6,-174.99"/>
-<text xml:space="preserve" text-anchor="middle" x="711.56" y="-264.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (one node each)</text>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M527.3,-355.09C571.47,-317.25 639.18,-259.25 639.18,-259.25 639.18,-259.25 810.93,-168 810.93,-168 810.93,-168 821.28,-164.49 835.76,-159.58"/>
+<polygon fill="black" stroke="black" points="836.6,-162.99 844.94,-156.47 834.35,-156.36 836.6,-162.99"/>
+<text xml:space="preserve" text-anchor="middle" x="711.56" y="-261.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (one node each)</text>
 </g>
 <!-- ucore -->
 <g id="node6" class="node net">
