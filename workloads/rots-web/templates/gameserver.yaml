@@ -73,6 +73,19 @@ spec:
               value: "http://rots-authserver.{{ $ns }}.svc"
             - name: ROTS_TICKET_AUDIENCE
               value: {{ required "publicUrl is required" .Values.publicUrl | quote }}
+            # Slot = StatefulSet pod index; the coordinator gates every join and
+            # receives the heartbeat roster through the authserver internal API.
+            - name: ROTS_SERVER_SLOT
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+            - name: ROTS_COORDINATOR_URL
+              value: "http://rots-authserver.{{ $ns }}.svc:8001"
+            - name: ROTS_COORDINATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-authserver-secret
+                  key: COORDINATOR_TOKEN
             - name: RUST_LOG
               value: info
           ports:

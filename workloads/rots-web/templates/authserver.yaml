@@ -11,6 +11,14 @@ metadata:
     app: rots-authserver
 spec:
   replicas: 1
+  # The authserver holds no state (fleet and session state live in Temporal), but
+  # the join path's availability does: the default 25%/25% would delete the only
+  # pod before its replacement is Ready.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -52,6 +60,24 @@ spec:
               value: "4346770"
             - name: DISABLED_PROVIDERS
               value: {{ .Values.authserver.disabledProviders | quote }}
+            # The authserver hosts the Temporal worker for the fleet coordinator
+            # and the per-login session workflows; see rots-authserver's README.
+            - name: TEMPORAL_ADDRESS
+              value: "http://temporal-frontend.default.svc.cluster.local:7233"
+            - name: TEMPORAL_NAMESPACE
+              value: {{ required "temporal.namespace is required" .Values.temporal.namespace | quote }}
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ required "temporal.taskQueue is required" .Values.temporal.taskQueue | quote }}
+            # Internal API for game-server reports (bearer COORDINATOR_TOKEN from
+            # the secret below). Never routed through the gateway.
+            - name: INTERNAL_PORT
+              value: "8001"
+            - name: GAME_SERVER_SLOTS
+              value: {{ .Values.gameserver.replicas | quote }}
+            - name: GAME_UDP_HOST
+              value: {{ .Values.host | quote }}
+            - name: GAME_UDP_PORT_BASE
+              value: {{ .Values.gameserver.udpPortBase | quote }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -66,14 +92,17 @@ spec:
           ports:
             - containerPort: &port 8000
               name: http
+            # Game-server reports (internal.rs); ClusterIP only.
+            - containerPort: 8001
+              name: internal
 
           resources:
             requests:
               cpu: 10m
-              memory: 64Mi
+              memory: 128Mi
             limits:
               cpu: 500m
-              memory: 256Mi
+              memory: 512Mi
 
           livenessProbe:
             httpGet:
@@ -83,9 +112,12 @@ spec:
             periodSeconds: 10
             failureThreshold: 6
 
+          # Readiness, not liveness: traffic only lands on a pod whose Temporal
+          # worker has connected (the worker retries every 10 s, so /health alone
+          # would route joins to a pod answering 503 temporal_unavailable).
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: *port
             initialDelaySeconds: 1
             periodSeconds: 5
@@ -107,3 +139,9 @@ spec:
       targetPort: 8000
       protocol: TCP
       name: http
+    # Game servers post /internal/v1/servers/* here
+    # (http://rots-authserver.<ns>.svc:8001).
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+      name: internal

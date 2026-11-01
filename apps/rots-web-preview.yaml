@@ -52,6 +52,8 @@ spec:
             - { name: gameserver.lbIP, value: 192.168.6.33 }
             - { name: gameserver.lbIPv6, value: 'fd00:6::33' }
             - { name: gameserver.shareKey, value: rots-preview }
+            - { name: temporal.namespace, value: rots-preview }
+            - { name: temporal.taskQueue, value: 'rots-pr-{{.number}}' }
       destination:
         server: https://kubernetes.default.svc
         namespace: 'rots-pr-{{.number}}'

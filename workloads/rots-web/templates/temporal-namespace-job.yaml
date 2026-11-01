@@ -1,0 +1,39 @@
+# Ensures this environment's Temporal namespace exists before the authserver
+# worker connects: Temporal clients cannot self-register, and a missing namespace
+# turns every /play into 503 temporal_unavailable. Idempotent; also self-heals a
+# rebuilt Temporal. Two previews creating the same shared namespace at once make
+# one Job retry, after which `describe` succeeds.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rots-temporal-namespace
+  namespace: {{ $ns }}
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: ensure-temporal-namespace
+          image: docker.io/temporalio/admin-tools:1.32.0
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: "temporal-frontend.default.svc:7233"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |-
+              set -e
+              NS={{ .Values.temporal.namespace }}
+              temporal operator namespace describe "$NS" >/dev/null 2>&1 || temporal operator namespace create "$NS" --retention 72h
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
