@@ -33,6 +33,7 @@ spec:
             - "2143.me"
             - "john2143.com"
             - "dsstar.us"
+            - "poe.sale"
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -57,7 +58,7 @@ spec:
 ---
 # http01-only issuer for concrete public names outside the deSEC zones
 # (e.g. *.b.hero.rehab, *.timestone.* mirrors). letsencrypt-prod routes
-# concrete names inside dnsZones [2143.me, john2143.com, dsstar.us] to the desec dns01
+# concrete names inside dnsZones [2143.me, john2143.com, dsstar.us, poe.sale] to the desec dns01
 # webhook; this issuer never does, so issuance cannot be blocked by it.
 # Wildcard certs still require letsencrypt-prod (dns01).
 apiVersion: cert-manager.io/v1

@@ -136,4 +136,20 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - "*.dsstar.us"
+---
+# *.poe.sale (how.poe.sale). DNS-01 through deSEC; poe.sale is in
+# letsencrypt-prod's dnsZones. The apex poe.sale is not ours to serve (its A
+# record points at an external redirect host), so it is not a dnsName.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: poe-sale-wildcard
+  namespace: default
+spec:
+  secretName: poe-sale-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.poe.sale"
 {{- end }}
