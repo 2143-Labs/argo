@@ -36,7 +36,7 @@ spec:
                       - general
       containers:
       - name: john2143-com
-        image: ghcr.io/john2143/john2143.com:215
+        image: ghcr.io/john2143/john2143.com:216
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
