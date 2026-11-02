@@ -7,6 +7,9 @@
 # turns Ready once its worker reaches the namespace, and a later wave would wait
 # for that forever. While Temporal is unreachable, this Job holds back the whole
 # sync, game servers and web included.
+# HookSucceeded deletes the Job once it succeeds, so every sync runs it fresh:
+# with a completed Job left over from the last sync, Argo CD (v3.5) deleted it
+# and reused its old result without running a new one.
 {{- $ns := required "namespace is required" .Values.namespace }}
 apiVersion: batch/v1
 kind: Job
@@ -15,7 +18,7 @@ metadata:
   namespace: {{ $ns }}
   annotations:
     argocd.argoproj.io/hook: Sync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 30
