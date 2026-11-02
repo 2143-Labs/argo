@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["custom.regex"],
+  "automerge": false,
+  "platformAutomerge": false,
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 0,
+  "separateMinorPatch": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^apps/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "chart:\\s*(?<depName>[\\w.-]+)\\s*\\n\\s*repoURL:\\s*(?<registryUrl>\\S+)\\s*\\n\\s*targetRevision:\\s*(?<currentValue>[\\w.-]+)",
+        "repoURL:\\s*(?<registryUrl>\\S+)\\s*\\n\\s*chart:\\s*(?<depName>[\\w.-]+)\\s*\\n\\s*targetRevision:\\s*(?<currentValue>[\\w.-]+)"
+      ],
+      "datasourceTemplate": "helm"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^workloads/.+\\.ya?ml$/"],
+      "matchStrings": ["image:\\s*(?<depName>[\\w./-]+):(?<currentValue>[\\w.-]+)"],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchCurrentValue": "/^(latest|stable|main|.*-latest)$/",
+      "enabled": false
+    },
+    {
+      "matchPackageNames": [
+        "ghcr.io/2143-labs/**",
+        "ghcr.io/john2143/**",
+        "ghcr.io/amandistry/**",
+        "ghcr.io/sooperu/**"
+      ],
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch bumps"
+    },
+    {
+      "matchUpdateTypes": ["minor", "major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
