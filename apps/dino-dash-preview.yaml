@@ -25,10 +25,12 @@ spec:
           owner: 2143-Labs
           repo: Dino-Dash
           tokenRef: { secretName: github-token, key: token }
-        filters:
           # Only PRs labeled `preview` get an environment. Each one runs a full
           # static client plus its own world server, so it is opt-in per PR.
-          - label: preview
+          # This must be github.labels: `filters` has no label key in this CRD
+          # (only branchMatch/targetBranchMatch/titleMatch) and an unknown key is
+          # silently dropped, which would deploy every PR.
+          labels: [preview]
         requeueAfterSeconds: 120
   template:
     metadata:
