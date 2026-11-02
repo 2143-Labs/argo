@@ -17,10 +17,8 @@ spec:
           args:
             - |
               set -e
-              echo rustfs $RUSTFS_ROOT_USER $RUSTFS_ROOT_PASSWORD
-              mc alias set dst https://files.john2143.com  "$RUSTFS_ROOT_USER"  "$RUSTFS_ROOT_PASSWORD"
+              mc alias set dst http://seaweedfs-s3.default.svc.cluster.local:8333 "$RUSTFS_ROOT_USER" "$RUSTFS_ROOT_PASSWORD"
               echo rustfs set
-              echo minio $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
               mc alias set src https://fs.john2143.com "$MINIO_ROOT_USER"   "$MINIO_ROOT_PASSWORD"
               echo minio set
               mc mirror --preserve --watch=false src/ dst/
