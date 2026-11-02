@@ -39,7 +39,11 @@ spec:
               - name: ndots
                 value: "5"
           securityContext:
+            # The image's user is the *named* curl_user, which kubelet cannot verify
+            # as non-root ("image has non-numeric user"), so pin the uid the image
+            # already uses. Without this the pod never starts: CreateContainerConfigError.
             runAsNonRoot: true
+            runAsUser: 100
           containers:
             - name: ddns
               image: docker.io/curlimages/curl:8.23.0
