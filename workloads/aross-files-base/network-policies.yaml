@@ -1,0 +1,166 @@
+# aross-files: default-deny ingress AND egress. Every allowed flow is listed here;
+# everything else is refused.
+#
+#   kube-system/traefik -> anubis:8080              public route files.aross.studio
+#   anubis              -> seafile:80               after a solved PoW challenge
+#   seafile             -> seafile-mariadb:3306
+#   seafile             -> seafile-memcached:11211
+#   seafile             -> pocket-id/pocket-id:1411 OIDC token + userinfo, plain
+#                          in-cluster HTTP (seafile-oauth-cm.yaml)
+#   every pod           -> kube-system:53           DNS
+#
+# Seafile has no other ingress: Traefik cannot reach it directly, so every
+# request goes through Anubis.
+#
+# Deliberately NOT allowed as egress from any pod: Traefik or any LoadBalancer
+# VIP (lan-only admits masqueraded pod traffic, so that would expose e.g. the
+# unauthenticated Longhorn UI), the kube-apiserver (no pod mounts a token), the
+# LAN, every other namespace, the internet. Anubis needs no egress beyond
+# Seafile: its policy disables DNSBL, and it has no GeoIP or Thoth configured.
+# Lives with the namespace, not in workloads/network-policies (that
+# ApplicationSet also syncs nonprod, where this namespace does not exist).
+# Not enforceable by NetworkPolicy: kube-router accepts traffic from the pod's
+# own node, so host processes and hostNetwork pods on that node can connect.
+# If pocket-id ever gets an ingress policy, it must admit
+# aross-files/app=seafile on 1411.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: aross-files
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: aross-files
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: anubis
+  namespace: aross-files
+spec:
+  podSelector:
+    matchLabels:
+      app: anubis
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Traefik dials the pod endpoint directly, so this is Anubis's container
+    # port (8080), not the Service port (80).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile
+      ports:
+        - port: 80
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seafile
+  namespace: aross-files
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: anubis
+      ports:
+        - port: 80
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-mariadb
+      ports:
+        - port: 3306
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-memcached
+      ports:
+        - port: 11211
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: pocket-id
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pocket-id
+      ports:
+        - port: 1411
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seafile-mariadb
+  namespace: aross-files
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-mariadb
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seafile
+      ports:
+        - port: 3306
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seafile-memcached
+  namespace: aross-files
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-memcached
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seafile
+      ports:
+        - port: 11211
+          protocol: TCP

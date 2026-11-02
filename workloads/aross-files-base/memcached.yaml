@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seafile-memcached
+  namespace: aross-files
+spec:
+  ports:
+    - port: 11211
+      name: memcached
+  selector:
+    app: seafile-memcached
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seafile-memcached
+  namespace: aross-files
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seafile-memcached
+  template:
+    metadata:
+      labels:
+        app: seafile-memcached
+    spec:
+      containers:
+      - name: memcached
+        image: memcached:1.6-alpine
+        ports:
+        - containerPort: 11211
+          name: memcached
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        args:
+        - "-m"
+        - "64"

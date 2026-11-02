@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seafile-oauth-config
+  namespace: aross-files
+data:
+  oauth_settings.py: |
+    import os
+    
+    # OAuth / OIDC configuration for Pocket ID
+    ENABLE_OAUTH = True
+    OAUTH_CREATE_UNKNOWN_USER = True
+    OAUTH_ACTIVATE_USER_AFTER_CREATION = True
+    OAUTH_REDIRECT_URL = "https://files.aross.studio/oauth/callback/"
+    OAUTH_AUTHORIZATION_URL = "https://au.2143.me/authorize"
+    OAUTH_TOKEN_URL = "http://pocket-id.pocket-id.svc.cluster.local/api/oidc/token"
+    OAUTH_USER_INFO_URL = "http://pocket-id.pocket-id.svc.cluster.local/api/oidc/userinfo"
+    # Token and userinfo are server-side calls. They go straight to the pocket-id
+    # Service because this namespace's egress policy does not allow Traefik
+    # (network-policies.yaml). seahub/oauth/views.py turns this setting into
+    # OAUTHLIB_INSECURE_TRANSPORT=1, which plain in-cluster HTTP requires.
+    OAUTH_ENABLE_INSECURE_TRANSPORT = True
+    OAUTH_SCOPE = ["openid", "profile", "email"]
+    OAUTH_ATTRIBUTE_MAP = {
+        "sub": (True, "uid"),
+        "email": (True, "email"),
+        "name": (False, "name"),
+    }
+    OAUTH_PROVIDER = "pocketid"
+    OAUTH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID", "MISSING")
+    OAUTH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET", "MISSING")
+
+    
+    # SSO-only: a non-staff user who has signed in through Pocket ID may not
+    # authenticate with a local password. seahub 13.0's is_force_user_sso()
+    # (seahub/utils/auth.py) matches SocialAuthUser.provider against
+    # OAUTH_PROVIDER_DOMAIN -- NOT OAUTH_PROVIDER -- so both keys are required.
+    # Setting only DISABLE_ADFS_USER_PWD_LOGIN silently has no effect.
+    DISABLE_ADFS_USER_PWD_LOGIN = True
+    OAUTH_PROVIDER_DOMAIN = "pocketid"

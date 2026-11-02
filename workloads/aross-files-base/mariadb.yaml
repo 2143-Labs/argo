@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seafile-mariadb
+  namespace: aross-files
+spec:
+  ports:
+    - port: 3306
+      name: mysql
+  clusterIP: None
+  selector:
+    app: seafile-mariadb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: seafile-mariadb
+  namespace: aross-files
+spec:
+  serviceName: seafile-mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seafile-mariadb
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: seafile-mariadb
+    spec:
+      containers:
+      - name: mariadb
+        image: mariadb:11.4
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seafile-secret
+              key: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "seafile_db"
+        - name: MYSQL_USER
+          value: "seafile"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seafile-secret
+              key: SEAFILE_MYSQL_DB_PASSWORD
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: longhorn-3
+      resources:
+        requests:
+          storage: 10Gi
