@@ -121,4 +121,19 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - chess.dsstar.us
+---
+# *.dsstar.us (Moss & Wool: moss, moss-dev, moss-<PR>). DNS-01 through deSEC;
+# dsstar.us is in letsencrypt-prod's dnsZones. chess.dsstar.us keeps its own cert.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dsstar-us-wildcard
+  namespace: default
+spec:
+  secretName: dsstar-us-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.dsstar.us"
 {{- end }}
