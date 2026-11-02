@@ -4,6 +4,13 @@ metadata:
   name: litellm-db
 spec:
   instances: 2
+  affinity:
+    # Two copies of a database on one node is no protection at all, and every
+    # instance volume here is single-replica (longhorn-cnpg), so the copy on the
+    # other node is the only thing keeping the data available during a node loss.
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
     requests:
