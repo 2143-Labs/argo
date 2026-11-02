@@ -23,17 +23,6 @@ spec:
       - name: data-volume
         persistentVolumeClaim:
           claimName: john2143-com-files
-      - name: upload-fish
-        configMap:
-          name: upload-fish
-          defaultMode: 0555
-          items:
-            - key: upload.fish
-              path: upload.fish
-            - key: prune.fish
-              path: prune.fish
-            - key: shared.fish
-              path: shared.fish
 
       affinity:
         nodeAffinity:
@@ -58,9 +47,6 @@ spec:
         volumeMounts:
         - mountPath: /app/juushFiles
           name: data-volume
-        - mountPath: /app/upload-fish
-          name: upload-fish
-          readOnly: true
         env:
         - name: DB
           valueFrom:
@@ -73,18 +59,6 @@ spec:
           value: "0.0.0.0"
         - name: NODE_ENV
           value: production
-        - name: S3_ENDPOINT_URL
-          value: "https://nyc3.digitaloceanspaces.com"
-        - name: S3_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: S3_ACCESS_KEY
-        - name: S3_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: S3_SECRET_KEY
         - name: MINIO_ENDPOINT_URL
           value: "http://seaweedfs-s3.default.svc.cluster.local:8333"
         - name: MINIO_ACCESS_KEY
