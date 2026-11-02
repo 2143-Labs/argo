@@ -1,0 +1,48 @@
+# Dino-Dash production at https://dino.dsstar.us, namespace dino-prod, from the game
+# repo's `dev` and `master` builds (2143-Labs/Dino-Dash: a Vite client served by
+# darkhttpd and scaled to zero via KEDA HTTP, plus one always-on world server on /ws).
+# Previews are separate and label-gated (see dino-dash-preview.yaml).
+# The image tags are moving (web-latest / server-latest, rewritten by the game repo's
+# .github/workflows/deploy.yml) and every workload uses imagePullPolicy: Always, so a
+# push to dev or master is live on the next cold start with no commit here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dino-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/dino-dash
+    helm:
+      parameters:
+        - { name: namespace, value: dino-prod }
+        - { name: host, value: dino.dsstar.us }
+        - { name: routeName, value: dino-dash }
+        # Moving tags: the game repo's deploy.yml retags them on every dev/master push.
+        - { name: image.webTag, value: web-latest }
+        - { name: image.serverTag, value: server-latest }
+        - { name: gameserver.replicas, value: '1' }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dino-prod
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,70 @@
+# darkhttpd on :8000 serving the Vite build (Dino-Dash flake `packages.web`).
+# No `replicas`: the ScaledObject owns it, so an idle world costs nothing to host.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dino-dash-web
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: dino-dash-web
+spec:
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: dino-dash-web
+  template:
+    metadata:
+      labels:
+        app: dino-dash-web
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: dino-dash-web
+          image: "{{ .Values.image.repository }}:{{ required "image.webTag is required" .Values.image.webTag }}"
+          # web-latest / web-pr-<N> are moving targets that CI overwrites; Always
+          # makes each cold start pick up the newest build.
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 300Mi
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3

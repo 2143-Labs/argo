@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dino-dash-web
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: dino-dash-web
+spec:
+  type: ClusterIP
+  selector:
+    app: dino-dash-web
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http

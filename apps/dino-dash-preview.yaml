@@ -1,0 +1,70 @@
+# One Application per open same-repo PR in 2143-Labs/Dino-Dash that carries the
+# `preview` label, served at https://dino-{N}.dsstar.us (namespace dino-pr-{N}),
+# with its own always-on world server.
+#
+# The label is the gate: an unlabeled PR generates no Application at all, so no
+# namespace, no pod and no world server is spent on it, and removing the label (or
+# closing the PR) prunes the whole environment on the next requeue.
+# The chart lives here (workloads/dino-dash), not in the game repo: the AppProject
+# does not allow that repo as a source. The image is the game repo's deploy.yml PR
+# build (web-pr-{N} / server-pr-{N}), so a labeled PR has no environment until its
+# CI finishes. Pattern copied from rots-web-preview and moss-and-wool-preview.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: dino-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: Dino-Dash
+          tokenRef: { secretName: github-token, key: token }
+        filters:
+          # Only PRs labeled `preview` get an environment. Each one runs a full
+          # static client plus its own world server, so it is opt-in per PR.
+          - label: preview
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'dino-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/dino-dash
+        helm:
+          parameters:
+            - { name: namespace, value: 'dino-pr-{{.number}}' }
+            - { name: host, value: 'dino-{{.number}}.dsstar.us' }
+            - { name: routeName, value: 'dino-pr-{{.number}}' }
+            - { name: image.webTag, value: 'web-pr-{{.number}}' }
+            - { name: image.serverTag, value: 'server-pr-{{.number}}' }
+            - { name: gameserver.replicas, value: '1' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'dino-pr-{{.number}}'
+      ignoreDifferences:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          # Gateway API defaulting (see status-design.yaml).
+          jqPathExpressions:
+            - .spec.parentRefs[].group
+            - .spec.parentRefs[].kind
+            - .spec.rules[].backendRefs[].group
+            - .spec.rules[].backendRefs[].kind
+            - .spec.rules[].backendRefs[].weight
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

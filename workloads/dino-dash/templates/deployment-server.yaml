@@ -1,0 +1,87 @@
+# The world process (Dino-Dash flake `packages.server`): one 20 Hz sim with
+# memory-only world state, no database and no accounts. It cannot scale to zero:
+# the tick loop runs with zero players and KEDA's HTTP interceptor cannot hold a
+# WebSocket upgrade open, so it is always on (one per environment).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dino-dash-server
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: dino-dash-server
+spec:
+  revisionHistoryLimit: 3
+  replicas: {{ .Values.gameserver.replicas }}
+  selector:
+    matchLabels:
+      app: dino-dash-server
+  template:
+    metadata:
+      labels:
+        app: dino-dash-server
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: dino-dash-server
+          image: "{{ .Values.image.repository }}:{{ required "image.serverTag is required" .Values.image.serverTag }}"
+          # server-latest / server-pr-<N> are moving targets that CI overwrites;
+          # Always makes each (re)start pull the newest build.
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &wsport 8787
+              name: ws
+
+          env:
+            - name: PORT
+              value: "8787"
+            # Traefik is the peer, so the per-IP connection cap must be well above
+            # the number of players in one house.
+            - name: MAX_CONN_PER_IP
+              value: {{ .Values.gameserver.maxConnPerIp | quote }}
+            - name: WORLD_SEED
+              value: {{ .Values.gameserver.worldSeed | quote }}
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+
+          # The server is a bare WebSocketServer with no HTTP endpoint, so the
+          # probes are TCP connects (a full HTTP probe would 404).
+          startupProbe:
+            tcpSocket:
+              port: *wsport
+            periodSeconds: 5
+            failureThreshold: 36
+
+          livenessProbe:
+            tcpSocket:
+              port: *wsport
+            periodSeconds: 10
+            failureThreshold: 6
+
+          readinessProbe:
+            tcpSocket:
+              port: *wsport
+            periodSeconds: 5
+            failureThreshold: 3

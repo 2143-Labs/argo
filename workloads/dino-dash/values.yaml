@@ -1,0 +1,19 @@
+# Every empty string is set by apps/dino-dash.yaml (prod) or
+# apps/dino-dash-preview.yaml (one per labeled PR); the templates fail to render
+# if any is empty.
+namespace: ""   # dino-prod or dino-pr-<N>
+host: ""        # dino.dsstar.us or dino-<N>.dsstar.us
+routeName: ""   # unique in `default`: dino-dash or dino-pr-<N>
+image:
+  repository: ghcr.io/2143-labs/dino-dash
+  webTag: ""      # web-latest (prod) or web-pr-<N> (preview)
+  serverTag: ""   # server-latest (prod) or server-pr-<N> (preview)
+gameserver:
+  # The client knows exactly one /ws URL and the server has no /servers
+  # discovery endpoint, so a second replica would be unreachable without new
+  # client code. Raise this only alongside that feature.
+  replicas: 1
+  # The socket peer seen by the server is Traefik, not the player, so the
+  # built-in per-IP cap of 3 would throttle the whole world to three clients.
+  maxConnPerIp: "100"
+  worldSeed: "1337"
