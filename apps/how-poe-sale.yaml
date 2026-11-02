@@ -1,4 +1,4 @@
-# how.poe.sale prod at https://how.john2143.com (namespace how-poe-sale, always-on).
+# how.poe.sale prod at https://how.poe.sale and https://how.john2143.com (namespace how-poe-sale, always-on).
 # CI in 2143-Labs/how.poe.sale bumps the image.tag line on every push to main
 # (build.yml job `deploy`, deploy key how-poe-sale-ci). Roll back by reverting
 # that bump commit. Previews are separate (see how-poe-sale-preview.yaml).
@@ -19,6 +19,7 @@ spec:
       parameters:
         - { name: namespace, value: how-poe-sale }
         - { name: host, value: how.john2143.com }
+        - { name: poeSaleHost, value: how.poe.sale }
         - { name: routeName, value: how-poe-sale }
         - { name: image.tag, value: sha-d1ed7d8084e939fdacadd0502a891717e8178417 }
         - { name: keda.enabled, value: 'false' }

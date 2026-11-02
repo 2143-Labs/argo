@@ -2,6 +2,7 @@
 # the templates fail to render if any is empty.
 namespace: ""   # how-poe-sale (prod) or how-poe-sale-pr-<N>
 host: ""        # how.john2143.com or how-<N>.john2143.com
+poeSaleHost: "" # prod only: how.poe.sale, served on listener poe-sale-wildcard-https in addition to host
 routeName: ""   # unique in `default`: how-poe-sale or how-pr-<N>
 image:
   repository: ghcr.io/2143-labs/how-poe-sale

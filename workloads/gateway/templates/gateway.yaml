@@ -254,3 +254,18 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    # *.poe.sale: how.poe.sale (prod). Routes live in `default`.
+    - name: poe-sale-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.poe.sale"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.certOverride | default "poe-sale-wildcard-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same

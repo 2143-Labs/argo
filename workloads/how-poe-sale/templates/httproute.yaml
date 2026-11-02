@@ -35,8 +35,15 @@ spec:
   parentRefs:
     - name: shared-gateway
       sectionName: john2143-wildcard-https
+{{- if .Values.poeSaleHost }}
+    - name: shared-gateway
+      sectionName: poe-sale-wildcard-https
+{{- end }}
   hostnames:
     - "{{ required "host is required" .Values.host }}"
+{{- if .Values.poeSaleHost }}
+    - "{{ .Values.poeSaleHost }}"
+{{- end }}
   rules:
     - matches:
         - path:
@@ -69,6 +76,9 @@ spec:
       sectionName: acme-http
   hostnames:
     - "{{ required "host is required" .Values.host }}"
+{{- if .Values.poeSaleHost }}
+    - "{{ .Values.poeSaleHost }}"
+{{- end }}
   rules:
     - matches:
         - path:
