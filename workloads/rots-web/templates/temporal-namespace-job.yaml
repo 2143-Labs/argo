@@ -3,6 +3,10 @@
 # turns every /play into 503 temporal_unavailable. Idempotent; also self-heals a
 # rebuilt Temporal. Two previews creating the same shared namespace at once make
 # one Job retry, after which `describe` succeeds.
+# Wave -1 runs it before the authserver Deployment (wave 0): the authserver only
+# turns Ready once its worker reaches the namespace, and a later wave would wait
+# for that forever. While Temporal is unreachable, this Job holds back the whole
+# sync, game servers and web included.
 {{- $ns := required "namespace is required" .Values.namespace }}
 apiVersion: batch/v1
 kind: Job
@@ -12,7 +16,7 @@ metadata:
   annotations:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 30
   template:
