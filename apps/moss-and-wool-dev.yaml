@@ -22,7 +22,7 @@ spec:
         - { name: host, value: moss-dev.dsstar.us }
         - { name: routeName, value: moss-dev }
         # Placeholder until the first build: the pod stays at 0 replicas until then.
-        - { name: image.tag, value: sha-1e7949ed69803da3571d626a7e337c40cfe55dd2 }
+        - { name: image.tag, value: sha-f7a8986411bae318b77908d54ad174214f542953 }
   destination:
     server: https://kubernetes.default.svc
     namespace: moss-dev
