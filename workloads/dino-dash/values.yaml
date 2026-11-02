@@ -17,3 +17,12 @@ gameserver:
   # built-in per-IP cap of 3 would throttle the whole world to three clients.
   maxConnPerIp: "100"
   worldSeed: "1337"
+  # In-server artificial players (bots), on in every environment. Pinned to the
+  # values the server derived on its own at deploy time (npc/population.ts) so
+  # they are visible and overridable per Application; a world-size change in the
+  # game no longer moves the target by itself.
+  npc:
+    enabled: true
+    target: "96"      # real + artificial players the governor aims for
+  softCap: "80"       # NPCs fill up to here; real players can still join past it
+  maxPlayers: "100"   # hard cap, real + artificial

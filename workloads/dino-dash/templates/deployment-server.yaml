@@ -57,6 +57,15 @@ spec:
               value: {{ .Values.gameserver.maxConnPerIp | quote }}
             - name: WORLD_SEED
               value: {{ .Values.gameserver.worldSeed | quote }}
+            # In-server bots: real + artificial target, soft and hard caps (values.yaml).
+            - name: PRIMAL_NO_NPC
+              value: {{ ternary "0" "1" .Values.gameserver.npc.enabled | quote }}
+            - name: PRIMAL_NPC_TARGET
+              value: {{ .Values.gameserver.npc.target | quote }}
+            - name: SOFT_CAP
+              value: {{ .Values.gameserver.softCap | quote }}
+            - name: MAX_PLAYERS
+              value: {{ .Values.gameserver.maxPlayers | quote }}
 
           resources:
             requests:
