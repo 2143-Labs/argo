@@ -1,0 +1,44 @@
+# how.poe.sale prod at https://how.john2143.com (namespace how-poe-sale, always-on).
+# CI in 2143-Labs/how.poe.sale bumps the image.tag line on every push to main
+# (build.yml job `deploy`, deploy key how-poe-sale-ci). Roll back by reverting
+# that bump commit. Previews are separate (see how-poe-sale-preview.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: how-poe-sale
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/how-poe-sale
+    helm:
+      parameters:
+        - { name: namespace, value: how-poe-sale }
+        - { name: host, value: how.john2143.com }
+        - { name: routeName, value: how-poe-sale }
+        - { name: image.tag, value: sha-74efde4977076cdc0f9a71c21ebddab6276adf63 }
+        - { name: keda.enabled, value: 'false' }
+        - { name: replicas, value: '1' }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: how-poe-sale
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

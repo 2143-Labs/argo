@@ -1,0 +1,13 @@
+# Every empty string is set by apps/how-poe-sale.yaml (prod) or apps/how-poe-sale-preview.yaml (per PR);
+# the templates fail to render if any is empty.
+namespace: ""   # how-poe-sale (prod) or how-poe-sale-pr-<N>
+host: ""        # how.john2143.com or how-<N>.john2143.com
+routeName: ""   # unique in `default`: how-poe-sale or how-pr-<N>
+image:
+  repository: ghcr.io/2143-labs/how-poe-sale
+  tag: ""       # sha-<commit>: main HEAD (prod, bumped by CI) or the PR head (previews)
+# Previews: true (scale to zero). Always compared as `eq (toString .Values.keda.enabled) "true"`
+# so a string "false" (helm --set-string) cannot read as true.
+keda:
+  enabled: false
+replicas: 1     # prod only; with KEDA the ScaledObject owns replicas

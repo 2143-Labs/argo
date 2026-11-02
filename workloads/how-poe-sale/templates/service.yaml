@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: how-poe-sale
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: how-poe-sale
+spec:
+  type: ClusterIP
+  selector:
+    app: how-poe-sale
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http

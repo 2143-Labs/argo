@@ -1,0 +1,62 @@
+# One Application per open PR in 2143-Labs/how.poe.sale, served at
+# https://how-{N}.john2143.com and scaled to zero by KEDA HTTP between visits.
+#
+# The image is CI's sha-<PR head SHA> tag (how.poe.sale build.yml, same-repo PRs
+# only), so a pushed commit re-tags the preview within one requeue and a fork PR
+# has no image (its preview stays in ImagePullBackOff). Closing the PR prunes the
+# namespace and routes. Pattern copied from rots-web-preview.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: how-poe-sale-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: how.poe.sale
+          tokenRef: { secretName: github-token, key: token }
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'how-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/how-poe-sale
+        helm:
+          parameters:
+            - { name: namespace, value: 'how-poe-sale-pr-{{.number}}' }
+            - { name: host, value: 'how-{{.number}}.john2143.com' }
+            - { name: routeName, value: 'how-pr-{{.number}}' }
+            - { name: image.tag, value: 'sha-{{.head_sha}}' }
+            - { name: keda.enabled, value: 'true' }
+            - { name: replicas, value: '1' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'how-poe-sale-pr-{{.number}}'
+      ignoreDifferences:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          # Gateway API defaulting (see status-design.yaml).
+          jqPathExpressions:
+            - .spec.parentRefs[].group
+            - .spec.parentRefs[].kind
+            - .spec.rules[].backendRefs[].group
+            - .spec.rules[].backendRefs[].kind
+            - .spec.rules[].backendRefs[].weight
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

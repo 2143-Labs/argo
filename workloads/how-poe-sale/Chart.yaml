@@ -1,0 +1,6 @@
+apiVersion: v2
+name: how-poe-sale
+description: how.poe.sale crafting solver (prod always-on, or one per PR scaling to zero via KEDA HTTP) - axum static server
+type: application
+version: 0.1.0
+home: https://github.com/2143-Labs/how.poe.sale

@@ -1,0 +1,64 @@
+# axum static server on :8080 (how.poe.sale flake `packages.container`): the
+# front end, the wasm solver and the data bundle, plus /health. Stateless.
+# Prod pins `replicas`; with KEDA (previews) the ScaledObject owns it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: how-poe-sale
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: how-poe-sale
+spec:
+{{- if ne (toString .Values.keda.enabled) "true" }}
+  replicas: {{ .Values.replicas }}
+{{- end }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: how-poe-sale
+  template:
+    metadata:
+      labels:
+        app: how-poe-sale
+    spec:
+      containers:
+        - name: how-poe-sale
+          image: "{{ .Values.image.repository }}:{{ required "image.tag is required" .Values.image.tag }}"
+          # Tags are sha-<commit> and never move, so a node that already has the
+          # image reuses it and a cold start never re-pulls.
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: &port 8080
+              name: http
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 25
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: *port
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3

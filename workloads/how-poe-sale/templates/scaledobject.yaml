@@ -1,0 +1,25 @@
+{{- if eq (toString .Values.keda.enabled) "true" }}
+# Previews only. The name is the constant how-poe-sale (not routeName): each
+# preview has its own namespace, and the InterceptorRoute's target resolves in it.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: how-poe-sale
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  scaleTargetRef:
+    name: how-poe-sale
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 600
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: how-poe-sale
+{{- end }}

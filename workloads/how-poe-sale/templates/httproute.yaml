@@ -1,0 +1,81 @@
+{{- /* The Class A gates; every HTTPS rule below includes them. */}}
+{{- define "how-poe-sale.gates" }}
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+{{- end }}
+{{- $ns := required "namespace is required" .Values.namespace }}
+# Class A browser surface (see docs/public-edge.md): a public tool with no login
+# and no server-side state, so the edge gate is the only gate.
+# Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
+# and the john2143-wildcard-https listener only admits default/argocd/kube-system/openbao.
+# Prod's backend is the app Service (reference-grant.yaml); a preview's is the
+# KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor), which
+# wakes the scale-to-zero pod via the InterceptorRoute.
+# scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
+# every rule must include "how-poe-sale.gates".
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ required "routeName is required" .Values.routeName }}
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
+  hostnames:
+    - "{{ required "host is required" .Values.host }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+{{- include "how-poe-sale.gates" . }}
+      backendRefs:
+{{- if eq (toString .Values.keda.enabled) "true" }}
+        - name: keda-add-ons-http-interceptor-proxy
+          namespace: keda
+          port: 8080
+{{- else }}
+        - name: how-poe-sale
+          namespace: {{ $ns }}
+          port: 80
+{{- end }}
+---
+# http:// -> https:// (one hop). Separate from gateway/john2143-http-to-https,
+# which is at the Gateway API cap of 16 hostnames. No backend, so it never wakes
+# a preview pod.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ required "routeName is required" .Values.routeName }}-http-to-https
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+  hostnames:
+    - "{{ required "host is required" .Values.host }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
