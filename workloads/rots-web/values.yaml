@@ -34,3 +34,7 @@ gameserver:
   lbIP: ""         # 192.168.6.32 (prod) or 192.168.6.33 (previews)
   lbIPv6: ""       # fd00:6::32 (prod) or fd00:6::33 (previews)
   shareKey: ""     # metallb.io/allow-shared-ip: rots-prod (prod) or rots-preview (previews)
+
+temporal:
+  namespace: ""    # rots (prod) | rots-preview (all previews)
+  taskQueue: ""    # rots-prod | rots-pr-<N>

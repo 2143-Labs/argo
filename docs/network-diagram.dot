@@ -5,7 +5,7 @@ digraph home {
   internet [class="internet", shape=ellipse, label="Internet", peripheries=2, fontsize=11];
   verizon [class="net", label="Verizon CR1000B\n192.168.0.1\nper-port forwards"];
   homepi [class="srv", label="home-pi\nAttic :8280\n192.168.0.154"];
-  router [class="net", penwidth=2, fontsize=11, label="ROUTER RB5009UPr+S+\n.0.2 WAN · .5.1 · .1.1 · .88.254\nBGP 65001 · BFD 3784 · WireGuard 51820\ndst-nat 15 rules · DNS FWD ×6"];
+  router [class="net", penwidth=2, fontsize=11, label="ROUTER RB5009UPr+S+\n.0.2 WAN · .5.1 · .1.1 · .88.254\nBGP 65001 · BFD 3784 · WireGuard 51820\ndst-nat 18 rules · DNS FWD ×6"];
   internet -> verizon [label=" coax"];
   verizon -> router [label=" 2.5G 2GWAN"];
   verizon -> homepi [label=" 1GbE"];
@@ -104,7 +104,7 @@ digraph home {
   u7proxgs -> of_aidot [class="wifi", style=dotted, weight=0];
   }
 
-  vipc [class="vip", fontsize=9, label="MetalLB — Cluster (13)\n.6.14 coturn   .6.17 openrct2   .6.19 mosquitto\n.6.20 temporal   .6.21 coturn   .6.22 livekit\n.6.23 mimir   .6.24 loki   .6.25 syslog\n.6.26 frigate   .6.30 lan-dns   .6.31 seaweedfs\n.5.10 kubernetes-api :6443"];
+  vipc [class="vip", fontsize=9, label="MetalLB — Cluster (15)\n.6.14 coturn   .6.17 openrct2   .6.19 mosquitto\n.6.20 temporal   .6.21 coturn   .6.22 livekit\n.6.23 mimir   .6.24 loki   .6.25 syslog\n.6.26 frigate   .6.30 lan-dns   .6.31 seaweedfs\n.6.32 rots-prod   .6.33 rots-preview\n.5.10 kubernetes-api :6443"];
   vipl [class="vip", fontsize=9, label="MetalLB — Local (7)\n.6.6 traefik   .6.13 stalwart\n.6.15 ts-voice   .6.16 ts-files\n.6.18 stun   .6.28 factorio   .6.29 minecraft"];
   router -> vipc [class="vip", style=dashed, label=" BGP 65001 (all speakers)"];
   router -> vipl [class="vip", style=dashed, label=" BGP 65001 (one node each)"];

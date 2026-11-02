@@ -132,7 +132,7 @@
   <div><b>5</b>on the Verizon LAN</div>
   <div><b>8</b>camera net</div>
   <div><b>42</b>on the switch LAN</div>
-  <div><b>20</b>MetalLB VIPs</div>
+  <div><b>22</b>MetalLB VIPs</div>
   <div><b>22</b>tailnet devices</div>
 </div>
 
@@ -169,7 +169,7 @@
 <path d="M900,52 C830,80 660,78 566,98" class="wg" marker-end="url(#a2w)"/>
 <text x="700" y="70" class="wglabel" style="font-size:10.5px;">WireGuard · UDP 51820 · encrypted</text>
 <a href="#h-0-1"><rect x="60" y="100" width="560" height="175" rx="9" class="panel"/><text x="74" y="122" class="title">192.168.0.0/24 — Verizon CR1000B</text><text x="74" y="138" class="muted">double NAT · pool .100–.169</text><circle cx="77" cy="156.5" r="3" class="dot-net"/><text x="86" y="160" class="" style="font-size:10.5px;">.0.1  Verizon CR1000B</text><circle cx="77" cy="173.5" r="3" class="dot-net"/><text x="86" y="177" class="" style="font-size:10.5px;">.0.2  MikroTik 2GWAN</text><circle cx="77" cy="190.5" r="3" class="dot-net"/><text x="86" y="194" class="" style="font-size:10.5px;">.0.152  MikroTik 2GWAN (2nd)</text><circle cx="77" cy="207.5" r="3" class="dot-srv"/><text x="86" y="211" class="" style="font-size:10.5px;">.0.154  home-pi</text><circle cx="77" cy="224.5" r="3" class="dot-cli"/><text x="86" y="228" class="" style="font-size:10.5px;">.0.165  unidentified</text><text x="74" y="258" class="muted" style="font-size:9.5px;">forwards 80,443,25,587,993,3478,3479,7881,9987,11753,18080,25565,30033,34197,45000-45063, 51820/udp</text></a>
-<a href="#h-5-1"><rect x="720" y="100" width="470" height="175" rx="9" class="panel"/><text x="734" y="122" class="title">MikroTik RB5009 — the boundary</text><text x="734" y="138" class="muted">WAN .0.2 · LAN .5.1 / .1.1 / .88.254</text><text x="734" y="160" class="" style="font-size:11.5px;">dst-nat 15 rules → .6.x VIPs</text><text x="734" y="177" class="" style="font-size:11.5px;">WireGuard 51820 terminates here</text><text x="734" y="194" class="" style="font-size:11.5px;">BGP 65001 · BFD 3784 · DNS FWD ×6</text><text x="734" y="211" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text><text x="734" y="228" class="" style="font-size:11.5px;">tunnel IN  .6.20 :7233 · .6.31 :8333</text><text x="734" y="245" class="" style="font-size:11.5px;">tunnel OUT 10.99.0.2:32040 mongo</text><text x="734" y="262" class="" style="font-size:9.5px;">direct: ether5 U7 Lite · ether8 pite · ether7 cam · ether4 KVM</text></a>
+<a href="#h-5-1"><rect x="720" y="100" width="470" height="175" rx="9" class="panel"/><text x="734" y="122" class="title">MikroTik RB5009 — the boundary</text><text x="734" y="138" class="muted">WAN .0.2 · LAN .5.1 / .1.1 / .88.254</text><text x="734" y="160" class="" style="font-size:11.5px;">dst-nat 18 rules → .6.x VIPs</text><text x="734" y="177" class="" style="font-size:11.5px;">WireGuard 51820 terminates here</text><text x="734" y="194" class="" style="font-size:11.5px;">BGP 65001 · BFD 3784 · DNS FWD ×6</text><text x="734" y="211" class="" style="font-size:11.5px;">blackhole .6.0/24 (fail closed)</text><text x="734" y="228" class="" style="font-size:11.5px;">tunnel IN  .6.20 :7233 · .6.31 :8333</text><text x="734" y="245" class="" style="font-size:11.5px;">tunnel OUT 10.99.0.2:32040 mongo</text><text x="734" y="262" class="" style="font-size:9.5px;">direct: ether5 U7 Lite · ether8 pite · ether7 cam · ether4 KVM</text></a>
 <path d="M620,170 L720,170" class="wire" marker-end="url(#a2)"/>
 <text x="624" y="162" class="" style="font-size:10.5px;">dst-nat</text>
 <path d="M620,215 L720,215" class="wg" marker-end="url(#a2w)"/>
@@ -1596,7 +1596,7 @@ a
 <path d="M805,396 L805,406" class="wire" opacity=".6"/>
 <rect x="640" y="406" width="330" height="240" rx="9" class="panel"/>
 <text x="654" y="428" class="title">192.168.6.0/24 — MetalLB</text>
-<text x="654" y="444" class="muted">20 VIPs · filled = Cluster · ring = Local</text>
+<text x="654" y="444" class="muted">22 VIPs · filled = Cluster · ring = Local</text>
 <a href="#vip-6-6"><circle cx="657" cy="464.5" r="3" class="ring"/><text x="666" y="468" class="" style="font-size:10.5px;">.6.6 traefik</text></a>
 <a href="#vip-6-13"><circle cx="817" cy="464.5" r="3" class="ring"/><text x="826" y="468" class="" style="font-size:10.5px;">.6.13 stalwart</text></a>
 <a href="#vip-6-14"><circle cx="657" cy="478.5" r="3" class="dot-vip"/><text x="666" y="482" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text></a>
@@ -1617,6 +1617,8 @@ a
 <a href="#vip-6-30"><circle cx="817" cy="576.5" r="3" class="dot-vip"/><text x="826" y="580" class="" style="font-size:10.5px;">.6.30 lan-dns</text></a>
 <a href="#vip-6-31"><circle cx="657" cy="590.5" r="3" class="dot-vip"/><text x="666" y="594" class="" style="font-size:10.5px;">.6.31 seaweedfs-s3-lan</text></a>
 <a href="#vip-5-10"><circle cx="817" cy="590.5" r="3" class="dot-vip"/><text x="826" y="594" class="" style="font-size:10.5px;">.5.10 kubernetes-api</text></a>
+<a href="#vip-6-32"><circle cx="657" cy="604.5" r="3" class="dot-vip"/><text x="666" y="608" class="" style="font-size:10.5px;">.6.32 rots-prod udp</text></a>
+<a href="#vip-6-33"><circle cx="817" cy="604.5" r="3" class="dot-vip"/><text x="826" y="608" class="" style="font-size:10.5px;">.6.33 rots-preview udp</text></a>
 <text x="654" y="636" class="muted">no router interface — BGP /32s only</text>
 <path d="M1097,396 L1097,406" class="wire" opacity=".6"/>
 <rect x="985" y="406" width="225" height="125" rx="9" class="panel"/>
@@ -1641,20 +1643,20 @@ a
 
 <h2 id="edge">The edge in detail</h2>
 <figure>
-<svg class="diagram" viewBox="0 0 1240 1020" role="img" aria-label="Home edge topology: internet to router to six k3s nodes; twenty VIPs grouped by announcement policy; WireGuard tunnel to the DigitalOcean cluster">
+<svg class="diagram" viewBox="0 0 1240 1020" role="img" aria-label="Home edge topology: internet to router to six k3s nodes; twenty-two VIPs grouped by announcement policy; WireGuard tunnel to the DigitalOcean cluster">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
     <marker id="arrwg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wg"/></marker>
     <marker id="arrwan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead wan"/></marker>
   </defs>
 <rect x="420" y="14" width="400" height="46" rx="9" class="inet"/>
-<text x="620" y="36" class="title" text-anchor="middle">Internet — 15 WAN forwards</text>
-<text x="620" y="52" class="muted" text-anchor="middle">10 VIPs + arch .5.76 (monero 18080)</text>
+<text x="620" y="36" class="title" text-anchor="middle">Internet — 18 WAN forwards</text>
+<text x="620" y="52" class="muted" text-anchor="middle">12 VIPs + arch .5.76 (monero 18080)</text>
 <path d="M620,60 L620,90" class="wire" marker-end="url(#arrwan)"/>
 <rect x="120" y="92" width="1000" height="104" rx="9" class="router"/>
 <text x="140" y="116" class="title">MikroTik · 192.168.5.1 · RouterOS 7.24.5</text>
 <text x="140" y="136" class="">dst-nat:</text>
-<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.16</text>
+<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.16 · 36000-36003→.6.32 · 31000-34999→.6.33</text>
 <text x="140" y="154" class="">11753→.6.17 · 3479→.6.18 · 7881→.6.22 · 34197→.6.28 · 25565→.6.29 · 18080→.5.76 (node)</text>
 <text x="140" y="174" class="">BGP 65001 · BFD 3784 · DNS FWD ×6 zones → .6.30 · WireGuard 51820 (10.99.0.1/24)</text>
 <path d="M36,208 L1120,208" class="wire" opacity=".35"/>
@@ -1805,6 +1807,13 @@ a
 <text x="606" y="821" class="muted">6443</text>
 <text x="606" y="838" class="wg">WG</text>
 <text x="627.8" y="838" class="note">all speakers</text>
+<a href="#vip-6-32"><rect x="848" y="786" width="240" height="62" rx="9" class="vip cluster"/>
+<text x="858" y="805" class="" style=" font-weight:700; font-size:12.5px;">.6.32 / .6.33  rots gameservers</text>
+<text x="858" y="821" class="muted" style="font-size:9.3px;">prod 36000–36003 · previews 31000–34999 /udp</text>
+<text x="858" y="838" class="wan">WAN udp</text>
+<text x="908" y="838" class="wg">WG</text>
+<text x="930" y="838" class="note">all speakers</text>
+</a>
 <rect x="36" y="902" width="1168" height="112" rx="9" class="do"/>
 <text x="56" y="926" class="title">DigitalOcean cluster (2143prod) — wg0 10.99.0.2/24</text>
 <text x="56" y="946" class="">routes 192.168.5.0/24 + 192.168.6.0/24 into the tunnel · keepalive 25 s · dials john2143.com:51820</text>
@@ -2015,7 +2024,7 @@ credentials I do not read.</p>
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-403.55" font-family="Helvetica,sans-Serif" font-size="11.00">ROUTER RB5009UPr+S+</text>
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-390.05" font-family="Helvetica,sans-Serif" font-size="11.00">.0.2 WAN · .5.1 · .1.1 · .88.254</text>
 <text xml:space="preserve" text-anchor="middle" x="489.06" y="-376.55" font-family="Helvetica,sans-Serif" font-size="11.00">BGP 65001 · BFD 3784 · WireGuard 51820</text>
-<text xml:space="preserve" text-anchor="middle" x="489.06" y="-363.05" font-family="Helvetica,sans-Serif" font-size="11.00">dst&#45;nat 15 rules · DNS FWD ×6</text>
+<text xml:space="preserve" text-anchor="middle" x="489.06" y="-363.05" font-family="Helvetica,sans-Serif" font-size="11.00">dst&#45;nat 18 rules · DNS FWD ×6</text>
 </g>
 <!-- verizon&#45;&gt;router -->
 <g id="edge2" class="edge">
@@ -2109,36 +2118,37 @@ credentials I do not read.</p>
 <!-- vipc -->
 <g id="node45" class="node vip">
 <title>vipc</title>
-<path fill="white" stroke="black" d="M1030.93,-267.75C1030.93,-267.75 822.93,-267.75 822.93,-267.75 816.93,-267.75 810.93,-261.75 810.93,-255.75 810.93,-255.75 810.93,-204.25 810.93,-204.25 810.93,-198.25 816.93,-192.25 822.93,-192.25 822.93,-192.25 1030.93,-192.25 1030.93,-192.25 1036.93,-192.25 1042.93,-198.25 1042.93,-204.25 1042.93,-204.25 1042.93,-255.75 1042.93,-255.75 1042.93,-261.75 1036.93,-267.75 1030.93,-267.75"/>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-255.2" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Cluster (13)</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-243.95" font-family="Helvetica,sans-Serif" font-size="9.00">.6.14 coturn &#160;&#160;.6.17 openrct2 &#160;&#160;.6.19 mosquitto</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-232.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.20 temporal &#160;&#160;.6.21 coturn &#160;&#160;.6.22 livekit</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-221.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.23 mimir &#160;&#160;.6.24 loki &#160;&#160;.6.25 syslog</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-210.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.26 frigate &#160;&#160;.6.30 lan&#45;dns &#160;&#160;.6.31 seaweedfs</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-198.95" font-family="Helvetica,sans-Serif" font-size="9.00">.5.10 kubernetes&#45;api :6443</text>
+<path fill="white" stroke="black" d="M1030.93,-267.38C1030.93,-267.38 822.93,-267.38 822.93,-267.38 816.93,-267.38 810.93,-261.38 810.93,-255.38 810.93,-255.38 810.93,-192.62 810.93,-192.62 810.93,-186.62 816.93,-180.62 822.93,-180.62 822.93,-180.62 1030.93,-180.62 1030.93,-180.62 1036.93,-180.62 1042.93,-186.62 1042.93,-192.62 1042.93,-192.62 1042.93,-255.38 1042.93,-255.38 1042.93,-261.38 1036.93,-267.38 1030.93,-267.38"/>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-254.82" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Cluster (15)</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-243.57" font-family="Helvetica,sans-Serif" font-size="9.00">.6.14 coturn &#160;&#160;.6.17 openrct2 &#160;&#160;.6.19 mosquitto</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-232.32" font-family="Helvetica,sans-Serif" font-size="9.00">.6.20 temporal &#160;&#160;.6.21 coturn &#160;&#160;.6.22 livekit</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-221.07" font-family="Helvetica,sans-Serif" font-size="9.00">.6.23 mimir &#160;&#160;.6.24 loki &#160;&#160;.6.25 syslog</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-209.82" font-family="Helvetica,sans-Serif" font-size="9.00">.6.26 frigate &#160;&#160;.6.30 lan&#45;dns &#160;&#160;.6.31 seaweedfs</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-198.57" font-family="Helvetica,sans-Serif" font-size="9.00">.6.32 rots&#45;prod &#160;&#160;.6.33 rots&#45;preview</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-187.32" font-family="Helvetica,sans-Serif" font-size="9.00">.5.10 kubernetes&#45;api :6443</text>
 </g>
 <!-- router&#45;&gt;vipc -->
 <g id="edge45" class="edge vip">
 <title>router&#45;&gt;vipc</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M567.24,-355.04C603.63,-339.97 639.18,-325.25 639.18,-325.25 639.18,-325.25 723.1,-297.38 800.14,-271.79"/>
-<polygon fill="black" stroke="black" points="801.13,-275.14 809.52,-268.67 798.92,-268.5 801.13,-275.14"/>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M567.24,-355.04C603.63,-339.97 639.18,-325.25 639.18,-325.25 639.18,-325.25 722.81,-295.72 799.74,-268.56"/>
+<polygon fill="black" stroke="black" points="800.85,-271.88 809.11,-265.25 798.52,-265.28 800.85,-271.88"/>
 <text xml:space="preserve" text-anchor="middle" x="711.56" y="-327.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (all speakers)</text>
 </g>
 <!-- vipl -->
 <g id="node46" class="node vip">
 <title>vipl</title>
-<path fill="white" stroke="black" d="M1021.18,-167.5C1021.18,-167.5 832.68,-167.5 832.68,-167.5 826.68,-167.5 820.68,-161.5 820.68,-155.5 820.68,-155.5 820.68,-126.5 820.68,-126.5 820.68,-120.5 826.68,-114.5 832.68,-114.5 832.68,-114.5 1021.18,-114.5 1021.18,-114.5 1027.18,-114.5 1033.18,-120.5 1033.18,-126.5 1033.18,-126.5 1033.18,-155.5 1033.18,-155.5 1033.18,-161.5 1027.18,-167.5 1021.18,-167.5"/>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-154.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-143.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-132.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-121.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
+<path fill="white" stroke="black" d="M1021.18,-155.5C1021.18,-155.5 832.68,-155.5 832.68,-155.5 826.68,-155.5 820.68,-149.5 820.68,-143.5 820.68,-143.5 820.68,-114.5 820.68,-114.5 820.68,-108.5 826.68,-102.5 832.68,-102.5 832.68,-102.5 1021.18,-102.5 1021.18,-102.5 1027.18,-102.5 1033.18,-108.5 1033.18,-114.5 1033.18,-114.5 1033.18,-143.5 1033.18,-143.5 1033.18,-149.5 1027.18,-155.5 1021.18,-155.5"/>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-142.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-131.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-109.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
 </g>
 <!-- router&#45;&gt;vipl -->
 <g id="edge46" class="edge vip">
 <title>router&#45;&gt;vipl</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M528.07,-355.2C572.26,-318.24 639.18,-262.25 639.18,-262.25 639.18,-262.25 810.93,-180 810.93,-180 810.93,-180 821.28,-176.49 835.76,-171.58"/>
-<polygon fill="black" stroke="black" points="836.6,-174.99 844.94,-168.47 834.35,-168.36 836.6,-174.99"/>
-<text xml:space="preserve" text-anchor="middle" x="711.56" y="-264.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (one node each)</text>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M527.3,-355.09C571.47,-317.25 639.18,-259.25 639.18,-259.25 639.18,-259.25 810.93,-168 810.93,-168 810.93,-168 821.28,-164.49 835.76,-159.58"/>
+<polygon fill="black" stroke="black" points="836.6,-162.99 844.94,-156.47 834.35,-156.36 836.6,-162.99"/>
+<text xml:space="preserve" text-anchor="middle" x="711.56" y="-261.4" font-family="Helvetica,sans-Serif" font-size="8.00"> BGP 65001 (one node each)</text>
 </g>
 <!-- ucore -->
 <g id="node6" class="node net">
@@ -2754,6 +2764,8 @@ placement fact rather than a security one.</p>
 <tr id="vip-6-29"><td class="mono">.6.29</td><td class="mono">::29</td><td>minecraft-game</td><td class="mono">25565/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">25565</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-30"><td class="mono">.6.30</td><td class="mono">::30</td><td>lan-dns</td><td class="mono">53 tcp+udp → 1053</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-31"><td class="mono">.6.31</td><td class="mono">::31</td><td>seaweedfs-s3-lan</td><td class="mono">8333/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
+<tr id="vip-6-32"><td class="mono">.6.32</td><td class="mono">::32</td><td>rots-gs-&lt;i&gt;-udp (rots-prod)</td><td class="mono">36000–36003/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">36000–36003/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-33"><td class="mono">.6.33</td><td class="mono">::33</td><td>rots-gs-0-udp (rots-pr-*)</td><td class="mono">31000–34999/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">31000–34999/udp</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-5-10"><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 </tbody>
 </table>
