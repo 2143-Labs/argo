@@ -1,0 +1,120 @@
+# Dynamic DNS for the public names that point at the home WAN IP. Replaces the
+# deSEC timers that ran on home-pi (dotfiles nixos/cluster/hosts/home-pi.nix).
+# Every RRset is read through the deSEC API (reads don't count against deSEC's
+# write limits) and written only when it differs. A throttled read (000/429/5xx)
+# skips that domain until the next run. Any other error exits 1 and posts to
+# ntfy. FORCE=1 rewrites every record with the current IP (same value, DNS
+# unchanged) and sends a confirmation push: it proves the token can write.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: desec-ddns
+  namespace: ddns
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          # Same resolver pin as steam-lobby/coturn-wan-ip-watcher: the IPv6 kube-dns
+          # ClusterIP (fd42:42:43::a) never answers and breaks musl lookups.
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            searches:
+              - ddns.svc.cluster.local
+              - svc.cluster.local
+              - cluster.local
+            options:
+              - name: ndots
+                value: "5"
+          securityContext:
+            runAsNonRoot: true
+          containers:
+            - name: ddns
+              image: docker.io/curlimages/curl:8.23.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -u
+                  FORCE=${FORCE:-0}
+                  TOKEN=$(cat /secret/token)
+                  NTFY=$(cat /secret/ntfy_url)
+                  fail=0
+                  alert() {
+                    echo "ERROR: $1" >&2; fail=1
+                    curl -fsS -m 20 -H "Title: desec-ddns failed" -H "Priority: high" -H "Tags: warning" \
+                      -d "$1" "$NTFY" >/dev/null || echo "ntfy post failed" >&2
+                  }
+                  IP=$(curl -4sf --connect-timeout 10 https://ifconfig.me 2>/dev/null \
+                    || curl -4sf --connect-timeout 10 https://icanhazip.com 2>/dev/null \
+                    || curl -4sf --connect-timeout 10 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | sed -n 's/^ip=//p')
+                  IP=$(printf '%s' "$IP" | tr -d '[:space:]')
+                  case "$IP" in
+                    ""|*[!0-9.]*) alert "could not determine the public IPv4 address (got '$IP')"; exit 1 ;;
+                  esac
+                  # sync <domain> <subname>...   ("@" = zone apex)
+                  sync() {
+                    d=$1; shift
+                    api="https://desec.io/api/v1/domains/$d/rrsets"
+                    body=""; need=$FORCE
+                    for s in "$@"; do
+                      code=$(curl -s -o /tmp/r -w '%{http_code}' -H "Authorization: Token $TOKEN" "$api/$s/A/") || code=000
+                      case "$code" in
+                        200) grep -qF "\"$IP\"" /tmp/r || need=1 ;;
+                        404) need=1 ;;
+                        000|429|5??) echo "SKIP $d: deSEC read returned HTTP $code; retrying next run"; return 0 ;;
+                        *) alert "$d/$s: deSEC read returned HTTP $code"; return 0 ;;
+                      esac
+                      sub=$s; [ "$s" = "@" ] && sub=""
+                      body="$body${body:+,}{\"subname\":\"$sub\",\"type\":\"A\",\"ttl\":3600,\"records\":[\"$IP\"]}"
+                    done
+                    if [ "$need" = 0 ]; then echo "OK $d: already $IP"; return 0; fi
+                    code=$(curl -s -o /tmp/w -w '%{http_code}' -X PUT -H "Authorization: Token $TOKEN" \
+                      -H "Content-Type: application/json" "$api/" -d "[$body]") || code=000
+                    case "$code" in
+                      2??) echo "UPDATED $d ($*) -> $IP" ;;
+                      *) alert "$d: deSEC write returned HTTP $code: $(head -c 300 /tmp/w)" ;;
+                    esac
+                  }
+                  sync john2143.com @ '*'
+                  sync 2143.me m
+                  sync dsstar.us @
+                  sync balabusta.homes @ '*'
+                  if [ "$FORCE" = 1 ] && [ "$fail" = 0 ]; then
+                    curl -fsS -m 20 -H "Title: desec-ddns verify OK" -H "Priority: low" \
+                      -d "forced run rewrote every record to $IP" "$NTFY" >/dev/null || { echo "ntfy post failed" >&2; fail=1; }
+                  fi
+                  exit $fail
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: secret
+                  mountPath: /secret
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "16Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "64Mi"
+          volumes:
+            - name: secret
+              secret:
+                secretName: desec-ddns
+            - name: tmp
+              emptyDir: {}
