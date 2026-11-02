@@ -1,0 +1,6 @@
+apiVersion: v2
+name: moss-and-wool
+description: Moss & Wool (2143-Labs/Moss-And-Wool) static web game, one environment per Application (prod, dev or one per PR), scale-to-zero via KEDA HTTP
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

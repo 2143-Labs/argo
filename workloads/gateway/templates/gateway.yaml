@@ -238,3 +238,19 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    # *.dsstar.us: Moss & Wool environments. One label only (moss-12.dsstar.us);
+    # the exact chess.dsstar.us listener above wins for that name.
+    - name: dsstar-us-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.dsstar.us"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.certOverride | default "dsstar-us-wildcard-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same

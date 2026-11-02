@@ -1,0 +1,44 @@
+# Moss & Wool production at https://moss.dsstar.us, namespace moss-prod, from the game repo's `master` branch
+# (2143-Labs/Moss-And-Wool, a static browser game served by darkhttpd, scale-to-zero
+# via KEDA HTTP). Previews are separate (see moss-and-wool-preview.yaml).
+# The game repo's .github/workflows/deploy.yml rewrites the image.tag line below on
+# every master build; that line's exact format is load-bearing.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: moss-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/moss-and-wool
+    helm:
+      parameters:
+        - { name: namespace, value: moss-prod }
+        - { name: host, value: moss.dsstar.us }
+        - { name: routeName, value: moss-prod }
+        # Placeholder until the first build: the pod stays at 0 replicas until then.
+        - { name: image.tag, value: sha-0000000000000000000000000000000000000000 }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: moss-prod
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -67,6 +67,7 @@ Usually nothing: `shared-gateway` has one listener per wildcard certificate. Pin
 | `<sub>.john2143.com` | `john2143-wildcard-https` | `*.john2143.com` |
 | `<sub>.2143.me` | `2143-me-wildcard-https` | `*.2143.me` |
 | `<sub>.ts.2143.me` | `ts-2143-me-wildcard-https` | `*.ts.2143.me` |
+| `<sub>.dsstar.us` | `dsstar-us-wildcard-https` | `*.dsstar.us` |
 
 A route outside namespace `default` attaches only if its namespace is in that listener's `allowedRoutes` `matchExpressions` `values` list in `workloads/gateway/gateway.yaml`; add it there.
 

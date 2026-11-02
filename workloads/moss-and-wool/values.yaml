@@ -1,0 +1,8 @@
+# Every empty string is set by apps/moss-and-wool.yaml (prod), apps/moss-and-wool-dev.yaml (dev)
+# or apps/moss-and-wool-preview.yaml (one per PR); the templates fail to render if any is empty.
+namespace: ""   # moss-prod, moss-dev or moss-pr-<N>
+host: ""        # moss.dsstar.us, moss-dev.dsstar.us or moss-<N>.dsstar.us
+routeName: ""   # unique in `default`: moss-prod, moss-dev or moss-pr-<N>
+image:
+  repository: ghcr.io/2143-labs/moss-and-wool
+  tag: ""       # sha-<full commit sha>; the game repo's deploy.yml pushes one per build

@@ -1,0 +1,61 @@
+# One Application per open same-repo PR in 2143-Labs/Moss-And-Wool, served at
+# https://moss-{N}.dsstar.us (namespace moss-pr-{N}).
+#
+# The chart lives here (workloads/moss-and-wool), not in the game repo: the
+# AppProject does not allow that repo as a source. The image is the game repo's
+# deploy.yml PR build (sha-<PR head>, same-repo PRs only), so a PR has no image
+# until its CI finishes. Closing the PR prunes the namespace and the routes.
+# Pattern copied from rots-web-preview.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: moss-preview
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - pullRequest:
+        github:
+          owner: 2143-Labs
+          repo: Moss-And-Wool
+          tokenRef: { secretName: github-token, key: token }
+        requeueAfterSeconds: 120
+  template:
+    metadata:
+      name: 'moss-pr-{{.number}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/2143-Labs/argo.git
+        targetRevision: HEAD
+        path: workloads/moss-and-wool
+        helm:
+          parameters:
+            - { name: namespace, value: 'moss-pr-{{.number}}' }
+            - { name: host, value: 'moss-{{.number}}.dsstar.us' }
+            - { name: routeName, value: 'moss-pr-{{.number}}' }
+            - { name: image.tag, value: 'sha-{{.head_sha}}' }
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'moss-pr-{{.number}}'
+      ignoreDifferences:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          # Gateway API defaulting (see status-design.yaml).
+          jqPathExpressions:
+            - .spec.parentRefs[].group
+            - .spec.parentRefs[].kind
+            - .spec.rules[].backendRefs[].group
+            - .spec.rules[].backendRefs[].kind
+            - .spec.rules[].backendRefs[].weight
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
