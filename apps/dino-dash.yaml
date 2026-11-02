@@ -1,10 +1,10 @@
 # Dino-Dash production at https://dino.dsstar.us, namespace dino-prod, from the game
-# repo's `dev` and `master` builds (2143-Labs/Dino-Dash: a Vite client served by
-# darkhttpd and scaled to zero via KEDA HTTP, plus one always-on world server on /ws).
-# Previews are separate and label-gated (see dino-dash-preview.yaml).
-# The image tags are moving (web-latest / server-latest, rewritten by the game repo's
-# .github/workflows/deploy.yml) and every workload uses imagePullPolicy: Always, so a
-# push to dev or master is live on the next cold start with no commit here.
+# repo's `master` branch, which only moves on dsstar's sign-off (2143-Labs/Dino-Dash:
+# a Vite client served by darkhttpd and scaled to zero via KEDA HTTP, plus one
+# always-on world server on /ws). dev is dino-dash-dev.yaml; previews are
+# label-gated in dino-dash-preview.yaml.
+# The game repo's .github/workflows/deploy.yml rewrites the image.tag line below on
+# every master build; that line's exact format is load-bearing.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -23,9 +23,9 @@ spec:
         - { name: namespace, value: dino-prod }
         - { name: host, value: dino.dsstar.us }
         - { name: routeName, value: dino-dash }
-        # Moving tags: the game repo's deploy.yml retags them on every dev/master push.
-        - { name: image.webTag, value: web-latest }
-        - { name: image.serverTag, value: server-latest }
+        # Until master's first build (dsstar's next sign-off) this pins the image prod
+        # already served: the 2026-11-02 build of dev 2ec7fbd.
+        - { name: image.tag, value: '20261102_074417' }
         - { name: gameserver.replicas, value: '1' }
   destination:
     server: https://kubernetes.default.svc

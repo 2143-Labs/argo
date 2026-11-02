@@ -1,0 +1,44 @@
+# Dino-Dash dev at https://dino-dev.dsstar.us, namespace dino-dev, from the game
+# repo's `dev` branch (2143-Labs/Dino-Dash; same chart as prod, see dino-dash.yaml).
+# The game repo's .github/workflows/deploy.yml rewrites the image.tag line below on
+# every dev build; that line's exact format is load-bearing.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dino-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/dino-dash
+    helm:
+      parameters:
+        - { name: namespace, value: dino-dev }
+        - { name: host, value: dino-dev.dsstar.us }
+        - { name: routeName, value: dino-dev }
+        # Starts at the image prod serves; dev's next build bumps it to sha-<commit>.
+        - { name: image.tag, value: '20261102_074417' }
+        - { name: gameserver.replicas, value: '1' }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dino-dev
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

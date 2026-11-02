@@ -7,8 +7,9 @@
 # closing the PR) prunes the whole environment on the next requeue.
 # The chart lives here (workloads/dino-dash), not in the game repo: the AppProject
 # does not allow that repo as a source. The image is the game repo's deploy.yml PR
-# build (web-pr-{N} / server-pr-{N}), so a labeled PR has no environment until its
-# CI finishes. Pattern copied from rots-web-preview and moss-and-wool-preview.
+# build (web-sha-<PR head> / server-sha-<PR head>), so a labeled PR has no
+# environment until its CI finishes, and each new push rolls once its build lands.
+# Pattern copied from rots-web-preview and moss-and-wool-preview.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -48,8 +49,7 @@ spec:
             - { name: namespace, value: 'dino-pr-{{.number}}' }
             - { name: host, value: 'dino-{{.number}}.dsstar.us' }
             - { name: routeName, value: 'dino-pr-{{.number}}' }
-            - { name: image.webTag, value: 'web-pr-{{.number}}' }
-            - { name: image.serverTag, value: 'server-pr-{{.number}}' }
+            - { name: image.tag, value: 'sha-{{.head_sha}}' }
             - { name: gameserver.replicas, value: '1' }
       destination:
         server: https://kubernetes.default.svc

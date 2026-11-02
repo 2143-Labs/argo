@@ -29,10 +29,9 @@ spec:
                       - general
       containers:
         - name: dino-dash-web
-          image: "{{ .Values.image.repository }}:{{ required "image.webTag is required" .Values.image.webTag }}"
-          # web-latest / web-pr-<N> are moving targets that CI overwrites; Always
-          # makes each cold start pick up the newest build.
-          imagePullPolicy: Always
+          image: "{{ .Values.image.repository }}:web-{{ required "image.tag is required" .Values.image.tag }}"
+          # Tags are immutable (web-sha-<commit>); a new build means a new tag in the Application.
+          imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 101
             runAsGroup: 101

@@ -32,10 +32,9 @@ spec:
                       - general
       containers:
         - name: dino-dash-server
-          image: "{{ .Values.image.repository }}:{{ required "image.serverTag is required" .Values.image.serverTag }}"
-          # server-latest / server-pr-<N> are moving targets that CI overwrites;
-          # Always makes each (re)start pull the newest build.
-          imagePullPolicy: Always
+          image: "{{ .Values.image.repository }}:server-{{ required "image.tag is required" .Values.image.tag }}"
+          # Tags are immutable (server-sha-<commit>); a new build means a new tag in the Application.
+          imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 65534
             runAsGroup: 65534

@@ -1,13 +1,14 @@
-# Every empty string is set by apps/dino-dash.yaml (prod) or
-# apps/dino-dash-preview.yaml (one per labeled PR); the templates fail to render
-# if any is empty.
-namespace: ""   # dino-prod or dino-pr-<N>
-host: ""        # dino.dsstar.us or dino-<N>.dsstar.us
-routeName: ""   # unique in `default`: dino-dash or dino-pr-<N>
+# Every empty string is set by apps/dino-dash.yaml (prod), apps/dino-dash-dev.yaml
+# (dev) or apps/dino-dash-preview.yaml (one per labeled PR); the templates fail
+# to render if any is empty.
+namespace: ""   # dino-prod, dino-dev or dino-pr-<N>
+host: ""        # dino.dsstar.us, dino-dev.dsstar.us or dino-<N>.dsstar.us
+routeName: ""   # unique in `default`: dino-dash, dino-dev or dino-pr-<N>
 image:
   repository: ghcr.io/2143-labs/dino-dash
-  webTag: ""      # web-latest (prod) or web-pr-<N> (preview)
-  serverTag: ""   # server-latest (prod) or server-pr-<N> (preview)
+  # sha-<full commit sha>: the game repo's deploy.yml pushes web-<tag> and
+  # server-<tag> once per build and never overwrites them.
+  tag: ""
 gameserver:
   # The client knows exactly one /ws URL and the server has no /servers
   # discovery endpoint, so a second replica would be unreachable without new
