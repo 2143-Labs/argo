@@ -160,6 +160,19 @@ alloy:
         }
       }
 
+      // longhorn-manager metrics (longhorn-backend:9500). Without this there is no
+      // longhorn_volume_robustness in Mimir, so volume degradation is invisible —
+      // which is how 20 volumes stayed degraded for hours on 2026-11-02.
+      prometheus.scrape "longhorn" {
+        targets         = [{__address__ = "longhorn-backend.longhorn-system.svc.cluster.local:9500"}]
+        job_name        = "longhorn"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.remote_write.mimir.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
       // temporal server services (default ns; metrics on :9090 — force address since
       // the pods may not declare the container port)
       discovery.kubernetes "temporal" {
