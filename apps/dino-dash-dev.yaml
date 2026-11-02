@@ -21,7 +21,7 @@ spec:
         - { name: host, value: dino-dev.dsstar.us }
         - { name: routeName, value: dino-dev }
         # Starts at the image prod serves; dev's next build bumps it to sha-<commit>.
-        - { name: image.tag, value: sha-fee962e04e4dde0f7c893bdffc1b9b5d1da5e621 }
+        - { name: image.tag, value: sha-e35d27b985a4e366891ba56d9a13cc600b7aa480 }
         - { name: gameserver.replicas, value: '1' }
   destination:
     server: https://kubernetes.default.svc
