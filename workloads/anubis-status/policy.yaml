@@ -1,0 +1,26 @@
+# Anubis policy for status.2143.me. The status app serves a bare <title> and no
+# Open Graph tags, so there is nothing to pass through: the challenge page
+# carries a fixed card instead, and Anubis never fetches the backend for an
+# unfurl.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anubis-status-policy
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  policy.yaml: |
+    bots:
+      - import: (data)/meta/default-config.yaml
+    dnsbl: false
+
+    openGraph:
+      enabled: true
+      ttl: 1h
+      override:
+        "og:type": "website"
+        "og:site_name": "2143 Labs"
+        "og:title": "2143 Labs — status"
+        "og:description": "Service status for 2143 Labs: what is up, what is degraded and what just broke."
+        "description": "Service status for 2143 Labs: what is up, what is degraded and what just broke."

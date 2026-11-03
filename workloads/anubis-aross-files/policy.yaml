@@ -1,9 +1,20 @@
-# aross files: Anubis challenges 100% of requests. The only rule is a
-# catch-all CHALLENGE, so there is no allow-listed user agent, path, crawler or
-# well-known URL, and the cookie a browser earns covers every later request
-# (all requests match the same rule). Anubis serves its own challenge assets
-# under /.within.website/ before policy evaluation. Native Seafile clients
-# cannot solve this; they are not used on this instance.
+# aross files: Anubis challenges every request. The rules are a static-icon
+# allowance and a catch-all CHALLENGE, so there is no allow-listed user agent,
+# crawler or well-known URL, and the cookie a browser earns covers every later
+# request (all requests match the same rule). Anubis serves its own challenge
+# assets under /.within.website/ before policy evaluation. Native Seafile
+# clients cannot solve this; they are not used on this instance.
+#
+# The one exception is /media/img/: Seafile's share pages (templates
+# shared_file_view_react.html, view_shared_dir_react.html) carry og: tags whose
+# image is a static file-type or folder icon under that path. A link unfurler
+# fetches the image with the same Mozilla user agent it uses for the page, so
+# without the allowance a preview keeps its title and loses its picture.
+# /media/avatars/ is deliberately not included: those are user uploads.
+#
+# openGraph passthrough reads a share page's tags anonymously and cached, so a
+# preview shows the shared file or folder name. The login page has no tags, so
+# a bare link keeps the Anubis title.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,6 +23,9 @@ metadata:
 data:
   policy.yaml: |
     bots:
+      - name: share-preview-image
+        path_regex: ^/media/img/
+        action: ALLOW
       - name: challenge-every-request
         path_regex: .*
         action: CHALLENGE
@@ -19,3 +33,8 @@ data:
           algorithm: fast
           difficulty: 4
     dnsbl: false
+
+    openGraph:
+      enabled: true
+      considerHost: true
+      ttl: 1h

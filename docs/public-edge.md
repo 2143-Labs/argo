@@ -52,7 +52,34 @@ Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
 
 Chart-embedded variant (the game charts; `workloads/<game>/templates/anubis.yaml`): Anubis runs in each environment's own namespace, so every preview gets one, and the route points at its Service directly. There is no failover `TraefikService`: Traefik's `kubernetescrd` provider runs without `allowCrossNamespace`, so a TraefikService in `default` cannot name a Service in the game namespace, and with Anubis down that environment answers 503. Sync waves (Namespace and signing key -2, Anubis -1) make Argo switch the route only after Anubis is ready. A WebSocket path (Dino-Dash `/ws`) bypasses Anubis: a socket cannot answer a challenge, and the page that opens it already passed one.
 
-Every Anubis enables Open Graph passthrough (`OG_PASSTHROUGH`, `OG_CACHE_CONSIDER_HOST`, `OG_EXPIRY_TIME=1h` in its env), so link unfurlers see the app's own `og:`/`twitter:` tags on the challenge page. Anubis fetches those anonymously from its `TARGET`, so only what the app shows a logged-out visitor is exposed. An `og:image` URL that is itself behind Anubis still gets the challenge. A new Anubis copies the same three variables.
+### Link previews
+
+Anubis challenges by user agent, and every unfurler worth naming (Discord, Slack,
+iMessage, Telegram, WhatsApp, LinkedIn) sends a `Mozilla/5.0 …` agent. It gets
+the challenge page, so the page is what has to carry the preview. Every Anubis
+therefore sets an `openGraph` block in its policy (`POLICY_FNAME`), which prints
+`og:`/`twitter:` tags in the `<head>` of the challenge page:
+
+- `override` — fixed tags for the whole host, and no backend request at all. Used
+  where the backend has no tags of its own and where a fetch would be a load
+  vector anyway: `workloads/anubis-status/policy.yaml`, and the three game charts'
+  `templates/anubis-policy.yaml` (a fetch there would cold-start a scaled-to-zero
+  world, which takes longer than Anubis's 5 s budget). Override replaces lookup
+  for every path, so never put it on a host whose tags vary by path.
+- passthrough — no `override`: Anubis fetches the requested path from `TARGET`
+  without the visitor's cookies and copies the tags it finds, cached per
+  host+path for 1 h. Used for Seafile (`workloads/anubis-aross-files/policy.yaml`),
+  whose share pages carry the shared file or folder name. The login page has no
+  tags, so a bare link keeps the Anubis title. Only what the app shows a
+  logged-out visitor is ever exposed.
+
+The `og:image` fetch is a challenge too, so the image path needs an `ALLOW` rule
+ahead of the catch-all: `^/og[.]png$` on the games (one static PNG from the same
+build) and `^/media/img/` on `files.aross.studio` (Seafile's file-type and folder
+icons; `/media/avatars/` is deliberately not included). Keep that rule as narrow
+as the one file or directory it exists for. The tags in the games' `index.html`
+serve the clients Anubis does not challenge (search engines, non-Mozilla
+unfurlers); keep the two copies in step.
 
 Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 
