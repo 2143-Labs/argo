@@ -18,12 +18,12 @@ spec:
         # apps/seafile.yaml; the chart reads only .Values.seafile.*. Namespace,
         # NetworkPolicies, DB, memcached and the OAuth ConfigMap come from
         # apps/aross-files-base.yaml.
-        # Served at arossfiles.john2143.com until files.aross.studio has DNS;
-        # switching means changing this hostname and OAUTH_REDIRECT_URL in
-        # workloads/aross-files-base/seafile-oauth-cm.yaml together.
+        # Served at files.aross.studio via the *.aross.studio listener; the OAuth
+        # redirect in workloads/aross-files-base/seafile-oauth-cm.yaml must name
+        # the same host.
         seafile:
           env:
-            SEAFILE_SERVER_HOSTNAME: "arossfiles.john2143.com"
+            SEAFILE_SERVER_HOSTNAME: "files.aross.studio"
             SEAFILE_MYSQL_DB_HOST: "seafile-mariadb"
             MEMCACHED_HOST: "seafile-memcached"
             INIT_SEAFILE_ADMIN_EMAIL: "admin@john2143.com"
