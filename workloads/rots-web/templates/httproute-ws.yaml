@@ -1,0 +1,48 @@
+{{- $ns := required "namespace is required" .Values.namespace }}
+{{- $routeName := required "routeName is required" .Values.routeName }}
+{{- $host := required "host is required" .Values.host }}
+{{- /*
+Game-server WebSocket routes: slot k is wss://<host>/ws/<k> -> Service
+rots-gs-<k>. They are split out of httproute.yaml because Gateway API v1.6.2
+caps one HTTPRoute at 16 rules (rules.maxItems), and `gameserver.slots` is the
+number of slots that exist - 400 in prod, i.e. 25 routes of 16.
+They live in `default` for the same reason the main route does: the Traefik
+ExtensionRef middlewares (the gates) are namespace-local and the wildcard
+listener only admits default/argocd/kube-system. Every rule includes
+"rots-web.gates" - never add one without it.
+
+Slots may be any number: ceil(slots/16) routes, the last one partial.
+*/}}
+{{- $slots := int .Values.gameserver.slots }}
+{{- $perRoute := 16 }}
+{{- $routes := div (add $slots $perRoute -1) $perRoute }}
+{{- range $c := until (int $routes) }}
+{{- $start := mul $c $perRoute }}
+{{- $end := min $slots (add $start $perRoute) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $routeName }}-ws-{{ $c }}
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
+  hostnames:
+    - "{{ $host }}"
+  rules:
+    {{- range $i := untilStep (int $start) (int $end) 1 }}
+    # Game server slot {{ $i }} over WebSocket; tungstenite ignores the path.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ws/{{ $i }}
+      filters:
+{{- include "rots-web.gates" $ }}
+      backendRefs:
+        - name: rots-gs-{{ $i }}
+          namespace: {{ $ns }}
+          port: 80
+    {{- end }}
+{{- end }}
