@@ -80,8 +80,16 @@
     httpGet:
       path: /healthz
       port: health
+{{- if .managed }}
+    # A managed instance is handed out by /play on its first heartbeat; probing
+    # every second makes its Service endpoint ready about a second later, so a
+    # browser that connects at once does not get a 503 on /ws/<slot>.
+    periodSeconds: 1
+    failureThreshold: 180
+{{- else }}
     periodSeconds: 5
     failureThreshold: 36
+{{- end }}
     # timeoutSeconds 3 on every probe: readiness gates the rots-gs-N-udp
     # LoadBalancer Service, so a 1 s timeout under node contention blackholes
     # native players.
