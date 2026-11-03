@@ -67,6 +67,11 @@ spec:
               value: {{ .Values.gameserver.softCap | quote }}
             - name: MAX_PLAYERS
               value: {{ .Values.gameserver.maxPlayers | quote }}
+            {{- if .Values.gameserver.debug }}
+            # Debug mode: Settings > ADMIN respawn, title START AT L4 (values.yaml). Never prod.
+            - name: PRIMAL_DEBUG
+              value: "1"
+            {{- end }}
 
           resources:
             requests:

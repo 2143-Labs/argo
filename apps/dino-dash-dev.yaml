@@ -23,6 +23,7 @@ spec:
         # Starts at the image prod serves; dev's next build bumps it to sha-<commit>.
         - { name: image.tag, value: sha-5515429f9f6de997fb968b489adb9cc7b8b19ef6 }
         - { name: gameserver.replicas, value: '1' }
+        - { name: gameserver.debug, value: 'true' }
   destination:
     server: https://kubernetes.default.svc
     namespace: dino-dev

@@ -51,6 +51,7 @@ spec:
             - { name: routeName, value: 'dino-pr-{{.number}}' }
             - { name: image.tag, value: 'sha-{{.head_sha}}' }
             - { name: gameserver.replicas, value: '1' }
+            - { name: gameserver.debug, value: 'true' }
       destination:
         server: https://kubernetes.default.svc
         namespace: 'dino-pr-{{.number}}'

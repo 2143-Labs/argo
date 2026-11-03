@@ -40,3 +40,6 @@ gameserver:
     target: "96"      # real + artificial players the governor aims for
   softCap: "80"       # NPCs fill up to here; real players can still join past it
   maxPlayers: "100"   # hard cap, real + artificial
+  # Debug mode (PRIMAL_DEBUG=1): Settings > ADMIN respawn at L4.9/9.9/14.9 and reset, the title
+  # START AT L4 button, NPC population logs. dino-dev and PR previews only; never prod.
+  debug: false
