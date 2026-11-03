@@ -73,6 +73,8 @@ A route outside namespace `default` attaches only if its namespace is in that li
 
 Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. A deeper name or a new domain needs a `Certificate` in `workloads/gateway/templates/wildcard-certs.yaml` and its own listener. Keep `shared-gateway` at 16 listeners or fewer: Traefik writes one BackendTLSPolicy status ancestor per listener and fails every status write beyond 16. `scripts/validate-gateway-certs.sh` fails CI when a route pins no listener or a missing one, when a pinned hostname is not covered by the listener's hostname or Certificate, or when the Gateway exceeds 16 listeners. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
+A wildcard needs DNS-01, so its zone must be in a `dnsZones` selector of `letsencrypt-prod` (`workloads/cert-manager/templates/cluster-issuer.yaml`). A zone in a second deSEC account means a second `dns01` solver entry with its own token Secret in `cert-manager`, plus a name-scoped Role for `desec-webhook` (see `workloads/secrets/cert-manager-desec-aross-studio*.yaml`).
+
 ### b. HTTPRoute (`workloads/<name>/ingress.yaml`)
 
 ```yaml

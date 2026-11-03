@@ -67,22 +67,7 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - aross.studio
----
-# files.aross.studio: aross files Seafile. HTTP-01, not DNS-01: aross.studio is
-# not in letsencrypt-prod's dnsZones (its DNS lives in another deSEC account),
-# and the name is a CNAME to john2143.com, which reaches our edge.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: files-aross-studio-tls
-  namespace: default
-spec:
-  secretName: files-aross-studio-tls
-  issuerRef:
-    name: letsencrypt-http01
-    kind: ClusterIssuer
-  dnsNames:
-    - files.aross.studio
+    - "*.aross.studio"
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
