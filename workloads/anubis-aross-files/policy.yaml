@@ -1,0 +1,21 @@
+# aross files: Anubis challenges 100% of requests. The only rule is a
+# catch-all CHALLENGE, so there is no allow-listed user agent, path, crawler or
+# well-known URL, and the cookie a browser earns covers every later request
+# (all requests match the same rule). Anubis serves its own challenge assets
+# under /.within.website/ before policy evaluation. Native Seafile clients
+# cannot solve this; they are not used on this instance.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anubis-policy
+  namespace: aross-files
+data:
+  policy.yaml: |
+    bots:
+      - name: challenge-every-request
+        path_regex: .*
+        action: CHALLENGE
+        challenge:
+          algorithm: fast
+          difficulty: 4
+    dnsbl: false

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anubis
+  namespace: aross-files
+  labels:
+    app: anubis
+spec:
+  # One replica: the default in-memory store keeps issued challenges per pod,
+  # so a second replica would fail roughly half of all challenge submissions.
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: anubis
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: anubis
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      containers:
+        - name: anubis
+          image: ghcr.io/techarohq/anubis:v1.28.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BIND
+              value: ":8080"
+            - name: METRICS_BIND
+              value: ":9090"
+            - name: TARGET
+              value: "http://seafile.aross-files.svc:80"
+            # arossfiles.john2143.com is the interim host; files.aross.studio
+            # is listed ahead of its route so the switch needs no change here.
+            - name: REDIRECT_DOMAINS
+              value: "arossfiles.john2143.com,files.aross.studio"
+            - name: POLICY_FNAME
+              value: "/etc/anubis/policy.yaml"
+            - name: HS512_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: anubis-signing-key
+                  key: password
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: metrics
+              containerPort: 9090
+          volumeMounts:
+            - name: policy
+              mountPath: /etc/anubis
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+            initialDelaySeconds: 1
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+      volumes:
+        - name: policy
+          configMap:
+            name: anubis-policy

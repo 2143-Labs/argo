@@ -11,7 +11,9 @@ data:
     ENABLE_OAUTH = True
     OAUTH_CREATE_UNKNOWN_USER = True
     OAUTH_ACTIVATE_USER_AFTER_CREATION = True
-    OAUTH_REDIRECT_URL = "https://files.aross.studio/oauth/callback/"
+    # Must match SEAFILE_SERVER_HOSTNAME in apps/aross-files.yaml. Interim host
+    # until files.aross.studio has DNS; change both together.
+    OAUTH_REDIRECT_URL = "https://arossfiles.john2143.com/oauth/callback/"
     OAUTH_AUTHORIZATION_URL = "https://au.2143.me/authorize"
     OAUTH_TOKEN_URL = "http://pocket-id.pocket-id.svc.cluster.local/api/oidc/token"
     OAUTH_USER_INFO_URL = "http://pocket-id.pocket-id.svc.cluster.local/api/oidc/userinfo"

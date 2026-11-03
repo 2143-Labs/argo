@@ -1,0 +1,31 @@
+# Persistent HS512 signing key for Anubis, generated once in-cluster.
+# CreatedOnce = never rotated; deleting the Secret makes ESO generate a new one
+# (every visitor re-solves the challenge once).
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: anubis-signing-key
+  namespace: aross-files
+spec:
+  length: 128
+  digits: 32
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: anubis-signing-key
+  namespace: aross-files
+spec:
+  refreshPolicy: CreatedOnce
+  target:
+    name: anubis-signing-key
+    creationPolicy: Owner
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: anubis-signing-key

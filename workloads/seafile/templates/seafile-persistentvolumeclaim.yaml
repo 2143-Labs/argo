@@ -3,6 +3,10 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: seafile-data
+  annotations:
+    # Customer data: Argo must never prune or delete this claim on app deletion.
+    # (longhorn-3 is also reclaimPolicy Retain.)
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   accessModes:
     - ReadWriteOnce

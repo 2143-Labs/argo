@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aross-files
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/seafile
+    helm:
+      releaseName: seafile
+      values: |
+        # Second Seafile CE instance for aross. Same vendored chart as
+        # apps/seafile.yaml; the chart reads only .Values.seafile.*. Namespace,
+        # NetworkPolicies, DB, memcached and the OAuth ConfigMap come from
+        # apps/aross-files-base.yaml.
+        # Served at arossfiles.john2143.com until files.aross.studio has DNS;
+        # switching means changing this hostname and OAUTH_REDIRECT_URL in
+        # workloads/aross-files-base/seafile-oauth-cm.yaml together.
+        seafile:
+          env:
+            SEAFILE_SERVER_HOSTNAME: "arossfiles.john2143.com"
+            SEAFILE_MYSQL_DB_HOST: "seafile-mariadb"
+            MEMCACHED_HOST: "seafile-memcached"
+            INIT_SEAFILE_ADMIN_EMAIL: "admin@john2143.com"
+            CACHE_PROVIDER: "memcached"
+          extraVolumes:
+            - name: oauth-config
+              mountPath: /scripts/seafile_oauth_settings.py
+              subPath: oauth_settings.py
+              volumeInfo:
+                configMap:
+                  name: seafile-oauth-config
+          configs:
+            seafileDataVolume:
+              storageClassName: longhorn-3
+              storage: 100Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aross-files
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
