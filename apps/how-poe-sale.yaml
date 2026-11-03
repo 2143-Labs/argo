@@ -23,7 +23,7 @@ spec:
         - { name: host, value: how.john2143.com }
         - { name: poeSaleHost, value: how.poe.sale }
         - { name: routeName, value: how-poe-sale }
-        - { name: image.tag, value: sha-d4ccd2ccb8b3bd13b388e2e49080b43949beee57 }
+        - { name: image.tag, value: sha-a8c23106a2c719e4409168307eca71b29b0e3fbd }
         - { name: keda.enabled, value: 'false' }
         - { name: replicas, value: '1' }
   destination:
