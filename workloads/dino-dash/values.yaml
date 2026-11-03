@@ -23,7 +23,7 @@ gameserver:
   # also wakes it (requestRate on the web route), so it is usually ready before
   # PLAY. Every cold start is a fresh world (positions, leaderboard, NPCs).
   scaleToZero:
-    enabled: false
+    enabled: true
     # Seconds with no open /ws socket and no page view (the rate window adds
     # ~1 min) before the server scales to zero.
     idleSeconds: 300
