@@ -2,12 +2,23 @@
 # game load fetches ~230 distinct files, ~190 of them .ogg, which crowdsecurity/http-logs
 # does not count as static, so http-crawl-non_statics banned every outside player
 # within seconds (2026-11-02). Bots on these hosts are Anubis's job
-# (workloads/<game>/templates/anubis.yaml). For them CrowdSec keeps only the
+# (helm_modules/game-edge). For them CrowdSec keeps only the
 # exploit-signature scenarios and john2143/game-http-flood (DDoS backstop).
 # The parser forces static_ressource=true, which switches off exactly the two
 # scenarios that read it: http-crawl-non_statics and http-probing. Its mounted
 # file name must sort after http-logs.yaml (s02 parsers run in file-name order).
-# A new game's hostnames go into the regex below in the same commit as its chart.
+#
+# Games are recognized by ROUTE NAME, not by hostname: helm_modules/game-edge
+# names every game HTTPRoute game-<routeName>, Traefik logs it as RouterName, and
+# the hub crowdsecurity/traefik-logs parser exposes that as
+# evt.Parsed.traefik_router_name. So a new game needs no change here - it gets
+# the exemption by using the library. The two hostname lists this replaced kept
+# drifting (rots-web was missing, and a preview host was banned for exactly the
+# cold-load pattern below on 2026-11-01).
+#
+# Accepted gap: a log line with no RouterName (a stale Traefik replica answering
+# 404, see docs/2026-10-17-traefik-partial-config.md) no longer matches; the
+# hostname regex would have caught it.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,8 +27,8 @@ metadata:
 data:
   game-hosts.yaml: |
     name: john2143/game-hosts
-    description: "Game hosts: no request counts as crawling or probing; john2143/game-http-flood is their rate scenario"
-    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^(dino|moss)(-(dev|[0-9]+))?[.]dsstar[.]us$|^how(-[0-9]+)?[.]john2143[.]com$|^how[.]poe[.]sale$|^rots(-[0-9]+)?[.]john2143[.]com$'"
+    description: "Game routes (HTTPRoute name game-*): no request counts as crawling or probing; john2143/game-http-flood is their rate scenario"
+    filter: "evt.Meta.service == 'http' && evt.Parsed.traefik_router_name startsWith 'httproute-default-game-'"
     statics:
       - parsed: static_ressource
         value: "true"
