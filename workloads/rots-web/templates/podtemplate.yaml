@@ -25,6 +25,11 @@ template:
     # by the controller, which is why it writes the shutdown sentinel first.
     restartPolicy: Always
     terminationGracePeriodSeconds: 30
+    # The server runs as 65534 and writes config.yaml and its statefile to /data,
+    # a fresh root-owned Longhorn volume; fsGroup hands it to that group.
+    securityContext:
+      fsGroup: 65534
+      fsGroupChangePolicy: OnRootMismatch
     priorityClassName: rots-gameserver
     affinity:
       nodeAffinity:
