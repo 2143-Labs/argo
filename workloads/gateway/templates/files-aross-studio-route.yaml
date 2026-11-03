@@ -1,0 +1,64 @@
+{{- if .Values.prodOnly }}
+# files.aross.studio: the aross Seafile instance (namespace aross-files), a
+# customer's file host. Deliberately NO CrowdSec bouncer: a ban of any origin
+# (a local scenario on any host, or the CAPI community blocklist on a shared
+# VPN/carrier-NAT address) would lock the customer out. Anubis challenges 100%
+# of requests and is the bot gate; uploads-* is the flood backstop. Backend is
+# Anubis, never seafile, and there is no failover TraefikService: failover
+# buffers the whole request body for replay. docs/public-edge.md lists this gate.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: files-aross-studio
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: aross-studio-wildcard-https
+  hostnames:
+    - files.aross.studio
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: uploads-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: uploads-inflight-limit
+      backendRefs:
+        - name: anubis
+          namespace: aross-files
+          port: 80
+---
+# http:// -> https:// for this host, separate from john2143-http-to-https, which
+# is at the Gateway API cap of 16 hostnames per HTTPRoute.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: files-aross-studio-http-to-https
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+  hostnames:
+    - files.aross.studio
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+{{- end }}

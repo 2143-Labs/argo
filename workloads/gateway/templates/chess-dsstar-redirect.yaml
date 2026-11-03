@@ -11,7 +11,7 @@ spec:
     - name: shared-gateway
       sectionName: acme-http
     - name: shared-gateway
-      sectionName: chess-dsstar-us-https
+      sectionName: dsstar-us-wildcard-https
   hostnames:
     - chess.dsstar.us
   rules:

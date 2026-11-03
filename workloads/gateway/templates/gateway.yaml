@@ -198,6 +198,22 @@ spec:
         namespaces:
           from: Same
 
+    # *.aross.studio: every aross subdomain (files.aross.studio today). One label
+    # only; a route hostname must match this listener, not the apex listener.
+    - name: aross-studio-wildcard-https
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.aross.studio"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.certOverride | default "aross-studio-wildcard-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+
     - name: balabusta-homes-https
       protocol: HTTPS
       port: 8443
