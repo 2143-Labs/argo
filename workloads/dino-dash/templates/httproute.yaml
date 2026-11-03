@@ -12,8 +12,8 @@
 # interceptor too when gameserver.scaleToZero.enabled (InterceptorRoute
 # dino-dash-server), else straight to the world server (reference-grant.yaml).
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not
-# CI-checked: every rule must include "game-edge.gates", and /ws uses
-# "game-edge.wsGates" once the WebSocket check is on.
+# CI-checked: every rule must include "game-edge.gates", except /ws, which uses
+# "game-edge.wsGates" (the gates plus the Anubis cookie check).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -28,13 +28,15 @@ spec:
   rules:
     # The world server over WebSocket (the protocol ignores the path). This MUST
     # stay the first rule: Gateway API evaluates rules in order and a / rule first
-    # would send the upgrade into the KEDA interceptor.
+    # would send the upgrade into the KEDA interceptor. /ws is not proxied by
+    # Anubis; anubis-ws checks the Anubis cookie on the handshake (forwardAuth),
+    # because a socket cannot answer a challenge itself.
     - matches:
         - path:
             type: PathPrefix
             value: /ws
       filters:
-{{- include "game-edge.gates" . }}
+{{- include "game-edge.wsGates" . }}
       backendRefs:
 {{- if .Values.gameserver.scaleToZero.enabled }}
         - name: keda-add-ons-http-interceptor-proxy

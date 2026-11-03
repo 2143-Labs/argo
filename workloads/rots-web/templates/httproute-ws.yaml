@@ -10,8 +10,10 @@ helm_modules/game-edge like the main route's.
 They live in `default` for the same reason the main route does: the Traefik
 ExtensionRef middlewares (the gates) are namespace-local and the wildcard
 listener only admits default/argocd/kube-system. Every rule includes
-"game-edge.gates" (step 4 of the rollout switches these to "game-edge.wsGates",
-which adds the Anubis cookie check) - never add one without gates.
+"game-edge.wsGates": the shared gates plus the Anubis cookie check. /ws is not
+proxied by Anubis (a socket cannot answer a challenge); the <routeName>-anubis-ws
+forwardAuth Middleware checks the cookie the page already earned on the
+handshake, so a cookieless client gets 401 before a game server sees it.
 
 Slots may be any number: ceil(slots/16) routes, the last one partial.
 */}}
@@ -41,7 +43,7 @@ spec:
             type: PathPrefix
             value: /ws/{{ $i }}
       filters:
-{{- include "game-edge.gates" $ }}
+{{- include "game-edge.wsGates" $ }}
       backendRefs:
         - name: rots-gs-{{ $i }}
           namespace: {{ $ns }}
