@@ -1,0 +1,130 @@
+{{- if .Values.temporal.cleanupOnDelete }}
+{{- if .Values.db.protect }}{{ fail "temporal.cleanupOnDelete is for previews; it must not be set with db.protect (prod)" }}{{- end }}
+{{- $ns := required "namespace is required" .Values.namespace }}
+# Destructor for a preview: when its Application is deleted (PR closed or merged),
+# the PreDelete Job stops the authserver and terminates every Running workflow on
+# the preview's task queue, which no worker polls once the namespace is gone.
+# PreDelete hooks run only on Application deletion, never on sync.
+# The authserver goes to 0 replicas first: heartbeats from static servers
+# signal-with-start their GameServerWorkflow and server reports signal-with-start
+# the coordinator (rots-authserver src/temporal/mod.rs), so terminating while it
+# runs would recreate workflows.
+# Only the Job is a hook. The ServiceAccount, Role and RoleBinding are ordinary
+# resources, so they exist while the hook runs: Argo CD v3.5 counts hook resources
+# without a health check as Healthy and can end the PreDelete phase before the
+# Job runs (argo-cd#29100).
+# The script always exits 0 so a Temporal outage never blocks preview deletion;
+# stragglers end via the 2 h session execution timeout and the 3 h coordinator /
+# 24 h game-server run timeouts.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rots-temporal-cleanup
+  namespace: {{ $ns }}
+  labels:
+    app: rots-temporal-cleanup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rots-temporal-cleanup
+  namespace: {{ $ns }}
+  labels:
+    app: rots-temporal-cleanup
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["rots-authserver"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    resourceNames: ["rots-authserver"]
+    # kubectl scale PATCHes the scale subresource.
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    # kubectl wait --for=delete
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rots-temporal-cleanup
+  namespace: {{ $ns }}
+  labels:
+    app: rots-temporal-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: rots-temporal-cleanup
+    namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rots-temporal-cleanup
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rots-temporal-cleanup
+  namespace: {{ $ns }}
+  labels:
+    app: rots-temporal-cleanup
+  annotations:
+    argocd.argoproj.io/hook: PreDelete
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app: rots-temporal-cleanup
+    spec:
+      serviceAccountName: rots-temporal-cleanup
+      restartPolicy: Never
+      initContainers:
+        - name: stop-authserver
+          image: docker.io/alpine/k8s:1.35.6
+          command: ["/bin/sh", "-c"]
+          args:
+            - |-
+              NS={{ $ns }}
+              if kubectl -n "$NS" get deploy rots-authserver >/dev/null 2>&1; then
+                kubectl -n "$NS" scale deploy/rots-authserver --replicas=0 || echo "scale failed; continuing"
+                kubectl -n "$NS" wait --for=delete pod -l app=rots-authserver --timeout=120s || echo "authserver pods not gone after 120s; continuing"
+              fi
+              exit 0
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      containers:
+        - name: terminate-workflows
+          image: docker.io/temporalio/admin-tools:1.32.0
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: "temporal-frontend.default.svc:7233"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |-
+              TNS={{ required "temporal.namespace is required" .Values.temporal.namespace }}
+              Q='TaskQueue="{{ required "temporal.taskQueue is required" .Values.temporal.taskQueue }}" AND ExecutionStatus="Running"'
+              for i in 1 2 3 4 5 6 7 8 9 10; do
+                n=$(temporal workflow count -n "$TNS" -q "$Q" 2>&1 | sed -n 's/^Total: //p')
+                echo "attempt $i: running=${n:-unknown}"
+                [ "$n" = "0" ] && exit 0
+                [ -n "$n" ] && temporal workflow terminate -n "$TNS" -q "$Q" --reason "rots-web PreDelete: {{ $ns }} deleted" -y
+                sleep 10
+              done
+              echo "workflows still running after 10 attempts; their timeouts end them"
+              exit 0
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+{{- end }}

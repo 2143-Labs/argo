@@ -59,6 +59,8 @@ spec:
             - { name: gameserver.shareKey, value: rots-preview }
             - { name: temporal.namespace, value: rots-preview }
             - { name: temporal.taskQueue, value: 'rots-pr-{{.number}}' }
+            - { name: authserver.sessionExecutionTimeoutSecs, value: '7200' }
+            - { name: temporal.cleanupOnDelete, value: 'true' }
       destination:
         server: https://kubernetes.default.svc
         namespace: 'rots-pr-{{.number}}'
