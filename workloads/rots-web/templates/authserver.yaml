@@ -1,6 +1,8 @@
-# rots-authserver: accounts, sessions and game tickets. Always on (game servers
-# fetch its public key at startup). Served at https://<host>/auth; the HTTPRoute
-# strips /auth, so the app serves /api/v1/... at its root.
+# rots-authserver: accounts, sessions and game tickets. Served at https://<host>/auth; the
+# HTTPRoute strips /auth, so the app serves /api/v1/... at its root.
+# With authserver.scaleToZero.enabled the ScaledObject rots-authserver owns `replicas`: the pod
+# is up while an /auth request is in flight or a game-server pod exists in this namespace,
+# which also covers game servers' public-key fetch at startup.
 {{- $ns := required "namespace is required" .Values.namespace }}
 {{- $gs := .Values.gameserver }}
 {{- /* In kubernetes mode the authserver provisions game servers itself, so it
@@ -14,7 +16,9 @@ metadata:
   labels:
     app: rots-authserver
 spec:
+{{- if not .Values.authserver.scaleToZero.enabled }}
   replicas: 1
+{{- end }}
   # The authserver holds no state (fleet and session state live in Temporal), but
   # the join path's availability does: the default 25%/25% would delete the only
   # pod before its replacement is Ready.
