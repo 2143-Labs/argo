@@ -21,7 +21,8 @@ tags are what decode.
 
 Anubis emits only the keys given here, and `og:image` must be a raster the
 platform's image proxy can fetch on its own: that fetch does proxy to the
-target, so the path is ALLOWed above. Games without a raster get a
+target, so the path is ALLOWed above — exactly the one file, quoted, so the hole
+is that file and nothing beside it. Games without a raster get a
 title+description card instead of a broken image.
 */}}
 {{- define "game-edge.policy" }}
@@ -30,15 +31,15 @@ title+description card instead of a broken image.
 {{- $desc := required "embed.description is required" $e.description }}
 {{- $host := required "host is required" .root.Values.host }}
 {{- with $e.image }}
-{{- if not (hasPrefix "/icons/" .) }}
-{{- fail (printf "embed.image %q must live under /icons/ (the only path this policy ALLOWs)" .) }}
+{{- if and (not (hasPrefix "/icons/" .)) (ne . "/og.png") }}
+{{- fail (printf "embed.image %q must be /og.png or live under /icons/ (the policy ALLOWs exactly that one file)" .) }}
 {{- end }}
 {{- end }}
 bots:
   - import: (data)/meta/default-config.yaml
 {{- with $e.image }}
   - name: embed-image
-    path_regex: ^/icons/
+    path_regex: ^{{ regexQuoteMeta . }}$
     action: ALLOW
 {{- end }}
   - name: game-everyone
@@ -58,7 +59,7 @@ openGraph:
     "og:description": {{ $desc | quote }}
     "description": {{ $desc | quote }}
     "og:url": {{ $e.url | default (printf "https://%s/" $host) | quote }}
-    "twitter:card": "summary"
+    "twitter:card": {{ $e.twitterCard | default "summary" | quote }}
 {{- with $e.image }}
     "og:image": {{ printf "https://%s%s" $host . | quote }}
     "og:image:type": "image/png"

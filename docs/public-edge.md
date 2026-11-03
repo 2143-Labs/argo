@@ -80,16 +80,22 @@ Anubis emits only the keys the override supplies, and its `og:image` must be a
 raster the platform's image proxy can fetch on its own — that fetch does go to
 `TARGET`, so a game with an image wakes for one static file, which is intended.
 The fetch is challenged like any other request, so the image path needs an
-`ALLOW` rule ahead of the catch-all: `^/icons/` on the games, emitted only for a
-game whose `embed.image` is set (`dino-dash` is the only one that ships a
-raster, `/icons/icon-512.png`), and `^/media/img/` on `files.aross.studio`
-(Seafile's file-type and folder icons; `/media/avatars/` is deliberately not
-included). The policy fails the render for an image path outside `/icons/`, and
-`moss-and-wool`, `how-poe-sale` and `rots-web` serve no image at all, so their
-cards carry a title and a description only — the `og:image` they used to
-advertise (`/og.png`) never existed. The games' own `index.html` carries no
-`og:` tags, so the challenge page is the only payload; the clients Anubis allow
-(real crawlers) see the app HTML as it is.
+`ALLOW` rule ahead of the catch-all. The policy emits that rule as
+`^{{ regexQuoteMeta <embed.image> }}$`: one file, escaped, not its directory.
+`helm_modules/game-edge` fails the render for an image path outside `/icons/` or
+`/og.png`, so the hole cannot grow into "whatever the chart says".
+
+`dino-dash`, `moss-and-wool` and `how-poe-sale` each ship a 1200x630 `/og.png`
+(the game repo's own screenshot; `embed.image: /og.png`, 1200x630,
+`twitterCard: summary_large_image`), and their `index.html` carries the same
+tag set for the clients Anubis allows through (real crawlers) or never sees
+(anyone reading the HTML directly). Keep the two copies in step — the chart's
+`embed` values are the source for the card, the repo's `index.html` for the
+page. `rots-web` ships no raster, so its card is a title and a description.
+
+`files.aross.studio` is the passthrough case: Seafile's share pages carry their
+own tags, and its image is a static icon under `/media/img/`, which is ALLOWed
+(`/media/avatars/` is deliberately not included).
 
 Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 

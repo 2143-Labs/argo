@@ -53,7 +53,10 @@ embed:
   title: "PRIMAL — Hatch. Hunt. Hide. Evolve."
   siteName: PRIMAL
   description: "A multiplayer browser .io game about dinosaur evolution: hatch as a tiny raptor, eat what you can, hide from what you cannot, and grow through the species chain."
-  image: /icons/icon-512.png
-  imageWidth: 512
-  imageHeight: 512
+  # 1200x630 from the game repo's own screenshot; the image ships at /og.png
+  # in the web image, and the policy ALLOWs exactly that path.
+  image: /og.png
+  imageWidth: 1200
+  imageHeight: 630
+  twitterCard: summary_large_image
   imageAlt: "An adult raptor hunting by firelight in the Deep Jungle at night"

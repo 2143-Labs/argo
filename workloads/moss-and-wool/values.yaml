@@ -15,3 +15,8 @@ embed:
   title: "Moss & Wool | A little meadow, a little patience"
   siteName: "Moss & Wool"
   description: "An original, small pixel-art sheep-herding prototype: work the edges, gather the flock and guide it through the open pen gate."
+  image: /og.png
+  imageWidth: 1200
+  imageHeight: 630
+  imageAlt: "Moss & Wool level select: ten pastures, the Meadow unlocked"
+  twitterCard: summary_large_image

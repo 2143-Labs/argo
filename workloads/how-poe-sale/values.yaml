@@ -21,4 +21,9 @@ embed:
   title: "how.poe.sale — Path of Exile crafting solver"
   siteName: how.poe.sale
   description: "Paste an item and see which crafts can produce it, with exact odds, expected cost and time. Buying is priced against crafting at every step."
+  image: /og.png
+  imageWidth: 1200
+  imageHeight: 630
+  imageAlt: "The how.poe.sale solver: a target item box above a market panel"
+  twitterCard: summary_large_image
   url: https://how.poe.sale/
