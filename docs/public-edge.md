@@ -8,6 +8,7 @@ Every HTTPRoute rule on `shared-gateway` carries exactly one of these gates. CI 
 | Public, class A — browser and login surfaces | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer` | `workloads/gateway/templates/grafana-route.yaml` |
 | Public, class B — machine, API and bulk bodies (S3, LLM prompts, webhooks that are not GitHub's, upload APIs) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/llm-proxy/httproute.yaml` |
 | HTTP → HTTPS redirect | `RequestRedirect` only | `workloads/gateway/templates/john2143-http-to-https.yaml` |
+| Public game hosts — browser games behind Anubis (charts `dino-dash`, `moss-and-wool`, `how-poe-sale`) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/dino-dash/templates/httproute.yaml` |
 
 Definitions and values: `workloads/gateway/templates/security-middlewares.yaml` (rate limits, bouncers) and `workloads/gateway/templates/lan-only-middleware.yaml`. Do not copy values into docs.
 
@@ -44,6 +45,8 @@ Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
   allow-lists, and the stock policy challenges every `Mozilla|Opera` user
   agent — so a relying party using a browser-like HTTP client would get the
   challenge HTML wherever it expects JSON.
+
+Chart-embedded variant (the game charts; `workloads/<game>/templates/anubis.yaml`): Anubis runs in each environment's own namespace, so every preview gets one, and the route points at its Service directly. There is no failover `TraefikService`: Traefik's `kubernetescrd` provider runs without `allowCrossNamespace`, so a TraefikService in `default` cannot name a Service in the game namespace, and with Anubis down that environment answers 503. Sync waves (Namespace and signing key -2, Anubis -1) make Argo switch the route only after Anubis is ready. A WebSocket path (Dino-Dash `/ws`) bypasses Anubis: a socket cannot answer a challenge, and the page that opens it already passed one.
 
 Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 

@@ -30,7 +30,7 @@ spec:
                       - general
       containers:
         - name: anubis
-          image: ghcr.io/techarohq/anubis:v1.28.1
+          image: ghcr.io/techarohq/anubis:v1.28.2
           imagePullPolicy: IfNotPresent
           env:
             - name: BIND

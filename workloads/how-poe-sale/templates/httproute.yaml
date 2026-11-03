@@ -1,4 +1,4 @@
-{{- /* The Class A gates; every HTTPS rule below includes them. */}}
+{{- /* The edge gates; every HTTPS rule below includes them. */}}
 {{- define "how-poe-sale.gates" }}
         - type: ExtensionRef
           extensionRef:
@@ -14,16 +14,19 @@
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: crowdsec-bouncer
+            name: crowdsec-bouncer-noappsec
 {{- end }}
 {{- $ns := required "namespace is required" .Values.namespace }}
-# Class A browser surface (see docs/public-edge.md): a public tool with no login
-# and no server-side state, so the edge gate is the only gate.
+# Public game edge (docs/public-edge.md): the shared generous rate and in-flight
+# limits, then crowdsec-bouncer-noappsec, which enforces IP bans only (no AppSec:
+# the backend is our own static server). The CrowdSec agent treats this host as
+# a game host (workloads/crowdsec-agent/agent-game-hosts.yaml): no crawl/probing
+# heuristics, only exploit signatures and a flood ban. Bots are Anubis's job:
+# the / rule's backend is Service anubis (anubis.yaml).
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system/openbao.
-# Prod's backend is the app Service (reference-grant.yaml); a preview's is the
-# KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor), which
-# wakes the scale-to-zero pod via the InterceptorRoute.
+# The backend is Anubis (anubis.yaml), which proxies to the app Service (prod)
+# or the KEDA interceptor (previews).
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
 # every rule must include "how-poe-sale.gates".
 apiVersion: gateway.networking.k8s.io/v1
@@ -52,15 +55,9 @@ spec:
       filters:
 {{- include "how-poe-sale.gates" . }}
       backendRefs:
-{{- if eq (toString .Values.keda.enabled) "true" }}
-        - name: keda-add-ons-http-interceptor-proxy
-          namespace: keda
-          port: 8080
-{{- else }}
-        - name: how-poe-sale
+        - name: anubis
           namespace: {{ $ns }}
           port: 80
-{{- end }}
 ---
 # http:// -> https:// (one hop). Separate from gateway/john2143-http-to-https,
 # which is at the Gateway API cap of 16 hostnames. No backend, so it never wakes

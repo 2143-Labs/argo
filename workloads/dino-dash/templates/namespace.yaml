@@ -4,5 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ required "namespace is required" .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
   labels:
     app.kubernetes.io/part-of: dino-dash

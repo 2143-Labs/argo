@@ -1,4 +1,4 @@
-{{- /* The Class A gates; every HTTPS rule below includes them. */}}
+{{- /* The edge gates; every HTTPS rule below includes them. */}}
 {{- define "dino-dash.gates" }}
         - type: ExtensionRef
           extensionRef:
@@ -14,15 +14,19 @@
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: crowdsec-bouncer
+            name: crowdsec-bouncer-noappsec
 {{- end }}
 {{- $ns := required "namespace is required" .Values.namespace }}
-# Class A browser surface (see docs/public-edge.md): the crowdsec-bouncer filter is
-# what stops scanners; the rate/inflight limits are the shared generous ones.
+# Public game edge (docs/public-edge.md): the shared generous rate and in-flight
+# limits, then crowdsec-bouncer-noappsec, which enforces IP bans only (no AppSec:
+# the backend is our own static server). The CrowdSec agent treats this host as
+# a game host (workloads/crowdsec-agent/agent-game-hosts.yaml): no crawl/probing
+# heuristics, only exploit signatures and a flood ban. Bots are Anubis's job:
+# the / rule's backend is Service anubis (anubis.yaml).
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the dsstar-us-wildcard-https listener only admits routes from `default`.
-# / is the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor),
-# which wakes the scale-to-zero client via the InterceptorRoute. /ws goes to the
+# / is Anubis, which proxies to the KEDA interceptor (the interceptor wakes the
+# scale-to-zero client via the InterceptorRoute). /ws goes to the
 # interceptor too when gameserver.scaleToZero.enabled (InterceptorRoute
 # dino-dash-server), else straight to the world server (reference-grant.yaml).
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
@@ -77,9 +81,9 @@ spec:
                 value: no-cache
             remove: [Last-Modified]
       backendRefs:
-        - name: keda-add-ons-http-interceptor-proxy
-          namespace: keda
-          port: 8080
+        - name: anubis
+          namespace: {{ $ns }}
+          port: 80
 ---
 # http:// -> https:// (one hop). No backend, so it never wakes anything.
 apiVersion: gateway.networking.k8s.io/v1
