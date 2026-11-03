@@ -52,6 +52,8 @@ Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
 
 Chart-embedded variant (the game charts; `workloads/<game>/templates/anubis.yaml`): Anubis runs in each environment's own namespace, so every preview gets one, and the route points at its Service directly. There is no failover `TraefikService`: Traefik's `kubernetescrd` provider runs without `allowCrossNamespace`, so a TraefikService in `default` cannot name a Service in the game namespace, and with Anubis down that environment answers 503. Sync waves (Namespace and signing key -2, Anubis -1) make Argo switch the route only after Anubis is ready. A WebSocket path (Dino-Dash `/ws`) bypasses Anubis: a socket cannot answer a challenge, and the page that opens it already passed one.
 
+Every Anubis enables Open Graph passthrough (`OG_PASSTHROUGH`, `OG_CACHE_CONSIDER_HOST`, `OG_EXPIRY_TIME=1h` in its env), so link unfurlers see the app's own `og:`/`twitter:` tags on the challenge page. Anubis fetches those anonymously from its `TARGET`, so only what the app shows a logged-out visitor is exposed. An `og:image` URL that is itself behind Anubis still gets the challenge. A new Anubis copies the same three variables.
+
 Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 
 ## Not covered

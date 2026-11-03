@@ -37,6 +37,17 @@ spec:
           env:
             - name: BIND
               value: ":8080"
+            # Open Graph passthrough: link unfurlers (Discord, Slack, iMessage...)
+            # get the app's own og:/twitter: tags on the challenge page. Anubis
+            # fetches the requested URL from TARGET without the visitor's
+            # cookies, so only what the app shows anonymously is exposed.
+            # Cached per host+path for 1h. Off by default in v1.28.
+            - name: OG_PASSTHROUGH
+              value: "true"
+            - name: OG_CACHE_CONSIDER_HOST
+              value: "true"
+            - name: OG_EXPIRY_TIME
+              value: "1h"
             - name: METRICS_BIND
               value: ":9090"
             - name: TARGET
