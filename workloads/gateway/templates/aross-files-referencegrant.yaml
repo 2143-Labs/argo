@@ -1,0 +1,18 @@
+{{- if .Values.prodOnly }}
+# Lets HTTPRoutes in default reach Service anubis in aross-files, and nothing
+# else there: no route can target seafile directly.
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: allow-aross-files-anubis
+  namespace: aross-files
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: default
+  to:
+    - group: ""
+      kind: Service
+      name: anubis
+{{- end }}
