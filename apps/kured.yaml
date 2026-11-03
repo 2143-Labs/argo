@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kured
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: kured
+    repoURL: https://kubereboot.github.io/charts
+    targetRevision: 6.1.0
+    helm:
+      releaseName: kured
+      values: |
+        configuration:
+          # NixOS has no /var/run/reboot-required and no /bin/systemctl. deadman
+          # decides: it answers "reboot" only when this node's boot is healthy, it
+          # is not locked or mid-switch, and the whole cluster passes its own
+          # health gate (all nodes Ready, no degraded Longhorn volume, every
+          # openbao and CNPG instance Ready). Any error, including an unreachable
+          # API, means "do not reboot" (fail closed).
+          useRebootSentinelHostPath: false
+          rebootSentinelCommand: /run/current-system/sw/bin/deadman needs-reboot
+          rebootMethod: command
+          rebootCommand: /run/current-system/sw/bin/systemctl reboot
+          rebootDays: [we]
+          startTime: "12:00"
+          endTime: "17:00"
+          timeZone: America/New_York
+          period: 10m
+          concurrency: 1
+          drainTimeout: 30m
+          skipWaitForDeleteTimeout: 300
+          # Cordon makes CNPG switch every primary off the node; give it time to
+          # finish before the reboot.
+          rebootDelay: 60s
+          # Stay on the node and reboot with it: CNPG instances (strict-local),
+          # Longhorn's instance-manager, and the node-pinned / single-replica pods
+          # from docs/node-maintenance.md's stay lists. Everything else moves.
+          drainPodSelector: "!cnpg.io/cluster,longhorn.io/component!=instance-manager,app notin (home-assistant,minecraft,frigate,matter-server),app.kubernetes.io/name notin (za-mullvad,ee-mullvad,tempo),statefulset.kubernetes.io/pod-name notin (loki-write-0,loki-write-1,mimir-1,loki-chunks-cache-0,loki-results-cache-0)"
+        # Control planes only: they are the quorum, they hold most Longhorn
+        # replicas, and only they can read the cluster-wide kubeconfig deadman's
+        # gate needs. big and pite keep manual reboots (docs/node-maintenance.md).
+        # The chart's default kubernetes.io/os: linux merges alongside this.
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: "true"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kured
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
