@@ -1,5 +1,5 @@
-# Game hosts (Dino-Dash, Moss & Wool, how.poe.sale: every environment). A cold game
-# load fetches ~230 distinct files, ~190 of them .ogg, which crowdsecurity/http-logs
+# Game hosts (Dino-Dash, Moss & Wool, how.poe.sale, ROTS: every environment). A cold
+# game load fetches ~230 distinct files, ~190 of them .ogg, which crowdsecurity/http-logs
 # does not count as static, so http-crawl-non_statics banned every outside player
 # within seconds (2026-11-02). Bots on these hosts are Anubis's job
 # (workloads/<game>/templates/anubis.yaml). For them CrowdSec keeps only the
@@ -17,7 +17,7 @@ data:
   game-hosts.yaml: |
     name: john2143/game-hosts
     description: "Game hosts: no request counts as crawling or probing; john2143/game-http-flood is their rate scenario"
-    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^(dino|moss)(-(dev|[0-9]+))?[.]dsstar[.]us$|^how(-[0-9]+)?[.]john2143[.]com$|^how[.]poe[.]sale$'"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^(dino|moss)(-(dev|[0-9]+))?[.]dsstar[.]us$|^how(-[0-9]+)?[.]john2143[.]com$|^how[.]poe[.]sale$|^rots(-[0-9]+)?[.]john2143[.]com$'"
     statics:
       - parsed: static_ressource
         value: "true"

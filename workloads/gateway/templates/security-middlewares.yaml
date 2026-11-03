@@ -134,3 +134,34 @@ spec:
         - ::1/128
         - fd00::/8
         - fe80::/10
+---
+# Game routes (helm_modules/game-edge): IP bans only, like noappsec. Its own name so
+# game routes are greppable and can diverge (ban page, status code). Keep the plugin
+# settings identical to crowdsec-bouncer-noappsec.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer-game
+  namespace: default
+spec:
+  plugin:
+    bouncer:
+      enabled: true
+      crowdsecMode: stream
+      crowdsecLapiScheme: http
+      crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
+      crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
+      crowdsecAppsecEnabled: false
+      crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
+      crowdsecAppsecFailureBlock: false
+      crowdsecAppsecUnreachableBlock: false
+      clientTrustedIps:
+        - 108.56.153.222/32
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 100.64.0.0/10
+        - 127.0.0.1/32
+        - ::1/128
+        - fd00::/8
+        - fe80::/10

@@ -12,7 +12,8 @@
 #    the gateway serves it to anyone who sends it to the WAN address. No
 #    exemptions.
 # B. Every other rule carries lan-only, crowdsec-bouncer,
-#    crowdsec-bouncer-noappsec or a RequestRedirect, or is listed in
+#    crowdsec-bouncer-noappsec, crowdsec-bouncer-game or a RequestRedirect, or
+#    is listed in
 #    scripts/route-gate-exemptions.txt with a reason.
 # C. Every exemption names a rule that B would otherwise reject.
 #
@@ -69,7 +70,7 @@ while IFS=$'\t' read -r file key path hosts refs types; do
     continue
   fi
 
-  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$types" == *,RequestRedirect,* ]]; then
+  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$refs" == *,crowdsec-bouncer-game,* || "$types" == *,RequestRedirect,* ]]; then
     continue
   fi
   if [[ -n "${exempt["$key $path"]:-}" ]]; then
