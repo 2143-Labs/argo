@@ -1,7 +1,15 @@
 # ROTS (bevy2025) production at https://rots.john2143.com, namespace rots-prod:
 # web client (CI's webserver-wasm-latest, scale-to-zero via KEDA HTTP),
 # rots-authserver + its CNPG database, and 4 game servers (wss /ws/<i>, native
-# UDP 192.168.6.32:36000-36003). Previews are separate (see rots-web-preview.yaml).
+# UDP 192.168.6.32:36000-36003; the router forwards 36000-36400 for 400 slots).
+# Previews are separate (see rots-web-preview.yaml).
+#
+# gameserver.provisioner stays static: prod keeps its 4 StatefulSet pods until
+# the managed-mode switch. The PriorityClass is rendered ahead of that switch -
+# it is cluster-scoped and shared by every preview, so prod is the only app that
+# may create it. slots stays at the 4 prod uses today; the chart renders 400
+# Services and 25 /ws routes when it is set to 400 (that is the switch's step,
+# not this one).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -27,10 +35,14 @@ spec:
         - { name: db.protect, value: 'true' }
         - { name: gameserver.tag, value: gameserver-latest }
         - { name: gameserver.replicas, value: '4' }
+        - { name: gameserver.slots, value: '4' }
         - { name: gameserver.udpPortBase, value: '36000' }
         - { name: gameserver.lbIP, value: 192.168.6.32 }
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
         - { name: gameserver.shareKey, value: rots-prod }
+        - { name: gameserver.priorityClass.create, value: 'true' }
+        - { name: gameserver.quota.cpu, value: '32' }
+        - { name: gameserver.quota.memory, value: 40Gi }
         - { name: temporal.namespace, value: rots }
         - { name: temporal.taskQueue, value: rots-prod }
   destination:

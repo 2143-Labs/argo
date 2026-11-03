@@ -1,0 +1,46 @@
+{{- /* Managed (kubernetes) provisioner: the pod template the authserver's
+       provisioner copies into one one-replica StatefulSet per instance
+       (rots-gs-<k>-g<g>). It is never run from this repo directly. A
+       StatefulSet is required rather than a bare Pod or a Job: Longhorn's
+       nodeDownPodDeletionPolicy only frees volumes of StatefulSet/Deployment
+       pods on node loss, and the volume must be reattachable for recovery.
+       The provisioner adds the per-instance labels and the slot/generation/
+       join-code/public-port env, and replaces the emptyDir volume with the
+       instance's Longhorn PVC. */}}
+{{- if eq (.Values.gameserver.provisioner | default "static") "kubernetes" }}
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  name: rots-gameserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-gameserver
+template:
+  metadata:
+    labels:
+      app: rots-gameserver
+  spec:
+    # StatefulSet pods must use Always; a gracefully-exited server is restarted
+    # by the controller, which is why it writes the shutdown sentinel first.
+    restartPolicy: Always
+    terminationGracePeriodSeconds: 30
+    priorityClassName: rots-gameserver
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: workload-type
+                  operator: In
+                  values:
+                    - general
+    containers:
+      {{- include "rots-web.gameserver-container" (dict "root" . "managed" true) | nindent 6 }}
+    volumes:
+      # PodTemplate validation requires a volume for the mount; the provisioner
+      # replaces this with the instance's PVC (data-rots-gs-<k>-g<g>-0).
+      - name: data
+        emptyDir: {}
+{{- end }}

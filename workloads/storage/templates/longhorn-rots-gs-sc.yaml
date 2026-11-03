@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-rots-gs
+  annotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+# ROTS managed game-server volumes (one per instance, 1Gi, holding its world
+# statefile). Two replicas, not one: a volume must survive the loss of the node
+# its pod ran on, which is exactly the forced-failure case it exists for.
+# best-effort locality keeps one replica on the pod's node without pinning.
+# Delete (unlike longhorn-1/2/3, which Retain): an instance's volume is
+# worthless once the instance is gone, and 400 of them must not accumulate PVs.
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: ext4
+  dataLocality: best-effort

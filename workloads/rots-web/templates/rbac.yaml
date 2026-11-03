@@ -1,0 +1,63 @@
+{{- /* Managed (kubernetes) provisioner only: the authserver creates, inspects and
+       deletes one-per-instance objects at runtime, so it needs a ServiceAccount.
+       Static mode needs none - the pod runs with the namespace default.
+       Pods (get/list/delete) are for the probe and the forced kill; there is no
+       pod create or exec, and no secret access: everything else goes through
+       resourcequotas, podtemplates and the objects it owns. */}}
+{{- if eq (.Values.gameserver.provisioner | default "static") "kubernetes" }}
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rots-authserver
+  namespace: {{ $ns }}
+  labels:
+    app: rots-authserver
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rots-gameserver-provisioner
+  namespace: {{ $ns }}
+  labels:
+    app: rots-authserver
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+  # Read-only: the pod spec comes from git, never from a runtime object.
+  - apiGroups: [""]
+    resources: ["podtemplates"]
+    verbs: ["get"]
+  # The PVC is created before its StatefulSet so the volume class and size are
+  # explicit; the StatefulSet adopts it as data-rots-gs-<k>-g<g>-0.
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "create", "delete"]
+  # The capacity pre-check before a spawn.
+  - apiGroups: [""]
+    resources: ["resourcequotas"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rots-gameserver-provisioner
+  namespace: {{ $ns }}
+  labels:
+    app: rots-authserver
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rots-gameserver-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: rots-authserver
+    namespace: {{ $ns }}
+{{- end }}

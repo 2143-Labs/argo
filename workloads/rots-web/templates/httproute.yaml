@@ -21,7 +21,9 @@
 # is what stops scanners; the rate/inflight limits are the shared generous ones.
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system.
-# /auth and /ws/<i> go straight to the namespace's Services (reference-grant.yaml).
+# /auth goes straight to the namespace's Service (reference-grant.yaml); the
+# /ws/<k> game-server rules live in httproute-ws.yaml, because one HTTPRoute
+# holds at most 16 rules and the fleet has one route per 16 slots.
 # The / backend is the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor),
 # which wakes the scale-to-zero web client via the InterceptorRoute.
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
@@ -54,19 +56,7 @@ spec:
         - name: rots-authserver
           namespace: {{ $ns }}
           port: 80
-    {{- range $i := until (int .Values.gameserver.replicas) }}
-    # Game server pod {{ $i }} over WebSocket; tungstenite ignores the path.
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /ws/{{ $i }}
-      filters:
-{{- include "rots-web.gates" $ }}
-      backendRefs:
-        - name: rots-gs-{{ $i }}
-          namespace: {{ $ns }}
-          port: 80
-    {{- end }}
+    # No /ws/<k> rule here: httproute-ws.yaml carries them, 16 per route.
     - matches:
         - path:
             type: PathPrefix
