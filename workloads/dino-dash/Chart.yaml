@@ -1,6 +1,6 @@
 apiVersion: v2
 name: dino-dash
-description: Dino-Dash (2143-Labs/Dino-Dash) - Vite client scaled to zero via KEDA HTTP plus one always-on 20 Hz WebSocket world server, one environment per Application (prod or one per labeled PR)
+description: Dino-Dash (2143-Labs/Dino-Dash) - Vite client scaled to zero via KEDA HTTP plus one 20 Hz WebSocket world server (always on, or scaled to zero with gameserver.scaleToZero), one environment per Application (prod or one per labeled PR)
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

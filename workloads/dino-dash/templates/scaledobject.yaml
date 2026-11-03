@@ -19,3 +19,29 @@ spec:
       metadata:
         scalerAddress: keda-add-ons-http-external-scaler.keda:9090
         interceptorRoute: dino-dash-web
+{{- if .Values.gameserver.scaleToZero.enabled }}
+---
+# World server: up while a player holds a /ws socket (dino-dash-server route) or
+# the page was requested in the last minute (dino-dash-web route's requestRate),
+# down after idleSeconds of neither. In-server NPCs are not connections.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: dino-dash-server
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    name: dino-dash-server
+  minReplicaCount: 0
+  maxReplicaCount: {{ int .Values.gameserver.replicas }}
+  cooldownPeriod: {{ int .Values.gameserver.scaleToZero.idleSeconds }}
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: dino-dash-server
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: dino-dash-web
+{{- end }}

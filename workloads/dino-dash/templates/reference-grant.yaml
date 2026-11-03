@@ -1,5 +1,7 @@
+{{- if not .Values.gameserver.scaleToZero.enabled }}
 # The HTTPRoute lives in `default` (httproute.yaml); this lets it reach
-# dino-dash-server in this namespace.
+# dino-dash-server in this namespace (only needed while /ws bypasses the
+# KEDA interceptor).
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -13,3 +15,4 @@ spec:
   to:
     - group: ""
       kind: Service
+{{- end }}

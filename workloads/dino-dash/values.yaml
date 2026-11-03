@@ -12,8 +12,21 @@ image:
 gameserver:
   # The client knows exactly one /ws URL and the server has no /servers
   # discovery endpoint, so a second replica would be unreachable without new
-  # client code. Raise this only alongside that feature.
+  # client code. Raise this only alongside that feature. With scaleToZero this is the
+  # ScaledObject's maxReplicaCount.
   replicas: 1
+  # Run the world server only while humans are around (KEDA HTTP add-on). /ws then
+  # goes through the KEDA interceptor, which holds the WebSocket upgrade while the
+  # server cold-starts (~10 s: ~3 s world generation, then the readiness probe) and
+  # counts each open WebSocket as one in-flight request for its whole lifetime, so
+  # in-server NPCs never keep it up and connected players always do. A page view
+  # also wakes it (requestRate on the web route), so it is usually ready before
+  # PLAY. Every cold start is a fresh world (positions, leaderboard, NPCs).
+  scaleToZero:
+    enabled: false
+    # Seconds with no open /ws socket and no page view (the rate window adds
+    # ~1 min) before the server scales to zero.
+    idleSeconds: 300
   # The socket peer seen by the server is Traefik, not the player, so the
   # built-in per-IP cap of 3 would throttle the whole world to three clients.
   maxConnPerIp: "100"

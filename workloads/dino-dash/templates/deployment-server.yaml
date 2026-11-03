@@ -1,7 +1,7 @@
 # The world process (Dino-Dash flake `packages.server`): one 20 Hz sim with
-# memory-only world state, no database and no accounts. It cannot scale to zero:
-# the tick loop runs with zero players and KEDA's HTTP interceptor cannot hold a
-# WebSocket upgrade open, so it is always on (one per environment).
+# memory-only world state, no database and no accounts. With
+# gameserver.scaleToZero.enabled the ScaledObject owns `replicas` (0 while nobody
+# is connected or browsing, see values.yaml); otherwise it is always on.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,7 +11,9 @@ metadata:
     app: dino-dash-server
 spec:
   revisionHistoryLimit: 3
+{{- if not .Values.gameserver.scaleToZero.enabled }}
   replicas: {{ .Values.gameserver.replicas }}
+{{- end }}
   selector:
     matchLabels:
       app: dino-dash-server

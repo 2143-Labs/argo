@@ -13,3 +13,36 @@ spec:
   scalingMetric:
     concurrency:
       targetValue: 10
+{{- if .Values.gameserver.scaleToZero.enabled }}
+    # Also a trigger of the dino-dash-server ScaledObject: a page view in the last
+    # minute wakes the world server before the player presses PLAY. Only "> 0"
+    # matters; the target is never reached (maxReplicaCount 1).
+    requestRate:
+      targetValue: 1000
+---
+# The world server's WebSocket (HTTPRoute /ws -> interceptor -> here). Longest
+# path prefix wins over dino-dash-web's implicit /. Concurrency = open sockets =
+# connected players; the interceptor holds the upgrade during a cold start.
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: dino-dash-server
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  target:
+    service: dino-dash-server
+    port: 80
+  rules:
+    - hosts:
+        - "{{ required "host is required" .Values.host }}"
+      paths:
+        - value: /ws
+  scalingMetric:
+    concurrency:
+      targetValue: {{ int .Values.gameserver.maxPlayers }}
+  timeouts:
+    # Cold start is ~10 s; leave room for an image pull on a fresh node.
+    readiness: 60s
+    # A socket lives as long as the session: never cut it.
+    request: 0s
+{{- end }}

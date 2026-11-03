@@ -21,9 +21,10 @@
 # what stops scanners; the rate/inflight limits are the shared generous ones.
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the dsstar-us-wildcard-https listener only admits routes from `default`.
-# /ws goes straight to the world server (reference-grant.yaml); / is the KEDA
-# interceptor (ReferenceGrant keda/allow-httproute-to-interceptor), which wakes the
-# scale-to-zero client via the InterceptorRoute.
+# / is the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor),
+# which wakes the scale-to-zero client via the InterceptorRoute. /ws goes to the
+# interceptor too when gameserver.scaleToZero.enabled (InterceptorRoute
+# dino-dash-server), else straight to the world server (reference-grant.yaml).
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
 # every rule must include "dino-dash.gates".
 apiVersion: gateway.networking.k8s.io/v1
@@ -48,9 +49,15 @@ spec:
       filters:
 {{- include "dino-dash.gates" . }}
       backendRefs:
+{{- if .Values.gameserver.scaleToZero.enabled }}
+        - name: keda-add-ons-http-interceptor-proxy
+          namespace: keda
+          port: 8080
+{{- else }}
         - name: dino-dash-server
           namespace: {{ $ns }}
           port: 80
+{{- end }}
     - matches:
         - path:
             type: PathPrefix
