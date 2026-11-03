@@ -1,0 +1,18 @@
+{{- /* Cluster-scoped, so only the prod app renders it (gameserver.priorityClass
+       .create): every preview namespace shares this one copy and would otherwise
+       fight over it. It is rendered independent of the provisioner so the class
+       exists before prod flips to managed mode. The ResourceQuota in managed
+       mode scopes itself to this class. */}}
+{{- if .Values.gameserver.priorityClass.create }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: rots-gameserver
+# 0 and Never: a game server exists only to be created and destroyed on demand,
+# so it must never preempt anyone, while 0 still puts it behind every other
+# workload when the cluster is full (and the authserver reports servers_full).
+value: 0
+preemptionPolicy: Never
+globalDefault: false
+description: ROTS managed game-server pods (authserver-provisioned StatefulSets).
+{{- end }}

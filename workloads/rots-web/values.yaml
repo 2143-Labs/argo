@@ -28,12 +28,30 @@ db:
 
 gameserver:
   tag: ""          # gameserver-latest (prod) or gameserver-pr-<N>
-  replicas: 1      # 4 (prod) or 1 (previews)
-  slots: 4         # UDP ports reserved per environment; replicas may not exceed it
+  # static: this chart's own StatefulSet rots-gameserver with `replicas` pods -
+  # today's prod, slot = pod ordinal. kubernetes: the authserver provisions one
+  # one-replica StatefulSet per instance from PodTemplate rots-gameserver
+  # (podtemplate.yaml) and destroys it when idle - previews, prod after the switch.
+  provisioner: static
+  replicas: 1      # static mode: 4 (prod) or 1 (previews)
+  slots: 4         # network slots: per-slot Services and /ws/<k> routes range over this
   udpPortBase: 0   # 36000 (prod) or 31000 + 4*(N % 1000) (previews)
   lbIP: ""         # 192.168.6.32 (prod) or 192.168.6.33 (previews)
   lbIPv6: ""       # fd00:6::32 (prod) or fd00:6::33 (previews)
   shareKey: ""     # metallb.io/allow-shared-ip: rots-prod (prod) or rots-preview (previews)
+  # Managed (kubernetes) mode only - passed to the authserver:
+  capacityPerServer: 32   # static mode's placement cap; placeholder until #74 measures it
+  readyTimeoutSecs: 120   # first heartbeat deadline before a start counts as failed
+  idleSecs: 60            # ROTS_IDLE_SECS: connected == 0 this long -> destroy
+  # requests.cpu / requests.memory hard cap on pods of PriorityClass
+  # rots-gameserver, and the numbers the authserver's pre-check reports.
+  quota:
+    cpu: "2"
+    memory: 4Gi
+  # Cluster-scoped, so prod only: one copy serves every preview namespace, which
+  # is also why a PodTemplate may name the class while previews do not create it.
+  priorityClass:
+    create: false
 
 temporal:
   namespace: ""    # rots (prod) | rots-preview (all previews)

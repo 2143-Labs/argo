@@ -2,6 +2,10 @@
 # fetch its public key at startup). Served at https://<host>/auth; the HTTPRoute
 # strips /auth, so the app serves /api/v1/... at its root.
 {{- $ns := required "namespace is required" .Values.namespace }}
+{{- $gs := .Values.gameserver }}
+{{- /* In kubernetes mode the authserver provisions game servers itself, so it
+       runs as a ServiceAccount with the provisioner Role (rbac.yaml). */}}
+{{- $managed := eq ($gs.provisioner | default "static") "kubernetes" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,6 +42,9 @@ spec:
                     operator: In
                     values:
                       - general
+{{- if $managed }}
+      serviceAccountName: rots-authserver
+{{- end }}
       containers:
         - name: rots-authserver
           image: {{ required "authserver.image is required" .Values.authserver.image }}
@@ -72,8 +79,17 @@ spec:
             # the secret below). Never routed through the gateway.
             - name: INTERNAL_PORT
               value: "8001"
+            # Provisioner: static (servers are this chart's StatefulSet pods) or
+            # kubernetes (spawn/delete one StatefulSet per instance). Static
+            # places against `replicas` ready servers; managed owns `slots`.
+            - name: GAME_SERVER_PROVISIONER
+              value: {{ $gs.provisioner | default "static" | quote }}
             - name: GAME_SERVER_SLOTS
-              value: {{ .Values.gameserver.replicas | quote }}
+              value: {{ ternary $gs.slots $gs.replicas $managed | quote }}
+            - name: GAME_SERVER_CAPACITY_PER_SERVER
+              value: {{ $gs.capacityPerServer | quote }}
+            - name: GAME_SERVER_READY_TIMEOUT_SECS
+              value: {{ $gs.readyTimeoutSecs | quote }}
             - name: GAME_UDP_HOST
               value: {{ .Values.host | quote }}
             - name: GAME_UDP_PORT_BASE
@@ -111,6 +127,10 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 6
+            # timeoutSeconds 3: the 1 s default timed out under node contention
+            # (rots-pr-13, 2026-11-02 04:56Z) and, with one replica, took the
+            # whole API out of Traefik for ~15 s.
+            timeoutSeconds: 3
 
           # Readiness, not liveness: traffic only lands on a pod whose Temporal
           # worker has connected (the worker retries every 10 s, so /health alone
@@ -122,6 +142,7 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 5
             failureThreshold: 3
+            timeoutSeconds: 3
 ---
 apiVersion: v1
 kind: Service
