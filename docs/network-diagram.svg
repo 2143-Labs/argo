@@ -301,7 +301,7 @@
 <path fill="white" stroke="black" d="M1021.18,-155.5C1021.18,-155.5 832.68,-155.5 832.68,-155.5 826.68,-155.5 820.68,-149.5 820.68,-143.5 820.68,-143.5 820.68,-114.5 820.68,-114.5 820.68,-108.5 826.68,-102.5 832.68,-102.5 832.68,-102.5 1021.18,-102.5 1021.18,-102.5 1027.18,-102.5 1033.18,-108.5 1033.18,-114.5 1033.18,-114.5 1033.18,-143.5 1033.18,-143.5 1033.18,-149.5 1027.18,-155.5 1021.18,-155.5"/>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-142.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-131.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice (9987+30033)</text>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-109.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
 </g>
 <!-- router&#45;&gt;vipl -->

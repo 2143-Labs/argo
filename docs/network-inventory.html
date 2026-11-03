@@ -1601,7 +1601,6 @@ a
 <a href="#vip-6-13"><circle cx="817" cy="464.5" r="3" class="ring"/><text x="826" y="468" class="" style="font-size:10.5px;">.6.13 stalwart</text></a>
 <a href="#vip-6-14"><circle cx="657" cy="478.5" r="3" class="dot-vip"/><text x="666" y="482" class="" style="font-size:10.5px;">.6.14 coturn (steam-lobby)</text></a>
 <a href="#vip-6-15"><circle cx="817" cy="478.5" r="3" class="ring"/><text x="826" y="482" class="" style="font-size:10.5px;">.6.15 ts-voice</text></a>
-<a href="#vip-6-16"><circle cx="657" cy="492.5" r="3" class="ring"/><text x="666" y="496" class="" style="font-size:10.5px;">.6.16 ts-files</text></a>
 <a href="#vip-6-17"><circle cx="817" cy="492.5" r="3" class="dot-vip"/><text x="826" y="496" class="" style="font-size:10.5px;">.6.17 openrct2-game</text></a>
 <a href="#vip-6-18"><circle cx="657" cy="506.5" r="3" class="ring"/><text x="666" y="510" class="" style="font-size:10.5px;">.6.18 headscale-stun</text></a>
 <a href="#vip-6-19"><circle cx="817" cy="506.5" r="3" class="dot-vip"/><text x="826" y="510" class="" style="font-size:10.5px;">.6.19 mosquitto</text></a>
@@ -1656,7 +1655,7 @@ a
 <rect x="120" y="92" width="1000" height="104" rx="9" class="router"/>
 <text x="140" y="116" class="title">MikroTik · 192.168.5.1 · RouterOS 7.24.5</text>
 <text x="140" y="136" class="">dst-nat:</text>
-<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.16 · 36000-36003→.6.32 · 31000-34999→.6.33</text>
+<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.15 · 36000-36003→.6.32 · 31000-34999→.6.33</text>
 <text x="140" y="154" class="">11753→.6.17 · 3479→.6.18 · 7881→.6.22 · 34197→.6.28 · 25565→.6.29 · 18080→.5.76 (node)</text>
 <text x="140" y="174" class="">BGP 65001 · BFD 3784 · DNS FWD ×6 zones → .6.30 · WireGuard 51820 (10.99.0.1/24)</text>
 <path d="M36,208 L1120,208" class="wire" opacity=".35"/>
@@ -1716,7 +1715,6 @@ a
 <text x="119.2" y="478" class="wg">WG</text>
 <text x="141.0" y="478" class="note">→ closet</text>
 <rect x="304" y="426" width="240" height="62" rx="9" class="vip local"/>
-<text x="314" y="445" class="" style=" font-weight:700; font-size:12.5px;">.6.16  ts-files</text>
 <text x="314" y="461" class="muted">30033/tcp</text>
 <text x="314" y="478" class="wan">WAN 30033</text>
 <text x="377.1" y="478" class="wg">WG</text>
@@ -2140,7 +2138,7 @@ credentials I do not read.</p>
 <path fill="white" stroke="black" d="M1021.18,-155.5C1021.18,-155.5 832.68,-155.5 832.68,-155.5 826.68,-155.5 820.68,-149.5 820.68,-143.5 820.68,-143.5 820.68,-114.5 820.68,-114.5 820.68,-108.5 826.68,-102.5 832.68,-102.5 832.68,-102.5 1021.18,-102.5 1021.18,-102.5 1027.18,-102.5 1033.18,-108.5 1033.18,-114.5 1033.18,-114.5 1033.18,-143.5 1033.18,-143.5 1033.18,-149.5 1027.18,-155.5 1021.18,-155.5"/>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-142.95" font-family="Helvetica,sans-Serif" font-size="9.00">MetalLB — Local (7)</text>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-131.7" font-family="Helvetica,sans-Serif" font-size="9.00">.6.6 traefik &#160;&#160;.6.13 stalwart</text>
-<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice &#160;&#160;.6.16 ts&#45;files</text>
+<text xml:space="preserve" text-anchor="middle" x="926.93" y="-120.45" font-family="Helvetica,sans-Serif" font-size="9.00">.6.15 ts&#45;voice (9987+30033)</text>
 <text xml:space="preserve" text-anchor="middle" x="926.93" y="-109.2" font-family="Helvetica,sans-Serif" font-size="9.00">.6.18 stun &#160;&#160;.6.28 factorio &#160;&#160;.6.29 minecraft</text>
 </g>
 <!-- router&#45;&gt;vipl -->
@@ -2748,8 +2746,7 @@ placement fact rather than a security one.</p>
 <tr id="vip-6-6"><td class="mono">.6.6</td><td class="mono">::6</td><td>traefik</td><td class="mono">80 → web · 443 → websecure</td><td><span class="pill local">Local</span> closet+arch</td><td class="mono">closet</td><td><span class="pill wan">80, 443</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-13"><td class="mono">.6.13</td><td class="mono">::13</td><td>stalwart</td><td class="mono">25 · 587 · 993</td><td><span class="pill local">Local</span> nas</td><td class="mono">nas</td><td><span class="pill wan">25, 587, 993</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-14"><td class="mono">.6.14</td><td class="mono">::14</td><td>coturn (steam-lobby)</td><td class="mono">3478 tcp+udp · 45000–45063/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">3478 · 45000–45063/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr id="vip-6-15"><td class="mono">.6.15</td><td class="mono">::15</td><td>ts-voice</td><td class="mono">9987/udp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">9987/udp</span></td><td><span class="pill wg">routed</span></td></tr>
-<tr id="vip-6-16"><td class="mono">.6.16</td><td class="mono">::16</td><td>ts-files</td><td class="mono">30033/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">30033</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-15"><td class="mono">.6.15</td><td class="mono">::15</td><td>ts-voice</td><td class="mono">9987/udp · 30033/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">9987/udp · 30033</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-17"><td class="mono">.6.17</td><td class="mono">::17</td><td>openrct2-game</td><td class="mono">11753/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono"><span class="small">none — no ready pod</span></td><td><span class="pill wan">11753</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-18"><td class="mono">.6.18</td><td class="mono">::18</td><td>headscale-stun</td><td class="mono">3479/udp</td><td><span class="pill local">Local</span> arch</td><td class="mono">arch</td><td><span class="pill wan">3479/udp</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-19"><td class="mono">.6.19</td><td class="mono">::19</td><td>mosquitto</td><td class="mono">1883/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
