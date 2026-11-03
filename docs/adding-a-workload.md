@@ -58,7 +58,7 @@ preferred; wifi nodes are overflow.
 
 A LAN/tailnet name `<sub>.ts.2143.me` needs a route on the existing wildcard listener carrying `lan-only` (b) and a headscale record (c). A public name needs the route plus an edge gate instead of `lan-only` (d).
 
-### a. Gateway Listener (`workloads/gateway/gateway.yaml`)
+### a. Gateway Listener (`workloads/gateway/templates/gateway.yaml`)
 
 Usually nothing: `shared-gateway` has one listener per wildcard certificate. Pin the route to it by `sectionName`:
 
@@ -69,9 +69,9 @@ Usually nothing: `shared-gateway` has one listener per wildcard certificate. Pin
 | `<sub>.ts.2143.me` | `ts-2143-me-wildcard-https` | `*.ts.2143.me` |
 | `<sub>.dsstar.us` | `dsstar-us-wildcard-https` | `*.dsstar.us` |
 
-A route outside namespace `default` attaches only if its namespace is in that listener's `allowedRoutes` `matchExpressions` `values` list in `workloads/gateway/gateway.yaml`; add it there.
+A route outside namespace `default` attaches only if its namespace is in that listener's `allowedRoutes` `matchExpressions` `values` list in `workloads/gateway/templates/gateway.yaml`; add it there.
 
-Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. A deeper name or a new domain needs a `Certificate` in `workloads/gateway/wildcard-certs.yaml` and its own listener. Keep `shared-gateway` at 16 listeners or fewer: Traefik writes one BackendTLSPolicy status ancestor per listener and fails every status write beyond 16. `scripts/validate-gateway-certs.sh` fails CI when a route pins no listener or a missing one, when a pinned hostname is not covered by the listener's hostname or Certificate, or when the Gateway exceeds 16 listeners. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
+Wildcard certificates cover exactly one label: `*.2143.me` covers `anni.2143.me` but not `element.chat.2143.me`. A deeper name or a new domain needs a `Certificate` in `workloads/gateway/templates/wildcard-certs.yaml` and its own listener. Keep `shared-gateway` at 16 listeners or fewer: Traefik writes one BackendTLSPolicy status ancestor per listener and fails every status write beyond 16. `scripts/validate-gateway-certs.sh` fails CI when a route pins no listener or a missing one, when a pinned hostname is not covered by the listener's hostname or Certificate, or when the Gateway exceeds 16 listeners. The gateway no longer uses the `cert-manager.io/cluster-issuer` annotation; certificates are separate resources.
 
 ### b. HTTPRoute (`workloads/<name>/ingress.yaml`)
 
@@ -103,7 +103,7 @@ spec:
           port: 80
 ```
 
-**Never omit `lan-only` on a `.ts.2143.me` route.** The name is private only in DNS. The gateway serves any route whose hostname a client sends to the WAN address, so without `lan-only` the app is on the internet. (A request for `argocd.ts.2143.me` sent to the WAN IP returns 403 only because its route carries `lan-only`.) The Middleware must exist in the route's namespace; copy `workloads/gateway/lan-only-middleware.yaml` (precedents: `workloads/argocd/ingress.yaml`, `workloads/longhorn-ui/ingress.yaml`, `workloads/stalwart/security-middlewares.yaml`). CI (`scripts/validate-route-gates.sh`) rejects a `.ts` rule without it.
+**Never omit `lan-only` on a `.ts.2143.me` route.** The name is private only in DNS. The gateway serves any route whose hostname a client sends to the WAN address, so without `lan-only` the app is on the internet. (A request for `argocd.ts.2143.me` sent to the WAN IP returns 403 only because its route carries `lan-only`.) The Middleware must exist in the route's namespace; copy `workloads/gateway/templates/lan-only-middleware.yaml` (precedents: `workloads/argocd/ingress.yaml`, `workloads/longhorn-ui/ingress.yaml`, `workloads/stalwart/security-middlewares.yaml`). CI (`scripts/validate-route-gates.sh`) rejects a `.ts` rule without it.
 
 ### c. Headscale DNS (`workloads/headscale/configmap.yaml`)
 

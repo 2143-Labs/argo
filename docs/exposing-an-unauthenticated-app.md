@@ -14,10 +14,11 @@ oauth2-proxy instances and Traefik. That gives a basic RBAC model with no app co
 It does **not** apply to non-HTTP protocols (gRPC passthrough, raw TCP/UDP, mail).
 Those never pass through oauth2-proxy and need native JWT or mTLS support in the app.
 
-> Versions this guide was verified against: oauth2-proxy **v7.15.4**, Pocket ID
-> **v2.14.0**, SPIRE **v1.15.3**, Traefik **3.7.13** (k3s). Several steps depend on
-> specific behaviour of those versions. Re-check the [evidence list](#evidence)
-> whenever one of them is upgraded.
+> Versions this guide was verified against: oauth2-proxy **v7.15.5** (this recipe
+> deployed and verified on it 2026-11-03; the behaviour notes below were read from
+> v7.15.4), Pocket ID **v2.14.0**, SPIRE **v1.15.3**, Traefik **3.7.13** (k3s).
+> Several steps depend on specific behaviour of those versions. Re-check the
+> [evidence list](#evidence) whenever one of them is upgraded.
 
 ---
 
@@ -309,14 +310,14 @@ anything that matters.
 An HTTPRoute ExtensionRef can only refer to a Middleware **in the route's own
 namespace**. Copy the following into this namespace:
 
-- `lan-only` from `workloads/gateway/lan-only-middleware.yaml`, and
+- `lan-only` from `workloads/gateway/templates/lan-only-middleware.yaml`, and
   `auth-security-headers` (see `workloads/temporal-routes/middleware.yaml`).
 - The edge gate per host class from [Public edge](public-edge.md): the human host
   is class A (`crowdsec-bouncer`); the machine host is class B
   (`crowdsec-bouncer-noappsec`), because AppSec body inspection misreads machine
   request bodies and bans the caller's address. Copy the definitions from
-  `workloads/gateway/security-middlewares.yaml` into this namespace, as
-  `workloads/pocket-id/security-middlewares.yaml` does. Board task #4 (public-edge
+  `workloads/gateway/templates/security-middlewares.yaml` into this namespace, as
+  `workloads/pocket-id/templates/security-middlewares.yaml` does. Board task #4 (public-edge
   reputation-primary gating) is changing this set; [Public edge](public-edge.md) is
   kept current.
 
@@ -431,7 +432,7 @@ before it reaches a proxy. Default: the whole app, gated by the floor.
 The routes pin the existing wildcard listeners (`ts-2143-me-wildcard-https`,
 `john2143-wildcard-https`). They live in namespace `some-temp-app`, so add
 `some-temp-app` to the `matchExpressions` `values` list of both listeners in
-`workloads/gateway/gateway.yaml`. Do not add listeners.
+`workloads/gateway/templates/gateway.yaml`. Do not add listeners.
 `scripts/validate-gateway-certs.sh` (CI) checks that each route hostname is
 covered by its listener's certificate.
 
@@ -598,6 +599,12 @@ OpenBao entries and this app's inventory row.
 
 Behaviour this guide depends on, with the source it was read from:
 
+- oauth2-proxy v7.15.4 → v7.15.5: v7.15.5 fixes two **critical** auth-bypass
+  advisories, skip-auth path interpretation (GHSA-63jm-59jj-478j) and spoofed
+  client-IP headers (GHSA-wr5q-7wxw-x568), so new proxies pin it rather than
+  v7.15.4. Neither applies to a proxy that sets no skip-auth route and no
+  `--trusted-ip`/`--real-client-ip-header`, which is why the older instances
+  could stay where they were.
 - oauth2-proxy v7.15.4: bearer sessions (`skip-jwt-bearer-tokens`, `oauthproxy.go`
   `buildSessionChain`); `--bearer-token-login-fallback` default **true**; `--api-route`
   returns 401; `--oidc-extra-audience` widens audience verification; groups come

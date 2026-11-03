@@ -11,7 +11,7 @@ How a k3s node leaves and rejoins the edge without router edits and without drop
 - The router ECMP-hashes each VIP across every node announcing it. RouterOS has no resilient hashing: whenever a node starts or stops announcing a VIP, 1/4–1/2 of that VIP's existing flows move to another node and break (TCP resets; UDP reaches the pod from a new source). HTTP clients reconnect transparently; long-lived flows do not.
 - `externalTrafficPolicy: Local` Services are announced only by the node running a ready pod, so other nodes coming and going never touch them. Use it for long-lived flows (see [Adding a New Workload](adding-a-workload.md)). Draining the pod's own node still disconnects its users: the pod restarts elsewhere.
 - `kubectl cordon` does **not** stop MetalLB from announcing. The label `node.kubernetes.io/exclude-from-external-load-balancers` does: MetalLB withdraws every route from that node while its BGP session stays up. Presence of the key is what counts; the value is ignored.
-- pite carries that label permanently (MetalLB has no node selectors in `workloads/metallb/bgpadvertisement.yaml`). **Never remove it from pite.**
+- pite carries that label permanently (MetalLB has no node selectors in `workloads/metallb/templates/bgpadvertisement.yaml`). **Never remove it from pite.**
 
 ## Drain a node
 
@@ -36,7 +36,7 @@ An unplanned failure needs nothing for routing: BFD withdraws the node, and when
 
 1. Router: a static DHCP lease for the node's NIC, and admit it to BGP: `mikrotik-connect r '/ip firewall address-list add list=k8s-nodes address=<node-ip> comment=<node>'`.
 2. NixOS: import `nixos/modules/k3s-server.nix` (control plane) or `nixos/modules/k3s-agent.nix` (worker) in `~/dotfiles`; both open TCP 179 and UDP 3784. Unless the node carries a taint the MetalLB DaemonSets do not tolerate (they tolerate only control-plane and `pi`), the speaker pods land on it, FRR dials `192.168.5.1`, the listener accepts, BFD comes up — no MetalLB or router BGP edit.
-3. Lists that still name nodes: the per-node SNAT gateway ipBlocks (MAINTENANCE in `workloads/network-policies/00-pattern.yaml`) and, for a control-plane node, the endpoints in `workloads/metallb/kubernetes-api-lb.yaml`.
+3. Lists that still name nodes: the per-node SNAT gateway ipBlocks (MAINTENANCE in `workloads/network-policies/00-pattern.yaml`) and, for a control-plane node, the endpoints in `workloads/metallb/templates/kubernetes-api-lb.yaml`.
 4. Check: router session for `<node-ip>` established, BFD up (`/routing bfd session print`), `prefix-count` > 0.
 
 ## Remove a node for good

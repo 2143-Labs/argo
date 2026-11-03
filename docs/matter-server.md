@@ -60,6 +60,6 @@ Current chain: volume/PV/PVC `matter-server-data-oct17`, restored 2026-10-17. Th
 
 ## Backups
 
-The volume carries `recurring-job-group.longhorn.io/default: enabled`, which puts it in the `nightly-backup` RecurringJob (`0 3 * * *`, `retain: 30`) declared in `workloads/storage/longhorn-backup-job.yaml`. A volume without that label is outside every backup — check the label first if `lastBackupAt` stays empty, then check `backup-volume`.
+The volume carries `recurring-job-group.longhorn.io/default: enabled`, which puts it in the `nightly-backup` RecurringJob (`0 3 * * *`, `retain: 30`) declared in `workloads/storage/templates/longhorn-backup-job.yaml`. A volume without that label is outside every backup — check the label first if `lastBackupAt` stays empty, then check `backup-volume`.
 
 Stuck `InProgress` Backup CRs are worse than failures: `backup-concurrent-limit` is 2, so a few jobs that can never finish block the queue for every volume. If backups stop cluster-wide, list `kubectl -n longhorn-system get backups.longhorn.io`, delete the ones wedged at `progress: 0` (`auto-cleanup-when-delete-backup` is `false`, so this cannot delete anything from the store), and check the `backup-volume` labels before waiting for the next run.
