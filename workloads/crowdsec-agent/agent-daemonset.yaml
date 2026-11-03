@@ -102,6 +102,14 @@ spec:
           name: crowdsec-agent-game-hosts
           subPath: game-http-flood.yaml
           readOnly: true
+        - mountPath: /etc/crowdsec/parsers/s02-enrich/john2143-upload-hosts.yaml
+          name: crowdsec-agent-upload-hosts
+          subPath: upload-hosts.yaml
+          readOnly: true
+        - mountPath: /etc/crowdsec/scenarios/john2143-upload-http-flood.yaml
+          name: crowdsec-agent-upload-hosts
+          subPath: upload-http-flood.yaml
+          readOnly: true
         - mountPath: /var/log
           name: varlog
           readOnly: true
@@ -163,6 +171,10 @@ spec:
           defaultMode: 420
           name: crowdsec-agent-game-hosts
         name: crowdsec-agent-game-hosts
+      - configMap:
+          defaultMode: 420
+          name: crowdsec-agent-upload-hosts
+        name: crowdsec-agent-upload-hosts
       - emptyDir: {}
         name: crowdsec-config
       - hostPath:

@@ -1,0 +1,42 @@
+# Seafile hosts (seafile.john2143.com and files.aross.studio). A folder view is
+# ~280 thumbnail GETs in a second, which crowdsecurity/http-logs does not count as
+# static, so http-crawl-non_statics and http-probing treat a normal album load as
+# crawling. This parser forces static_ressource=true, which switches off exactly
+# those two scenarios, and adds john2143/upload-http-flood as the rate backstop.
+# Exploit-signature scenarios still apply. Bots on files.aross.studio are Anubis's
+# job, and that route has no bouncer, so no decision blocks it at all. The mounted
+# file name must sort after http-logs.yaml: s02 parsers run in file-name order.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-agent-upload-hosts
+  namespace: crowdsec
+data:
+  upload-hosts.yaml: |
+    name: john2143/upload-hosts
+    description: "Seafile hosts: no request counts as crawling or probing; john2143/upload-http-flood is their rate scenario"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^seafile[.]john2143[.]com$|^files[.]aross[.]studio$'"
+    statics:
+      - parsed: static_ressource
+        value: "true"
+      - parsed: upload_host
+        value: "true"
+  upload-http-flood.yaml: |
+    type: leaky
+    name: john2143/upload-http-flood
+    description: "Seafile hosts: one address sustaining a flood no human browser produces"
+    filter: "evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Parsed.upload_host == 'true'"
+    groupby: evt.Meta.source_ip
+    capacity: 10000
+    leakspeed: 10ms
+    blackhole: 5m
+    cache_size: 5
+    labels:
+      service: http
+      confidence: 3
+      spoofable: 0
+      classification:
+        - attack.T1498
+      behavior: "http:dos"
+      label: "Seafile host HTTP flood"
+      remediation: true

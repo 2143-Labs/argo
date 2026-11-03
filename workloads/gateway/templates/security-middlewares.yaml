@@ -25,6 +25,7 @@
 # same file and namespace as that HTTPRoute, and point that route's
 # ExtensionRef at it. Put a strict limit on its own narrow rule (e.g. a
 # PathPrefix match for a login endpoint) rather than on the whole host.
+# uploads-* is the tier for upload/browse-heavy apps; both Seafile hosts use it.
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -45,6 +46,33 @@ metadata:
 spec:
   inFlightReq:
     amount: 2500
+    sourceCriterion:
+      ipStrategy: {}
+---
+# Upload/browse-heavy apps (both Seafile hosts). A folder view is ~280 thumbnail
+# GETs in one second (docs/2026-09-21-seafile-429-rate-limit.md). 30000/min is a
+# 500/s refill, ~1.8x that second sustained; burst 10000 is ~36x it and in-flight
+# 5000 is ~18x it. Far above any human action, still a backstop for a client that
+# runs away. Keep above public-*: a 429 on these hosts is a customer-visible bug.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: uploads-rate-limit
+  namespace: default
+spec:
+  rateLimit:
+    average: 30000
+    burst: 10000
+    period: 1m
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: uploads-inflight-limit
+  namespace: default
+spec:
+  inFlightReq:
+    amount: 5000
     sourceCriterion:
       ipStrategy: {}
 ---

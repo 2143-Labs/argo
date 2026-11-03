@@ -9,6 +9,7 @@ Every HTTPRoute rule on `shared-gateway` carries exactly one of these gates. CI 
 | Public, class B — machine, API and bulk bodies (S3, LLM prompts, webhooks that are not GitHub's, upload APIs) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/llm-proxy/httproute.yaml` |
 | HTTP → HTTPS redirect | `RequestRedirect` only | `workloads/gateway/templates/john2143-http-to-https.yaml` |
 | Public game hosts — browser games behind Anubis (charts `dino-dash`, `moss-and-wool`, `how-poe-sale`) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/dino-dash/templates/httproute.yaml` |
+| Public file host — Seafile (`seafile.john2143.com`) | `uploads-rate-limit`, `uploads-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/gateway/templates/seafile-route.yaml` |
 
 Definitions and values: `workloads/gateway/templates/security-middlewares.yaml` (rate limits, bouncers) and `workloads/gateway/templates/lan-only-middleware.yaml`. Do not copy values into docs.
 
@@ -21,6 +22,7 @@ Definitions and values: `workloads/gateway/templates/security-middlewares.yaml` 
 - **Per-route limits:** never lower the shared values. Define `<app>-rate-limit` / `<app>-inflight-limit` next to the route and point that route's filter at it, on the narrowest rule possible.
 - **Who is exempt from what:** rate limits apply to everyone, LAN included (no `excludedIPs`; see the header comment in `security-middlewares.yaml`). CrowdSec checks skip the addresses in the bouncer's `clientTrustedIps` (LAN, tailnet, cluster ranges and the household WAN address), so a ban cannot be tested from home; test from an outside host.
 - **Game hosts get no crawl or probing heuristics.** A cold game load fetches a few hundred assets, mostly `.ogg`, which the hub's `http-logs` parser does not count as static, so `http-crawl-non_statics` banned every outside player. `workloads/crowdsec-agent/agent-game-hosts.yaml` marks every request to a game host as static, which switches off `http-crawl-non_statics` and `http-probing` for those hosts only, and adds the flood scenario `john2143/game-http-flood`. Exploit-signature scenarios still apply. A new game's hostnames go into that file's regex in the same commit as its chart.
+- **Seafile hosts get no crawl or probing heuristics either, and a higher limit tier.** A folder view is ~280 thumbnail GETs in one second, which `http-logs` does not count as static. `workloads/crowdsec-agent/agent-upload-hosts.yaml` does for `seafile.john2143.com` and `files.aross.studio` what the game-host file does, with the flood scenario `john2143/upload-http-flood`, and both routes use `uploads-rate-limit` / `uploads-inflight-limit`. Other scenarios still see these hosts: `http-sensitive-files` matches URL suffixes such as `.exe`, `.bak`, `.sql` and `.env` at any status, and Seafile file URLs end in the file name, so a user opening several such files can still be banned where the bouncer runs. Lift a false ban with `cscli decisions delete --ip <ip>` from an agent pod.
 
 ## Ungated routes
 
