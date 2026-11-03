@@ -110,21 +110,8 @@ spec:
     - balabusta.homes
     - www.balabusta.homes
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: chess-dsstar-us-tls
-  namespace: default
-spec:
-  secretName: chess-dsstar-us-tls
-  issuerRef:
-    name: letsencrypt-http01
-    kind: ClusterIssuer
-  dnsNames:
-    - chess.dsstar.us
----
 # *.dsstar.us (Moss & Wool: moss, moss-dev, moss-<PR>). DNS-01 through deSEC;
-# dsstar.us is in letsencrypt-prod's dnsZones. chess.dsstar.us keeps its own cert.
+# dsstar.us is in letsencrypt-prod's dnsZones. Also covers chess.dsstar.us.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
