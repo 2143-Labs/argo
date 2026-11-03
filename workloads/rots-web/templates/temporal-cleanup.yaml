@@ -5,10 +5,12 @@
 # the PreDelete Job stops the authserver and terminates every Running workflow on
 # the preview's task queue, which no worker polls once the namespace is gone.
 # PreDelete hooks run only on Application deletion, never on sync.
-# The authserver goes to 0 replicas first: heartbeats from static servers
+# The game servers go to 0 first, then the authserver: heartbeats from static servers
 # signal-with-start their GameServerWorkflow and server reports signal-with-start
-# the coordinator (rots-authserver src/temporal/mod.rs), so terminating while it
-# runs would recreate workflows.
+# the coordinator (rots-authserver src/temporal/mod.rs), so terminating while a worker
+# runs would recreate workflows. With authserver.scaleToZero.enabled any game-server pod
+# keeps the authserver up through KEDA's workload trigger, so scaling the authserver alone
+# would be undone; that is why the game servers go first.
 # Only the Job is a hook. The ServiceAccount, Role and RoleBinding are ordinary
 # resources, so they exist while the hook runs: Argo CD v3.5 counts hook resources
 # without a health check as Healthy and can end the PreDelete phase before the
@@ -45,6 +47,14 @@ rules:
     resources: ["pods"]
     # kubectl wait --for=delete
     verbs: ["get", "list", "watch"]
+  # Managed instances are StatefulSets created at runtime, so they are not in the Application
+  # and a label-selected scale is namespace-wide: no resourceNames.
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets/scale"]
+    verbs: ["get", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -73,7 +83,7 @@ metadata:
     argocd.argoproj.io/hook: PreDelete
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: 300
+  activeDeadlineSeconds: 600
   template:
     metadata:
       labels:
@@ -82,12 +92,16 @@ spec:
       serviceAccountName: rots-temporal-cleanup
       restartPolicy: Never
       initContainers:
-        - name: stop-authserver
+        - name: stop-workloads
           image: docker.io/alpine/k8s:1.35.6
           command: ["/bin/sh", "-c"]
           args:
             - |-
               NS={{ $ns }}
+              if kubectl -n "$NS" get sts -l app=rots-gameserver >/dev/null 2>&1; then
+                kubectl -n "$NS" scale sts -l app=rots-gameserver --replicas=0 || echo "scale failed; continuing"
+                kubectl -n "$NS" wait --for=delete pod -l app=rots-gameserver --timeout=60s || echo "game-server pods not gone after 60s; continuing"
+              fi
               if kubectl -n "$NS" get deploy rots-authserver >/dev/null 2>&1; then
                 kubectl -n "$NS" scale deploy/rots-authserver --replicas=0 || echo "scale failed; continuing"
                 kubectl -n "$NS" wait --for=delete pod -l app=rots-authserver --timeout=120s || echo "authserver pods not gone after 120s; continuing"

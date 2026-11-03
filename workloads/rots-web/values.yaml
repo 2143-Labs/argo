@@ -20,6 +20,15 @@ authserver:
   # SESSION_EXECUTION_TIMEOUT_SECS: a login session's workflow ends after this long at
   # the latest. 172800 (prod); previews 7200, so a deleted preview's sessions end soon.
   sessionExecutionTimeoutSecs: 172800
+  # KEDA scale-to-zero for the authserver and, with it, the Temporal worker that runs the
+  # coordinator. /auth goes through the KEDA interceptor, which holds a request while the pod
+  # cold-starts; any game-server pod in the namespace keeps it up, because only a running
+  # authserver can delete a managed instance. Prod's static pods keep it up until the managed
+  # switch.
+  scaleToZero:
+    enabled: true
+    # Seconds with no /auth request in flight and no game-server pod before it scales to zero.
+    idleSeconds: 3600
 
 db:
   clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app

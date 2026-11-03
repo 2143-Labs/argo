@@ -19,3 +19,35 @@ spec:
       metadata:
         scalerAddress: keda-add-ons-http-external-scaler.keda:9090
         interceptorRoute: rots-web
+{{- if .Values.authserver.scaleToZero.enabled }}
+---
+# Authserver (and the coordinator's Temporal worker): up while an /auth request is in flight
+# or any game-server pod exists in this namespace; down after idleSeconds of neither.
+# Wave 1: the InterceptorRoute and the /auth route change (wave 0) must exist before KEDA owns
+# the live Deployment, or the HPA falls back to a CPU metric and scale-up from zero breaks
+# until KEDA re-reconciles (docs/2026-08-07-keda-http-addon-poc.md).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: rots-authserver
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  scaleTargetRef:
+    name: rots-authserver
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: {{ int .Values.authserver.scaleToZero.idleSeconds }}
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: rots-authserver
+    # Static servers and managed instances both carry app=rots-gameserver; Pending pods
+    # count, Succeeded/Failed do not.
+    - type: kubernetes-workload
+      metadata:
+        podSelector: app=rots-gameserver
+        value: "1"
+{{- end }}

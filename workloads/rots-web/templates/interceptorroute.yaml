@@ -13,3 +13,29 @@ spec:
   scalingMetric:
     concurrency:
       targetValue: 10
+{{- if .Values.authserver.scaleToZero.enabled }}
+---
+# The authserver behind /auth (httproute.yaml). Traefik strips /auth and sets
+# X-Rots-Backend: authserver on that rule only (and removes the header on /), so this
+# header rule beats rots-web's host-only rule and nothing else reaches it. The interceptor
+# holds a request while the pod cold-starts (global KEDA_HTTP_READINESS_TIMEOUT, 30s).
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: rots-authserver
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  target:
+    service: rots-authserver
+    port: 80
+  rules:
+    - hosts:
+        - "{{ required "host is required" .Values.host }}"
+      headers:
+        - name: X-Rots-Backend
+          value: authserver
+  scalingMetric:
+    concurrency:
+      # Only "> 0" matters: maxReplicaCount is 1.
+      targetValue: 100
+{{- end }}

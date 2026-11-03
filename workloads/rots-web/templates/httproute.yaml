@@ -21,9 +21,10 @@
 # is what stops scanners; the rate/inflight limits are the shared generous ones.
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system.
-# /auth goes straight to the namespace's Service (reference-grant.yaml); the
-# /ws/<k> game-server rules live in httproute-ws.yaml, because one HTTPRoute
-# holds at most 16 rules and the fleet has one route per 16 slots.
+# /auth goes through the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor)
+# to the authserver when authserver.scaleToZero.enabled, else straight to the namespace's
+# Service (reference-grant.yaml); the /ws/<k> game-server rules live in httproute-ws.yaml,
+# because one HTTPRoute holds at most 16 rules and the fleet has one route per 16 slots.
 # The / backend is the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor),
 # which wakes the scale-to-zero web client via the InterceptorRoute.
 # scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
@@ -52,10 +53,24 @@ spec:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: /
+{{- if .Values.authserver.scaleToZero.enabled }}
+          # Selects InterceptorRoute rots-authserver; `set` overwrites any client value.
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: X-Rots-Backend
+                value: authserver
+{{- end }}
       backendRefs:
+{{- if .Values.authserver.scaleToZero.enabled }}
+        - name: keda-add-ons-http-interceptor-proxy
+          namespace: keda
+          port: 8080
+{{- else }}
         - name: rots-authserver
           namespace: {{ $ns }}
           port: 80
+{{- end }}
     # No /ws/<k> rule here: httproute-ws.yaml carries them, 16 per route.
     - matches:
         - path:
@@ -63,6 +78,12 @@ spec:
             value: /
       filters:
 {{- include "rots-web.gates" . }}
+{{- if .Values.authserver.scaleToZero.enabled }}
+          # Only the /auth rule may select the authserver's InterceptorRoute.
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove: [X-Rots-Backend]
+{{- end }}
       backendRefs:
         - name: keda-add-ons-http-interceptor-proxy
           namespace: keda
