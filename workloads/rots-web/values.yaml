@@ -17,6 +17,9 @@ authserver:
   secretKey: ""
   # DISABLED_PROVIDERS: "" (prod) or "discord" (previews; Discord redirect URIs are exact).
   disabledProviders: ""
+  # SESSION_EXECUTION_TIMEOUT_SECS: a login session's workflow ends after this long at
+  # the latest. 172800 (prod); previews 7200, so a deleted preview's sessions end soon.
+  sessionExecutionTimeoutSecs: 172800
 
 db:
   clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app
@@ -56,3 +59,6 @@ gameserver:
 temporal:
   namespace: ""    # rots (prod) | rots-preview (all previews)
   taskQueue: ""    # rots-prod | rots-pr-<N>
+  # Previews only (never with db.protect): a PreDelete hook stops the authserver and
+  # terminates every workflow on taskQueue before Argo deletes the preview.
+  cleanupOnDelete: false

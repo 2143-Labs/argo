@@ -75,6 +75,8 @@ spec:
               value: {{ required "temporal.namespace is required" .Values.temporal.namespace | quote }}
             - name: TEMPORAL_TASK_QUEUE
               value: {{ required "temporal.taskQueue is required" .Values.temporal.taskQueue | quote }}
+            - name: SESSION_EXECUTION_TIMEOUT_SECS
+              value: {{ .Values.authserver.sessionExecutionTimeoutSecs | quote }}
             # Internal API for game-server reports (bearer COORDINATOR_TOKEN from
             # the secret below). Never routed through the gateway.
             - name: INTERNAL_PORT
