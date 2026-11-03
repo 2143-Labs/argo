@@ -37,35 +37,13 @@ spec:
     targetPort: 9987
     protocol: UDP
     name: voice
-  # File transfer shares this VIP: both load balancers select the same pods, so a
-  # second Service bought nothing but a second address. ts-files still owns
-  # 30033 until the router's dst-nat is repointed (see docs/network-edge.md).
+  # Voice and file transfer share this VIP: both used to have a Service of their
+  # own, but they select the same pods, so the second address (.6.16) bought
+  # nothing. The router dst-nats both ports here (docs/network-edge.md).
   - port: 30033
     targetPort: 30033
     protocol: TCP
     name: file-transfer
-
-  selector:
-    app: teamspeak
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ts-files
-  annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.16,fd00:6::16"
-spec:
-  ipFamilyPolicy: PreferDualStack
-  ipFamilies: [IPv4, IPv6]
-  type: LoadBalancer
-  # Local: only the node running the pod announces this VIP, so draining any
-  # other node never re-hashes live players (argo docs/node-maintenance.md).
-  externalTrafficPolicy: Local
-  allocateLoadBalancerNodePorts: false
-  ports:
-  - port: 30033
-    targetPort: 30033
-    protocol: TCP
 
   selector:
     app: teamspeak

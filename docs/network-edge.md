@@ -46,7 +46,7 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 | p2p relays | 45000-45063 | `steam-lobby coturn relay (udp/45000-45063) -> .6.14` | `.6.14` | steam-lobby/coturn relay range |
 | headscale stun | 3479 | `headscale stun (udp/3479) -> .6.18` | `.6.18` | headscale embedded DERP STUN |
 | (9987 entry) | 9987 | `teamspeak voice (udp/9987) -> .6.15` | `.6.15` | ts-voice |
-| ts-files | 30033 | `teamspeak file transfer (tcp/30033) -> .6.16` | `.6.16` | ts-files |
+| ts-files | 30033 | `teamspeak file transfer (tcp/30033) -> .6.15` | `.6.15` | ts-voice |
 | rct2 | 11753 | `openrct2 (tcp/11753) -> .6.17` | `.6.17` | openrct2 (scaled to 0: no answer, see fail-closed below) |
 | LiveKit WebRTC TCP (TCP only) | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` | `.6.22` | matrix/livekit-server-rtc |
 | factorio | 34197 | `factorio (udp/34197) -> .6.28` | `.6.28` | factorio-game |

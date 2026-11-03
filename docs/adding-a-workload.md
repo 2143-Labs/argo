@@ -194,8 +194,7 @@ Notes:
 | traefik (kube-system; `ingress` pool via `metallb.io/address-pool` in the k3s HelmChartConfig in dotfiles, no address pin) | 192.168.6.6 | fd00:6::6 |
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
 | steam-lobby coturn (TURN) | 192.168.6.14 | fd00:6::14 |
-| ts-voice (9987) | 192.168.6.15 | fd00:6::15 |
-| ts-files (30033) | 192.168.6.16 | fd00:6::16 |
+| ts-voice (9987/udp + 30033/tcp file transfer) | 192.168.6.15 | fd00:6::15 |
 | openrct2-game | 192.168.6.17 | fd00:6::17 |
 | headscale-stun | 192.168.6.18 | fd00:6::18 |
 | mosquitto (1883) | 192.168.6.19 | fd00:6::19 |

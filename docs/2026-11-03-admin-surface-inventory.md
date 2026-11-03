@@ -1,6 +1,8 @@
 # Admin surface inventory (2026-11-03)
 
 **Date:** 2026-11-03  
+> **Correction 2026-11-03:** `ts-files` no longer exists — its `30033/TCP` moved onto `ts-voice` (`192.168.6.15`), so the LoadBalancer table below lists one TeamSpeak VIP instead of two.
+
 **Context:** the SeaweedFS admin lockdown (filer UI behind oauth2-proxy, `seaweedfs.yaml` ingress policies). This record lists every other admin surface and its auth state. It fixes nothing; the follow-ups are the backlog.
 
 ## Method
