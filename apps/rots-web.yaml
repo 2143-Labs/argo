@@ -1,15 +1,13 @@
 # ROTS (bevy2025) production at https://rots.john2143.com, namespace rots-prod:
 # web client (CI's webserver-wasm-latest, scale-to-zero via KEDA HTTP),
-# rots-authserver + its CNPG database, and 4 game servers (wss /ws/<i>, native
-# UDP 192.168.6.32:36000-36003; the router forwards 36000-36400 for 400 slots).
+# rots-authserver + its CNPG database, and game servers provisioned just in time
+# by the authserver (gameserver.provisioner: kubernetes): one instance per new
+# player, destroyed when idle, up to 64 at once (wss /ws/<k>, native UDP
+# 192.168.6.32:36000-36063; the router forwards 36000-36400).
 # Previews are separate (see rots-web-preview.yaml).
 #
-# gameserver.provisioner stays static: prod keeps its 4 StatefulSet pods until
-# the managed-mode switch. The PriorityClass is rendered ahead of that switch -
-# it is cluster-scoped and shared by every preview, so prod is the only app that
-# may create it. slots stays at the 4 prod uses today; the chart renders 400
-# Services and 25 /ws routes when it is set to 400 (that is the switch's step,
-# not this one).
+# The PriorityClass is cluster-scoped and shared by every preview, so prod is the
+# only app that may create it.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -36,8 +34,11 @@ spec:
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
         - { name: gameserver.tag, value: gameserver-latest }
-        - { name: gameserver.replicas, value: '4' }
-        - { name: gameserver.slots, value: '4' }
+        # Managed mode: no standing servers; the authserver spawns one instance per
+        # new player (friends join by code) and destroys it when idle. slots caps
+        # concurrent instances: UDP 36000-36063, /ws/0-63 (4 HTTPRoutes of 16).
+        - { name: gameserver.provisioner, value: kubernetes }
+        - { name: gameserver.slots, value: '64' }
         - { name: gameserver.udpPortBase, value: '36000' }
         - { name: gameserver.lbIP, value: 192.168.6.32 }
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
