@@ -1,9 +1,9 @@
 {{- if .Values.prodOnly }}
-# aross files (second Seafile, namespace aross-files) at its interim host until
-# files.aross.studio has DNS. Public, class-B edge gate as seafile-route.yaml
-# (AppSec off: it false-positives on Seafile uploads). The backend is Anubis,
-# never seafile, and there is no failover TraefikService: failover buffers the
-# whole request body for replay, which large uploads cannot go through.
+# arossfiles.john2143.com was the interim host of the aross files Seafile. It
+# now only redirects (http and https, any path) to files.aross.studio: a tab
+# left open on the old host gets upload URLs on files.aross.studio, and Anubis
+# challenges the cross-origin CORS preflight, so uploads from the old host fail.
+# No backend. Delete this file once nothing links to the old name.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -12,46 +12,9 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: john2143-wildcard-https
-  hostnames:
-    - arossfiles.john2143.com
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer-noappsec
-      backendRefs:
-        - name: anubis
-          namespace: aross-files
-          port: 80
----
-# http:// -> https:// for this host. Separate from john2143-http-to-https,
-# which is at the Gateway API cap of 16 hostnames per HTTPRoute.
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: arossfiles-john2143-http-to-https
-  namespace: default
-spec:
-  parentRefs:
-    - name: shared-gateway
       sectionName: acme-http
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
   hostnames:
     - arossfiles.john2143.com
   rules:
@@ -63,5 +26,6 @@ spec:
         - type: RequestRedirect
           requestRedirect:
             scheme: https
+            hostname: files.aross.studio
             statusCode: 301
 {{- end }}
