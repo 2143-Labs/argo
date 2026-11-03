@@ -135,11 +135,6 @@
 #                                  without breaking device control. Ingress and
 #                                  egress ship together by design, so the whole
 #                                  namespace is skipped.
-#                                  One exception, by pod: seaweedfs.yaml puts
-#                                  ingress-only policies on the SeaweedFS
-#                                  filer, master and volume pods so apps reach
-#                                  only the S3 API. Nothing else in default is
-#                                  selected and default egress is untouched.
 #   kube-system                  - hosts Traefik, CoreDNS and metrics-server;
 #                                  policy risk outweighs benefit.
 #   longhorn-system              - CSI/instance-manager chatter and host mounts.
