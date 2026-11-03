@@ -94,6 +94,14 @@ spec:
           name: crowdsec-agent-whitelists
           subPath: home-wan-whitelist.yaml
           readOnly: true
+        - mountPath: /etc/crowdsec/parsers/s02-enrich/john2143-game-hosts.yaml
+          name: crowdsec-agent-game-hosts
+          subPath: game-hosts.yaml
+          readOnly: true
+        - mountPath: /etc/crowdsec/scenarios/john2143-game-http-flood.yaml
+          name: crowdsec-agent-game-hosts
+          subPath: game-http-flood.yaml
+          readOnly: true
         - mountPath: /var/log
           name: varlog
           readOnly: true
@@ -151,6 +159,10 @@ spec:
           defaultMode: 420
           name: crowdsec-agent-whitelists
         name: crowdsec-agent-whitelists
+      - configMap:
+          defaultMode: 420
+          name: crowdsec-agent-game-hosts
+        name: crowdsec-agent-game-hosts
       - emptyDir: {}
         name: crowdsec-config
       - hostPath:

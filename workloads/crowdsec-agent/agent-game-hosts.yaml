@@ -1,0 +1,44 @@
+# Game hosts (Dino-Dash, Moss & Wool, how.poe.sale: every environment). A cold game
+# load fetches ~230 distinct files, ~190 of them .ogg, which crowdsecurity/http-logs
+# does not count as static, so http-crawl-non_statics banned every outside player
+# within seconds (2026-11-02). Bots on these hosts are Anubis's job
+# (workloads/<game>/templates/anubis.yaml). For them CrowdSec keeps only the
+# exploit-signature scenarios and john2143/game-http-flood (DDoS backstop).
+# The parser forces static_ressource=true, which switches off exactly the two
+# scenarios that read it: http-crawl-non_statics and http-probing. Its mounted
+# file name must sort after http-logs.yaml (s02 parsers run in file-name order).
+# A new game's hostnames go into the regex below in the same commit as its chart.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-agent-game-hosts
+  namespace: crowdsec
+data:
+  game-hosts.yaml: |
+    name: john2143/game-hosts
+    description: "Game hosts: no request counts as crawling or probing; john2143/game-http-flood is their rate scenario"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^(dino|moss)(-(dev|[0-9]+))?[.]dsstar[.]us$|^how(-[0-9]+)?[.]john2143[.]com$|^how[.]poe[.]sale$'"
+    statics:
+      - parsed: static_ressource
+        value: "true"
+      - parsed: game_host
+        value: "true"
+  game-http-flood.yaml: |
+    type: leaky
+    name: john2143/game-http-flood
+    description: "Game hosts: one address sustaining a request flood (DDoS backstop; a full game load is ~230 requests)"
+    filter: "evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Parsed.game_host == 'true'"
+    groupby: evt.Meta.source_ip
+    capacity: 3000
+    leakspeed: 20ms
+    blackhole: 5m
+    cache_size: 5
+    labels:
+      service: http
+      confidence: 3
+      spoofable: 0
+      classification:
+        - attack.T1498
+      behavior: "http:dos"
+      label: "Game host HTTP flood"
+      remediation: true

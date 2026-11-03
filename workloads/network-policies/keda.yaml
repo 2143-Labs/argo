@@ -6,6 +6,9 @@
 #     keda-add-ons-http-interceptor-proxy. This is the only ingress path to the
 #     interceptor, so it is the one that must not break. Traefik has a pod IP,
 #     so the source is its pod, not a node.
+#   * game namespaces (label app.kubernetes.io/part-of in dino-dash,
+#     moss-and-wool, how-poe-sale), pods app=anubis -> 8080 - each game
+#     environment's Anubis proxies its / to the interceptor.
 #   * observability/alloy -> all ports - scrapes keda-operator,
 #     keda-operator-metrics-apiserver, keda-admission-webhooks and the add-on
 #     metrics endpoints. Any port, because scrape targets move with the chart.
@@ -71,6 +74,19 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+    # Game Anubis -> HTTP interceptor proxy (workloads/<game>/templates/anubis.yaml).
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values: [dino-dash, moss-and-wool, how-poe-sale]
+          podSelector:
+            matchLabels:
+              app: anubis
       ports:
         - port: 8080
           protocol: TCP
