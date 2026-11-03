@@ -1,0 +1,17 @@
+{{- /*
+Anubis (bot challenge) in front of the game's page and assets, plus the
+WebSocket cookie check: helm_modules/game-edge (docs/public-edge.md, "Anubis in
+front of an app"). The /auth rule never goes through Anubis (templates/
+httproute.yaml), so OAuth callbacks, sessions and Steam tickets keep their
+AppSec-enabled bouncer and an Anubis outage cannot lock players out.
+   target          the KEDA interceptor: page views wake the scale-to-zero client
+                   and its InterceptorRoute still matches the inbound Host.
+   redirectDomains the public host, for the cookie/OAuth redirect checks.
+   wsCheck         true: /ws/<k> is never proxied by Anubis, but every handshake
+                   must carry the Anubis cookie (Middleware <routeName>-anubis-ws).
+*/}}
+{{- include "game-edge.anubis" (dict
+      "root" .
+      "target" "http://keda-add-ons-http-interceptor-proxy.keda.svc:8080"
+      "redirectDomains" (required "host is required" .Values.host)
+      "wsCheck" true) }}

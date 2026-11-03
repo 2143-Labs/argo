@@ -1,0 +1,6 @@
+dependencies:
+- name: game-edge
+  repository: file://../../helm_modules/game-edge
+  version: 0.1.0
+digest: sha256:9975624fa0519657a2eb0a31957994c5dc178c2beb9975668b58ea9cb7b47fa9
+generated: "2026-11-03T17:39:40.138967044-05:00"

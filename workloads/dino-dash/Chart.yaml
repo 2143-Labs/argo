@@ -4,3 +4,8 @@ description: Dino-Dash (2143-Labs/Dino-Dash) - Vite client scaled to zero via KE
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+dependencies:
+  - name: game-edge
+    version: 0.1.0
+    repository: file://../../helm_modules/game-edge

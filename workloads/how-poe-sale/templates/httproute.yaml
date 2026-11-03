@@ -1,38 +1,20 @@
-{{- /* The edge gates; every HTTPS rule below includes them. */}}
-{{- define "how-poe-sale.gates" }}
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer-noappsec
-{{- end }}
 {{- $ns := required "namespace is required" .Values.namespace }}
-# Public game edge (docs/public-edge.md): the shared generous rate and in-flight
-# limits, then crowdsec-bouncer-noappsec, which enforces IP bans only (no AppSec:
-# the backend is our own static server). The CrowdSec agent treats this host as
-# a game host (workloads/crowdsec-agent/agent-game-hosts.yaml): no crawl/probing
-# heuristics, only exploit signatures and a flood ban. Bots are Anubis's job:
-# the / rule's backend is Service anubis (anubis.yaml).
+# Public game edge (docs/public-edge.md): the gates, Anubis and the route names
+# come from helm_modules/game-edge. The `game-` name prefix is what the CrowdSec
+# agent keys on (workloads/crowdsec-agent/agent-game-hosts.yaml): a rule whose
+# router is `httproute-default-game-...` never counts as crawling or probing —
+# only exploit signatures and the flood ban apply. Bots are Anubis's job: the /
+# rule's backend is Service anubis (anubis.yaml).
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system/openbao.
 # The backend is Anubis (anubis.yaml), which proxies to the app Service (prod)
 # or the KEDA interceptor (previews).
-# scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
-# every rule must include "how-poe-sale.gates".
+# scripts/validate-route-gates.sh skips /templates/, so these gates are not
+# CI-checked: every rule must include "game-edge.gates".
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ required "routeName is required" .Values.routeName }}
+  name: {{ include "game-edge.routeName" . }}
   namespace: default
 spec:
   parentRefs:
@@ -53,7 +35,7 @@ spec:
             type: PathPrefix
             value: /
       filters:
-{{- include "how-poe-sale.gates" . }}
+{{- include "game-edge.gates" . }}
       backendRefs:
         - name: anubis
           namespace: {{ $ns }}
@@ -65,7 +47,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ required "routeName is required" .Values.routeName }}-http-to-https
+  name: {{ include "game-edge.routeName" . }}-http-to-https
   namespace: default
 spec:
   parentRefs:

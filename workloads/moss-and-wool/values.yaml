@@ -6,3 +6,12 @@ routeName: ""   # unique in `default`: moss-prod, moss-dev or moss-pr-<N>
 image:
   repository: ghcr.io/2143-labs/moss-and-wool
   tag: ""       # sha-<full commit sha>; the game repo's deploy.yml pushes one per build
+
+# Link previews (helm_modules/game-edge): the Open Graph payload the Anubis
+# challenge page carries for clients that cannot solve a challenge. Moss & Wool
+# ships no raster image (it is one self-contained index.html), so the card is a
+# title and a description.
+embed:
+  title: "Moss & Wool | A little meadow, a little patience"
+  siteName: "Moss & Wool"
+  description: "An original, small pixel-art sheep-herding prototype: work the edges, gather the flock and guide it through the open pen gate."

@@ -7,6 +7,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: moss-prod
+  labels:
+    edge.2143.me/class: game
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io

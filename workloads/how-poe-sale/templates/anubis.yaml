@@ -1,183 +1,22 @@
-{{- $ns := required "namespace is required" .Values.namespace }}
-# Anubis (bot challenge) in front of this environment's page and assets
-# (docs/public-edge.md, "Anubis in front of an app", chart-embedded variant).
-# The HTTPRoute's / rule points at Service anubis; Anubis proxies to Service
-# how-poe-sale (prod) or to the KEDA interceptor (previews), keeping the
-# inbound Host so the InterceptorRoute still matches and page views still
-# wake the scale-to-zero pod.
-# No failover: Traefik's kubernetescrd provider runs without allowCrossNamespace,
-# so a TraefikService in `default` cannot name this namespace's Service; with
-# this pod down the page answers 503 (open sockets are unaffected).
-# Sync waves: Namespace and signing key -2, Anubis -1, the HTTPRoute 0, so the
-# route switches only after Anubis is ready.
-#
-# Persistent JWT signing key (HS512_SECRET), generated once in-cluster, so an
-# Anubis restart does not make every player solve the challenge again.
-# CreatedOnce = never rotated; deleting the Secret makes ESO generate a new one.
-apiVersion: generators.external-secrets.io/v1alpha1
-kind: Password
-metadata:
-  name: anubis-signing-key
-  namespace: {{ $ns }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-2"
-spec:
-  length: 128
-  digits: 32
-  symbols: 0
-  noUpper: false
-  allowRepeat: true
----
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: anubis-signing-key
-  namespace: {{ $ns }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-2"
-spec:
-  refreshPolicy: CreatedOnce
-  target:
-    name: anubis-signing-key
-    creationPolicy: Owner
-  dataFrom:
-    - sourceRef:
-        generatorRef:
-          apiVersion: generators.external-secrets.io/v1alpha1
-          kind: Password
-          name: anubis-signing-key
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: anubis
-  namespace: {{ $ns }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-  labels:
-    app: anubis
-spec:
-  replicas: 1
-  revisionHistoryLimit: 2
-  selector:
-    matchLabels:
-      app: anubis
-  template:
-    metadata:
-      labels:
-        app: anubis
-    spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - general
-      volumes:
-        - name: policy
-          configMap:
-            name: anubis-policy
-      containers:
-        - name: anubis
-          image: ghcr.io/techarohq/anubis:v1.28.2
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: BIND
-              value: ":8080"
-            # Link-preview tags and the ALLOW rule for /og.png live here
-            # (templates/anubis-policy.yaml).
-            - name: POLICY_FNAME
-              value: /etc/anubis/policy.yaml
-            - name: METRICS_BIND
-              value: ":9090"
-            - name: TARGET
-{{- if eq (toString .Values.keda.enabled) "true" }}
-              value: "http://keda-add-ons-http-interceptor-proxy.keda.svc:8080"
-{{- else }}
-              value: "http://how-poe-sale.{{ $ns }}.svc:80"
+{{- /*
+Anubis (bot challenge) in front of this environment's page and assets:
+helm_modules/game-edge (docs/public-edge.md, "Anubis in front of an app").
+   target          the KEDA interceptor when the app scales to zero (prod is
+                   always-on and is addressed through its Service directly).
+   redirectDomains the public hosts: prod serves how.john2143.com and
+                   how.poe.sale, a preview only its own host.
+   wsCheck         false: how.poe.sale has no WebSocket.
+*/}}
+{{- $target := "http://keda-add-ons-http-interceptor-proxy.keda.svc:8080" }}
+{{- if ne (toString .Values.keda.enabled) "true" }}
+{{- $target = printf "http://how-poe-sale.%s.svc:80" .Values.namespace }}
 {{- end }}
-            - name: REDIRECT_DOMAINS
-              value: "{{ required "host is required" .Values.host }}{{ with .Values.poeSaleHost }},{{ . }}{{ end }}"
-            - name: HS512_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: anubis-signing-key
-                  key: password
-          volumeMounts:
-            - name: policy
-              mountPath: /etc/anubis
-              readOnly: true
-          ports:
-            - name: http
-              containerPort: 8080
-            - name: metrics
-              containerPort: 9090
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 9090
-            initialDelaySeconds: 1
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9090
-            initialDelaySeconds: 10
-            periodSeconds: 20
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 500m
-              memory: 128Mi
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            seccompProfile:
-              type: RuntimeDefault
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: anubis
-  namespace: {{ $ns }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-  labels:
-    app: anubis
-spec:
-  type: ClusterIP
-  selector:
-    app: anubis
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8080
-      protocol: TCP
----
-# The HTTPRoute lives in `default`; this lets its / rule reach Service anubis.
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: allow-httproute-to-anubis
-  namespace: {{ $ns }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: default
-  to:
-    - group: ""
-      kind: Service
-      name: anubis
+{{- $rd := required "host is required" .Values.host }}
+{{- with .Values.poeSaleHost }}
+{{- $rd = printf "%s,%s" $rd . }}
+{{- end }}
+{{- include "game-edge.anubis" (dict
+      "root" .
+      "target" $target
+      "redirectDomains" $rd
+      "wsCheck" false) }}

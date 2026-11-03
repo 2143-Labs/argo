@@ -19,7 +19,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^workloads/.+\\.ya?ml$/"],
+      "managerFilePatterns": ["/^workloads/.+\\.ya?ml$/", "/^helm_modules/.+\\.(ya?ml|tpl)$/"],
       "matchStrings": ["image:\\s*(?<depName>[\\w./-]+):(?<currentValue>[\\w.-]+)"],
       "datasourceTemplate": "docker"
     }

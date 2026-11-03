@@ -4,3 +4,8 @@ description: how.poe.sale crafting solver (prod always-on, or one per PR scaling
 type: application
 version: 0.1.0
 home: https://github.com/2143-Labs/how.poe.sale
+
+dependencies:
+  - name: game-edge
+    version: 0.1.0
+    repository: file://../../helm_modules/game-edge

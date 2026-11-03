@@ -43,3 +43,17 @@ gameserver:
   # Debug mode (PRIMAL_DEBUG=1): Settings > ADMIN respawn at L4.9/9.9/14.9 and reset, the title
   # START AT L4 button, NPC population logs. dino-dev and PR previews only; never prod.
   debug: false
+
+# Link previews (helm_modules/game-edge): the Open Graph payload the Anubis
+# challenge page carries for clients that cannot solve a challenge (Discord,
+# Slack, Telegram, ...). Only dino ships a raster, so only dino gets an og:image;
+# the image path must be under /icons/, which is the one path the policy ALLOWs.
+# The copy is lifted verbatim from the per-chart policy this replaces.
+embed:
+  title: "PRIMAL — Hatch. Hunt. Hide. Evolve."
+  siteName: PRIMAL
+  description: "A multiplayer browser .io game about dinosaur evolution: hatch as a tiny raptor, eat what you can, hide from what you cannot, and grow through the species chain."
+  image: /icons/icon-512.png
+  imageWidth: 512
+  imageHeight: 512
+  imageAlt: "An adult raptor hunting by firelight in the Deep Jungle at night"

@@ -1,15 +1,17 @@
 {{- $ns := required "namespace is required" .Values.namespace }}
-{{- $routeName := required "routeName is required" .Values.routeName }}
 {{- $host := required "host is required" .Values.host }}
 {{- /*
 Game-server WebSocket routes: slot k is wss://<host>/ws/<k> -> Service
 rots-gs-<k>. They are split out of httproute.yaml because Gateway API v1.6.2
 caps one HTTPRoute at 16 rules (rules.maxItems), and `gameserver.slots` is the
-number of slots that exist - 400 in prod, i.e. 25 routes of 16.
+number of slots that exist - 400 in prod, i.e. 25 routes of 16. The `game-`
+prefix in the route name is what the CrowdSec agent keys on, so it comes from
+helm_modules/game-edge like the main route's.
 They live in `default` for the same reason the main route does: the Traefik
 ExtensionRef middlewares (the gates) are namespace-local and the wildcard
 listener only admits default/argocd/kube-system. Every rule includes
-"rots-web.gates" - never add one without it.
+"game-edge.gates" (step 4 of the rollout switches these to "game-edge.wsGates",
+which adds the Anubis cookie check) - never add one without gates.
 
 Slots may be any number: ceil(slots/16) routes, the last one partial.
 */}}
@@ -23,7 +25,7 @@ Slots may be any number: ceil(slots/16) routes, the last one partial.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ $routeName }}-ws-{{ $c }}
+  name: {{ include "game-edge.routeName" $ }}-ws-{{ $c }}
   namespace: default
 spec:
   parentRefs:
@@ -39,7 +41,7 @@ spec:
             type: PathPrefix
             value: /ws/{{ $i }}
       filters:
-{{- include "rots-web.gates" $ }}
+{{- include "game-edge.gates" $ }}
       backendRefs:
         - name: rots-gs-{{ $i }}
           namespace: {{ $ns }}

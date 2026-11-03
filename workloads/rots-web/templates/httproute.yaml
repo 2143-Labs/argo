@@ -1,24 +1,8 @@
-{{- /* The Class A gates; every HTTPS rule below includes them. */}}
-{{- define "rots-web.gates" }}
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-{{- end }}
 {{- $ns := required "namespace is required" .Values.namespace }}
-# Class A browser surface (see docs/public-edge.md): the crowdsec-bouncer filter
-# is what stops scanners; the rate/inflight limits are the shared generous ones.
+# Class A browser surface (see docs/public-edge.md): the gates, Anubis and the
+# route names come from helm_modules/game-edge; a rule whose router is
+# `httproute-default-game-...` is what the CrowdSec agent exempts from its
+# crawl/probing heuristics (workloads/crowdsec-agent/agent-game-hosts.yaml).
 # Lives in `default` because Traefik ExtensionRef middlewares are namespace-local
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system.
 # /auth goes through the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor)
@@ -27,12 +11,16 @@
 # because one HTTPRoute holds at most 16 rules and the fleet has one route per 16 slots.
 # The / backend is the KEDA interceptor (ReferenceGrant keda/allow-httproute-to-interceptor),
 # which wakes the scale-to-zero web client via the InterceptorRoute.
-# scripts/validate-route-gates.sh skips /templates/, so these gates are not CI-checked:
-# every rule must include "rots-web.gates".
+# / is Anubis, which proxies to the KEDA interceptor and keeps the inbound Host,
+# so the InterceptorRoute still matches and page views still wake the client.
+# scripts/validate-route-gates.sh skips /templates/, so these gates are not
+# CI-checked: every rule must include "game-edge.gates" (/auth uses
+# "game-edge.urlGates" for the AppSec-enabled bouncer) and /ws/<k> uses
+# "game-edge.wsGates" once the WebSocket check is on.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ required "routeName is required" .Values.routeName }}
+  name: {{ include "game-edge.routeName" . }}
   namespace: default
 spec:
   parentRefs:
@@ -47,7 +35,7 @@ spec:
             type: PathPrefix
             value: /auth
       filters:
-{{- include "rots-web.gates" . }}
+{{- include "game-edge.urlGates" . }}
         - type: URLRewrite
           urlRewrite:
             path:
@@ -77,7 +65,7 @@ spec:
             type: PathPrefix
             value: /
       filters:
-{{- include "rots-web.gates" . }}
+{{- include "game-edge.gates" . }}
 {{- if .Values.authserver.scaleToZero.enabled }}
           # Only the /auth rule may select the authserver's InterceptorRoute.
         - type: RequestHeaderModifier
@@ -85,9 +73,9 @@ spec:
             remove: [X-Rots-Backend]
 {{- end }}
       backendRefs:
-        - name: keda-add-ons-http-interceptor-proxy
-          namespace: keda
-          port: 8080
+        - name: anubis
+          namespace: {{ $ns }}
+          port: 80
 ---
 # http:// -> https:// (one hop). Separate from gateway/john2143-http-to-https,
 # which is at the Gateway API cap of 16 hostnames. No backend, so it never wakes
@@ -95,7 +83,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ required "routeName is required" .Values.routeName }}-http-to-https
+  name: {{ include "game-edge.routeName" . }}-http-to-https
   namespace: default
 spec:
   parentRefs:

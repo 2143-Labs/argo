@@ -36,6 +36,8 @@ spec:
   template:
     metadata:
       name: 'dino-pr-{{.number}}'
+      labels:
+        edge.2143.me/class: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

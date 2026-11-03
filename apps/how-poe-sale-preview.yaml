@@ -25,6 +25,8 @@ spec:
   template:
     metadata:
       name: 'how-pr-{{.number}}'
+      labels:
+        edge.2143.me/class: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

@@ -26,6 +26,8 @@ spec:
   template:
     metadata:
       name: 'moss-pr-{{.number}}'
+      labels:
+        edge.2143.me/class: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

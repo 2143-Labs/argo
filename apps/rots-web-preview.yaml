@@ -30,6 +30,8 @@ spec:
   template:
     metadata:
       name: 'rots-pr-{{.number}}'
+      labels:
+        edge.2143.me/class: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

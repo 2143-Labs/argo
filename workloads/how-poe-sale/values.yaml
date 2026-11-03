@@ -12,3 +12,13 @@ image:
 keda:
   enabled: false
 replicas: 1     # prod only; with KEDA the ScaledObject owns replicas
+
+# Link previews (helm_modules/game-edge): the Open Graph payload the Anubis
+# challenge page carries for clients that cannot solve a challenge. The SPA
+# answers every path with its index.html and serves no image, so the card is a
+# title and a description; how.poe.sale is the canonical name on both hosts.
+embed:
+  title: "how.poe.sale — Path of Exile crafting solver"
+  siteName: how.poe.sale
+  description: "Paste an item and see which crafts can produce it, with exact odds, expected cost and time. Buying is priced against crafting at every step."
+  url: https://how.poe.sale/

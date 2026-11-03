@@ -5,14 +5,18 @@ on:
     paths:
       - apps/**
       - workloads/**
+      - helm_modules/**
       - scripts/validate-route-gates.sh
+      - scripts/validate-game-edge.sh
       - scripts/route-gate-exemptions.txt
       - .github/workflows/validate-route-gates.yml
   push:
     paths:
       - apps/**
       - workloads/**
+      - helm_modules/**
       - scripts/validate-route-gates.sh
+      - scripts/validate-game-edge.sh
       - scripts/route-gate-exemptions.txt
       - .github/workflows/validate-route-gates.yml
 
@@ -37,3 +41,17 @@ jobs:
 
       - name: Validate route gates
         run: nix develop -c ./scripts/validate-route-gates.sh
+
+  game-edge:
+    name: Every game app is tagged and uses the game-edge library
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Validate game edge
+        run: nix develop -c ./scripts/validate-game-edge.sh

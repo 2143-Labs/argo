@@ -4,3 +4,8 @@ description: Moss & Wool (2143-Labs/Moss-And-Wool) static web game, one environm
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+dependencies:
+  - name: game-edge
+    version: 0.1.0
+    repository: file://../../helm_modules/game-edge

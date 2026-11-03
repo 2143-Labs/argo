@@ -4,3 +4,8 @@ description: ROTS (bevy2025) environment (prod or one per PR) - WASM web client 
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+dependencies:
+  - name: game-edge
+    version: 0.1.0
+    repository: file://../../helm_modules/game-edge

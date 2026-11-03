@@ -1,0 +1,5 @@
+apiVersion: v2
+name: game-edge
+description: Shared public edge for the browser games (route gates, Anubis policy with link-preview payload, WebSocket check)
+type: library
+version: 0.1.0

@@ -8,7 +8,7 @@ Every HTTPRoute rule on `shared-gateway` carries exactly one of these gates. CI 
 | Public, class A — browser and login surfaces | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer` | `workloads/gateway/templates/grafana-route.yaml` |
 | Public, class B — machine, API and bulk bodies (S3, LLM prompts, webhooks that are not GitHub's, upload APIs) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/llm-proxy/httproute.yaml` |
 | HTTP → HTTPS redirect | `RequestRedirect` only | `workloads/gateway/templates/john2143-http-to-https.yaml` |
-| Public game hosts — browser games behind Anubis (charts `dino-dash`, `moss-and-wool`, `how-poe-sale`) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/dino-dash/templates/httproute.yaml` |
+| Public game hosts — browser games behind Anubis (`dino-dash`, `moss-and-wool`, `how-poe-sale`, `rots-web`; all four via `helm_modules/game-edge`) | `public-rate-limit`, `public-inflight-limit`, `crowdsec-bouncer-game` | `workloads/dino-dash/templates/httproute.yaml` |
 | Public file host — Seafile (`seafile.john2143.com`) | `uploads-rate-limit`, `uploads-inflight-limit`, `crowdsec-bouncer-noappsec` | `workloads/gateway/templates/seafile-route.yaml` |
 | Customer file host behind Anubis (`files.aross.studio`) — no bouncer | `uploads-rate-limit`, `uploads-inflight-limit` | `workloads/gateway/templates/files-aross-studio-route.yaml` |
 
@@ -50,7 +50,9 @@ Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
   agent — so a relying party using a browser-like HTTP client would get the
   challenge HTML wherever it expects JSON.
 
-Chart-embedded variant (the game charts; `workloads/<game>/templates/anubis.yaml`): Anubis runs in each environment's own namespace, so every preview gets one, and the route points at its Service directly. There is no failover `TraefikService`: Traefik's `kubernetescrd` provider runs without `allowCrossNamespace`, so a TraefikService in `default` cannot name a Service in the game namespace, and with Anubis down that environment answers 503. Sync waves (Namespace and signing key -2, Anubis -1) make Argo switch the route only after Anubis is ready. A WebSocket path (Dino-Dash `/ws`) bypasses Anubis: a socket cannot answer a challenge, and the page that opens it already passed one.
+Chart-embedded variant (the four games; `helm_modules/game-edge`): every game chart depends on the library, and a single `{{ include "game-edge.anubis" … }}` in `workloads/<game>/templates/anubis.yaml` renders Anubis in each environment's own namespace, so every preview gets one, and the route points at its Service directly. There is no failover `TraefikService`: Traefik's `kubernetescrd` provider runs without `allowCrossNamespace`, so a TraefikService in `default` cannot name a Service in the game namespace, and with Anubis down that environment answers 503. Sync waves (Namespace, signing key and policy -2, Anubis -1) make Argo switch the route only after Anubis is ready. A WebSocket path (Dino-Dash `/ws`) bypasses Anubis: a socket cannot answer a challenge, and the page that opens it already passed one.
+
+A new game: label its Application(s) `edge.2143.me/class: game` (CI checks the tag against the library dependency, `scripts/validate-game-edge.sh`), depend on `helm_modules/game-edge`, set its `embed` values for the link preview, include `game-edge.gates` on every rule and `game-edge.anubis` once. Its routes are named `game-<routeName>`.
 
 ### Link previews
 
@@ -62,10 +64,11 @@ therefore sets an `openGraph` block in its policy (`POLICY_FNAME`), which prints
 
 - `override` — fixed tags for the whole host, and no backend request at all. Used
   where the backend has no tags of its own and where a fetch would be a load
-  vector anyway: `workloads/anubis-status/policy.yaml`, and the three game charts'
-  `templates/anubis-policy.yaml` (a fetch there would cold-start a scaled-to-zero
-  world, which takes longer than Anubis's 5 s budget). Override replaces lookup
-  for every path, so never put it on a host whose tags vary by path.
+  vector anyway: `workloads/anubis-status/policy.yaml`, and `helm_modules/game-edge`
+  (one payload per game, rendered from the chart's `embed` values; a fetch there
+  would cold-start a scaled-to-zero world, which takes longer than Anubis's 5 s
+  budget). Override replaces lookup for every path, so never put it on a host
+  whose tags vary by path.
 - passthrough — no `override`: Anubis fetches the requested path from `TARGET`
   without the visitor's cookies and copies the tags it finds, cached per
   host+path for 1 h. Used for Seafile (`workloads/anubis-aross-files/policy.yaml`),
@@ -73,13 +76,20 @@ therefore sets an `openGraph` block in its policy (`POLICY_FNAME`), which prints
   tags, so a bare link keeps the Anubis title. Only what the app shows a
   logged-out visitor is ever exposed.
 
-The `og:image` fetch is a challenge too, so the image path needs an `ALLOW` rule
-ahead of the catch-all: `^/og[.]png$` on the games (one static PNG from the same
-build) and `^/media/img/` on `files.aross.studio` (Seafile's file-type and folder
-icons; `/media/avatars/` is deliberately not included). Keep that rule as narrow
-as the one file or directory it exists for. The tags in the games' `index.html`
-serve the clients Anubis does not challenge (search engines, non-Mozilla
-unfurlers); keep the two copies in step.
+Anubis emits only the keys the override supplies, and its `og:image` must be a
+raster the platform's image proxy can fetch on its own — that fetch does go to
+`TARGET`, so a game with an image wakes for one static file, which is intended.
+The fetch is challenged like any other request, so the image path needs an
+`ALLOW` rule ahead of the catch-all: `^/icons/` on the games, emitted only for a
+game whose `embed.image` is set (`dino-dash` is the only one that ships a
+raster, `/icons/icon-512.png`), and `^/media/img/` on `files.aross.studio`
+(Seafile's file-type and folder icons; `/media/avatars/` is deliberately not
+included). The policy fails the render for an image path outside `/icons/`, and
+`moss-and-wool`, `how-poe-sale` and `rots-web` serve no image at all, so their
+cards carry a title and a description only — the `og:image` they used to
+advertise (`/og.png`) never existed. The games' own `index.html` carries no
+`og:` tags, so the challenge page is the only payload; the clients Anubis allow
+(real crawlers) see the app HTML as it is.
 
 Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 

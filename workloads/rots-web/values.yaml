@@ -71,3 +71,12 @@ temporal:
   # Previews only (never with db.protect): a PreDelete hook stops the authserver and
   # terminates every workflow on taskQueue before Argo deletes the preview.
   cleanupOnDelete: false
+
+# Link previews (helm_modules/game-edge): the Open Graph payload the Anubis
+# challenge page carries for clients that cannot solve a challenge (Discord,
+# Slack, Telegram, ...). ROTS serves no raster (every path 404s), so the card is
+# a title and a description.
+embed:
+  title: ROTS
+  siteName: ROTS
+  description: "ROTS — a multiplayer game built with Bevy: play it in the browser, or with the native client."

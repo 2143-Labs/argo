@@ -127,6 +127,9 @@ A public hostname carries an edge gate instead of `lan-only`. Pick the gate from
 [Public edge](public-edge.md). If the app has no login of its own, also follow
 [Exposing an Unauthenticated App](exposing-an-unauthenticated-app.md).
 
+Games: a browser game's edge is `helm_modules/game-edge` — see
+[Public edge](public-edge.md) (tag, gates, Anubis, WebSocket check).
+
 ### e. LAN and cluster DNS (automatic)
 
 Nothing to do for LAN clients or pods: `lan-dns` answers every HTTPRoute/TLSRoute
