@@ -36,6 +36,14 @@ spec:
   - port: 9987
     targetPort: 9987
     protocol: UDP
+    name: voice
+  # File transfer shares this VIP: both load balancers select the same pods, so a
+  # second Service bought nothing but a second address. ts-files still owns
+  # 30033 until the router's dst-nat is repointed (see docs/network-edge.md).
+  - port: 30033
+    targetPort: 30033
+    protocol: TCP
+    name: file-transfer
 
   selector:
     app: teamspeak
