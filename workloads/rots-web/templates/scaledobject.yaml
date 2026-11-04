@@ -36,8 +36,8 @@ metadata:
 spec:
   scaleTargetRef:
     name: rots-authserver
-  minReplicaCount: 0
-  maxReplicaCount: 1
+  minReplicaCount: {{ .Values.authserver.scaleToZero.minReplicas | default 0 }}
+  maxReplicaCount: {{ .Values.authserver.scaleToZero.maxReplicas | default 1 }}
   cooldownPeriod: {{ int .Values.authserver.scaleToZero.idleSeconds }}
   triggers:
     - type: external-push
