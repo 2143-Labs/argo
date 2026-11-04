@@ -1,13 +1,14 @@
-# One Application per open same-repo PR in 2143-Labs/Dino-Dash that carries the
-# `preview` label, served at https://dino-{N}.dsstar.us (namespace dino-pr-{N}),
-# with its own always-on world server.
+# One Application per open same-repo PR in 2143-Labs/Dino-Dash, served at
+# https://dino-{N}.dsstar.us (namespace dino-pr-{N}), with its own world server that
+# scales to zero when nobody is playing.
 #
-# The label is the gate: an unlabeled PR generates no Application at all, so no
-# namespace, no pod and no world server is spent on it, and removing the label (or
-# closing the PR) prunes the whole environment on the next requeue.
+# There is no opt-in gate: gameserver.scaleToZero is on, so the web client and the
+# world server both idle at 0 replicas, and TLS is the edge wildcard, so an open PR
+# costs a namespace, a route and this Application and nothing else. Closing the PR
+# prunes the whole environment on the next requeue.
 # The chart lives here (workloads/dino-dash), not in the game repo: the AppProject
 # does not allow that repo as a source. The image is the game repo's deploy.yml PR
-# build (web-sha-<PR head> / server-sha-<PR head>), so a labeled PR has no
+# build (web-sha-<PR head> / server-sha-<PR head>), so a PR has no working
 # environment until its CI finishes, and each new push rolls once its build lands.
 # Pattern copied from rots-web-preview and moss-and-wool-preview.
 apiVersion: argoproj.io/v1alpha1
@@ -26,12 +27,11 @@ spec:
           owner: 2143-Labs
           repo: Dino-Dash
           tokenRef: { secretName: github-token, key: token }
-          # Only PRs labeled `preview` get an environment. Each one runs a full
-          # static client plus its own world server, so it is opt-in per PR.
-          # This must be github.labels: `filters` has no label key in this CRD
-          # (only branchMatch/targetBranchMatch/titleMatch) and an unknown key is
-          # silently dropped, which would deploy every PR.
-          labels: [preview]
+          # Every open PR, no label gate. There is also no fork filter available:
+          # `filters` only knows branchMatch/targetBranchMatch/titleMatch, and an
+          # unknown key is silently dropped. A fork PR therefore gets an Application
+          # whose image never appears (the game repo only builds same-repo PRs); it
+          # sits at 0 replicas and inert until the PR is closed.
         requeueAfterSeconds: 120
   template:
     metadata:
