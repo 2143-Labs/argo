@@ -8,6 +8,12 @@ image:
   repository: ghcr.io/2143-labs/bevy2025
   tag: ""       # web client: webserver-wasm-latest or webserver-wasm-pr-<N>
 
+web:
+  # minReplicaCount on the ScaledObject rots-web (max is always 1). 0 (previews):
+  # the KEDA interceptor holds a page view while the pod cold-starts. 1 (prod): a
+  # pod is always up, so the wasm bundle is served warm.
+  minReplicas: 0
+
 authserver:
   # Same image everywhere: rots-authserver CI pushes server-latest on every master build.
   image: ghcr.io/2143-labs/rots-authserver:server-latest

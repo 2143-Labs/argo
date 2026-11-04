@@ -6,7 +6,9 @@ metadata:
 spec:
   scaleTargetRef:
     name: rots-web
-  minReplicaCount: 0
+  # web.minReplicas: 0 (scale-to-zero behind the interceptor) or 1 (always warm,
+  # prod - a page view never waits on a cold start).
+  minReplicaCount: {{ int .Values.web.minReplicas }}
   maxReplicaCount: 1
   cooldownPeriod: 1800
   advanced:
