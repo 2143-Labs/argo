@@ -29,6 +29,11 @@ authserver:
     enabled: true
     # Seconds with no /auth request in flight and no game-server pod before it scales to zero.
     idleSeconds: 3600
+    # Replica bounds for the authserver's ScaledObject. Prod runs at least one (the warm pool
+    # needs a coordinator to fill and reap it) and may scale out on /auth concurrency;
+    # previews keep 0 so they still scale to zero.
+    minReplicas: 0          # prod 1
+    maxReplicas: 1          # prod 3
 
 db:
   clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app
@@ -55,6 +60,13 @@ gameserver:
   capacityPerServer: 32   # static mode's placement cap; placeholder until #74 measures it
   readyTimeoutSecs: 120   # first heartbeat deadline before a start counts as failed
   idleSecs: 60            # ROTS_IDLE_SECS: connected == 0 this long -> destroy
+  # Managed (kubernetes) mode only: instances kept booted in pre-game (sockets and the
+  # coordinator link up, world paused) and activated when a player is placed on one, so
+  # /play answers with a ticket in ~1 s instead of ~15 s. Each takes a slot from
+  # gameserver.slots, a 200m/256Mi pod and a 1Gi Longhorn volume.
+  warmInstances: 0        # prod 1; previews 0 (a warm pod keeps the authserver awake)
+  # How long an unclaimed warm instance may live before it is destroyed and replaced.
+  warmMaxAgeSecs: 21600
   # requests.cpu / requests.memory hard cap on pods of PriorityClass
   # rots-gameserver, and the numbers the authserver's pre-check reports.
   quota:
