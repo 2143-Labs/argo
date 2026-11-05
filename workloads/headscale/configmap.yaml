@@ -22,7 +22,18 @@ data:
       "groups": {
         // People John knows in person. Starts with John only — read the warning on
         // the group:home ACL rule before adding anyone.
-        "group:home": ["john@2143.me"]
+        "group:home": ["john@2143.me"],
+
+        // People who get unrestricted, all-port access to each other's tailnet
+        // devices in both directions. Headscale ACLs match on user/group/tag,
+        // never on hostname, so "direct friends" means *every* device the member
+        // owns — laptops and servers alike — not just their laptop.
+        //
+        // Amandistry.1 has no email recorded in headscale (OIDC login carried no
+        // email claim), so she is referenced by legacy username syntax: the
+        // trailing "@" is required, otherwise policy parsing rejects the group
+        // with "username must contain @".
+        "group:direct_friends": ["john@2143.me", "Amandistry.1@"]
       },
       "tagOwners": {
         "tag:vpin": ["john@2143.me"],
@@ -79,6 +90,18 @@ data:
           "action": "accept",
           "src": ["autogroup:member"],
           "dst": ["autogroup:self:*"]
+        },
+        // Direct friends: full open communication between each other's devices —
+        // every port, both directions, no protocol restriction. This is device
+        // access only: it grants no tailnet subnet routes (192.168.5.0/24,
+        // 192.168.6.0/24) and no tagged infrastructure (pite, vpin, vpn-endpoint),
+        // which stay John-only. Amanda's MacBook therefore reaches John's NAS,
+        // KVM and k3s hosts; that broadening is deliberate, since headscale cannot
+        // express "laptops only" without tagging those nodes.
+        {
+          "action": "accept",
+          "src": ["group:direct_friends"],
+          "dst": ["group:direct_friends:*"]
         },
         // Everyone can use exit nodes
         {
