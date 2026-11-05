@@ -115,7 +115,7 @@ data:
       # Claude Code on the Claude Max subscription — OAuth passthrough, per
       # docs.litellm.ai/docs/tutorials/claude_code_max_subscription.
       #
-      # Header flow (all verified against the pinned image ghcr.io/berriai/litellm:v1.106.6):
+      # Header flow (all verified against the pinned image ghcr.io/berriai/litellm:v1.108.0):
       #   Claude Code sends  Authorization: Bearer sk-ant-oat...   (subscription token)
       #                 and  x-litellm-api-key: Bearer sk-...      (proxy key)
       #   * user_api_key_auth prefers `x-litellm-api-key` over Authorization
@@ -274,8 +274,9 @@ data:
   # in one hour (83%) were this one message, which buried real warnings.
   # Upstream issue BerriAI/litellm#37629 was closed on 2026-10-20 without the
   # aggregation fix: PR #37728 was closed unmerged and the per-message warning
-  # is still present in the pinned image ghcr.io/berriai/litellm:v1.106.6
-  # (litellm/llms/deepseek/chat/transformation.py, _fill_reasoning_content).
+  # is still present in the pinned image ghcr.io/berriai/litellm:v1.108.0
+  # (litellm/llms/deepseek/chat/transformation.py, _fill_reasoning_content,
+  # line 89).
   #
   # Scope: drops ONLY that one message, from litellm's `LiteLLM` logger. The
   # placeholder substitution is untouched, so DeepSeek receives exactly the
