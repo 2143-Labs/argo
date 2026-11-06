@@ -125,5 +125,7 @@ for guide in "${guides[@]}"; do
   done < <(code_paths "$guide")
 done
 
+(( nlinks > 0 && npaths > 0 )) || { echo "::error::scanned 0 links or 0 guide paths; refusing to pass"; exit 1; }
+
 [[ "$fail" -eq 0 ]] || exit 1
 echo "doc links OK: $nlinks links, $nanchors anchors in ${#docs[@]} docs; $npaths paths in ${#guides[@]} guides"

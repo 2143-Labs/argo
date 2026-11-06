@@ -15,6 +15,8 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+source scripts/lib/inventory.sh
+
 # The shared-gateway (traefik) LoadBalancer address: the traefik row of the IP
 # allocation table in docs/adding-a-workload.md §5.
 gateway_ip=192.168.6.6
@@ -38,21 +40,25 @@ while read -r name type value; do
   fi
 done < <(yq e -N '.dns.extra_records[]? | .name + " " + .type + " " + .value' - <<<"$config")
 
-mapfile -t files < <(git ls-files 'apps/*.yaml' 'apps/*.yml' 'workloads/*.yaml' 'workloads/*.yml' | grep -v '/templates/')
-mapfile -t apps < <(git ls-files 'apps/*.yaml' 'apps/*.yml')
+ri_init
+ri_files || fail=1
+ri_require_files
+ri_apps
 
 declare -A routes=()
 while read -r f h; do
   [[ "$h" == *.ts.2143.me && "$h" != \** ]] || continue
   [[ -n "${routes[$h]:-}" ]] || routes["$h"]=$f
 done < <(
-  yq e -N "select($route_kinds) | .spec.hostnames[]? as \$h | filename + \" \" + \$h" "${files[@]}"
-  yq e -N "filename as \$f | select(.kind == \"Application\") | (.spec.source.helm.values // \"\") | select(. != \"\") | from_yaml | .extraObjects[]? | select($route_kinds) | .spec.hostnames[]? as \$h | \$f + \" \" + \$h" "${apps[@]}"
+  yq e -N "select($route_kinds) | .spec.hostnames[]? as \$h | filename + \" \" + \$h" "${RI_FILES[@]}"
+  yq e -N "filename as \$f | select(.kind == \"Application\") | (.spec.source.helm.values // \"\") | select(. != \"\") | from_yaml | .extraObjects[]? | select($route_kinds) | .spec.hostnames[]? as \$h | \$f + \" \" + \$h" "${RI_APPS[@]}"
 )
+
+[[ ${#routes[@]} -gt 0 ]] || { echo "::error::scanned 0 .ts route hostnames; refusing to pass"; exit 1; }
 
 for h in "${!routes[@]}"; do
   if [[ -z "${records[$h]:-}" ]]; then
-    echo "::error file=${routes[$h]}::route hostname $h has no headscale extra_records entry; tailnet clients cannot resolve it"
+    echo "::error file=$(ri_src "${routes[$h]}")::route hostname $h has no headscale extra_records entry; tailnet clients cannot resolve it"
     fail=1
   fi
 done

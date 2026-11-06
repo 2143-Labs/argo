@@ -18,6 +18,7 @@ done
 [[ -f "${APPLICATION_SET}" ]] || fail "ApplicationSet not found: ${APPLICATION_SET}"
 [[ -f "${EXPECTED_ELEMENTS}" ]] || fail "expected element inventory not found: ${EXPECTED_ELEMENTS}"
 jq -e 'type == "array"' "${EXPECTED_ELEMENTS}" >/dev/null || fail 'expected element inventory must be a JSON array'
+[[ "$(jq length "${EXPECTED_ELEMENTS}")" -gt 0 ]] || fail 'expected element inventory is empty'
 
 work_dir="$(mktemp -d)"
 trap 'rm -rf "${work_dir}"' EXIT

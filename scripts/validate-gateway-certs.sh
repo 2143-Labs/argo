@@ -19,43 +19,39 @@
 # 6. shared-gateway has at most 16 listeners: Traefik writes one
 #    BackendTLSPolicy ancestor per listener and fails status writes beyond 16.
 #
-# Helm chart templates (*/templates/*) are not plain YAML and are skipped, with
-# one exception: workloads/gateway, the chart that owns the listeners and the
-# Certificates. It is rendered with helm template (prod values) and validated
-# like any other manifest.
+# Every Helm chart that emits edge objects is rendered by scripts/lib/inventory.sh
+# as the Application owning it renders it (prod values); the rendered objects are
+# validated like any other manifest. The gateway chart is the one this check
+# exists for: it owns the listeners and the Certificates.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+source scripts/lib/inventory.sh
 
-# Argo CD renders this chart per cluster: prod takes values-prod.yaml
-# (prodOnly: true, every listener on a real Certificate). Nonprod is not
-# rendered: values-nonprod.yaml sets certOverride: nonprod-dev-tls, a Secret
-# seeded by bigp-tofu with no Certificate object, so rule 2 would fire on every
-# listener and say nothing about the chart.
-gw=$tmp/gateway.yaml
-helm template gateway workloads/gateway --namespace default -f workloads/gateway/values-prod.yaml >"$gw"
-
-# Annotations for the rendered chart should point at its templates.
-src() { case "$1" in "$tmp"/*) echo "workloads/gateway/templates";; *) echo "$1";; esac; }
-
+ri_init
 fail=0
-mapfile -t files < <(git ls-files 'apps/*.yaml' 'apps/*.yml' 'workloads/*.yaml' 'workloads/*.yml' | grep -v '/templates/')
-files+=("$gw")
+ri_files || fail=1
+ri_require_files
+ri_apps
 
-for f in "${files[@]}"; do
+gw=$(ri_rendered_for workloads/gateway || true)
+if [[ -z "$gw" ]]; then
+  echo "::error file=workloads/gateway/templates::gateway chart did not render"
+  exit 1
+fi
+
+for f in "${RI_FILES[@]}"; do
   dups=$(yq e -N '[.. | select(tag == "!!map") | select((keys | length) != (keys | unique | length)) | "." + (path | join("."))] | .[]' "$f")
   if [[ -n "$dups" ]]; then
     while IFS= read -r p; do
-      echo "::error file=$(src "$f")::duplicate mapping keys at '$p' (missing '---' between manifests?)"
+      echo "::error file=$(ri_src "$f")::duplicate mapping keys at '$p' (missing '---' between manifests?)"
     done <<<"$dups"
     fail=1
   fi
 done
 
-refs=$(yq e -N 'select(.kind == "Gateway") | .metadata.namespace as $ns | .spec.listeners[] | .tls.certificateRefs[]? | select((.kind // "Secret") == "Secret") | (.namespace // $ns) + "/" + .name' "${files[@]}" | sort -u)
-certs=$(yq e -N 'select(.kind == "Certificate") | (.metadata.namespace // "<no-namespace>") + "/" + .spec.secretName' "${files[@]}" | sort)
+refs=$(yq e -N 'select(.kind == "Gateway") | .metadata.namespace as $ns | .spec.listeners[] | .tls.certificateRefs[]? | select((.kind // "Secret") == "Secret") | (.namespace // $ns) + "/" + .name' "${RI_FILES[@]}" | sort -u)
+certs=$(yq e -N 'select(.kind == "Certificate") | (.metadata.namespace // "<no-namespace>") + "/" + .spec.secretName' "${RI_FILES[@]}" | sort)
 
 while IFS= read -r secret; do
   [[ -z "$secret" ]] && continue
@@ -66,8 +62,8 @@ while IFS= read -r secret; do
   fi
 done <<<"$refs"
 
-pairs=$(yq e -N 'select(.kind == "Gateway") | .metadata.namespace as $ns | .spec.listeners[] | select(.hostname and .tls.certificateRefs) | .hostname as $h | .tls.certificateRefs[] | select((.kind // "Secret") == "Secret") | (.namespace // $ns) + "/" + .name + " " + $h' "${files[@]}" | sort -u)
-sans=$(yq e -N 'select(.kind == "Certificate") | ((.metadata.namespace // "<no-namespace>") + "/" + .spec.secretName) as $s | .spec.dnsNames[]? | $s + " " + .' "${files[@]}" | tr '[:upper:]' '[:lower:]' | sort -u)
+pairs=$(yq e -N 'select(.kind == "Gateway") | .metadata.namespace as $ns | .spec.listeners[] | select(.hostname and .tls.certificateRefs) | .hostname as $h | .tls.certificateRefs[] | select((.kind // "Secret") == "Secret") | (.namespace // $ns) + "/" + .name + " " + $h' "${RI_FILES[@]}" | sort -u)
+sans=$(yq e -N 'select(.kind == "Certificate") | ((.metadata.namespace // "<no-namespace>") + "/" + .spec.secretName) as $s | .spec.dnsNames[]? | $s + " " + .' "${RI_FILES[@]}" | tr '[:upper:]' '[:lower:]' | sort -u)
 
 while read -r secret host; do
   [[ -z "$secret" ]] && continue
@@ -86,15 +82,14 @@ while IFS= read -r secret; do
 done < <(uniq -d <<<"$certs")
 
 route_kinds='.kind == "HTTPRoute" or .kind == "TLSRoute" or .kind == "GRPCRoute"'
-mapfile -t apps < <(git ls-files 'apps/*.yaml' 'apps/*.yml')
 
 n_listeners=$(yq e -N 'select(.kind == "Gateway" and .metadata.name == "shared-gateway") | .spec.listeners | length' "$gw")
 if [[ -z "$n_listeners" || "$n_listeners" -eq 0 ]]; then
-  echo "::error file=$(src "$gw")::shared-gateway has no listeners in the rendered chart; refusing to report a green check with nothing to validate"
+  echo "::error file=$(ri_src "$gw")::shared-gateway has no listeners in the rendered chart; refusing to report a green check with nothing to validate"
   exit 1
 fi
 if [[ "$n_listeners" -gt 16 ]]; then
-  echo "::error file=$(src "$gw")::shared-gateway has $n_listeners listeners; Traefik fails BackendTLSPolicy status writes above 16 (one ancestor per listener)"
+  echo "::error file=$(ri_src "$gw")::shared-gateway has $n_listeners listeners; Traefik fails BackendTLSPolicy status writes above 16 (one ancestor per listener)"
   fail=1
 fi
 
@@ -110,8 +105,8 @@ served() { local l=$1 h=$2; [[ "$l" == "-" || "$l" == "$h" ]] && return 0; [[ "$
 
 # One line per (route parentRef to shared-gateway) x (route hostname): file route section host
 route_refs=$(
-  yq e -N "select($route_kinds) | filename as \$f | .metadata.name as \$n | (.spec.hostnames // [\"-\"]) as \$hs | .spec.parentRefs[]? | select(.name == \"shared-gateway\") | (.sectionName // \"-\") as \$s | \$hs[] | \$f + \" \" + \$n + \" \" + \$s + \" \" + ." "${files[@]}"
-  yq e -N "filename as \$f | select(.kind == \"Application\") | (.spec.source.helm.values // \"\") | select(. != \"\") | from_yaml | .extraObjects[]? | select($route_kinds) | .metadata.name as \$n | (.spec.hostnames // [\"-\"]) as \$hs | .spec.parentRefs[]? | select(.name == \"shared-gateway\") | (.sectionName // \"-\") as \$s | \$hs[] | \$f + \" \" + \$n + \" \" + \$s + \" \" + ." "${apps[@]}"
+  yq e -N "select($route_kinds) | filename as \$f | .metadata.name as \$n | (.spec.hostnames // [\"-\"]) as \$hs | .spec.parentRefs[]? | select(.name == \"shared-gateway\") | (.sectionName // \"-\") as \$s | \$hs[] | \$f + \" \" + \$n + \" \" + \$s + \" \" + ." "${RI_FILES[@]}"
+  yq e -N "filename as \$f | select(.kind == \"Application\") | (.spec.source.helm.values // \"\") | select(. != \"\") | from_yaml | .extraObjects[]? | select($route_kinds) | .metadata.name as \$n | (.spec.hostnames // [\"-\"]) as \$hs | .spec.parentRefs[]? | select(.name == \"shared-gateway\") | (.sectionName // \"-\") as \$s | \$hs[] | \$f + \" \" + \$n + \" \" + \$s + \" \" + ." "${RI_APPS[@]}"
 )
 
 declare -A seen=() ok=()
@@ -122,11 +117,11 @@ while read -r f n s h; do
   key="$f $n $h"
   seen["$key"]=1
   if [[ "$s" == "-" ]]; then
-    echo "::error file=$(src "$f")::route $n has a shared-gateway parentRef without sectionName; pin one listener"
+    echo "::error file=$(ri_src "$f")::route $n has a shared-gateway parentRef without sectionName; pin one listener"
     fail=1; ok["$key"]=1; continue
   fi
   if [[ -z "${lhost[$s]+x}" ]]; then
-    echo "::error file=$(src "$f")::route $n pins sectionName $s, which is not a shared-gateway listener"
+    echo "::error file=$(ri_src "$f")::route $n pins sectionName $s, which is not a shared-gateway listener"
     fail=1; ok["$key"]=1; continue
   fi
   served "${lhost[$s]}" "$h" || continue
@@ -135,7 +130,7 @@ while read -r f n s h; do
   [[ "$sec" == "-" || "$h" == "-" ]] && continue
   hl=${h,,}
   if ! grep -qxF "default/$sec $hl" <<<"$sans" && ! grep -qxF "default/$sec *.${hl#*.}" <<<"$sans"; then
-    echo "::error file=$(src "$f")::route $n hostname $h is served by listener $s, but Certificate default/$sec does not cover it; clients get a certificate name mismatch"
+    echo "::error file=$(ri_src "$f")::route $n hostname $h is served by listener $s, but Certificate default/$sec does not cover it; clients get a certificate name mismatch"
     fail=1
   fi
 done <<<"$route_refs"
@@ -143,7 +138,7 @@ done <<<"$route_refs"
 for key in "${!seen[@]}"; do
   if [[ -z "${ok[$key]:-}" ]]; then
     read -r f n h <<<"$key"
-    echo "::error file=$(src "$f")::route $n hostname $h matches none of its pinned shared-gateway listeners; it is never served"
+    echo "::error file=$(ri_src "$f")::route $n hostname $h matches none of its pinned shared-gateway listeners; it is never served"
     fail=1
   fi
 done

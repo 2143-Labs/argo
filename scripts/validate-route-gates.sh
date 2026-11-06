@@ -2,18 +2,21 @@
 # Every HTTPRoute rule carries an edge gate, so nothing reaches the internet by
 # accident. Read docs/public-edge.md.
 #
-# Rules are read from HTTPRoutes in apps/ and workloads/, plus routes embedded
-# in Helm values strings (.spec.source.helm.values -> extraObjects, e.g.
-# apps/openbao.yaml). A rule is keyed "<namespace>/<route> <path>", where path
-# is its first match's path value ("/" if absent).
+# Rules are read from HTTPRoutes in apps/ and workloads/, from every Helm chart
+# that emits edge objects (rendered by scripts/lib/inventory.sh as its
+# Application renders it), plus routes embedded in Helm values strings
+# (.spec.source.helm.values -> extraObjects, e.g. apps/openbao.yaml). A rule is
+# keyed "<namespace>/<route> <path>", where path is its first match's path value
+# ("/" if absent).
 #
 # A. A rule whose route serves a *.ts.2143.me hostname must carry lan-only
 #    (unless it is only a RequestRedirect). The name is private only in DNS:
 #    the gateway serves it to anyone who sends it to the WAN address. No
 #    exemptions.
 # B. Every other rule carries lan-only, crowdsec-bouncer,
-#    crowdsec-bouncer-noappsec, crowdsec-bouncer-game or a RequestRedirect, or
-#    is listed in
+#    crowdsec-bouncer-noappsec, crowdsec-bouncer-game, the uploads tier
+#    (uploads-rate-limit + uploads-inflight-limit, the customer file host behind
+#    Anubis: docs/public-edge.md) or a RequestRedirect, or is listed in
 #    scripts/route-gate-exemptions.txt with a reason.
 # C. Every exemption names a rule that B would otherwise reject.
 #
@@ -21,16 +24,16 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+source scripts/lib/inventory.sh
+
 exemptions=scripts/route-gate-exemptions.txt
 
-# One line per rule: file, ns/name, path, then hostnames, ExtensionRef names and
-# filter types as ",a,b," lists (never empty, so tab splitting keeps columns).
-body='.metadata.namespace as $ns | .metadata.name as $n | ("," + (.spec.hostnames // [] | join(",")) + ",") as $h | .spec.rules[] | ((.matches // [{}])[0].path.value // "/") as $p | ("," + ([.filters[]? | select(.type == "ExtensionRef") | .extensionRef.name] | join(",")) + ",") as $f | ("," + ([.filters[]? | .type] | join(",")) + ",") as $t | $file + "\t" + ($ns // "") + "/" + $n + "\t" + $p + "\t" + $h + "\t" + $f + "\t" + $t'
-
-mapfile -t files < <(git ls-files 'apps/*.yaml' 'apps/*.yml' 'workloads/*.yaml' 'workloads/*.yml' | grep -v '/templates/')
-mapfile -t apps < <(git ls-files 'apps/*.yaml' 'apps/*.yml')
-
 fail=0
+ri_init
+ri_files || fail=1
+ri_require_files
+ri_apps
+
 declare -A exempt=() exempt_line=() used=()
 ln=0
 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -50,6 +53,7 @@ declare -A no_ns=()
 n=0
 while IFS=$'\t' read -r file key path hosts refs types; do
   n=$((n + 1))
+  file=$(ri_src "$file")
   if [[ "$key" == /* && -z "${no_ns[$key]:-}" ]]; then
     no_ns["$key"]=1
     echo "::error file=$file::HTTPRoute ${key#/} has no metadata.namespace"
@@ -70,7 +74,7 @@ while IFS=$'\t' read -r file key path hosts refs types; do
     continue
   fi
 
-  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$refs" == *,crowdsec-bouncer-game,* || "$types" == *,RequestRedirect,* ]]; then
+  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$refs" == *,crowdsec-bouncer-game,* || "$refs" == *,uploads-inflight-limit,* || "$types" == *,RequestRedirect,* ]]; then
     continue
   fi
   if [[ -n "${exempt["$key $path"]:-}" ]]; then
@@ -80,10 +84,9 @@ while IFS=$'\t' read -r file key path hosts refs types; do
   hosts=${hosts#,}
   echo "::error file=$file::rule $key $path on ${hosts%,} has no edge gate; add one (docs/public-edge.md) or list it in $exemptions with a reason"
   fail=1
-done < <(
-  yq e -N "select(.kind == \"HTTPRoute\") | filename as \$file | $body" "${files[@]}"
-  yq e -N "filename as \$file | select(.kind == \"Application\") | (.spec.source.helm.values // \"\") | select(. != \"\") | from_yaml | .extraObjects[]? | select(.kind == \"HTTPRoute\") | $body" "${apps[@]}"
-)
+done < <(ri_route_stream)
+
+[[ "$n" -gt 0 ]] || { echo "::error::scanned 0 route rules; refusing to pass"; exit 1; }
 
 for k in "${!exempt[@]}"; do
   if [[ -z "${used[$k]:-}" ]]; then

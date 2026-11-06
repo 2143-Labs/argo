@@ -5,15 +5,20 @@
 #
 # 1. The zone line after "# lan-dns-zones" in the lan-dns Corefile and the
 #    zones on its k8s_gateway line must be identical.
-# 2. Every hostname of an HTTPRoute/TLSRoute/GRPCRoute in apps/ or workloads/
-#    is one of those zones or a subdomain of one, unless the route carries
+# 2. Every hostname of an HTTPRoute/TLSRoute/GRPCRoute in apps/, in workloads/,
+#    or in a Helm chart that emits edge objects (rendered by
+#    scripts/lib/inventory.sh as its Application renders it) is one of those
+#    zones or a subdomain of one, unless the route carries
 #    k8s-gateway.dns/ignore: "true" (it is meant to resolve publicly).
 #
 # Not checkable here: the router FWD entries and dotfiles coredns-custom must
 # carry the same zones (docs/lan-dns.md, "Adding a new domain"). Routes embedded
-# as strings in Helm values (e.g. apps/openbao.yaml) are not seen.
+# as strings in Helm values (e.g. apps/openbao.yaml) are not seen: only plain
+# manifests and rendered charts are scanned.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
+
+source scripts/lib/inventory.sh
 
 cm=workloads/lan-dns/configmap.yaml
 corefile=$(yq e -N 'select(.kind == "ConfigMap" and .metadata.name == "lan-dns-corefile") | .data.Corefile' "$cm")
@@ -31,7 +36,10 @@ if [[ "$header" != "$plugin" ]]; then
 fi
 mapfile -t zones <<<"$header"
 
-mapfile -t files < <(git ls-files 'apps/*.yaml' 'apps/*.yml' 'workloads/*.yaml' 'workloads/*.yml' | grep -v '/templates/')
+ri_init
+ri_files || fail=1
+ri_require_files
+
 n=0
 while read -r f h; do
   [[ -z "$h" || "$h" == \** ]] && continue
@@ -41,10 +49,12 @@ while read -r f h; do
     if [[ "$h" == "$z" || "$h" == *".$z" ]]; then ok=1; break; fi
   done
   if [[ "$ok" -eq 0 ]]; then
-    echo "::error file=$f::route hostname $h is not inside any lan-dns zone; LAN clients and pods would hairpin through the WAN. Add the zone as described in docs/lan-dns.md, or label the route k8s-gateway.dns/ignore: \"true\" if it must resolve publicly"
+    echo "::error file=$(ri_src "$f")::route hostname $h is not inside any lan-dns zone; LAN clients and pods would hairpin through the WAN. Add the zone as described in docs/lan-dns.md, or label the route k8s-gateway.dns/ignore: \"true\" if it must resolve publicly"
     fail=1
   fi
-done < <(yq e -N 'select(.kind == "HTTPRoute" or .kind == "TLSRoute" or .kind == "GRPCRoute") | select((.metadata.labels."k8s-gateway.dns/ignore" // "") != "true") | .spec.hostnames[]? as $h | filename + " " + $h' "${files[@]}")
+done < <(yq e -N 'select(.kind == "HTTPRoute" or .kind == "TLSRoute" or .kind == "GRPCRoute") | select((.metadata.labels."k8s-gateway.dns/ignore" // "") != "true") | .spec.hostnames[]? as $h | filename + " " + $h' "${RI_FILES[@]}")
+
+[[ "$n" -gt 0 ]] || { echo "::error::scanned 0 route hostnames; refusing to pass"; exit 1; }
 
 [[ "$fail" -eq 0 ]] || exit 1
 echo "lan-dns zones OK: ${#zones[@]} zones cover $n route hostnames"
