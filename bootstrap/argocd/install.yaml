@@ -31511,6 +31511,11 @@ metadata:
     app.kubernetes.io/name: argocd-cmd-params-cm
     app.kubernetes.io/part-of: argocd
   name: argocd-cmd-params-cm
+data:
+  server.insecure: "true"
+  controller.log.level: warn
+  notificationscontroller.log.level: warn
+  reposerver.log.level: warn
 ---
 apiVersion: v1
 kind: ConfigMap

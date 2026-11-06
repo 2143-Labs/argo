@@ -121,6 +121,7 @@ spec:
               memory: 2Gi
           extraArgs:
             - "-config.expand-env=true"
+            - "-log.level=warn"
           extraEnv:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
