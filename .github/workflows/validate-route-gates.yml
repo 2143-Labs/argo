@@ -6,6 +6,7 @@ on:
       - apps/**
       - workloads/**
       - helm_modules/**
+      - scripts/lib/**
       - scripts/validate-route-gates.sh
       - scripts/validate-game-edge.sh
       - scripts/route-gate-exemptions.txt
@@ -15,6 +16,7 @@ on:
       - apps/**
       - workloads/**
       - helm_modules/**
+      - scripts/lib/**
       - scripts/validate-route-gates.sh
       - scripts/validate-game-edge.sh
       - scripts/route-gate-exemptions.txt
@@ -40,7 +42,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Validate route gates
-        run: nix develop -c ./scripts/validate-route-gates.sh
+        run: nix develop --fallback -c ./scripts/validate-route-gates.sh
 
   game-edge:
     name: Every game app is tagged and uses the game-edge library
@@ -54,4 +56,4 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Validate game edge
-        run: nix develop -c ./scripts/validate-game-edge.sh
+        run: nix develop --fallback -c ./scripts/validate-game-edge.sh

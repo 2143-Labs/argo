@@ -25,4 +25,4 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Validate doc links
-        run: nix develop -c ./scripts/validate-doc-links.sh
+        run: nix develop --fallback -c ./scripts/validate-doc-links.sh

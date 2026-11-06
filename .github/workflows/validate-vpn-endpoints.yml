@@ -7,6 +7,7 @@ on:
       - workloads/vpn-endpoints/**
       - workloads/secrets/vpn-endpoints-mullvad-account.yaml
       - workloads/secrets/vpn-endpoints-tailscale-bootstrap.yaml
+      - scripts/lib/**
       - scripts/validate-vpn-endpoints.sh
       - scripts/vpn-endpoints-expected.json
       - .github/workflows/vpn-enroll-image.yml
@@ -19,6 +20,7 @@ on:
       - workloads/vpn-endpoints/**
       - workloads/secrets/vpn-endpoints-mullvad-account.yaml
       - workloads/secrets/vpn-endpoints-tailscale-bootstrap.yaml
+      - scripts/lib/**
       - scripts/validate-vpn-endpoints.sh
       - scripts/vpn-endpoints-expected.json
       - .github/workflows/vpn-enroll-image.yml
@@ -46,4 +48,4 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Validate VPN endpoints
-        run: nix develop -c ./scripts/validate-vpn-endpoints.sh
+        run: nix develop --fallback -c ./scripts/validate-vpn-endpoints.sh

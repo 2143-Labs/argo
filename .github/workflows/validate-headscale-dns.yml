@@ -5,12 +5,14 @@ on:
     paths:
       - apps/**
       - workloads/**
+      - scripts/lib/**
       - scripts/validate-headscale-dns.sh
       - .github/workflows/validate-headscale-dns.yml
   push:
     paths:
       - apps/**
       - workloads/**
+      - scripts/lib/**
       - scripts/validate-headscale-dns.sh
       - .github/workflows/validate-headscale-dns.yml
 
@@ -34,4 +36,4 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Validate headscale DNS
-        run: nix develop -c ./scripts/validate-headscale-dns.sh
+        run: nix develop --fallback -c ./scripts/validate-headscale-dns.sh
