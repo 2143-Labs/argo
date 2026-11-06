@@ -9,13 +9,17 @@
 # and the john2143-wildcard-https listener only admits default/argocd/kube-system/openbao.
 # The backend is Anubis (anubis.yaml), which proxies to the app Service (prod)
 # or the KEDA interceptor (previews).
-# scripts/validate-route-gates.sh skips /templates/, so these gates are not
-# CI-checked: every rule must include "game-edge.gates".
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ include "game-edge.routeName" . }}
   namespace: default
+  labels:
+    # LAN clients resolve these hosts publicly (docs/lan-dns.md): no lan-dns zone
+    # covers how.poe.sale, and lan-dns must not answer anyway. The label applies
+    # to the whole route, so how.john2143.com (inside a zone) stops resolving
+    # through lan-dns too; how.poe.sale is the canonical name.
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway
@@ -49,6 +53,12 @@ kind: HTTPRoute
 metadata:
   name: {{ include "game-edge.routeName" . }}-http-to-https
   namespace: default
+  labels:
+    # LAN clients resolve these hosts publicly (docs/lan-dns.md): no lan-dns zone
+    # covers how.poe.sale, and lan-dns must not answer anyway. The label applies
+    # to the whole route, so how.john2143.com (inside a zone) stops resolving
+    # through lan-dns too; how.poe.sale is the canonical name.
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway
