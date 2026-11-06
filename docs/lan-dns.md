@@ -76,6 +76,14 @@ Zones: `2143.me`, `john2143.com`, `aross.studio`, `balabusta.homes`,
   `.6.11`. Find them with
   `kubectl --context closet-as-admin get httproute,tlsroute,grpcroute -A -o yaml | grep -n '<name>'`.
 
+  `dino-dash`, `moss-and-wool` and `how-poe-sale` carry the label on both of
+  their chart routes (the main route and its `-http-to-https` twin) because no
+  zone covers `dino.dsstar.us`, `dino-dev.dsstar.us`, `moss.dsstar.us`,
+  `moss-dev.dsstar.us` or `how.poe.sale`. Chart templates are rendered by CI
+  (`scripts/validate-lan-dns-zones.sh` through `scripts/lib/inventory.sh`), so a
+  route added to a chart is checked like any other; only routes embedded in
+  Application `helm.values` strings are still unseen.
+
 ### Exceptions
 
 | Name | Answer | Why | Where |

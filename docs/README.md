@@ -14,6 +14,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Expanded port-level diagram (Graphviz source)](network-diagram.dot) · [rendered](network-diagram.svg)
 - [Node maintenance: drain, return, add, remove](node-maintenance.md)
 - [Public edge: gating public routes](public-edge.md)
+- [CI validations: what each check protects, and how to add one](ci-validations.md)
 - [Exposing an Unauthenticated App (humans + federated machines)](exposing-an-unauthenticated-app.md)
 - [Longhorn iSCSI Recovery](longhorn-iscsi-recovery.md)
 - [Matter server: fabric, restore and the start-up guard](matter-server.md)
