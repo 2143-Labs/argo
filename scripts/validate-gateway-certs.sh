@@ -19,18 +19,36 @@
 # 6. shared-gateway has at most 16 listeners: Traefik writes one
 #    BackendTLSPolicy ancestor per listener and fails status writes beyond 16.
 #
-# Helm chart templates (*/templates/*) are not plain YAML and are skipped.
+# Helm chart templates (*/templates/*) are not plain YAML and are skipped, with
+# one exception: workloads/gateway, the chart that owns the listeners and the
+# Certificates. It is rendered with helm template (prod values) and validated
+# like any other manifest.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# Argo CD renders this chart per cluster: prod takes values-prod.yaml
+# (prodOnly: true, every listener on a real Certificate). Nonprod is not
+# rendered: values-nonprod.yaml sets certOverride: nonprod-dev-tls, a Secret
+# seeded by bigp-tofu with no Certificate object, so rule 2 would fire on every
+# listener and say nothing about the chart.
+gw=$tmp/gateway.yaml
+helm template gateway workloads/gateway --namespace default -f workloads/gateway/values-prod.yaml >"$gw"
+
+# Annotations for the rendered chart should point at its templates.
+src() { case "$1" in "$tmp"/*) echo "workloads/gateway/templates";; *) echo "$1";; esac; }
+
 fail=0
 mapfile -t files < <(git ls-files 'apps/*.yaml' 'apps/*.yml' 'workloads/*.yaml' 'workloads/*.yml' | grep -v '/templates/')
+files+=("$gw")
 
 for f in "${files[@]}"; do
   dups=$(yq e -N '[.. | select(tag == "!!map") | select((keys | length) != (keys | unique | length)) | "." + (path | join("."))] | .[]' "$f")
   if [[ -n "$dups" ]]; then
     while IFS= read -r p; do
-      echo "::error file=$f::duplicate mapping keys at '$p' (missing '---' between manifests?)"
+      echo "::error file=$(src "$f")::duplicate mapping keys at '$p' (missing '---' between manifests?)"
     done <<<"$dups"
     fail=1
   fi
@@ -67,13 +85,16 @@ while IFS= read -r secret; do
   fail=1
 done < <(uniq -d <<<"$certs")
 
-gw=workloads/gateway/gateway.yaml
 route_kinds='.kind == "HTTPRoute" or .kind == "TLSRoute" or .kind == "GRPCRoute"'
 mapfile -t apps < <(git ls-files 'apps/*.yaml' 'apps/*.yml')
 
 n_listeners=$(yq e -N 'select(.kind == "Gateway" and .metadata.name == "shared-gateway") | .spec.listeners | length' "$gw")
+if [[ -z "$n_listeners" || "$n_listeners" -eq 0 ]]; then
+  echo "::error file=$(src "$gw")::shared-gateway has no listeners in the rendered chart; refusing to report a green check with nothing to validate"
+  exit 1
+fi
 if [[ "$n_listeners" -gt 16 ]]; then
-  echo "::error file=$gw::shared-gateway has $n_listeners listeners; Traefik fails BackendTLSPolicy status writes above 16 (one ancestor per listener)"
+  echo "::error file=$(src "$gw")::shared-gateway has $n_listeners listeners; Traefik fails BackendTLSPolicy status writes above 16 (one ancestor per listener)"
   fail=1
 fi
 
@@ -101,11 +122,11 @@ while read -r f n s h; do
   key="$f $n $h"
   seen["$key"]=1
   if [[ "$s" == "-" ]]; then
-    echo "::error file=$f::route $n has a shared-gateway parentRef without sectionName; pin one listener"
+    echo "::error file=$(src "$f")::route $n has a shared-gateway parentRef without sectionName; pin one listener"
     fail=1; ok["$key"]=1; continue
   fi
   if [[ -z "${lhost[$s]+x}" ]]; then
-    echo "::error file=$f::route $n pins sectionName $s, which is not a shared-gateway listener"
+    echo "::error file=$(src "$f")::route $n pins sectionName $s, which is not a shared-gateway listener"
     fail=1; ok["$key"]=1; continue
   fi
   served "${lhost[$s]}" "$h" || continue
@@ -114,7 +135,7 @@ while read -r f n s h; do
   [[ "$sec" == "-" || "$h" == "-" ]] && continue
   hl=${h,,}
   if ! grep -qxF "default/$sec $hl" <<<"$sans" && ! grep -qxF "default/$sec *.${hl#*.}" <<<"$sans"; then
-    echo "::error file=$f::route $n hostname $h is served by listener $s, but Certificate default/$sec does not cover it; clients get a certificate name mismatch"
+    echo "::error file=$(src "$f")::route $n hostname $h is served by listener $s, but Certificate default/$sec does not cover it; clients get a certificate name mismatch"
     fail=1
   fi
 done <<<"$route_refs"
@@ -122,7 +143,7 @@ done <<<"$route_refs"
 for key in "${!seen[@]}"; do
   if [[ -z "${ok[$key]:-}" ]]; then
     read -r f n h <<<"$key"
-    echo "::error file=$f::route $n hostname $h matches none of its pinned shared-gateway listeners; it is never served"
+    echo "::error file=$(src "$f")::route $n hostname $h matches none of its pinned shared-gateway listeners; it is never served"
     fail=1
   fi
 done

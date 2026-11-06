@@ -1,0 +1,35 @@
+{{- /* Pull credential for the private images under image.repository on zot
+       (imagePullSecret.registry, argo workloads/zot). OpenBao holds {username, token}
+       of zot's read-only user cluster-pull (docs/deploying-a-private-repo-game.md).
+       Every pod spec that runs a ROTS image lists registry-pull under imagePullSecrets;
+       the authserver also reads it as REGISTRY_DOCKERCONFIGJSON for the warm pool's
+       digest check. The auths entry names only that registry, so images elsewhere
+       (e.g. public ghcr.io) keep pulling anonymously. */}}
+{{- with (.Values.imagePullSecret).key }}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: registry-pull
+  namespace: {{ required "namespace is required" $.Values.namespace }}
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: openbao
+    kind: ClusterSecretStore
+  target:
+    name: registry-pull
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: '{"auths":{"{{ required "imagePullSecret.registry is required" $.Values.imagePullSecret.registry }}":{"auth":"{{ `{{ printf "%s:%s" .username .token | b64enc }}` }}"}}}'
+  data:
+    - secretKey: username
+      remoteRef:
+        key: {{ . }}
+        property: username
+    - secretKey: token
+      remoteRef:
+        key: {{ . }}
+        property: token
+{{- end }}

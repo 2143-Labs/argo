@@ -1,5 +1,4 @@
 
-# docker pull ghcr.io/2143-labs/bevy2025:teamspeak-wasm-latest
 apiVersion: apps/v1
 kind: Deployment
 metadata:

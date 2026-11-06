@@ -1,14 +1,15 @@
-# One Application per open PR in 2143-Labs/bevy2025, served at
+# One Application per open PR in 2143-Labs/rots4 (private), served at
 # https://rots-{N}.john2143.com: web client, rots-authserver + a 1-instance CNPG
 # database, and one game server (wss /ws/0, native UDP
 # 192.168.6.33:31000+4*(N%1000), i.e. 31000-34999; PR numbers equal mod 1000 collide, accepted),
 # provisioned by the authserver per instance (gameserver.provisioner: kubernetes)
 # from PodTemplate rots-gameserver, so there is no StatefulSet in this render.
 #
-# The chart lives here (workloads/rots-web), not in bevy2025: the AppProject does
-# not allow that repo as a source. The images are CI's webserver-wasm-pr-<N> and
-# gameserver-pr-<N> tags (bevy2025 build_nix.yml, same-repo PRs only), so a PR has
-# no image until its CI runs. Closing the PR prunes the namespace (database
+# The chart lives here (workloads/rots-web), not in rots4: the AppProject does
+# not allow that repo as a source. The images are CI's webserver-wasm-pr-<N>,
+# gameserver-pr-<N> and authserver-pr-<N> tags on registry.ts.2143.me/2143-labs/rots4
+# (rots4 build_nix.yml, same-repo PRs only), so a PR has no image until its CI runs.
+# The pullRequest generator's github-token must be able to read the private repo. Closing the PR prunes the namespace (database
 # included) and routes. Pattern copied from status-design-preview.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -24,7 +25,7 @@ spec:
     - pullRequest:
         github:
           owner: 2143-Labs
-          repo: bevy2025
+          repo: rots4
           tokenRef: { secretName: github-token, key: token }
         requeueAfterSeconds: 120
   template:
@@ -49,6 +50,7 @@ spec:
             - { name: image.tag, value: 'webserver-wasm-pr-{{.number}}' }
             - { name: authserver.secretKey, value: john2143-com/rots-preview/rots-authserver-secret }
             - { name: authserver.disabledProviders, value: discord }
+            - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-pr-{{.number}}' }
             - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}' }
             - { name: gameserver.replicas, value: '1' }
             # Managed mode: the authserver spawns one instance per new player.

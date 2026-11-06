@@ -1,4 +1,4 @@
-# python3 http.server on :8000 serving the wasm-bindgen build (bevy2025 flake
+# python3 http.server on :8000 serving the wasm-bindgen build (rots4 flake
 # `packages.staticWebserver`). No `replicas`: the ScaledObject owns it.
 apiVersion: apps/v1
 kind: Deployment
@@ -27,6 +27,10 @@ spec:
                     operator: In
                     values:
                       - general
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
       containers:
         - name: rots-web
           image: "{{ .Values.image.repository }}:{{ required "image.tag is required" .Values.image.tag }}"
