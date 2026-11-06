@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zot
+  namespace: default
+  labels: {app: zot}
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: zot}}
+  template:
+    metadata:
+      labels: {app: zot}
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: workload-type, operator: In, values: [general]}
+                  - {key: kubernetes.io/hostname, operator: NotIn, values: [arch]}
+      containers:
+        - name: zot
+          image: ghcr.io/project-zot/zot-linux-amd64:v2.1.23
+          args: ["serve", "/etc/zot/config.json"]
+          ports:
+            - {name: http, containerPort: 5000}
+          startupProbe:
+            httpGet: {path: /startupz, port: http}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /livez, port: http}
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 1Gi}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/registry}
+            - {name: config, mountPath: /etc/zot, readOnly: true}
+            - {name: htpasswd, mountPath: /etc/zot-auth, readOnly: true}
+      volumes:
+        - {name: data, persistentVolumeClaim: {claimName: zot-data}}
+        - {name: config, configMap: {name: zot-config}}
+        - {name: htpasswd, secret: {secretName: zot-htpasswd}}

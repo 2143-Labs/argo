@@ -1,0 +1,27 @@
+# zot (namespace default): only Traefik reaches the registry. Every client - CI pushes from
+# the runner VM, kubelet pulls on the nodes, the rots authserver's digest check - comes
+# through registry.ts.2143.me (lan-only) and arrives from a Traefik pod. Kubelet probes need
+# no rule (00-pattern.yaml, consequence 2). On nonprod this selects nothing.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zot
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector:
+    matchLabels:
+      app: zot
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 5000
+          protocol: TCP

@@ -1,0 +1,24 @@
+# zot: private OCI registry for images built by private-repo CI (first: 2143-Labs/rots4),
+# at https://registry.ts.2143.me (LAN/tailnet only, every request authenticated).
+# Separate from kube-system/docker-registry, the ghcr.io pull-through cache, which
+# cannot accept pushes. Users and per-repo access: workloads/zot/configmap.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: zot
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/zot
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
