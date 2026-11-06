@@ -34,8 +34,8 @@ spec:
       containers:
         - name: rots-web
           image: "{{ .Values.image.repository }}:{{ required "image.tag is required" .Values.image.tag }}"
-          # The tags (webserver-wasm-latest / -pr-<N>) are moving targets that CI
-          # overwrites; Always makes each cold start pick up the newest build.
+          # The tags (webserver-wasm-<sha7> in prod, -pr-<N>-<head sha> in previews) are
+          # immutable per commit; Always keeps a pod that outlived a repoint in step.
           imagePullPolicy: Always
           securityContext:
             runAsUser: 101

@@ -6,9 +6,11 @@
 # from PodTemplate rots-gameserver, so there is no StatefulSet in this render.
 #
 # The chart lives here (workloads/rots-web), not in rots4: the AppProject does
-# not allow that repo as a source. The images are CI's webserver-wasm-pr-<N>,
-# gameserver-pr-<N> and authserver-pr-<N> tags on registry.ts.2143.me/2143-labs/rots4
-# (rots4 build_nix.yml, same-repo PRs only), so a PR has no image until its CI runs.
+# not allow that repo as a source. The images are CI's webserver-wasm-pr-<N>-<head sha>,
+# gameserver-pr-<N>-<head sha> and authserver-pr-<N>-<head sha> tags on
+# registry.ts.2143.me/2143-labs/rots4 (rots4 build_nix.yml, same-repo PRs only), so a
+# PR has no image until its CI runs, and a new push to the PR moves the preview only
+# once its build publishes the new tag.
 # The pullRequest generator's github-token must be able to read the private repo. Closing the PR prunes the namespace (database
 # included) and routes. Pattern copied from status-design-preview.
 apiVersion: argoproj.io/v1alpha1
@@ -47,11 +49,14 @@ spec:
             - { name: host, value: 'rots-{{.number}}.john2143.com' }
             - { name: routeName, value: 'rots-pr-{{.number}}' }
             - { name: publicUrl, value: 'https://rots-{{.number}}.john2143.com' }
-            - { name: image.tag, value: 'webserver-wasm-pr-{{.number}}' }
+            # `<component>-pr-<N>-<head sha>`: one immutable tag per PR head commit, so a
+            # rebuilt PR never leaves a preview on a mixed set of images (rots4
+            # build_nix.yml pushes exactly this tag; zot keeps it 14 days).
+            - { name: image.tag, value: 'webserver-wasm-pr-{{.number}}-{{.head_sha}}' }
             - { name: authserver.secretKey, value: john2143-com/rots-preview/rots-authserver-secret }
             - { name: authserver.disabledProviders, value: discord }
-            - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-pr-{{.number}}' }
-            - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}' }
+            - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-pr-{{.number}}-{{.head_sha}}' }
+            - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}-{{.head_sha}}' }
             - { name: gameserver.replicas, value: '1' }
             # Managed mode: the authserver spawns one instance per new player.
             - { name: gameserver.provisioner, value: kubernetes }

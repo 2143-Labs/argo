@@ -147,6 +147,11 @@ If it does not, replace the token (a fine-grained PAT for `2143-Labs`, Contents
 and Pull requests read-only) with `bao kv patch … token=-` and force-sync
 `argocd/github-token`.
 
+Tag the images per PR **head commit**, not per PR number: `<component>-pr-<N>-<head sha>`,
+which is what ROTS's `apps/rots-web-preview.yaml` asks for (`{{.number}}-{{.head_sha}}`). A
+moving `-pr-<N>` tag leaves a preview on a mixed set of images whenever a second push
+rebuilds only part of it, and it cannot be told from the tag which commit is running.
+
 ## 7. Verify
 
 - Anonymous probe (any LAN/tailnet host; `401` means TLS verified and zot

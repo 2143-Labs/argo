@@ -10,10 +10,11 @@ data:
   #   cluster-pull  read-only on every repo (imagePullSecrets; OpenBao john2143-com/default/zot-cluster-pull).
   #                 zot applies only the longest matching pattern, so a repo with its own entry
   #                 must list cluster-pull again; "**" covers only repos without one.
-  # Retention for 2143-labs/rots4: every *-latest tag; PR tags until 14 days after their last
-  # push or pull; per-commit PR tags <component>-pr-<N>-<head sha> are kept on the same 14-day
-  # terms; the 20 newest <sha7> tags per component. Anything else in that repo (e.g.
-  # smoke-* test tags) goes at the next GC. Other repos keep every tag (last policy).
+  # Retention for 2143-labs/rots4: per-commit PR tags <component>-pr-<N>-<head sha> until 14
+  # days after their last push or pull; the 20 newest <sha7> tags per component (what prod
+  # is pinned to). Anything else in that repo -- smoke-* test tags, and the old *-latest and
+  # <component>-pr-<N> tags left over from before prod pinned commits -- goes at the next GC.
+  # Other repos keep every tag (last policy).
   config.json: |
     {
       "distSpecVersion": "1.1.1",
@@ -31,8 +32,6 @@ data:
               "deleteReferrers": true,
               "deleteUntagged": true,
               "keepTags": [
-                {"patterns": ["^.+-latest$"]},
-                {"patterns": ["^.+-pr-[0-9]+$"], "pushedWithin": "336h", "pulledWithin": "336h"},
                 {"patterns": ["^.+-pr-[0-9]+-[0-9a-f]{40}$"], "pushedWithin": "336h", "pulledWithin": "336h"},
                 {"patterns": ["^webserver-wasm-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
                 {"patterns": ["^gameserver-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},

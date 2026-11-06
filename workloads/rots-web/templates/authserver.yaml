@@ -59,7 +59,9 @@ spec:
       containers:
         - name: rots-authserver
           image: {{ required "authserver.image is required" .Values.authserver.image }}
-          # authserver-latest / authserver-pr-<N> are moving tags that CI overwrites.
+          # authserver-<sha7> (prod, rewritten by rots4 CI) and authserver-pr-<N>-<head sha>
+          # (previews) are immutable per commit, so Always costs nothing and a repointed tag
+          # is picked up on the next pod.
           imagePullPolicy: Always
           # clap subcommand (Action::Server) is required.
           args: ["server"]
