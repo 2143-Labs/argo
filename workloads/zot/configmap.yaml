@@ -5,7 +5,8 @@ metadata:
   namespace: default
 data:
   # Users are bcrypt lines in Secret zot-htpasswd (OpenBao john2143-com/default/zot-htpasswd):
-  #   rots4-ci      push/pull 2143-labs/rots4 (rots4 build_nix.yml, Actions secret REGISTRY_PASSWORD)
+  #   rots4-ci      push/pull 2143-labs/rots4 (rots4 build_nix.yml; read from OpenBao
+  #                 john2143-com/default/zot-rots4-ci with the job's GitHub OIDC token)
   #   cluster-pull  read-only on every repo (imagePullSecrets; OpenBao john2143-com/default/zot-cluster-pull).
   #                 zot applies only the longest matching pattern, so a repo with its own entry
   #                 must list cluster-pull again; "**" covers only repos without one.

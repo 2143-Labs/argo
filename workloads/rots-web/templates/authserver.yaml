@@ -52,10 +52,14 @@ spec:
 {{- if $managed }}
       serviceAccountName: rots-authserver
 {{- end }}
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
       containers:
         - name: rots-authserver
           image: {{ required "authserver.image is required" .Values.authserver.image }}
-          # server-latest is a moving tag that CI overwrites.
+          # authserver-latest / authserver-pr-<N> are moving tags that CI overwrites.
           imagePullPolicy: Always
           # clap subcommand (Action::Server) is required.
           args: ["server"]
@@ -114,6 +118,16 @@ spec:
                   key: uri
             - name: RUST_LOG
               value: info
+{{- if .Values.imagePullSecret.key }}
+            # The warm pool's stale-image check reads the PodTemplate image digest from
+            # the registry; private images need the pull credential (k8s.rs registry_digest).
+            - name: REGISTRY_DOCKERCONFIGJSON
+              valueFrom:
+                secretKeyRef:
+                  name: registry-pull
+                  key: .dockerconfigjson
+                  optional: true
+{{- end }}
           # TICKET_SIGNING_KEY and the provider credentials (externalsecret.yaml).
           envFrom:
             - secretRef:

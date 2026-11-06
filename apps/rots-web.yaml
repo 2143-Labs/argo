@@ -1,4 +1,4 @@
-# ROTS (bevy2025) production at https://rots.john2143.com, namespace rots-prod:
+# ROTS (rots4) production at https://rots.john2143.com, namespace rots-prod:
 # web client (CI's webserver-wasm-latest, always warm: KEDA min 1, so a page view
 # never waits on a cold start),
 # rots-authserver + its CNPG database, and game servers provisioned just in time

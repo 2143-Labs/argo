@@ -62,6 +62,10 @@ spec:
                     operator: In
                     values:
                       - general
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
       containers:
         {{- include "rots-web.gameserver-container" (dict "root" . "managed" false) | nindent 8 }}
       volumes:
