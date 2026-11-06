@@ -6,7 +6,7 @@ routeName: ""   # unique in `default`: rots-web or rots-pr-<N>
 publicUrl: ""   # https://rots.john2143.com or https://rots-<N>.john2143.com; ticket audience
 image:
   repository: registry.ts.2143.me/2143-labs/rots4
-  tag: ""       # web client: webserver-wasm-latest or webserver-wasm-pr-<N>
+  tag: ""       # web client: webserver-wasm-<sha7> (prod, written by rots4 CI) or webserver-wasm-pr-<N>-<head sha>
 
 # Pull credential for the private images under image.repository (templates/registry-pull.yaml).
 # key: OpenBao key (consumers mount) holding {username, token}; "" = public images, no pull
@@ -57,7 +57,7 @@ db:
   protect: false        # true (prod): Prune=false,Delete=false on the Cluster and Namespace
 
 gameserver:
-  tag: ""          # gameserver-latest (prod) or gameserver-pr-<N>
+  tag: ""          # gameserver-<sha7> (prod, written by rots4 CI) or gameserver-pr-<N>-<head sha>
   # static: this chart's own StatefulSet rots-gameserver with `replicas` pods -
   # today's prod, slot = pod ordinal. kubernetes: the authserver provisions one
   # one-replica StatefulSet per instance from PodTemplate rots-gameserver
