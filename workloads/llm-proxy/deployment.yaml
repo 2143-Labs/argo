@@ -34,7 +34,7 @@ spec:
                       - general
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:v1.108.0
+          image: ghcr.io/berriai/litellm:v1.108.1
           ports:
             - containerPort: 4000
               protocol: TCP
@@ -49,7 +49,7 @@ spec:
             # mount below). Remove this prefix, that mount and the ConfigMap key
             # only when a released image carries the aggregation fix for
             # BerriAI/litellm#37629: PR #37728 was closed unmerged, so re-check
-            # on every image bump. Re-checked on v1.108.0 (2026-11-05): the
+            # on every image bump. Re-checked on v1.108.1 (2026-11-06): the
             # per-message warning is unchanged (transformation.py:89), so the
             # filter stays.
             - name: PYTHONPATH
@@ -84,6 +84,12 @@ spec:
             # The default is still the v2 resolver; `--use_v2_migration_resolver`
             # is accepted but ignored and `--use_legacy_migration_resolver`
             # opts back into v1.
+            #
+            # v1.108.0 -> v1.108.1 (2026-11-06) carries none: it is an LTS
+            # backport (21 cherry-picks onto lts/1.108.x, mostly router
+            # cooldown, spend-log query cancellation and anthropic count_tokens
+            # fixes) with an unchanged migration set, so the schema on the
+            # cluster is already the target state.
             # `false` (not deletion) so it also overrides any inherited value.
             - name: DISABLE_SCHEMA_UPDATE
               value: "false"
