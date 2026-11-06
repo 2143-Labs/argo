@@ -22,9 +22,8 @@ web:
   minReplicas: 0
 
 authserver:
-  # rots4 CI pushes authserver-latest on every main build; previews override it with
-  # authserver-pr-<N> (apps/rots-web-preview.yaml).
-  image: registry.ts.2143.me/2143-labs/rots4:authserver-latest
+  # set by apps/rots-web.yaml (prod, rewritten by rots4 CI) or apps/rots-web-preview.yaml
+  image: ""
   # OpenBao path rendered into Secret rots-authserver-secret (externalsecret.yaml):
   # john2143-com/rots-prod/rots-authserver-secret (prod) or
   # john2143-com/rots-preview/rots-authserver-secret (every preview).
