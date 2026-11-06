@@ -420,5 +420,7 @@ metadata:
 spec:
   forwardAuth:
     address: http://anubis-ws.{{ $ns }}.svc.cluster.local/.within.website/x/cmd/anubis/api/check
+    trustForwardHeader: false
+    maxResponseBodySize: 1048576
 {{- end }}
 {{- end }}
