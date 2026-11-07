@@ -6,10 +6,13 @@
 #
 # 1. Records: dns.extra_records in the config.yaml of ConfigMap
 #    headscale-config. Each must be type A with the shared-gateway address.
-# 2. Route hostnames ending in .ts.2143.me, from HTTPRoute/TLSRoute/GRPCRoute
-#    in apps/ and workloads/, plus routes embedded in Helm values strings
+# 2. Route hostnames from HTTPRoute/TLSRoute/GRPCRoute in apps/ and
+#    workloads/, plus routes embedded in Helm values strings
 #    (.spec.source.helm.values -> extraObjects, e.g. apps/openbao.yaml).
-# 3. The two sets must be identical.
+# 3. Every .ts.2143.me route hostname has a record, and every record names a
+#    route hostname. A record may also name a public route hostname (the
+#    booking sites): that deliberately overrides public DNS for every tailnet
+#    member using MagicDNS, read the comment on those records first.
 #
 # Not scanned: multi-source Applications (.spec.sources[]).
 set -euo pipefail
@@ -45,9 +48,11 @@ ri_files || fail=1
 ri_require_files
 ri_apps
 
-declare -A routes=()
+declare -A routes=() any_route=()
 while read -r f h; do
-  [[ "$h" == *.ts.2143.me && "$h" != \** ]] || continue
+  [[ "$h" != \** ]] || continue
+  [[ -n "${any_route[$h]:-}" ]] || any_route["$h"]=$f
+  [[ "$h" == *.ts.2143.me ]] || continue
   [[ -n "${routes[$h]:-}" ]] || routes["$h"]=$f
 done < <(
   yq e -N "select($route_kinds) | .spec.hostnames[]? as \$h | filename + \" \" + \$h" "${RI_FILES[@]}"
@@ -63,11 +68,11 @@ for h in "${!routes[@]}"; do
   fi
 done
 for h in "${!records[@]}"; do
-  if [[ -z "${routes[$h]:-}" ]]; then
+  if [[ -z "${any_route[$h]:-}" ]]; then
     echo "::error file=$cm::headscale record $h has no route; remove it"
     fail=1
   fi
 done
 
 [[ "$fail" -eq 0 ]] || exit 1
-echo "headscale DNS OK: ${#records[@]} records match ${#routes[@]} .ts route hostnames"
+echo "headscale DNS OK: ${#records[@]} records cover ${#routes[@]} .ts route hostnames ($(( ${#records[@]} - ${#routes[@]} )) public)"

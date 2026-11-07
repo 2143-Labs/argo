@@ -22,7 +22,7 @@ Zones: `2143.me`, `john2143.com`, `aross.studio`, `balabusta.homes`,
 |---|---|---|
 | LAN client | DHCP → router `192.168.5.1` → `/ip dns static` FWD entries (`comment="lan-dns forward"`) for the six zones → `lan-dns` `192.168.6.30` | Other names: router upstream `1.1.1.1`. If lan-dns stops answering, netwatch disables the forwards and these zones resolve publicly until it recovers |
 | Pod | **Stage 2, pending:** kube-dns `10.43.0.10` → `coredns-custom` (dotfiles). `split-horizon.server` will send the six zones to `192.168.6.30`; `ts.2143.me` is carved out to MagicDNS (`/etc/resolv.conf` → `100.100.100.100`). Until then pods use the hand-kept `hosts.split-horizon` | Public zones fall back to `1.1.1.1` if lan-dns is unreachable. `.ts` route names come from headscale `extra_records`. Tailnet machine names (`nas.ts`, `office.ts`) resolve to their `100.64.` addresses, which Longhorn backups (`nfs://nas.ts.2143.me`) and llm-proxy (`office.ts.2143.me:11434`) depend on |
-| Tailnet device | MagicDNS `100.100.100.100` → headscale | `.ts.2143.me` via `extra_records` (hand-kept, `workloads/headscale/configmap.yaml`); everything else public (hairpin). Unchanged by design |
+| Tailnet device | MagicDNS `100.100.100.100` → headscale | `.ts.2143.me` via `extra_records` (hand-kept, `workloads/headscale/configmap.yaml`), plus the public booking hosts `book.2143.me` and `book.aross.studio` (John's remote admin; other members cannot reach `.6.6`); everything else public (hairpin) |
 | Node shell (closet, nas, …) | `100.100.100.100` | Public (hairpin) |
 | Browser with DNS-over-HTTPS | Its own resolver | Bypasses all of this (hairpin) |
 

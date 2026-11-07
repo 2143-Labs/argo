@@ -6,12 +6,15 @@
 # gate is lan-only until the web installer has run from the LAN (public=false),
 # then the edge limits plus crowdsec-bouncer-appsec-only, which NEVER IP-bans a
 # client (scripts/validations/booking-never-ban.sh). Rule 2 (admin, REST API,
-# installer, recovery) is LAN-only forever. Traefik ranks Exact above every
+# installer, recovery) is lan-only forever: home LAN, plus John's tailnet
+# devices, which resolve these names to the gateway through headscale
+# extra_records (workloads/headscale/configmap.yaml). Traefik ranks Exact above every
 # PathPrefix and longer prefixes above "/", and PathPrefix matches whole path
 # elements, so /index.php/booking does not cover /index.php/booking_settings.
 # The CodeIgniter /?/<controller> bypass is refused by Apache (zz-booking.conf).
 # Do not label these routes k8s-gateway.dns/ignore: lan-dns must answer the
-# host so LAN admin access works.
+# host so LAN admin access works. A client that hairpins through the WAN IP
+# (public DNS from inside the house) is NOT admitted by lan-only.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -68,7 +71,7 @@ spec:
         - name: {{ if .Values.anubis }}anubis{{ else }}booking{{ end }}
           namespace: {{ required "namespace is required" .Values.namespace }}
           port: 80
-    # Everything else (admin, REST API, installer, recovery): LAN only, straight to EA.
+    # Everything else (admin, REST API, installer, recovery): LAN and John's tailnet, straight to EA.
     - matches:
         - path: { type: PathPrefix, value: / }
       filters:

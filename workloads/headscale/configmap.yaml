@@ -251,6 +251,19 @@ data:
         - name: "registry.ts.2143.me"
           type: "A"
           value: "192.168.6.6"
+        # Booking sites (workloads/booking): public names, answered here so John's
+        # devices reach the LAN-only admin paths through the subnet route from
+        # anywhere (Traefik then sees a pod-CIDR source, which lan-only admits).
+        # These records are global: any other member using MagicDNS also gets
+        # .6.6, which only john@2143.me may reach, so for them both booking
+        # sites (public pages included) fail while Tailscale is on. Accepted by
+        # John 2026-11-07 over admitting the home WAN IP on the admin paths.
+        - name: "book.2143.me"
+          type: "A"
+          value: "192.168.6.6"
+        - name: "book.aross.studio"
+          type: "A"
+          value: "192.168.6.6"
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
 
