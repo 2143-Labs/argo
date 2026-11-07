@@ -1,5 +1,7 @@
 # 2026-08-14 — Registry mirror: all ghcr.io pulls through the local cache
 
+> **Correction 2026-11-07:** the cache now expires entries. `REGISTRY_PROXY_TTL=720h` and `REGISTRY_STORAGE_DELETE_ENABLED=true` were set on `workloads/docker-registry/deployment.yaml`; the TTL is armed when an entry is fetched from ghcr.io, so an image unused for a month is evicted and re-fetched on the next pull. Content cached before that change is not retroactively scheduled (`scheduler-state.json` only tracks new entries), so the 50Gi volume still holds the old backlog.
+
 > **Correction 2026-11-06:** not all cluster images are public any more. ROTS images live on the private zot registry `registry.ts.2143.me` (`workloads/zot/`) and are pulled with `imagePullSecrets`, not through this mirror. See [deploying-a-private-repo-game.md](deploying-a-private-repo-game.md).
 
 > **Correction 2026-10-15:** Traefik's VIP pair (`192.168.6.6`, `fd00:6::6`) comes from the dedicated MetalLB `ingress` pool and the Service pins no address; both addresses sit outside the `services` ranges. See [2026-10-15-fungible-ingress.md](2026-10-15-fungible-ingress.md).

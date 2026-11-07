@@ -58,6 +58,13 @@ spec:
               value: /var/lib/registry
             - name: REGISTRY_PROXY_REMOTEURL
               value: https://ghcr.io
+            # Pull-through caches are pruned by TTL only: without delete enabled the
+            # scheduler's deletes fail with UNSUPPORTED and the volume grows forever.
+            # An expired entry is re-fetched from ghcr.io on the next pull.
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+            - name: REGISTRY_PROXY_TTL
+              value: "720h"
           volumeMounts:
             - name: data
               mountPath: /var/lib/registry
