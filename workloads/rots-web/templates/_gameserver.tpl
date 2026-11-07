@@ -8,7 +8,9 @@
 {{- $gs := $root.Values.gameserver -}}
 - name: rots-gameserver
   image: "{{ $root.Values.image.repository }}:{{ required "gameserver.tag is required" $gs.tag }}"
-  # gameserver-latest / gameserver-pr-<N> are moving tags that CI overwrites.
+  # Immutable per-commit tags (prod: <component>-<sha7>, written by rots4 CI; previews:
+  # <component>-pr-<N>-<head sha>). Always stays: a re-run CI build re-pushes the same
+  # tag, and the warm pool's digest check expects new pods to run the registry's current digest.
   imagePullPolicy: Always
   # Config::load_from_main_dir writes config.yaml into the cwd.
   workingDir: /data

@@ -179,3 +179,36 @@ retry). If it persists: `no such host` means that node's MagicDNS is stale
 (restart `tailscaled` there); `401` means the Secret's token does not match
 zot's htpasswd; `403` from Traefik means `lan-only` rejected the node's source
 address.
+
+## 8. Deploy from CI
+
+- Publish only immutable tags (ROTS: `<component>-<sha7>` on main,
+  `<component>-pr-<N>-<head sha>` on PRs), and give each a `keepTags` rule in
+  zot's retention (section 2).
+- Prod: after a green main build, CI rewrites each image parameter in
+  `apps/<app>.yaml` (one `- { name: …, value: … }` line each) and pushes the
+  commit to argo `main` with a write deploy key, which the `main` ruleset lets
+  bypass review. ROTS does this in rots4's `ci-argo-bump.sh` helper (job
+  `deploy`), which also refuses to move prod to a commit that is not ahead of
+  the deployed one. Roll back by reverting the bot commit.
+- A private repo keeps that key base64-encoded on one line in OpenBao (so the
+  helper masks it as one value) and pushes from the self-hosted runner, with ssh
+  from nixpkgs and GitHub's host keys from `https://api.github.com/meta`.
+  Create (admin, fish):
+
+  ```fish
+  set d (mktemp -d)
+  ssh-keygen -q -t ed25519 -N '' -C <repo>-ci-argo -f $d/id
+  gh repo deploy-key add $d/id.pub --repo 2143-Labs/argo --title <repo>-ci-argo --allow-write
+  base64 -w0 $d/id > $d/id.b64
+  bao kv put -mount=consumers john2143-com/default/<repo>-ci-argo ssh_private_key_b64=@$d/id.b64
+  rm -rf $d
+  echo 'path "consumers/data/john2143-com/default/<repo>-ci-argo" { capabilities = ["read"] }' | bao policy write <repo>-ci-argo -
+  echo '{"role_type":"jwt","bound_audiences":["https://openbao.ts.2143.me"],"user_claim":"repository","bound_claims_type":"string","bound_claims":{"repository_id":"<numeric repo id>","ref":"refs/heads/main","event_name":"push"},"token_policies":["<repo>-ci-argo"],"token_type":"batch","token_ttl":"10m","token_max_ttl":"10m"}' | bao write auth/jwt-github/role/<repo>-ci-argo -
+  ```
+
+  Paste these lines exactly as they are. A copy that picks up wrap markers
+  (e.g. a `│` in the middle of `repository_id`) still writes the role, but CI
+  can never log in with it. Check it with
+  `bao read -format=json auth/jwt-github/role/<repo>-ci-argo | jq .data.bound_claims`.
+- Previews read `{{.head_sha}}` in the ApplicationSet, so they need no commit.
