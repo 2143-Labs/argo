@@ -251,6 +251,10 @@ data:
         - name: "registry.ts.2143.me"
           type: "A"
           value: "192.168.6.6"
+        # grafana.ts.2143.me
+        - name: "grafana.ts.2143.me"
+          type: "A"
+          value: "192.168.6.6"
         # Booking sites (workloads/booking): public names, answered here so John's
         # devices reach the LAN-only admin paths through the subnet route from
         # anywhere (Traefik then sees a pod-CIDR source, which lan-only admits).

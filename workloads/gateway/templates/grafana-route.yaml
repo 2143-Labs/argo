@@ -1,14 +1,21 @@
 {{- if .Values.prodOnly }}
+# Grafana is LAN/tailnet only (moved off the internet 2026-11-07: blind scanners
+# probed /.env and /proc/self/environ on every grafana.<domain> guess, and none of
+# them ever authenticated). grafana.ts.2143.me is the way in; lan-only keeps it off
+# the internet, and the public hostname only redirects, so no request from the
+# internet can reach the app. lan-only is required by scripts/validate-route-gates.sh
+# rule A and policies/edge.yaml (*.ts.2143.me => private).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: grafana-route
+  name: grafana-internal
   namespace: default
 spec:
   parentRefs:
     - name: shared-gateway
-      sectionName: john2143-wildcard-https
-  hostnames: [grafana.john2143.com]
+      sectionName: ts-2143-me-wildcard-https
+  hostnames:
+    - grafana.ts.2143.me
   rules:
     - matches:
         - path:
@@ -19,19 +26,38 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
+            name: lan-only
       backendRefs:
         - name: grafana
           namespace: observability
           port: 80
+---
+# The old public hostname has no backend at all: it answers 302 to the same path on
+# the tailnet name, so old links and alert notifications keep working, and settles
+# on the LAN via lan-dns instead of hairpinning through the WAN. 302 rather than 301
+# so a later move does not stick in browsers.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+    - name: shared-gateway
+      sectionName: john2143-wildcard-https
+  hostnames:
+    - grafana.john2143.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: grafana.ts.2143.me
+            statusCode: 302
 {{- end }}
