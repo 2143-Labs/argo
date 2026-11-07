@@ -38,6 +38,27 @@ spec:
         app: booking
     spec:
       enableServiceLinks: false
+      initContainers:
+        # The image ships storage/{sessions,uploads,logs,cache,backups}; an empty
+        # volume would hide them, and CI's file session driver fails without its
+        # directory. Apache writes as www-data (33).
+        - name: storage-init
+          image: docker.io/alextselegidis/easyappointments:1.6.1@sha256:6d3a927dc16db11827018bcbc708e6ee7d4be7f577e5d0967e90a1b08b71e2e0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /var/www/html/storage/sessions /var/www/html/storage/uploads \
+                /var/www/html/storage/logs /var/www/html/storage/cache /var/www/html/storage/backups
+              chown -R 33:33 /var/www/html/storage
+              chmod 775 /var/www/html/storage
+          volumeMounts:
+            - name: storage
+              mountPath: /var/www/html/storage
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
       containers:
         - name: easyappointments
           image: docker.io/alextselegidis/easyappointments:1.6.1@sha256:6d3a927dc16db11827018bcbc708e6ee7d4be7f577e5d0967e90a1b08b71e2e0
@@ -55,6 +76,8 @@ spec:
               mountPath: /etc/apache2/conf-enabled/zz-booking.conf
               subPath: zz-booking.conf
               readOnly: true
+            - name: storage
+              mountPath: /var/www/html/storage
           # Apache only, not PHP or the database. Before the web installer runs,
           # every EA page except /index.php/installation answers 503 ("Database
           # Migration Required"); probing / would pull the only replica out of
@@ -87,6 +110,30 @@ spec:
         - name: overrides
           configMap:
             name: booking-overrides
+        - name: storage
+          persistentVolumeClaim:
+            claimName: booking-storage
+---
+# Sessions, uploads, logs and the app's own backups. Without it a pod restart
+# logs every admin out and wipes storage/logs, the first place an EA error
+# shows up. Prune/Delete=false: a volume lost to an Argo prune cannot be
+# restored from git.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: booking-storage
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    # Nightly Longhorn backup (workloads/storage/templates/longhorn-backup-job.yaml).
+    recurring-job-group.longhorn.io/default: enabled
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-3
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: Service

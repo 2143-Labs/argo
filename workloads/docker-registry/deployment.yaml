@@ -58,9 +58,12 @@ spec:
               value: /var/lib/registry
             - name: REGISTRY_PROXY_REMOTEURL
               value: https://ghcr.io
-            # Pull-through caches are pruned by TTL only: without delete enabled the
-            # scheduler's deletes fail with UNSUPPORTED and the volume grows forever.
-            # An expired entry is re-fetched from ghcr.io on the next pull.
+            # TTL eviction for the pull-through cache. registry:3 already ships
+            # storage.delete.enabled: true, and the TTL scheduler runs whenever
+            # proxy.ttl is set (default 168h); without it nothing is ever reclaimed,
+            # because the proxy stores' Delete is only reachable via that scheduler.
+            # Pinned explicitly so an image default change cannot silently stop
+            # eviction, and 720h is the intended 30-day retention policy.
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
             - name: REGISTRY_PROXY_TTL
