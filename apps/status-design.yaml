@@ -19,6 +19,10 @@ spec:
         - { name: namespace, value: status-design }
         - { name: host, value: status.john2143.com }
         - { name: routeName, value: status-design }
+        # Read-only GitHub PAT (pull requests, 5 repos) for the games feed's
+        # PR column. The OpenBao key must exist under the `consumers` mount
+        # before this merges; see docs/games-tracker.md.
+        - { name: games.githubKey, value: john2143-com/status-design/github-pr-reader }
   destination:
     server: https://kubernetes.default.svc
     namespace: status-design
