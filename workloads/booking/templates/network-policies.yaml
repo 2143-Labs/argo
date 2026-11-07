@@ -1,0 +1,186 @@
+# Booking namespace: default-deny ingress AND egress. Every allowed flow is
+# listed here; everything else is refused. Ports are container ports.
+#
+#   kube-system/traefik -> booking:80        LAN rule (admin), and the public rule
+#                                            when Anubis is off
+#   kube-system/traefik -> anubis:8080       public rule when Anubis is on
+#   anubis              -> booking:80        after a solved challenge
+#   booking             -> mariadb:3306
+#   booking             -> internet:587      Scaleway TEM (smtp.tem.scaleway.com)
+#   booking             -> internet:443      CalDAV (the calendar page's Sync button)
+#   booking-sync        -> mariadb:3306
+#   booking-sync        -> internet:443      CalDAV (caldav-sync CronJob)
+#   every pod           -> kube-system:53    DNS
+#
+# "internet" is IPv4 0.0.0.0/0 minus RFC1918 and CGNAT (tailnet), the tier in
+# workloads/network-policies/00-pattern.yaml. Deliberately NOT allowed as
+# egress: Traefik or any LoadBalancer VIP (lan-only admits masqueraded pod
+# traffic), the kube-apiserver (no pod mounts a token), the LAN, every other
+# namespace. Anubis needs no egress beyond EA: its policy disables DNSBL.
+# Not enforceable by NetworkPolicy: kube-router accepts traffic from the pod's
+# own node, so host processes and hostNetwork pods on that node can connect.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: booking
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: booking
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 80
+          protocol: TCP
+    {{- if .Values.anubis }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app: anubis
+      ports:
+        - port: 80
+          protocol: TCP
+    {{- end }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - port: 3306
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16
+      ports:
+        - port: 587
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: booking-sync
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: booking-sync
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mariadb
+      ports:
+        - port: 3306
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mariadb
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: mariadb
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: booking
+        - podSelector:
+            matchLabels:
+              app: booking-sync
+      ports:
+        - port: 3306
+          protocol: TCP
+{{- if .Values.anubis }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: anubis
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: anubis
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Traefik dials the pod endpoint directly, so this is Anubis's container
+    # port (8080), not the Service port (80).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: booking
+      ports:
+        - port: 80
+          protocol: TCP
+{{- end }}

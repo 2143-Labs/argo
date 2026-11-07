@@ -1,0 +1,107 @@
+# Both routes live in namespace default: the aross-studio-wildcard-https listener
+# admits only default (from: Same), and Traefik Middlewares are namespace-local.
+# templates/referencegrant.yaml lets them reach the backends.
+#
+# Rule 1 publishes EA 1.6.1's public booking controllers and nothing else. Its
+# gate is lan-only until the web installer has run from the LAN (public=false),
+# then the edge limits plus crowdsec-bouncer-appsec-only, which NEVER IP-bans a
+# client (scripts/validations/booking-never-ban.sh). Rule 2 (admin, REST API,
+# installer, recovery) is LAN-only forever. Traefik ranks Exact above every
+# PathPrefix and longer prefixes above "/", and PathPrefix matches whole path
+# elements, so /index.php/booking does not cover /index.php/booking_settings.
+# The CodeIgniter /?/<controller> bypass is refused by Apache (zz-booking.conf).
+# Do not label these routes k8s-gateway.dns/ignore: lan-dns must answer the
+# host so LAN admin access works.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: book-{{ required "id is required" .Values.id }}
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: {{ required "sectionName is required" .Values.sectionName }}
+  hostnames:
+    - {{ required "host is required" .Values.host }}
+  rules:
+    # Public: the booking pages and nothing else (EA 1.6.1 public controllers).
+    - matches:
+        - path: { type: Exact, value: / }
+        - path: { type: Exact, value: /index.php }
+        - path: { type: Exact, value: /index.php/ }
+        - path: { type: PathPrefix, value: /index.php/booking }               # index, reschedule, register, get_available_hours, get_unavailable_dates
+        - path: { type: PathPrefix, value: /index.php/booking_confirmation }
+        - path: { type: PathPrefix, value: /index.php/booking_cancellation }
+        - path: { type: PathPrefix, value: /index.php/captcha }               # image captcha + altcha_challenge
+        - path: { type: PathPrefix, value: /index.php/localization }
+        - path: { type: PathPrefix, value: /index.php/privacy }
+        - path: { type: PathPrefix, value: /index.php/consents }
+        - path: { type: PathPrefix, value: /assets }
+        {{- if .Values.anubis }}
+        - path: { type: PathPrefix, value: /.within.website }                 # Anubis challenge assets and API
+        {{- end }}
+      filters:
+        {{- if .Values.public }}
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer-appsec-only
+        {{- else }}
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
+        {{- end }}
+      backendRefs:
+        - name: {{ if .Values.anubis }}anubis{{ else }}booking{{ end }}
+          namespace: {{ required "namespace is required" .Values.namespace }}
+          port: 80
+    # Everything else (admin, REST API, installer, recovery): LAN only, straight to EA.
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
+      backendRefs:
+        - name: booking
+          namespace: {{ .Values.namespace }}
+          port: 80
+---
+# http:// -> https:// for this host, separate from john2143-http-to-https, which
+# is at the Gateway API cap of 16 hostnames per HTTPRoute.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: book-{{ .Values.id }}-http-to-https
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+  hostnames:
+    - {{ .Values.host }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

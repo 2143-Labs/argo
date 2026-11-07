@@ -1,0 +1,8 @@
+# Per-instance values come from helm.parameters in apps/book-*.yaml.
+namespace: ""     # book-2143 | book-aross
+id: ""            # route names: book-<id>, book-<id>-http-to-https (namespace default)
+host: ""          # public hostname
+sectionName: ""   # shared-gateway listener whose wildcard certificate covers host
+mailFrom: ""      # sender; must be @m.2143.me, the only TEM-verified domain
+anubis: false     # Anubis in front of the public booking paths
+public: false     # false = every rule lan-only; true only after the web installer has run from the LAN

@@ -1,0 +1,62 @@
+# Runs EA's `console sync` (Google and CalDAV, per provider) so events in each
+# provider's calendar block booking slots. Suspended until the instance is
+# public: before the web installer runs there are no tables and every run would
+# fail. The admin can still press Sync on the calendar page.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: caldav-sync
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  schedule: "*/10 * * * *"
+  suspend: {{ not .Values.public }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 540
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: booking-sync
+        spec:
+          restartPolicy: Never
+          enableServiceLinks: false
+          containers:
+            - name: sync
+              image: docker.io/alextselegidis/easyappointments:1.6.1@sha256:6d3a927dc16db11827018bcbc708e6ee7d4be7f577e5d0967e90a1b08b71e2e0
+              command: ["bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  # Reuse the image's config writer without starting Apache (its last line).
+                  grep -qx 'apache2-foreground' /usr/local/bin/docker-entrypoint.sh
+                  sed '/^apache2-foreground$/d' /usr/local/bin/docker-entrypoint.sh > /tmp/write-config.sh
+                  bash /tmp/write-config.sh
+                  exec php /var/www/html/index.php console sync
+              env:
+                {{- include "booking.env" . | nindent 16 }}
+              volumeMounts:
+                - name: overrides
+                  mountPath: /usr/local/etc/php/conf.d/zz-booking.ini
+                  subPath: zz-booking.ini
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                seccompProfile:
+                  type: RuntimeDefault
+          volumes:
+            - name: overrides
+              configMap:
+                name: booking-overrides

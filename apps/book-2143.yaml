@@ -1,0 +1,54 @@
+# https://book.2143.me - John's booking page, behind Anubis.
+# workloads/booking: Easy!Appointments 1.6.1, its own MariaDB (OpenBao
+# consumers/john2143-com/book-2143/booking-db), CalDAV sync, mail via Scaleway TEM.
+# public stays "false" (every route rule lan-only) until the web installer has
+# run from the LAN and the public DNS record exists; then flip it to "true".
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: book-2143
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/booking
+    helm:
+      parameters:
+        - { name: namespace, value: book-2143 }
+        - { name: id, value: "2143", forceString: true }
+        - { name: host, value: book.2143.me }
+        - { name: sectionName, value: 2143-me-wildcard-https }
+        - { name: mailFrom, value: booking@m.2143.me }
+        - { name: anubis, value: "true" }
+        - { name: public, value: "false" }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: book-2143
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates[].spec.storageClassName
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest

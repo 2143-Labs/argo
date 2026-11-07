@@ -110,6 +110,10 @@ spec:
           name: crowdsec-agent-upload-hosts
           subPath: upload-http-flood.yaml
           readOnly: true
+        - mountPath: /etc/crowdsec/parsers/s02-enrich/john2143-booking-hosts.yaml
+          name: crowdsec-agent-booking-hosts
+          subPath: booking-hosts.yaml
+          readOnly: true
         - mountPath: /var/log
           name: varlog
           readOnly: true
@@ -175,6 +179,10 @@ spec:
           defaultMode: 420
           name: crowdsec-agent-upload-hosts
         name: crowdsec-agent-upload-hosts
+      - configMap:
+          defaultMode: 420
+          name: crowdsec-agent-booking-hosts
+        name: crowdsec-agent-booking-hosts
       - emptyDir: {}
         name: crowdsec-config
       - hostPath:

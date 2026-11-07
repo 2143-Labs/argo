@@ -1,0 +1,23 @@
+# Booking hosts (book.2143.me, book.aross.studio; workloads/booking). Booking
+# visitors must never be flagged: a ban would not block them on these routes
+# (crowdsec-bouncer-appsec-only never consults decisions), but it would lock
+# them out of John's other hosts and be reported to the CrowdSec community.
+# Forcing static_ressource=true switches off http-crawl-non_statics and
+# http-probing for these hosts, the scenarios a normal booking session (calendar
+# AJAX, 404s on missing assets) can trip. Exploit-signature scenarios still
+# apply. No flood scenario: the routes' rate and in-flight limits are the
+# backstop. The mounted file name must sort after http-logs.yaml: s02 parsers
+# run in file-name order.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-agent-booking-hosts
+  namespace: crowdsec
+data:
+  booking-hosts.yaml: |
+    name: john2143/booking-hosts
+    description: "Booking hosts: no request counts as crawling or probing"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^book[.]2143[.]me$|^book[.]aross[.]studio$'"
+    statics:
+      - parsed: static_ressource
+        value: "true"

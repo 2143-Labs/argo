@@ -1,0 +1,6 @@
+apiVersion: v2
+name: booking
+description: Easy!Appointments booking site (one instance per Application) - EA, its own MariaDB, a CalDAV sync CronJob, optional Anubis, and HTTPRoutes that publish only the booking pages
+type: application
+version: 0.1.0
+appVersion: "1.6.1"

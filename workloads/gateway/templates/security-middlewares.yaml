@@ -165,3 +165,41 @@ spec:
         - ::1/128
         - fd00::/8
         - fe80::/10
+---
+# Booking hosts (workloads/booking: book.2143.me, book.aross.studio) must NEVER
+# IP-ban a potential client. crowdsecMode: appsec skips the decision stream
+# entirely: no LAPI bans, no CAPI community blocklist, no ban earned on another
+# host. It 403s only the one request that matches an in-band AppSec rule
+# (crowdsecurity/vpatch-*), and fails open when AppSec errors or is unreachable.
+# In this mode the plugin's New() returns before the cache/stream/metrics
+# globals the stream-mode middlewares share, so it cannot change their
+# behaviour. scripts/validations/booking-never-ban.sh enforces that the booking
+# routes use only this gate or lan-only. Keep the other settings identical to
+# crowdsec-bouncer.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer-appsec-only
+  namespace: default
+spec:
+  plugin:
+    bouncer:
+      enabled: true
+      crowdsecMode: appsec
+      crowdsecLapiScheme: http
+      crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
+      crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
+      crowdsecAppsecEnabled: true
+      crowdsecAppsecHost: crowdsec-appsec-service.crowdsec.svc:7422
+      crowdsecAppsecFailureBlock: false
+      crowdsecAppsecUnreachableBlock: false
+      clientTrustedIps:
+        - 108.56.153.222/32
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 100.64.0.0/10
+        - 127.0.0.1/32
+        - ::1/128
+        - fd00::/8
+        - fe80::/10

@@ -14,10 +14,11 @@
 #    the gateway serves it to anyone who sends it to the WAN address. No
 #    exemptions.
 # B. Every other rule carries lan-only, crowdsec-bouncer,
-#    crowdsec-bouncer-noappsec, crowdsec-bouncer-game, the uploads tier
-#    (uploads-rate-limit + uploads-inflight-limit, the customer file host behind
-#    Anubis: docs/public-edge.md) or a RequestRedirect, or is listed in
-#    scripts/route-gate-exemptions.txt with a reason.
+#    crowdsec-bouncer-noappsec, crowdsec-bouncer-game,
+#    crowdsec-bouncer-appsec-only (booking hosts: AppSec only, never an IP ban),
+#    the uploads tier (uploads-rate-limit + uploads-inflight-limit, the customer
+#    file host behind Anubis: docs/public-edge.md) or a RequestRedirect, or is
+#    listed in scripts/route-gate-exemptions.txt with a reason.
 # C. Every exemption names a rule that B would otherwise reject.
 #
 # Not scanned: multi-source Applications (.spec.sources[]).
@@ -74,7 +75,7 @@ while IFS=$'\t' read -r file key path hosts refs types; do
     continue
   fi
 
-  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$refs" == *,crowdsec-bouncer-game,* || "$refs" == *,uploads-inflight-limit,* || "$types" == *,RequestRedirect,* ]]; then
+  if [[ "$refs" == *,lan-only,* || "$refs" == *,crowdsec-bouncer,* || "$refs" == *,crowdsec-bouncer-noappsec,* || "$refs" == *,crowdsec-bouncer-game,* || "$refs" == *,crowdsec-bouncer-appsec-only,* || "$refs" == *,uploads-inflight-limit,* || "$types" == *,RequestRedirect,* ]]; then
     continue
   fi
   if [[ -n "${exempt["$key $path"]:-}" ]]; then

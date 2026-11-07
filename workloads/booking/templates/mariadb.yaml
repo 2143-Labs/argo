@@ -1,0 +1,79 @@
+# The repo's MySQL method (workloads/aross-files-base/mariadb.yaml): EA supports
+# only mysqli, so CNPG/Postgres is not an option.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  ports:
+    - port: 3306
+      name: mysql
+  clusterIP: None
+  selector:
+    app: mariadb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: mariadb
+    spec:
+      # Load-bearing: Service "mariadb" would inject MARIADB_PORT=tcp://... and
+      # friends, and the image reads the MARIADB_* prefix as configuration.
+      enableServiceLinks: false
+      containers:
+      - name: mariadb
+        image: mariadb:11.4
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: booking-db
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "easyappointments"
+        - name: MYSQL_USER
+          value: "easyappointments"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: booking-db
+              key: MYSQL_PASSWORD
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      # Nightly Longhorn backup (workloads/storage/templates/longhorn-backup-job.yaml).
+      labels:
+        recurring-job-group.longhorn.io/default: enabled
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: longhorn-3
+      resources:
+        requests:
+          storage: 10Gi
