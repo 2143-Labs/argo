@@ -7,6 +7,42 @@ spec:
   target:
     service: rots-web
     port: 80
+  # A page view that finds no ready web pod gets this page instead of a 504: KEDA answers with
+  # the placeholder while the target has no ready endpoints, and the page reloads every 5s
+  # (the `Refresh` header) until the app answers. Readiness has no deadline: a first image pull
+  # is ~45s, longer than the 30s global readinessTimeout in apps/keda-http-addon.yaml, and any
+  # finite deadline under it would turn the placeholder back into a timeout.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        # 503, not 200: while this is served the app is not answering, which is what a monitor
+        # should see. Browsers still render the body and honour `Refresh`.
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        # Inline, not bodyFromConfigMap: with a path-derived ConfigMap key a request for
+        # /assets/... while waking would answer an empty body, and naming an explicit key
+        # answers every path with index.html anyway. The inline body keeps it to one object
+        # with no key to get wrong.
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <title>ROTS is starting</title>
+          <meta http-equiv="refresh" content="5">
+          </head>
+          <body style="font:16px system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
+          <div>
+          <h1 style="font-size:1.25rem;margin:0 0 .5rem">ROTS is starting</h1>
+          <p style="margin:0;color:#555">The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - "{{ required "host is required" .Values.host }}"
