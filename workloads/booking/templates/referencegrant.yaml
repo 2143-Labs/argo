@@ -19,3 +19,8 @@ spec:
       kind: Service
       name: anubis
     {{- end }}
+    {{- if .Values.sso }}
+    - group: ""
+      kind: Service
+      name: booking-oauth2-proxy
+    {{- end }}

@@ -5,6 +5,9 @@
 #                                            when Anubis is off
 #   kube-system/traefik -> anubis:8080       public rule when Anubis is on
 #   anubis              -> booking:80        after a solved challenge
+#   kube-system/traefik -> booking-oauth2-proxy:4180   admin rule with sso on
+#   booking-oauth2-proxy -> booking:80       the authenticated admin request
+#   booking-oauth2-proxy -> internet:443     Pocket ID (https://au.2143.me)
 #   booking             -> mariadb:3306
 #   booking             -> internet:587      Scaleway TEM (smtp.tem.scaleway.com)
 #   booking             -> internet:443      CalDAV (the calendar page's Sync button)
@@ -73,6 +76,16 @@ spec:
         - podSelector:
             matchLabels:
               app: anubis
+      ports:
+        - port: 80
+          protocol: TCP
+    {{- end }}
+    {{- if .Values.sso }}
+    # In proxy mode the admin traffic reaches EA from oauth2-proxy, not from Traefik.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: booking-oauth2-proxy
       ports:
         - port: 80
           protocol: TCP
@@ -182,5 +195,51 @@ spec:
               app: booking
       ports:
         - port: 80
+          protocol: TCP
+{{- end }}
+{{- if .Values.sso }}
+---
+# oauth2-proxy in front of the admin rule. No egress to Traefik or any
+# LoadBalancer VIP: Pocket ID is reached at https://au.2143.me over the public
+# address, which the internet block below allows.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: booking-oauth2-proxy
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: booking-oauth2-proxy
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 4180
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: booking
+      ports:
+        - port: 80
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16
+      ports:
+        - port: 443
           protocol: TCP
 {{- end }}

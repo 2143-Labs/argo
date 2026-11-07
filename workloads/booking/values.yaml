@@ -6,3 +6,4 @@ sectionName: ""   # shared-gateway listener whose wildcard certificate covers ho
 mailFrom: ""      # sender; must be @m.2143.me, the only TEM-verified domain
 anubis: false     # Anubis in front of the public booking paths
 public: false     # false = every rule lan-only; true only after the web installer has run from the LAN
+sso: false        # Pocket ID group "booking" in front of the admin rule; true only once the OIDC client exists in Pocket ID and its secrets are in OpenBao

@@ -25,6 +25,7 @@ spec:
         - { name: mailFrom, value: booking@m.2143.me }
         - { name: anubis, value: "true" }
         - { name: public, value: "false" }
+        - { name: sso, value: "false" }
   destination:
     server: https://kubernetes.default.svc
     namespace: book-2143

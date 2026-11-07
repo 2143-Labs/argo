@@ -71,7 +71,10 @@ spec:
         - name: {{ if .Values.anubis }}anubis{{ else }}booking{{ end }}
           namespace: {{ required "namespace is required" .Values.namespace }}
           port: 80
-    # Everything else (admin, REST API, installer, recovery): LAN and John's tailnet, straight to EA.
+    # Everything else (admin, REST API, installer, recovery): LAN and John's tailnet only, and
+    # with sso on also a Pocket ID session for a member of group "booking"
+    # (booking-oauth2-proxy sits in front of EA, proxies the authenticated request, and serves
+    # /oauth2/* itself). Customers never reach this rule: rule 1's paths rank higher in Traefik.
     - matches:
         - path: { type: PathPrefix, value: / }
       filters:
@@ -81,9 +84,9 @@ spec:
             kind: Middleware
             name: lan-only
       backendRefs:
-        - name: booking
+        - name: {{ if .Values.sso }}booking-oauth2-proxy{{ else }}booking{{ end }}
           namespace: {{ .Values.namespace }}
-          port: 80
+          port: {{ if .Values.sso }}4180{{ else }}80{{ end }}
 ---
 # http:// -> https:// for this host, separate from john2143-http-to-https, which
 # is at the Gateway API cap of 16 hostnames per HTTPRoute.

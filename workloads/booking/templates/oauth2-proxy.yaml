@@ -1,0 +1,142 @@
+{{- if .Values.sso }}
+# Pocket ID (OIDC) in front of EA's admin paths, in *proxy* mode like
+# workloads/oauth2-proxy-{cameras,seaweedfs,temporal}: the HTTPRoute's admin rule
+# points its backend here and this proxies the authenticated request to EA. It
+# serves /oauth2/* itself, so the callback needs no separate route.
+#
+# Only members of Pocket ID group "booking" get through: --scope ... groups makes
+# Pocket ID emit the claim and --allowed-group matches it. Everyone else gets a
+# 403 from oauth2-proxy before EA is involved. EA's own login still follows, so
+# the admin surface is SSO *and* an EA account.
+#
+# The cookie lives 8h and its claims are refreshed hourly, so removing somebody
+# from the group takes effect within about an hour of their next refresh.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-oauth2-proxy
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: booking-oauth2-proxy
+spec:
+  revisionHistoryLimit: 3
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: booking-oauth2-proxy
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: booking-oauth2-proxy
+    spec:
+      enableServiceLinks: false
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: booking-oauth2-proxy
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--provider=oidc"
+            - "--oidc-issuer-url=https://au.2143.me"
+            - "--client-id=$(OAUTH2_PROXY_CLIENT_ID)"
+            - "--client-secret=$(OAUTH2_PROXY_CLIENT_SECRET)"
+            - "--cookie-secret=$(OAUTH2_PROXY_COOKIE_SECRET)"
+            - "--redirect-url=https://{{ required "host is required" .Values.host }}/oauth2/callback"
+            - "--upstream=http://booking.{{ required "namespace is required" .Values.namespace }}.svc.cluster.local:80"
+            - "--scope=openid email profile groups"
+            - "--allowed-group=booking"
+            - "--email-domain=*"
+            - "--reverse-proxy=true"
+            - "--http-address=0.0.0.0:4180"
+            - "--cookie-domain={{ required "host is required" .Values.host }}"
+            - "--cookie-secure=true"
+            - "--cookie-httponly=true"
+            - "--cookie-samesite=lax"
+            - "--cookie-expire=8h"
+            - "--cookie-refresh=1h"
+            - "--cookie-csrf-expire=5m"
+            - "--force-code-challenge-method=S256"
+            - "--set-xauthrequest=true"
+            - "--skip-provider-button=true"
+            - "--pass-authorization-header=false"
+            - "--standard-logging=true"
+            - "--auth-logging=true"
+            - "--request-logging=true"
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: booking-oauth2-proxy
+                  key: client-id
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: booking-oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: booking-oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - containerPort: 4180
+              name: http
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-oauth2-proxy
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: booking-oauth2-proxy
+spec:
+  type: ClusterIP
+  selector:
+    app: booking-oauth2-proxy
+  ports:
+    - name: http
+      port: 4180
+      targetPort: 4180
+      protocol: TCP
+{{- end }}

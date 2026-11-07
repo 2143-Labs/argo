@@ -26,6 +26,7 @@ spec:
         - { name: mailFrom, value: aross_booking@m.2143.me }
         - { name: anubis, value: "false" }
         - { name: public, value: "false" }
+        - { name: sso, value: "false" }
   destination:
     server: https://kubernetes.default.svc
     namespace: book-aross
