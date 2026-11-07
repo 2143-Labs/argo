@@ -8,6 +8,7 @@ kind: Application
 metadata:
   name: moss-prod
   labels:
+    2143.me/tracker: game
     edge.2143.me/class: game
   namespace: argocd
   finalizers:

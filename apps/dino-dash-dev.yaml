@@ -7,6 +7,7 @@ kind: Application
 metadata:
   name: dino-dev
   labels:
+    2143.me/tracker: game
     edge.2143.me/class: game
   namespace: argocd
   finalizers:

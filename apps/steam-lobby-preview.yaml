@@ -18,6 +18,8 @@ spec:
   template:
     metadata:
       name: 'steam-lobby-pr-{{.number}}'
+      labels:
+        2143.me/tracker: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:
