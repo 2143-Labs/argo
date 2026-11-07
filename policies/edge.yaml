@@ -1,0 +1,25 @@
+# Machine-checked assertions about routes on shared-gateway.
+# Every pattern must match at least one route hostname; every non-redirect rule
+# of every matching route must satisfy every key of the assertion.
+#   exposure: private        -> the rule references Middleware lan-only
+#   gates: [names]           -> the rule references each of these Middlewares
+#   gates_any: [names]       -> the rule references at least one of them
+#   auth: [spec keys]        -> a referenced Middleware defines one of these spec keys
+# Add a check by adding an assertion; see docs/ci-validations.md.
+version: 1
+assertions:
+  - hosts: ["*.ts.2143.me"]
+    exposure: private
+
+  - hosts: ["containerstore.john2143.com"]
+    auth: [basicAuth]
+
+  - hosts: ["rots.john2143.com", "dino.dsstar.us", "dino-dev.dsstar.us", "moss.dsstar.us", "moss-dev.dsstar.us", "how.john2143.com", "how.poe.sale"]
+    gates: [public-rate-limit, public-inflight-limit]
+    gates_any: [crowdsec-bouncer, crowdsec-bouncer-game]
+
+  - hosts: ["seafile.john2143.com"]
+    gates: [uploads-rate-limit, uploads-inflight-limit, crowdsec-bouncer-noappsec]
+
+  - hosts: ["files.aross.studio"]
+    gates: [uploads-rate-limit, uploads-inflight-limit]

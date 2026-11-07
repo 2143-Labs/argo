@@ -11,14 +11,15 @@
 # scale-to-zero client via the InterceptorRoute). /ws goes to the
 # interceptor too when gameserver.scaleToZero.enabled (InterceptorRoute
 # dino-dash-server), else straight to the world server (reference-grant.yaml).
-# scripts/validate-route-gates.sh skips /templates/, so these gates are not
-# CI-checked: every rule must include "game-edge.gates", except /ws, which uses
-# "game-edge.wsGates" (the gates plus the Anubis cookie check).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ include "game-edge.routeName" . }}
   namespace: default
+  labels:
+    # LAN clients resolve these hosts publicly (docs/lan-dns.md): no lan-dns zone
+    # covers them, and lan-dns must not answer anyway.
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway
@@ -76,6 +77,10 @@ kind: HTTPRoute
 metadata:
   name: {{ include "game-edge.routeName" . }}-http-to-https
   namespace: default
+  labels:
+    # LAN clients resolve these hosts publicly (docs/lan-dns.md): no lan-dns zone
+    # covers them, and lan-dns must not answer anyway.
+    k8s-gateway.dns/ignore: "true"
 spec:
   parentRefs:
     - name: shared-gateway

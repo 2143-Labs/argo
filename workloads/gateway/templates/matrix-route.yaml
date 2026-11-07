@@ -18,6 +18,24 @@ spec:
         - path:
             type: PathPrefix
             value: /voice
+      filters:
+        # Class B (machine/API, docs/public-edge.md): the voice relay speaks a
+        # machine protocol, so no AppSec body inspection.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer-noappsec
       backendRefs:
         - group: ""
           kind: Service

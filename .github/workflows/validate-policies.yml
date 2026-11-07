@@ -1,0 +1,43 @@
+name: Validate policies
+
+on:
+  pull_request:
+    paths:
+      - apps/**
+      - workloads/**
+      - policies/**
+      - scripts/lib/**
+      - scripts/validations/**
+      - scripts/validate-policies.sh
+      - .github/workflows/validate-policies.yml
+  push:
+    paths:
+      - apps/**
+      - workloads/**
+      - policies/**
+      - scripts/lib/**
+      - scripts/validations/**
+      - scripts/validate-policies.sh
+      - .github/workflows/validate-policies.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-policies-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Declared edge policy holds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Validate policies
+        run: nix develop --fallback -c ./scripts/validate-policies.sh

@@ -68,7 +68,25 @@ spec:
   hostnames:
     - "*.dev.john2143.com"
   rules:
-    - backendRefs:
+    # Class A (browser surfaces, docs/public-edge.md): these are whole
+    # applications behind the nonprod Traefik, page loads included.
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
         - name: nonprod-traefik
           port: 443
 ---
@@ -84,7 +102,23 @@ spec:
   hostnames:
     - au-dev.2143.me
   rules:
-    - backendRefs:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
         - name: nonprod-traefik-2143me
           port: 443
 {{- end }}

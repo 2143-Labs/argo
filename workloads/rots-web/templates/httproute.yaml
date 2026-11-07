@@ -13,10 +13,6 @@
 # which wakes the scale-to-zero web client via the InterceptorRoute.
 # / is Anubis, which proxies to the KEDA interceptor and keeps the inbound Host,
 # so the InterceptorRoute still matches and page views still wake the client.
-# scripts/validate-route-gates.sh skips /templates/, so these gates are not
-# CI-checked: every rule must include "game-edge.gates" (/auth uses
-# "game-edge.urlGates" for the AppSec-enabled bouncer) and /ws/<k> uses
-# "game-edge.wsGates" once the WebSocket check is on.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
