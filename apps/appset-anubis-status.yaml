@@ -11,7 +11,8 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   syncPolicy:
     applicationsSync: create-update
-    preserveResourcesOnDeletion: true
+    # false: generated Applications get resources-finalizer, so deleting this ApplicationSet also deletes their resources on both clusters (status.2143.me retirement).
+    preserveResourcesOnDeletion: false
   generators:
     - clusters:
         selector:
