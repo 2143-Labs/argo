@@ -55,10 +55,13 @@ spec:
               mountPath: /etc/apache2/conf-enabled/zz-booking.conf
               subPath: zz-booking.conf
               readOnly: true
-          # A 302 to the installer counts as ready (kubelet accepts 200-399).
+          # Apache only, not PHP or the database. Before the web installer runs,
+          # every EA page except /index.php/installation answers 503 ("Database
+          # Migration Required"); probing / would pull the only replica out of
+          # the Service and make the installer itself unreachable.
           readinessProbe:
             httpGet:
-              path: /
+              path: /assets/img/favicon.ico
               port: http
             periodSeconds: 10
           livenessProbe:
