@@ -1,5 +1,6 @@
-# python3 http.server on :8000 serving the wasm-bindgen build (rots4 flake
-# `packages.staticWebserver`). No `replicas`: the ScaledObject owns it.
+# rots-web-server on :8000 (rots4 web/server/main.rs, a static binary) serving the
+# wasm-bindgen build (rots4 flake `packages.staticWebserver`). No `replicas`: the
+# ScaledObject owns it.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
