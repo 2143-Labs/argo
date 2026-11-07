@@ -99,7 +99,7 @@
 
 <h1>IP hiding &amp; self-hosted edge — north star</h1>
 <p class="meta">
-  Owner: John · Adopted 2026-10-16 · Design v5.5 · Implementation: <span class="pill todo">not started</span> · Next step: Phase 0 · Board: task 173 (#48)
+  Owner: John · Adopted 2026-10-16 · Design v5.8 · Implementation: <span class="pill todo">not started</span> · Next step: Phase 0 · Board: task 173 (#48)
   <br>Lives in <code>argo/docs/ip-hiding-tech.html</code>. Edit it as decisions land; record changes in the <a href="#changelog">changelog</a>.
 </p>
 
@@ -360,7 +360,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
 
 <h3>Key properties</h3>
 <ul>
-  <li><strong>Fixed slots, fungible machines.</strong> Slots <code>s1</code>–<code>s4</code> each have a WireGuard keypair (in OpenBao) and a name <code>s&lt;N&gt;.edge.2143.me</code>. A VM <em>is</em> a slot because the pipeline gave it that slot's key. Replacing the VM, or moving the slot to another provider, changes only that slot's A record. No backend is reconfigured.</li>
+  <li><strong>Fixed slots, fungible machines.</strong> Slots <code>s1</code>–<code>s4</code> each have a WireGuard keypair (in OpenBao) and a name <code>s&lt;N&gt;.edge.2143.me</code>. A VM <em>is</em> a slot because the pipeline gave it that slot's key. Replacing the VM, or moving the slot to another provider, changes only that slot's A record — and a same-region replacement changes nothing in DNS if the provider's floating/reserved IP moves to the new VM (<a href="#requirements">section 7</a>). No backend is reconfigured.</li>
   <li><strong>Backends initiate.</strong> Every connector pod resolves every slot name and dials it. The edge learns the backend's current address from the handshake, so a backend IP change heals on the next keepalive and is configured nowhere.</li>
   <li><strong>Edges are layer 4, routed by name.</strong> Port 443 is routed by TLS SNI without decrypting; port 80 by the HTTP Host header (it is plaintext anyway, and ACME HTTP-01 needs it); every other port belongs to exactly one backend. TCP carries a PROXY v2 header with the real client IP, so per-IP rate limits, CrowdSec and mail checks keep working. UDP is relayed through the tunnel.</li>
   <li><strong>Media relays live on edges.</strong> A TURN relay must advertise an address it owns, so coturn runs on every edge. LiveKit stays at home and is reached only through TURN/TLS.</li>
@@ -481,6 +481,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
 <!-- ============================================================ -->
 <h2 id="edge">6. What an edge is</h2>
 <p>A VM booted from the pinned Talos factory image, configured entirely by one rendered machine config passed as user-data. The same pattern timestone uses for its Hetzner nodes (<code>timestone-tofu/hetzner/talos.tf:48-70</code>): factory schematic → provider image → VM. No cluster runs on the edge; Talos runs a fixed set of static pods.</p>
+<p>An edge is <strong>one VM per slot</strong> — no control plane, no scheduler, no node registration. That rules out Cluster API here: CAPMOX provisions Proxmox VE VMs only (so it cannot reach Hetzner or DigitalOcean), CAPI has no supported path to adopt or extend an existing cluster, and a CAPI-managed edge would run a control plane and spend the ≤ 3 min boot budget on it. Provisioning stays OpenTofu plus <code>bin/edge.py</code> (<a href="#supply">section 10</a>); D22 records it.</p>
 <table>
   <thead><tr><th>Component</th><th>Role</th><th>Ports (public unless noted)</th></tr></thead>
   <tbody>
@@ -534,7 +535,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
   <thead><tr><th>Requirement</th><th>Must / should</th></tr></thead>
   <tbody>
     <tr><td>Boot our pinned Talos image (custom image upload or snapshot) with the machine config as user-data</td><td>must</td></tr>
-    <tr><td>Static public IPv4 per VM (IPv6 nice to have)</td><td>must</td></tr>
+    <tr><td>Static public IPv4 per VM (IPv6 nice to have), ideally a floating/reserved address that follows a replacement VM in the same region</td><td>must</td></tr>
     <tr><td>Unfiltered inbound TCP and UDP on any port, including 25, 3478 and the relay range; no provider-side L7 proxying</td><td>must</td></tr>
     <tr><td>Inbound UDP 51820 from anywhere (backends roam)</td><td>must</td></tr>
     <tr><td>Outbound: GHCR, DNS, NTP, and 443/8448 for masked egress. Outbound SMTP is <em>not</em> needed (mail leaves via a relay)</td><td>must</td></tr>
@@ -545,8 +546,45 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
   </tbody>
 </table>
 
+<h3>Why not a provider load balancer or NAT gateway</h3>
+<p>Checked 2026-11-06 against Hetzner, DigitalOcean and AWS. No managed load balancer can take an edge's place. The decisive reason is the first; the rest close the remaining gaps:</p>
+<ul>
+  <li><strong>Its targets are cloud instances, not tunnels.</strong> Every managed LB forwards to registered Droplets, instances or IPs in its own VPC. The backends here dial out and have no inbound path, so there is nothing to register.</li>
+  <li><strong>443 must be routed by SNI without decryption</strong> (D9). NLB and ALB route by name only when they terminate TLS; DigitalOcean states its load balancers are not application load balancers and do not route on headers; Hetzner's is TCP/HTTP only. Turning termination on re-opens D21.</li>
+  <li><strong>UDP on arbitrary ports is required</strong> (TURN relay range, 3478, 3479, game ports). Hetzner offers no UDP load balancing at all. NLB and DigitalOcean's regional network LB do, but one listener per port turns the relay range into dozens of objects on a 2 vCPU box.</li>
+  <li><strong>PROXY v2 is required</strong> because the tunnel hides the client. DigitalOcean's network LBs do not support PROXY protocol (they preserve the source IP natively, useless after WireGuard); NLB supports it only on TCP/TLS target groups.</li>
+  <li><strong>coturn must own the address it advertises</strong> (D10), and derper must see the client's real address for STUN. Neither survives a managed hop.</li>
+</ul>
+<p>A managed NAT gateway is right for one narrow case: masked egress from a workload already inside that cloud's VPC. It does not replace <code>tinyproxy</code>, because the backend is at home and would still need a tunnel to reach that NAT — a paid resource on the same path.</p>
+<p>The provider resource worth using is the <strong>address</strong>: Hetzner Floating IP, DigitalOcean Reserved IP, AWS Elastic IP. They let a replacement VM inherit the slot's address, so a same-region replacement changes nothing in DNS. A move across providers or regions still changes the slot's A record.</p>
+
+<h3>What a live slot costs</h3>
+<p class="small">List prices on 2026-11-06, excluding VAT. Traffic assumes the §7 worst case (1.7 TB/month outbound), so each slot can carry everything alone.</p>
+<table>
+  <thead><tr><th>Slot</th><th>Server</th><th>Address</th><th>Traffic</th><th>Monthly</th></tr></thead>
+  <tbody>
+    <tr><td><code>s1</code> Hetzner Ashburn</td><td>CPX11 · 2 vCPU · 2 GB · 40 GB NVMe · €17.99 (primary IPv4 included)</td><td>€0 primary; floating IP +€3.00, billed even unattached</td><td>1 TB included; +€0.70</td><td class="num">≈ €18.70 (~$20)</td></tr>
+    <tr><td><code>s2</code> DigitalOcean NYC</td><td>s-2vcpu-2gb · 60 GB SSD · $18.00</td><td>Reserved IP free while assigned; $5.00/month if parked</td><td>3 TB included, pooled across the account</td><td class="num">≈ $18</td></tr>
+    <tr><td>Both live slots</td><td></td><td></td><td></td><td class="num">≈ $38–40</td></tr>
+    <tr><td><code>s3</code>, <code>s4</code> idle</td><td>—</td><td>none reserved</td><td>—</td><td class="num">$0</td></tr>
+  </tbody>
+</table>
+<p>Two consequences. Idle slots must hold <strong>no address</strong>: a parked Hetzner floating IP is €3.00/month and a parked DigitalOcean Reserved IP is $5.00/month. And the floating/reserved address is an optimisation worth about €2.40/month at Hetzner (drop the €0.60 primary, add the €3.00 floating) and nothing at DigitalOcean, where it is free while attached.</p>
+<p>A third slot on AWS is not comparable. EC2 egress is $0.09/GB, so 1.7 TB is about $153/month before compute, and every public IPv4 is $0.005/hour (≈$3.65/month) whether attached or idle. Lightsail's $12 plan (2 vCPU, 2 GB, 3 TB, static IP free while attached) would fit the price, but it cannot boot our pinned Talos image, so it fails the §7 must.</p>
+
+<h3>Why not private-only edges behind one VIP</h3>
+<p>Both providers can run a VM with no public IPv4 — Hetzner lists "no public IP" as a create-time option, and DigitalOcean has private Droplets plus a VPC NAT gateway — so the obvious saving is one shared VIP instead of one address per edge. It does not work for edges, and it does not save money:</p>
+<ul>
+  <li><strong>The NAT gateways are egress-only.</strong> DigitalOcean's VPC NAT gateway is documented as giving private resources internet access "without exposing them to incoming traffic"; Hetzner has no managed NAT at all. Ingress would need a gateway VM holding the VIP and doing DNAT — one hop that owns every connection.</li>
+  <li><strong>coturn would sit behind that hop.</strong> A TURN relay must advertise an address it owns (D10), so the edge would need <code>external-ip</code> pointed at the gateway plus DNAT for 3478 and the whole 45000–45127 relay range: 129 rules and UDP conntrack on one box — the fragile path this design exists to avoid.</li>
+  <li><strong>It concentrates the flood.</strong> The threat model assumes floods hit individual edges and DNS steers away; with one VIP per provider, every flood lands on the gateway that all edges depend on.</li>
+  <li><strong>There is nothing to share.</strong> The two live slots are on two different providers (D3), one VM each. One gateway for one edge is strictly worse.</li>
+  <li><strong>The saving is negative.</strong> Hetzner's public IPv4 is €0.60/month per server; moving it to a gateway saves that per edge but adds a whole VM (cheapest plan ≈ €4–6/month) plus the gateway's own IPv4. DigitalOcean saves nothing, because a Reserved IP is free while attached.</li>
+</ul>
+<p>The pattern is right one tier down: backends already have no public ingress, and a private-only DOKS node behind a NAT gateway would keep its egress and lose its inbound surface. A per-provider gateway is a scale-out topology for many edges, and would be a self-hosted load balancer — a separate decision, not a cost optimisation.</p>
+
 <h3>The first two providers</h3>
-<p class="small">Pricing and policy as found 2026-10-16; re-check in Phase 0.</p>
+<p class="small">Pricing and policy as found 2026-10-16; slot costs re-checked 2026-11-06 (above); re-check in Phase 0.</p>
 <table>
   <thead><tr><th></th><th>Hetzner Cloud (Ashburn)</th><th>DigitalOcean (NYC)</th></tr></thead>
   <tbody>
@@ -648,7 +686,7 @@ derp: { component: derper, udp: [3479], tcp: [8443],    hosts: [derp.edge.2143.m
 
 <!-- ============================================================ -->
 <h2 id="supply">10. Supply chain &amp; deploy model</h2>
-<p>A new repository, <code>2143-Labs/edge-tofu</code>, laid out like <code>timestone-tofu</code>:</p>
+<p>A new repository, <code>edge-tofu</code>, in a <strong>dedicated edge GitHub organisation</strong> (D24 — not <code>2143-Labs</code> or <code>John2143</code>), laid out like <code>timestone-tofu</code>:</p>
 <pre><code>versions.json       Talos version + schematic, tofu + providers, every image digest, tool checksums
 images/             Dockerfiles we build (derper, tinyproxy, edge-connector) + mirror list for third-party images
 talos/              machine-config templates and patches (firewall, wireguard, static pods, files)
@@ -735,9 +773,9 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
   <tbody>
     <tr><td>D1</td><td>Edge OS</td><td>Talos, same version and factory pattern as timestone (1.14.0 in <code>timestone-tofu/talos/versions.json</code>); schematic with only what the edge needs</td><td><span class="pill done">decided</span></td></tr>
     <tr><td>D2</td><td>Data plane</td><td>Plain WireGuard, initiated by each backend's connectors. Tailnet is the operator plane only.</td><td><span class="pill done">decided</span></td></tr>
-    <tr><td>D3</td><td>Slots</td><td>4 defined, 2 live on 2 providers; each live slot sized to carry everything alone (<a href="#requirements">section 7</a>)</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D3</td><td>Slots</td><td>4 defined, 2 live on 2 providers; each live slot sized to carry everything alone (<a href="#requirements">section 7</a>); idle slots hold no address</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D4</td><td>Providers</td><td>Hetzner Ashburn + DigitalOcean NYC first; another only once its Talos image + user-data path is proven</td><td><span class="pill done">default</span></td></tr>
-    <tr><td>D5</td><td>Repos</td><td>New <code>2143-Labs/edge-tofu</code>; each backend's manifest stays in that backend's repo, pinned by commit</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D5</td><td>Repos</td><td>New <code>edge-tofu</code> in the dedicated edge organisation (D24), not <code>2143-Labs</code>; each backend's manifest stays in that backend's repo, pinned by commit</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D6</td><td>Deploy runner</td><td>Dedicated ARC scale set in the home cluster, not the general CI VM</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D7</td><td>Signing</td><td>cosign keyless via GitHub OIDC; verification pins the release workflow identity on <code>main</code></td><td><span class="pill done">default</span></td></tr>
     <tr><td>D8</td><td>Registry</td><td>Edges and connectors pull only from <code>ghcr.io/2143-labs/edge-*</code>, by digest</td><td><span class="pill done">default</span></td></tr>
@@ -754,6 +792,9 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>D19</td><td>Certificates</td><td>Each backend holds certificates only for names it serves; no wildcard in a zone shared by two backends; CAA per name pins the issuing ACME account and DNS-01</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D20</td><td>External access to the house</td><td>Through the <a href="#doors">doors</a> in order: edges, tailnet, keyed WireGuard peers (home-initiated first). Every keyed peer or forward is a register row with its own ACL. A raw port forward needs a recorded decision.</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D21</td><td>Outage page</td><td>Owner requirement (2026-10-16): when a backend is unreachable, browsers get a branded "temporarily unavailable" page, not a timeout. Conflicts with D9: an edge that holds no certificate can't serve an HTTPS page for the name, and HSTS rules out falling back to port 80. Options: (a) edges hold certificates for browser-facing names and terminate only while no connector is healthy, so private keys sit on untrusted machines; (b) opt-in termination per hostname, the same switch as <a href="#cdn">section 16</a>; (c) accept a connection error when the backend is down. Separable and possible today: a Traefik <code>errors</code> middleware with a static page for 502–504 on browser-facing routes covers "app down, house up".</td><td><span class="pill input">needs input</span></td></tr>
+    <tr><td>D22</td><td>Edge provisioning &amp; data plane</td><td>One VM per slot from <code>edge-tofu</code>, static pods, no Kubernetes control plane. No Cluster API (CAPMOX is Proxmox-only; CAPI cannot adopt an existing cluster and would add a control plane and boot time) and no provider load balancer or NAT gateway in the path (<a href="#requirements">section 7</a>). Provider floating/reserved IPs are used where they exist; DNS remains the fallback.</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D23</td><td>Edge addressing</td><td>One public IPv4 per edge. Private-only edges behind a shared VIP are rejected: DigitalOcean's NAT gateway is egress-only and Hetzner has none, coturn would need the 3478 and 45000–45127 relay range DNAT'd behind one hop, the VIP concentrates floods, and with one VM per provider there is nothing to share (€0.60/month saved against a whole extra VM). Idle slots hold no address (€3 Hetzner / $5 DO per parked month).</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D24</td><td>Account separation</td><td>The edge programme belongs to the business (<strong>2143 Labs LLC</strong>): a dedicated GitHub organisation, a new Hetzner account and a new DigitalOcean account, all under business billing. The personal estate is unchanged — home k3s and the existing DigitalOcean account (DOKS, Tor relay, <code>status-1</code>) — and is reached only as a backend over this design's tunnels. The single cross-boundary credential is the <code>edge-deploy</code> runner at home, holding business-scoped cloud tokens; its blast radius is the edges, which hold nothing else. Open: the organisation name.</td><td><span class="pill input">needs input</span></td></tr>
   </tbody>
 </table>
 
@@ -780,6 +821,7 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <li>DO link bootstrap: whether a DOKS node can hold a DO Reserved IP that a job reassigns on node replacement, its cost, and that <code>wireguard-doks</code> replies from it; for the fallback, a RouterOS API user scoped to one peer's endpoint and an edge endpoint hint. That the CR1000B forward preserves the router's source port 51820 outbound.</li>
     <li>Outage page (D21): choose (a), (b) or (c). For (a) or (b): how an edge obtains and rotates a certificate without a backend's ACME account (DNS-01 with a scoped deSEC token; the CAA record for that name must then allow it). Independent of the edges: a Traefik <code>errors</code> middleware for 502–504 on browser-facing routes.</li>
     <li>Provider pricing and port policies in <a href="#requirements">section 7</a>; DO transfer-pool use with the Tor relay counted.</li>
+    <li>Slot address resources: that a Hetzner Floating IP re-attaches to a rebuilt server in the same location, and a DigitalOcean Reserved IP re-assigns to a new Droplet in the region, fast enough to keep the ≤ 5 min replace target (<a href="#lifecycle">section 11</a>).</li>
   </ol>
   <p class="exit"><strong>Exit:</strong> every item has an answer recorded here, or a fallback chosen.</p>
 </details>
@@ -1028,6 +1070,9 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>2026-10-16</td><td>v5.3: home-IP-change analysis (<a href="#ipchange">section 11</a>). Found: today's DO link does not survive a home IP change (the endpoint name is resolved once at pod start; the router never dials). D14 now pins both ends with keepalives on both sides so either address can change. Added: connector watchdog and IPv4-only dialing, controller freeze on all-slot failure, WAN-address mismatch alert for CrowdSec. Corrected the router allowlist from the live rules (Postgres 5432 and router DNS were missing).</td></tr>
     <tr><td>2026-10-16</td><td>v5.4: home bootstraps the DO link. DO stores no home address (no Secret): the router initiates and keeps alive, DO learns the endpoint from the handshake and keeps alive back. DO's link address survives node replacement (Reserved IP; edge rendezvous fallback). Added: the home IP as soft state (requirement 4, "where the home IP lives"), doors into the house with a register (D20), Phase 9 removes every configured copy before the Phase 10 rotation. Found: <code>argo</code>, <code>dotfiles</code> and <code>2143-k8s</code> are public, and the first two already contain the current home address.</td></tr>
     <tr><td>2026-10-17</td><td>v5.5: D21 (branded outage page: owner requirement, conflicts with D9, needs input) with a Phase 0 item and a risk row. Board reconciliation: Phase 9's split horizon names LAN DNS stage 2 (#23) as its prerequisite; Mongo 4040, <code>derp-r</code> verification and the DO DNS zones are tracked on #51; #39 (trim public routes) shrinks the first manifest; #25 owns the SOC 2 scope question. Fixed two stale references (D14 keeps the DO link; the CrowdSec whitelist is removed in Phase 9, not updated in Phase 10).</td></tr>
+    <tr><td>2026-11-06</td><td>v5.6: provisioning and data plane settled (D22). Section 6 states one VM per slot and why not Cluster API: CAPMOX is Proxmox-only, CAPI has no adoption path for an existing cluster, and a control plane would eat the ≤ 3 min boot budget. Section 7 gains "Why not a provider load balancer or NAT gateway": managed LBs target cloud instances rather than outbound tunnels, SNI routing requires termination, Hetzner has no UDP load balancing, and DigitalOcean's network LBs have no PROXY protocol. Floating/reserved IPs recorded as a same-region replacement optimisation (Hetzner Floating IP, DO Reserved IP, AWS EIP); Phase 0 verifies re-attach timing.</td></tr>
+    <tr><td>2026-11-06</td><td>v5.7: slot costs and edge addressing. Added "What a live slot costs": Hetzner Ashburn ≈€18.70 and DigitalOcean NYC ≈$18 per live slot (≈$38–40 for both), address costs (Hetzner €0.60 primary / €3.00 floating; DO free assigned / $5 parked), and why AWS is not a third slot (EC2 egress $0.09/GB ≈ $153 for 1.7 TB; Lightsail $12 cannot boot the Talos image). Added "Why not private-only edges behind one VIP": DO's NAT gateway is egress-only, Hetzner has none, the relay range would need DNAT behind a single hop, and the saving is negative. D23 added; D3 notes idle slots hold no address.</td></tr>
+    <tr><td>2026-11-06</td><td>v5.8: D24 account separation. The edge programme moves to a dedicated GitHub organisation and its own provider credentials, so nothing in the edge accounts can reach a backend, its DNS or its secrets; the home <code>edge-deploy</code> runner is the only bridge. D5 and section 10 no longer name <code>2143-Labs</code>. All edge infrastructure is business-owned: a dedicated GitHub organisation plus new Hetzner and DigitalOcean accounts under 2143 Labs LLC. The personal estate (home k3s, the existing DigitalOcean account with DOKS, the Tor relay and <code>status-1</code>) is unchanged and reaches the edges only as a backend; the home <code>edge-deploy</code> runner holds business-scoped tokens as the single bridge. Open: the organisation name.</td></tr>
   </tbody>
 </table>
 
