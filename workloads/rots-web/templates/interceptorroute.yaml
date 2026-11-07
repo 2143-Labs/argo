@@ -49,6 +49,12 @@ spec:
   scalingMetric:
     concurrency:
       targetValue: 10
+    # The placeholder above is answered in ~1ms, so a page view never appears in the
+    # instantaneous concurrency count the scaler samples: the app would never wake and
+    # the page would reload for ever. Request rate buckets each request across its window
+    # (1m), so one page load keeps the route above zero and KEDA scales the pod up.
+    requestRate:
+      targetValue: 1
 {{- if .Values.authserver.scaleToZero.enabled }}
 ---
 # The authserver behind /auth (httproute.yaml). Traefik strips /auth and sets
