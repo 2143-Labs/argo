@@ -99,7 +99,7 @@
 
 <h1>IP hiding &amp; self-hosted edge — north star</h1>
 <p class="meta">
-  Owner: John · Adopted 2026-10-16 · Design v5.8 · Implementation: <span class="pill todo">not started</span> · Next step: Phase 0 · Board: task 173 (#48)
+  Owner: John · Adopted 2026-10-16 · Design v6.0 · Implementation: <span class="pill todo">not started</span> · Next step: Phase 0 · Board: task 173 (#48)
   <br>Lives in <code>argo/docs/ip-hiding-tech.html</code>. Edit it as decisions land; record changes in the <a href="#changelog">changelog</a>.
 </p>
 
@@ -115,13 +115,13 @@
 <div class="callout ok">
   <p><strong>The requirements.</strong> Everything below exists to satisfy these. If a later change breaks one, it needs a decision recorded here.</p>
   <ol>
-    <li><strong>No public DNS record points at a backend, and no backend exposes a service to the internet.</strong> The house is the hard line; the DigitalOcean cluster follows the same rule. The only listeners allowed are silent, key-authenticated WireGuard ports (the router's, for the DO link and any keyed peer, and DO's end of that link): they answer nothing without a key. External access to something specific goes through one of the <a href="#doors">doors into the house</a>, never an ad-hoc port forward.</li>
+    <li><strong>No public DNS record points at a backend, and no backend exposes a service to the internet.</strong> The house is the hard line; the DigitalOcean cluster follows the same rule. The only listeners allowed are silent, key-authenticated WireGuard ports (the router's, for the DO link and any keyed peer, and DO's end of that link): they answer nothing without a key. External access to something specific goes through one of the <a href="#doors">doors into the house</a>, never an ad-hoc port forward. <strong>The one exception is the status origin</strong> (<a href="#origin">public origins</a>): <code>status.2143.me</code> points at its own droplet on purpose, because the page whose job is to report outages must not depend on the machinery it reports on.</li>
     <li><strong>TCP and UDP</strong> both work for every public service.</li>
     <li><strong>Edges are fungible and ephemeral.</strong> Any edge can be destroyed, replaced, or moved to another provider in minutes. Backend addresses (the home IP is mostly static) never matter to the edges.</li>
     <li><strong>The home IP is soft state everywhere outside the house.</strong> Anything that needs it learns it from a packet the house sent and holds it in memory only. It is never stored in git, a Secret, DNS, or a firewall rule (<a href="#homeip">where the home IP lives</a>).</li>
     <li><strong>Backends are pluggable.</strong> One edge fleet serves every backend. Adding a backend is a manifest and a connector, not a new edge design.</li>
     <li><strong>Zero trust and auditable</strong>, shaped for an eventual SOC 2 Type I: pinned, signed, SBOM'd artifacts; reviewed, gated, recorded changes.</li>
-    <li><strong>Traffic lands in Kubernetes, not on a machine.</strong> No backend node is special. The tailnet (headscale) is the operator plane, and only that.</li>
+    <li><strong>Traffic lands in Kubernetes, not on a machine.</strong> No backend node is special. The tailnet (headscale) is the operator plane, and only that. The status origin is the one service that is deliberately a single machine rather than a cluster (<a href="#origin">public origins</a>).</li>
   </ol>
 </div>
 
@@ -177,6 +177,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
     <tr><td><code>headscale.9s.pics</code></td><td>home-pi DDNS. The first tailnet test, superseded by the in-cluster headscale at <code>net.john2143.com</code>. <strong>Retiring</strong> (D12).</td></tr>
   </tbody>
 </table>
+<p class="small"><code>status.2143.me</code> is deliberately absent from that list: it left the house on 2026-11-08 for its own droplet, and the home HTTPRoute, its Anubis instance and pite's generator are deleted. It is the one public name that stays on a machine of its own — see <a href="#origin">public origins</a> (D25).</p>
 
 <h3>Inbound paths into the house</h3>
 <table>
@@ -186,7 +187,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
     <tr><td>Mail 25 / 587 / 993</td><td>dst-nat → Stalwart <code>.6.13</code></td><td>Edge TCP passthrough with PROXY (see <a href="#mail">Mail</a>)</td></tr>
     <tr><td>TURN 3478 tcp+udp, relay 45000–45063/udp</td><td>dst-nat → steam-lobby coturn <code>.6.14</code></td><td>coturn runs <em>on</em> the edges</td></tr>
     <tr><td>LiveKit RTC 7881/tcp</td><td>dst-nat → <code>.6.22</code></td><td>Removed; media via TURN/TLS through edges</td></tr>
-    <tr><td>TeamSpeak 9987/udp, 30033/tcp</td><td>dst-nat → <code>.6.15</code>, <code>.6.16</code></td><td>Edge UDP + TCP</td></tr>
+    <tr><td>TeamSpeak 9987/udp, 30033/tcp</td><td>dst-nat → <code>.6.15</code> only. <code>.6.16</code> (<code>ts-files</code>) was retired and its VIP no longer exists; <code>ts-voice</code> now carries voice and file transfer.</td><td>Edge UDP + TCP</td></tr>
     <tr><td>OpenRCT2 11753/tcp</td><td>dst-nat → <code>.6.17</code></td><td>Edge TCP</td></tr>
     <tr><td>Factorio 34197/udp</td><td>dst-nat → <code>.6.28</code></td><td>Edge UDP</td></tr>
     <tr><td>Minecraft 25565/tcp</td><td>dst-nat → <code>.6.29</code></td><td>Edge TCP</td></tr>
@@ -200,7 +201,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
 <p class="small">The live MikroTik record (network-engineer skill, live-verified 2026-10-11, updated 2026-10-13) has 16 dst-nat rules plus the router's own WireGuard listener; the committed export (<code>dotfiles/network-configs/router.rsc:188-240</code>) is stale. The Verizon CR1000B in front is <em>not</em> a DMZ: every open port also needs a Verizon forward, so there are two layers to close. Phase 0 re-reads both live.</p>
 
 <h3>The DigitalOcean cluster's public surface</h3>
-<p>Read from the live cluster (<code>2143prod</code>, one node) on 2026-10-16:</p>
+<p>Read from the live cluster (<code>2143prod</code>, one node) on 2026-10-16; the status droplet row was read on 2026-11-08 (the droplet was created 2026-10-21 and is not part of the DOKS cluster).</p>
 <table>
   <thead><tr><th>Exposure</th><th>What answers</th><th>Fate</th></tr></thead>
   <tbody>
@@ -209,6 +210,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
     <tr><td>LoadBalancer <code>linkerd-gateway</code> <code>143.244.214.201</code>:4143</td><td>Nothing (connection refused); the home side was removed 2026-10-11</td><td>Delete</td></tr>
     <tr><td>Node IP, NodePort 30478/udp</td><td><code>derp-r</code> STUN</td><td>Retired with <code>derp-r</code> (D11)</td></tr>
     <tr><td>Node IP, 30901/tcp</td><td>Tor middle relay (published in the Tor consensus with contact <code>tor@2143.me</code>)</td><td>Needs a decision (D17)</td></tr>
+    <tr><td>Droplet <code>status-1</code>, reserved IPv4, 80 and 443 (ICMP too)</td><td>The status origin (<code>status.2143.me</code>): Caddy in front of <code>statusd</code> and its SQLite history. <strong>No SSH listener at all</strong> — the DO cloud firewall admits 80, 443 and ICMP from anywhere and nothing else, so management is a pull-deploy timer, not a shell.</td><td><strong>Stays public by design</strong> (<a href="#origin">public origins</a>, D25); <code>status-origin.2143.me</code> is retired</td></tr>
   </tbody>
 </table>
 
@@ -478,6 +480,23 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
 </table>
 <p>Known cross-backend dependencies, all on the WireGuard link: DO → home Temporal (gRPC 7233), SeaweedFS S3 (8333), router DNS, and Postgres (5432, unused while <code>openfront-pro*</code> is scaled to 0); home → DO MongoDB (<code>10.99.0.2:32040</code>). Phase 0 confirms the list is complete.</p>
 
+<h3 id="origin">Public origins — the status droplet (D25)</h3>
+<p>One service is deliberately outside this design: the status page. <code>status.2143.me</code> is served by a single DigitalOcean droplet, <code>status-1</code>, in a category the rest of this document does not otherwise have — a <strong>public origin</strong>. It is not an edge: it holds no one else's traffic, terminates its own TLS and keeps its own data. It is not a backend either: it is in public DNS and accepts internet traffic on purpose. Both are correct for what it does.</p>
+<table>
+  <thead><tr><th></th><th>The status origin</th></tr></thead>
+  <tbody>
+    <tr><td>Machine</td><td>One Ubuntu 24.04 droplet, <code>s-1vcpu-512mb-10gb</code>, tor1, reserved IPv4, no IPv6</td></tr>
+    <tr><td>Software</td><td>Caddy (TLS, static files, proxy) in front of <code>statusd</code> (stdlib Python, probes every 30 s) and SQLite for history. No Kubernetes, no cluster agent, no shell access.</td></tr>
+    <tr><td>Public name</td><td><code>status.2143.me</code>, and only that one. <code>status-origin.2143.me</code> is retired (2026-11-08): a second name on one origin is surface with no benefit.</td></tr>
+    <tr><td>Inbound</td><td>80, 443 and ICMP from anywhere, by the DO cloud firewall. No SSH listener exists at all; deploys are a <code>git pull</code> on a timer, so a broken deploy is fixed through the DO web console, not a shell.</td></tr>
+    <tr><td>Outbound</td><td>Its own probes of the public internet, ACME, and git. It dials nothing at home and stores no home address. When pite stops reporting, the page reads "home not reporting" rather than pretending.</td></tr>
+    <tr><td>Authenticated paths</td><td><code>/v1/*</code>: bearer token, SHA-256 with a constant-time compare, 64 KiB body cap, component allowlist. <code>/metrics</code>: bcrypt basic auth with only the hash in git and the password in OpenBao.</td></tr>
+    <tr><td>Recovery</td><td>Weekly provider backups plus a daily SQLite snapshot pulled to pite. The page is reproducible from git and that database.</td></tr>
+  </tbody>
+</table>
+<p><strong>Why it is not behind the edges.</strong> Its entire purpose is to be readable when other things are not. Behind an edge it would inherit the edge fleet's failure modes and D21: an edge holds no certificate, so it could serve this name only while a backend was healthy — precisely the moment the page matters. It carries 20–100 KB of static HTML, so edge caching and flood absorption are not why it exists, and it holds nothing confidential.</p>
+<p><strong>What stops it becoming a hole.</strong> Four invariants, tested by the leak checklist: exactly one public name; no SSH; the edge-controller's deSEC token may not write <code>status.2143.me</code>, because the controller publishes names to edges and this name is outside its scope; and no tunnel to home. Card #138 would replace the public <code>/metrics</code> with a home-initiated WireGuard tunnel and add droplet-side Mimir backfill — worth having, but the page must keep working with that tunnel down, so it changes the scrape path and nothing else.</p>
+
 <!-- ============================================================ -->
 <h2 id="edge">6. What an edge is</h2>
 <p>A VM booted from the pinned Talos factory image, configured entirely by one rendered machine config passed as user-data. The same pattern timestone uses for its Hetzner nodes (<code>timestone-tofu/hetzner/talos.tf:48-70</code>): factory schematic → provider image → VM. No cluster runs on the edge; Talos runs a fixed set of static pods.</p>
@@ -686,7 +705,7 @@ derp: { component: derper, udp: [3479], tcp: [8443],    hosts: [derp.edge.2143.m
 
 <!-- ============================================================ -->
 <h2 id="supply">10. Supply chain &amp; deploy model</h2>
-<p>A new repository, <code>edge-tofu</code>, in a <strong>dedicated edge GitHub organisation</strong> (D24 — not <code>2143-Labs</code> or <code>John2143</code>), laid out like <code>timestone-tofu</code>:</p>
+<p>A new repository, <code>2143-Labs/edge-tofu</code> (the existing organisation; only the cloud accounts are new, D24), laid out like <code>timestone-tofu</code>:</p>
 <pre><code>versions.json       Talos version + schematic, tofu + providers, every image digest, tool checksums
 images/             Dockerfiles we build (derper, tinyproxy, edge-connector) + mirror list for third-party images
 talos/              machine-config templates and patches (firewall, wireguard, static pods, files)
@@ -775,7 +794,7 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>D2</td><td>Data plane</td><td>Plain WireGuard, initiated by each backend's connectors. Tailnet is the operator plane only.</td><td><span class="pill done">decided</span></td></tr>
     <tr><td>D3</td><td>Slots</td><td>4 defined, 2 live on 2 providers; each live slot sized to carry everything alone (<a href="#requirements">section 7</a>); idle slots hold no address</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D4</td><td>Providers</td><td>Hetzner Ashburn + DigitalOcean NYC first; another only once its Talos image + user-data path is proven</td><td><span class="pill done">default</span></td></tr>
-    <tr><td>D5</td><td>Repos</td><td>New <code>edge-tofu</code> in the dedicated edge organisation (D24), not <code>2143-Labs</code>; each backend's manifest stays in that backend's repo, pinned by commit</td><td><span class="pill done">default</span></td></tr>
+    <tr><td>D5</td><td>Repos</td><td>New <code>2143-Labs/edge-tofu</code>; each backend's manifest stays in that backend's repo, pinned by commit</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D6</td><td>Deploy runner</td><td>Dedicated ARC scale set in the home cluster, not the general CI VM</td><td><span class="pill done">default</span></td></tr>
     <tr><td>D7</td><td>Signing</td><td>cosign keyless via GitHub OIDC; verification pins the release workflow identity on <code>main</code></td><td><span class="pill done">default</span></td></tr>
     <tr><td>D8</td><td>Registry</td><td>Edges and connectors pull only from <code>ghcr.io/2143-labs/edge-*</code>, by digest</td><td><span class="pill done">default</span></td></tr>
@@ -794,7 +813,8 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>D21</td><td>Outage page</td><td>Owner requirement (2026-10-16): when a backend is unreachable, browsers get a branded "temporarily unavailable" page, not a timeout. Conflicts with D9: an edge that holds no certificate can't serve an HTTPS page for the name, and HSTS rules out falling back to port 80. Options: (a) edges hold certificates for browser-facing names and terminate only while no connector is healthy, so private keys sit on untrusted machines; (b) opt-in termination per hostname, the same switch as <a href="#cdn">section 16</a>; (c) accept a connection error when the backend is down. Separable and possible today: a Traefik <code>errors</code> middleware with a static page for 502–504 on browser-facing routes covers "app down, house up".</td><td><span class="pill input">needs input</span></td></tr>
     <tr><td>D22</td><td>Edge provisioning &amp; data plane</td><td>One VM per slot from <code>edge-tofu</code>, static pods, no Kubernetes control plane. No Cluster API (CAPMOX is Proxmox-only; CAPI cannot adopt an existing cluster and would add a control plane and boot time) and no provider load balancer or NAT gateway in the path (<a href="#requirements">section 7</a>). Provider floating/reserved IPs are used where they exist; DNS remains the fallback.</td><td><span class="pill done">decided</span></td></tr>
     <tr><td>D23</td><td>Edge addressing</td><td>One public IPv4 per edge. Private-only edges behind a shared VIP are rejected: DigitalOcean's NAT gateway is egress-only and Hetzner has none, coturn would need the 3478 and 45000–45127 relay range DNAT'd behind one hop, the VIP concentrates floods, and with one VM per provider there is nothing to share (€0.60/month saved against a whole extra VM). Idle slots hold no address (€3 Hetzner / $5 DO per parked month).</td><td><span class="pill done">decided</span></td></tr>
-    <tr><td>D24</td><td>Account separation</td><td>The edge programme belongs to the business (<strong>2143 Labs LLC</strong>): a dedicated GitHub organisation, a new Hetzner account and a new DigitalOcean account, all under business billing. The personal estate is unchanged — home k3s and the existing DigitalOcean account (DOKS, Tor relay, <code>status-1</code>) — and is reached only as a backend over this design's tunnels. The single cross-boundary credential is the <code>edge-deploy</code> runner at home, holding business-scoped cloud tokens; its blast radius is the edges, which hold nothing else. Open: the organisation name.</td><td><span class="pill input">needs input</span></td></tr>
+    <tr><td>D24</td><td>Account separation</td><td>Cloud accounts are separate; code is not. The edges run in <strong>new Hetzner and DigitalOcean accounts owned by the business (2143 Labs LLC)</strong>, with business billing and their own scoped API tokens. The repository stays in the existing <code>2143-Labs</code> organisation. The personal estate — home k3s and the existing DigitalOcean account (DOKS, Tor relay, <code>status-1</code>) — is unchanged. It reaches the edges only as a backend over this design's tunnels; the status origin on <code>status-1</code> is the one deliberate public exception (D25). The single cross-boundary credential is the <code>edge-deploy</code> runner at home, holding business cloud tokens; its blast radius is the edges, which hold nothing else.</td><td><span class="pill done">decided</span></td></tr>
+    <tr><td>D25</td><td>The status origin</td><td><code>status-1</code> is a <strong>public origin</strong>, not a backend: one droplet, its own Let's Encrypt certificate, its own SQLite history, exactly one public name (<code>status.2143.me</code>), 80 and 443 open to the world and no SSH listener at all. It never joins the edge fleet, never runs a connector and is never on the DO ↔ home link, because the page must keep working when the house, DOKS, the edge fleet or a certificate is the thing that failed. Invariants in <a href="#origin">public origins</a>. <code>status-origin.2143.me</code> is retired: one name, one origin.</td><td><span class="pill done">decided</span></td></tr>
   </tbody>
 </table>
 
@@ -850,7 +870,7 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
   <summary>Phase 3 — First two edges, through the pipeline only <span class="pill todo">not started</span></summary>
   <ol>
     <li><code>s1</code> on Hetzner Ashburn, <code>s2</code> on DO NYC. PR → merge → approve. No manual applies.</li>
-    <li>Controller publishes one name: <code>status.2143.me</code>.</li>
+    <li>Controller publishes one name, and it must be a home-served one: <code>au.2143.me</code>. <strong>Not</strong> <code>status.2143.me</code> — that name belongs to a public origin on its own droplet (D25) and must never be published to the edges.</li>
     <li>Run every drill in <a href="#verification">Verification</a> and record the timings.</li>
   </ol>
   <p class="exit"><strong>Exit:</strong> external request succeeds with the real client IP in Traefik's log; CrowdSec ban enforced through the edge; au.2143.me cold load 168/168 × 200; drills meet targets.</p>
@@ -905,21 +925,21 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
 <details>
   <summary>Phase 9 — DNS cutover <span class="pill todo">not started</span></summary>
   <ol>
-    <li>Controller publishes every name of every backend. Delete the home-pi DDNS units.</li>
+    <li>Controller publishes every name of every backend. <code>status.2143.me</code> is excluded: it is already a public origin on its own droplet (D25). Delete the home-pi DDNS units.</li>
     <li>Retire home-pi's headscale (D12; independent of the edges, can happen any time): stop headscale, delete the <code>headscale.9s.pics</code> DDNS unit and record, remove the Verizon 6767 (and 8280) forwards, and move or drop the remaining references in <code>dotfiles</code> (attic substituter and login in <code>nixos/cluster/modules/k3s-common.nix</code>, the default login server in <code>nixos/cluster/modules/tailscale.nix</code>, the johndeploy skill).</li>
     <li>Split horizon for every household client (LAN, pods and tailnet), so nothing at home reaches its own services through the WAN address. Prerequisite: LAN DNS stage 2 (task 143, #23: pods resolve through lan-dns; gate 2026-10-18). Then delete the CrowdSec home-WAN whitelist and the five <code>clientTrustedIps</code> entries: the last configured copies of the home IP.</li>
   </ol>
-  <p class="exit"><strong>Exit:</strong> no record in any of our zones resolves to a backend address, and no configuration anywhere contains the home IP.</p>
+  <p class="exit"><strong>Exit:</strong> no record in any of our zones resolves to a backend address (<code>status.2143.me</code> is a public origin, not a backend, D25), and no configuration anywhere contains the home IP.</p>
 </details>
 
 <details>
   <summary id="p10">Phase 10 — Lock the doors <span class="pill todo">not started</span></summary>
   <ol>
     <li>Remove every MikroTik dst-nat <em>and</em> every Verizon CR1000B forward, except UDP 51820 for the DO link (keep disabled copies for a week).</li>
-    <li>Delete both DO LoadBalancers; close the DO cloud firewall to all inbound (except the Tor ORPort if D17 keeps it there).</li>
+    <li>Delete both DO LoadBalancers; close the DO cloud firewall to all inbound (except the Tor ORPort if D17 keeps it there, and the status droplet, whose own firewall is separate and stays 80/443/ICMP — D25).</li>
     <li>Rotate the FiOS lease, only after Phase 9 (otherwise the new address would have to be committed to a public repo). This is the real IP-change drill (<a href="#ipchange">section 11</a>): every tunnel, including the DO link, must come back with no config change.</li>
   </ol>
-  <p class="exit"><strong>Exit:</strong> TCP and UDP scans of the old and new home IP and the DO addresses show nothing open (UDP 51820 indistinguishable from closed; bar a D17 exception); every service works via edges.</p>
+  <p class="exit"><strong>Exit:</strong> TCP and UDP scans of the old and new home IP and the DO addresses show nothing open (UDP 51820 indistinguishable from closed; bar a D17 exception; the status origin's 80/443 are excepted, D25); every service works via edges.</p>
 </details>
 
 <details>
@@ -935,6 +955,7 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
   <thead><tr><th>Surface</th><th>Check</th><th>Pass</th></tr></thead>
   <tbody>
     <tr><td>DNS</td><td>Every record in every zone via a public resolver</td><td>No backend address</td></tr>
+    <tr><td>Status origin</td><td><code>status.2143.me</code> from a public resolver, then a port scan of the droplet's reserved IP</td><td>Resolves to the droplet, never an edge; 80/443/ICMP only with 22 closed; exactly one name, no <code>status-origin</code>; its address is unlike any backend's</td></tr>
     <tr><td>Inbound</td><td>TCP + UDP scan of the old and new home IPv4, the home's public IPv6 addresses, and the DO node and former LoadBalancer addresses</td><td>Nothing open; UDP 51820 indistinguishable from closed (bar a D17 exception)</td></tr>
     <tr><td>Split horizon</td><td>From inside each backend, resolve every public name it serves</td><td>Internal addresses, never an edge</td></tr>
     <tr><td>Home IP at rest</td><td>Search every repo, Secret, DNS zone and firewall rule for the current home address</td><td>Not found (git history before the rotation excepted)</td></tr>
@@ -1013,6 +1034,7 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>A home IP change leaves stale state behind</td><td>Stale CR1000B mapping: connector watchdog. CrowdSec trust entries: removed in Phase 9, before the rotation. DO link: home re-teaches DO on its next keepalive; nothing to update.</td></tr>
     <tr><td>DO's link address doesn't survive a node replacement</td><td>Reserved IP reassigned by a DO-side job; edge rendezvous as fallback; handshake-age alert either way.</td></tr>
     <tr><td>A backend outage shows as a connection error, not a branded page</td><td>D21 (needs input). Until then, a Traefik <code>errors</code> page covers "app down, house up".</td></tr>
+    <tr><td>The status origin is a public, internet-facing machine outside the edges (D25)</td><td>Accepted by design: it exists to report the failures the edges would otherwise hide. Narrow surface — one name, no SSH listener, pull-deploy, strict CSP with no JS, token-gated writes with a 64 KiB cap — and nothing on it is confidential. A flood can take it down; #138 removes the public <code>/metrics</code>.</td></tr>
     <tr><td><span class="pill risk">high</span> headscale is already a path into the whole home LAN (approved subnet routes <code>192.168.5.0/24</code>, <code>192.168.6.0/24</code> on <code>closet</code> and <code>arch</code>), and it is internet-facing by necessity</td><td>D18: operators only, routes narrowed, DO node removed. Longer term, operator access to admin UIs by identity rather than LAN-wide routes (the policy's own warning about <code>192.168.6.11:443</code> says the same).</td></tr>
     <tr><td><span class="pill risk">high</span> Both backends hold <code>*.2143.me</code></td><td>D19; Phase 5.</td></tr>
     <tr><td>Split-horizon failure hairpins internal traffic through edges</td><td>Leak-checklist test from every backend; 650 GB/week of S3 traffic depends on it.</td></tr>
@@ -1072,8 +1094,10 @@ deployments/        one JSON record per deploy: slot, provider, config hash, dig
     <tr><td>2026-10-17</td><td>v5.5: D21 (branded outage page: owner requirement, conflicts with D9, needs input) with a Phase 0 item and a risk row. Board reconciliation: Phase 9's split horizon names LAN DNS stage 2 (#23) as its prerequisite; Mongo 4040, <code>derp-r</code> verification and the DO DNS zones are tracked on #51; #39 (trim public routes) shrinks the first manifest; #25 owns the SOC 2 scope question. Fixed two stale references (D14 keeps the DO link; the CrowdSec whitelist is removed in Phase 9, not updated in Phase 10).</td></tr>
     <tr><td>2026-11-06</td><td>v5.6: provisioning and data plane settled (D22). Section 6 states one VM per slot and why not Cluster API: CAPMOX is Proxmox-only, CAPI has no adoption path for an existing cluster, and a control plane would eat the ≤ 3 min boot budget. Section 7 gains "Why not a provider load balancer or NAT gateway": managed LBs target cloud instances rather than outbound tunnels, SNI routing requires termination, Hetzner has no UDP load balancing, and DigitalOcean's network LBs have no PROXY protocol. Floating/reserved IPs recorded as a same-region replacement optimisation (Hetzner Floating IP, DO Reserved IP, AWS EIP); Phase 0 verifies re-attach timing.</td></tr>
     <tr><td>2026-11-06</td><td>v5.7: slot costs and edge addressing. Added "What a live slot costs": Hetzner Ashburn ≈€18.70 and DigitalOcean NYC ≈$18 per live slot (≈$38–40 for both), address costs (Hetzner €0.60 primary / €3.00 floating; DO free assigned / $5 parked), and why AWS is not a third slot (EC2 egress $0.09/GB ≈ $153 for 1.7 TB; Lightsail $12 cannot boot the Talos image). Added "Why not private-only edges behind one VIP": DO's NAT gateway is egress-only, Hetzner has none, the relay range would need DNAT behind a single hop, and the saving is negative. D23 added; D3 notes idle slots hold no address.</td></tr>
-    <tr><td>2026-11-06</td><td>v5.8: D24 account separation. The edge programme moves to a dedicated GitHub organisation and its own provider credentials, so nothing in the edge accounts can reach a backend, its DNS or its secrets; the home <code>edge-deploy</code> runner is the only bridge. D5 and section 10 no longer name <code>2143-Labs</code>. All edge infrastructure is business-owned: a dedicated GitHub organisation plus new Hetzner and DigitalOcean accounts under 2143 Labs LLC. The personal estate (home k3s, the existing DigitalOcean account with DOKS, the Tor relay and <code>status-1</code>) is unchanged and reaches the edges only as a backend; the home <code>edge-deploy</code> runner holds business-scoped tokens as the single bridge. Open: the organisation name.</td></tr>
-  </tbody>
+    <tr><td>2026-11-06</td><td>v5.8: D24 account separation. The edge programme moves to a dedicated GitHub organisation and its own provider credentials, so nothing in the edge accounts can reach a backend, its DNS or its secrets; the home <code>edge-deploy</code> runner is the only bridge. D5 and section 10 no longer name <code>2143-Labs</code>. All edge infrastructure is business-owned: a dedicated GitHub organisation plus new Hetzner and DigitalOcean accounts under 2143 Labs LLC. The personal estate (home k3s, the existing DigitalOcean account with DOKS, the Tor relay and <code>status-1</code>) is unchanged and reaches the edges only as a backend; the home <code>edge-deploy</code> runner holds business-scoped tokens as the single bridge. Code stays in <code>2143-Labs</code>, so no new org, App or scale set.</td></tr>
+      <tr><td>2026-11-07</td><td>v5.9: ownership correction. The code organisation is not new — <code>edge-tofu</code> stays in <code>2143-Labs</code>. Only the cloud accounts are new and business-owned: a Hetzner account and a DigitalOcean account under 2143 Labs LLC, with business billing and their own scoped tokens. Consequence: no new GitHub App, runner scale set or signing identity; the org-level <code>edge-deploy</code> scale set serves the repo. D5 and section 10 restored to <code>2143-Labs</code>.</td></tr>
+    <tr><td>2026-11-08</td><td>v6.0: the status origin (D25). <code>status.2143.me</code> moved off home on 2026-11-08 onto its own droplet — a public origin with its own TLS, its own SQLite history and exactly one public name, deliberately outside the edge programme so the page survives the failures it reports. Requirements 1 and 7 now name that exception; section 1 records the droplet's surface and the retirement of the home route, its Anubis instance and pite's generator; section 5 gains "public origins" with the invariants that keep it from becoming a hole. Phase 3's first published name becomes a home-served one (<code>au.2143.me</code>), because <code>status.2143.me</code> no longer resolves to home and publishing it to an edge would 502; Phases 9, 10, the leak checklist and the risks table exclude the origin explicitly. Fixed a stale row: TeamSpeak's VIP is <code>.6.15</code> only — <code>.6.16</code>/<code>ts-files</code> was retired.</td></tr>
+</tbody>
 </table>
 
 </main>
