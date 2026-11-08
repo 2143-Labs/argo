@@ -41,6 +41,10 @@ spec:
   minReplicaCount: {{ .Values.authserver.scaleToZero.minReplicas | default 0 }}
   maxReplicaCount: {{ .Values.authserver.scaleToZero.maxReplicas | default 1 }}
   cooldownPeriod: {{ int .Values.authserver.scaleToZero.idleSeconds }}
+  # A new ScaledObject sees no traffic and would scale the pod that just started (and just
+  # took the coordinator's Temporal work) straight to zero; the next /play then stalls on
+  # the dead worker's sticky queue. Hold off for the first 5 minutes.
+  initialCooldownPeriod: 300
   triggers:
     - type: external-push
       metadata:
