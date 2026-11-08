@@ -187,8 +187,9 @@ address.
   zot's retention (section 2).
 - Prod: after a green main build, CI rewrites each image parameter in
   `apps/<app>.yaml` (one `- { name: …, value: … }` line each) and pushes the
-  commit to argo `main` with a write deploy key, which the `main` ruleset lets
-  bypass review. ROTS does this in rots4's `ci-argo-bump.sh` helper (job
+  commit to argo `main` with a write deploy key. The `main` ruleset only blocks
+  force-push and deletion, so no review is needed to land the bump. ROTS does
+  this in rots4's `ci-argo-bump.sh` helper (job
   `deploy`), which also refuses to move prod to a commit that is not ahead of
   the deployed one. Roll back by reverting the bot commit.
 - A private repo keeps that key base64-encoded on one line in OpenBao (so the
