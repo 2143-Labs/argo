@@ -34,13 +34,23 @@ spec:
           <head>
           <meta charset="utf-8">
           <title>ROTS is starting</title>
+          <meta name="theme-color" content="#1a1a1a">
           <meta http-equiv="refresh" content="5">
+          <style>
+          /* #1a1a1a and #cccccc at 24px monospace are the game's home-menu colours and the
+             `loading...` line in web/index.html, so a cold start looks like the game rather
+             than a different site. */
+          html, body { margin: 0; height: 100%; overflow: hidden;
+                       background: #1a1a1a; color-scheme: dark; }
+          body { display: flex; flex-direction: column; gap: .75rem;
+                 align-items: center; justify-content: center; text-align: center;
+                 font-family: ui-monospace, monospace; font-size: 24px; color: #cccccc; }
+          p { margin: 0; font-size: 14px; color: #888; }
+          </style>
           </head>
-          <body style="font:16px system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
-          <div>
-          <h1 style="font-size:1.25rem;margin:0 0 .5rem">ROTS is starting</h1>
-          <p style="margin:0;color:#555">The server is waking up. This page refreshes every 5 seconds.</p>
-          </div>
+          <body>
+          <div>ROTS is starting...</div>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
           </body>
           </html>
   rules:
