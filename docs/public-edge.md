@@ -34,8 +34,7 @@ Per-site statements about a route ("this site must have auth", "this site must n
 
 ## Anubis in front of an app
 
-Anubis is not a gate: it sits behind the route's gate as the backend. Pattern
-(live example: `status.2143.me`):
+Anubis is not a gate: it sits behind the route's gate as the backend. Pattern:
 
 - `workloads/anubis-<app>/`: one Anubis Deployment + Service per app, reverse-proxy
   mode, `TARGET` = the app's Service, `REDIRECT_DOMAINS` = the app's hostnames,
@@ -66,7 +65,7 @@ therefore sets an `openGraph` block in its policy (`POLICY_FNAME`), which prints
 
 - `override` — fixed tags for the whole host, and no backend request at all. Used
   where the backend has no tags of its own and where a fetch would be a load
-  vector anyway: `workloads/anubis-status/policy.yaml`, and `helm_modules/game-edge`
+  vector anyway: `helm_modules/game-edge`
   (one payload per game, rendered from the chart's `embed` values; a fetch there
   would cold-start a scaled-to-zero world, which takes longer than Anubis's 5 s
   budget). Override replaces lookup for every path, so never put it on a host
@@ -98,8 +97,6 @@ page. `rots-web` ships no raster, so its card is a title and a description.
 `files.aross.studio` is the passthrough case: Seafile's share pages carry their
 own tags, and its image is a static icon under `/media/img/`, which is ALLOWed
 (`/media/avatars/` is deliberately not included).
-
-Example: `workloads/anubis-status/`, `workloads/gateway/templates/status-route.yaml`.
 
 ## Not covered
 
