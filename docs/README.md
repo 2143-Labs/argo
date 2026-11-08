@@ -24,7 +24,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 
 ## Records
 
-Files named `YYYY-MM-DD-*.md`, plus `worker-deployment-handoff.md`, record what was done, why, and how it was verified. Do not rewrite them. When one goes stale, add one line directly under its title:
+Files named `YYYY-MM-DD-*.md`, plus `worker-deployment-handoff.md` and `business_plan.md`, record what was done, why, and how it was verified. Do not rewrite them. When one goes stale, add one line directly under its title:
 
 - `> **Superseded <date>.** <what replaced it>. See [guide](guide.md).`
 - `> **Correction <date>:** <the corrected fact>.`
