@@ -37,6 +37,7 @@ spec:
     metadata:
       name: 'dino-pr-{{.number}}'
       labels:
+        2143.me/tracker: game
         edge.2143.me/class: game
       finalizers:
         - resources-finalizer.argocd.argoproj.io

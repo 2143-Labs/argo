@@ -250,6 +250,33 @@ alloy:
       }
 
 
+      // ArgoCD application status for the status-design games tracker. Only the
+      // controller exports argocd_app_info (sync + health per Application); its
+      // Service argocd-metrics:8082 admits ingress from every namespace
+      // (argocd-application-controller-network-policy), so the peer that wins
+      // the hash under clustering can scrape it from whichever node it runs on.
+      // Everything else the controller exports (per-app histograms for 130+
+      // Applications) is dropped before remote write.
+      prometheus.scrape "argocd" {
+        targets         = [{ __address__ = "argocd-metrics.argocd.svc:8082" }]
+        job_name        = "argocd"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.relabel.argocd_app_info.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      prometheus.relabel "argocd_app_info" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "argocd_app_info"
+          action        = "keep"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
+      }
+
+
       // OpenBao server metrics (HTTPS via internal ordinals, public CA)
       prometheus.scrape "openbao" {
         targets = [
