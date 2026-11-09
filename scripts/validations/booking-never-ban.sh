@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The booking hosts must NEVER IP-ban a potential client (workloads/booking).
-# Every rule serving book.2143.me or book.aross.studio is gated by lan-only or
+# The booking host must NEVER IP-ban a potential client (workloads/odoo serves
+# book.aross.studio since 2026-11-09; 2143 Labs takes no bookings, so book.2143.me
+# is gone). Every rule serving book.aross.studio is gated by lan-only or
 # crowdsec-bouncer-appsec-only (AppSec 403s single requests, never consults the
 # ban list), and by no stream-mode bouncer, which would enforce LAPI bans, the
 # CAPI community blocklist and bans earned on other hosts. RequestRedirect rules
@@ -15,7 +16,7 @@ ri_files || fail=1
 ri_require_files
 ri_apps
 
-hosts_re='(^|,)(book[.]2143[.]me|book[.]aross[.]studio)(,|$)'
+hosts_re='(^|,)book[.]aross[.]studio(,|$)'
 declare -A served=()
 n=0
 while IFS=$'\t' read -r file key path hosts refs types; do
@@ -23,7 +24,7 @@ while IFS=$'\t' read -r file key path hosts refs types; do
   [[ "$types" == *,RequestRedirect,* ]] && continue
   n=$((n + 1))
   file=$(ri_src "$file")
-  for h in book.2143.me book.aross.studio; do
+  for h in book.aross.studio; do
     [[ "$hosts" == *,"$h",* ]] && served[$h]=1
   done
   if [[ "$refs" != *,lan-only,* && "$refs" != *,crowdsec-bouncer-appsec-only,* ]]; then
@@ -38,7 +39,7 @@ while IFS=$'\t' read -r file key path hosts refs types; do
   done
 done < <(ri_route_stream)
 
-for h in book.2143.me book.aross.studio; do
+for h in book.aross.studio; do
   if [[ -z "${served[$h]:-}" ]]; then
     echo "::error::no route rule serves $h; refusing to pass"
     fail=1

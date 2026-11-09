@@ -4,6 +4,7 @@
 namespace: ""      # odoo-aross | odoo-labs
 id: ""             # route names odoo-<id>, odoo-<id>-http-to-https (namespace default)
 host: ""           # public hostname; also Odoo's web.base.url
+bookingHost: ""    # extra public hostname serving the booking page, e.g. book.aross.studio
 sectionName: ""    # shared-gateway listener whose wildcard certificate covers host
 mailFrom: ""       # sender; must be @m.2143.me, the only TEM-verified domain
 companyName: ""    # written on first init only; edit later in Odoo
@@ -12,7 +13,7 @@ filestoreSize: ""  # odoo-filestore PVC size
 oidc: false        # true once OpenBao john2143-com/<namespace>/oidc exists (docs/odoo.md)
 
 # Built by .github/workflows/odoo-image.yml from workloads/odoo/image.
-image: ghcr.io/2143-labs/odoo:sha-8c303da25fbcc771dbe6d617684689a8013d0d95
+image: ghcr.io/2143-labs/odoo:sha-4e64d198d33fe54c8c4f4e3692147df8a5923a70
 db:
   instances: 2
   size: 10Gi
@@ -99,3 +100,7 @@ modules:
   - mass_mailing_sms
   - website_sale_wishlist
   - website_sale_comparison
+  # Authorize.net alongside Stripe and PayPal (added 2026-11-09).
+  - payment_authorize
+  # In-repo addon: workloads/odoo/image/addons/booking_public (public /book page)
+  - booking_public

@@ -21,6 +21,86 @@ odoo-db-app (username, password) for the bootstrap owner.
       key: password
 {{- end }}
 
+{{/*
+The three rules of one Odoo host. Argument: dict "bouncer" (the CrowdSec
+middleware gating the public rules: "crowdsec-bouncer", which IP-bans, for the
+back office, or "crowdsec-bouncer-appsec-only", which never IP-bans a client,
+for the booking host; scripts/validations/booking-never-ban.sh requires the
+latter on book.*) and "ns" (the namespace holding the Service).
+*/}}
+{{- define "odoo.routeRules" -}}
+rules:
+  # Rule 1: LAN and tailnet only.
+  - matches:
+      - path: { type: PathPrefix, value: /web/database }
+      - path: { type: PathPrefix, value: /xmlrpc }
+      - path: { type: PathPrefix, value: /jsonrpc }
+    filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: lan-only
+    backendRefs:
+      - name: odoo
+        namespace: {{ required "namespace is required" .ns }}
+        port: 80
+  # Rule 2: public, arbitrary bodies.
+  - matches:
+      - path: { type: PathPrefix, value: /web/dataset }
+      - path: { type: PathPrefix, value: /web/action }
+      - path: { type: PathPrefix, value: /web/binary }
+      - path: { type: PathPrefix, value: /mail }
+      - path: { type: PathPrefix, value: /discuss }
+      - path: { type: PathPrefix, value: /im_livechat }
+      - path: { type: PathPrefix, value: /html_editor }
+      - path: { type: PathPrefix, value: /web_editor }
+      - path: { type: PathPrefix, value: /websocket }
+    filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: public-rate-limit
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: public-inflight-limit
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: {{ .bouncer }}
+    backendRefs:
+      - name: odoo
+        namespace: {{ .ns }}
+        port: 80
+  # Rule 3: public, everything else.
+  - matches:
+      - path: { type: PathPrefix, value: / }
+    filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: public-rate-limit
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: public-inflight-limit
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: {{ .bouncer }}
+    backendRefs:
+      - name: odoo
+        namespace: {{ .ns }}
+        port: 80
+{{- end }}
+
 {{/* Changes only with the image: odoo-init runs `-u all` when it does. */}}
 {{- define "odoo.imageHash" -}}
 {{ .Values.image | sha256sum | trunc 16 }}

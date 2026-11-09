@@ -1,4 +1,5 @@
-# Booking hosts (book.2143.me, book.aross.studio; workloads/booking). Booking
+# Booking host (book.aross.studio; in-repo booking_public addon on workloads/odoo
+# since 2026-11-09, previously Easy!Appointments). Booking
 # visitors must never be flagged: a ban would not block them on these routes
 # (crowdsec-bouncer-appsec-only never consults decisions), but it would lock
 # them out of John's other hosts and be reported to the CrowdSec community.
@@ -13,9 +14,11 @@
 # crawling and probing: shop pages fetch many extension-less /web/image/...
 # thumbnails, the back office makes many /web/dataset/call_kw calls, and
 # missing product images 404. Neither is an attack, so the same two scenarios
-# are off for them. Unlike the booking hosts, the Odoo routes DO enforce bans
+# are off for them. Unlike the booking host, o.* routes DO enforce bans
 # (crowdsec-bouncer / crowdsec-bouncer-noappsec): exploit-signature scenarios
-# and AppSec on the class-A rule still ban malicious clients.
+# and AppSec on the class-A rule still ban malicious clients there.
+# book.aross.studio is now one of these Odoo hosts but keeps its own route on
+# crowdsec-bouncer-appsec-only, so a customer there is never IP-banned.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,7 +28,7 @@ data:
   booking-hosts.yaml: |
     name: john2143/booking-hosts
     description: "Booking and Odoo hosts: no request counts as crawling or probing"
-    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^book[.]2143[.]me$|^book[.]aross[.]studio$|^o[.]2143[.]me$|^o[.]aross[.]studio$'"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^book[.]aross[.]studio$|^o[.]2143[.]me$|^o[.]aross[.]studio$'"
     statics:
       - parsed: static_ressource
         value: "true"

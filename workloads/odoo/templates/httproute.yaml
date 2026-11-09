@@ -1,23 +1,32 @@
-# Both routes live in namespace default: the wildcard listeners admit only
-# default, and Traefik Middlewares are namespace-local. templates/referencegrant.yaml
-# lets them reach the odoo Service. Keep `kind: HTTPRoute` at column 0 in this
-# file: scripts/lib/inventory.sh renders a chart for CI only when a template has it.
+# Both routes (three with a booking host) live in namespace default: the wildcard
+# listeners admit only default, and Traefik Middlewares are namespace-local.
+# templates/referencegrant.yaml lets them reach the odoo Service. Keep
+# `kind: HTTPRoute` at column 0 in this file: scripts/lib/inventory.sh renders a
+# chart for CI only when a template has it.
 #
 # These are ordinary public sites: shared rate limits on every public rule, and
 # CrowdSec bans only malicious traffic (John, 2026-11-08). docs/public-edge.md.
 #   Rule 1 (LAN and John's tailnet only): the database manager (also disabled by
 #     list_db = False) and the external XML-RPC/JSON-RPC APIs.
-#   Rule 2 (class B, crowdsec-bouncer-noappsec): paths that carry arbitrary
-#     request bodies - every back-office write (HTML fields, website-builder
-#     saves), chatter and portal messages, live chat, attachment and photo
-#     uploads. AppSec body inspection misreads those and would ban the sender
-#     ("Class B, not A, for machine traffic"); IP-reputation bans still apply.
+#   Rule 2 (public, arbitrary bodies): paths that carry every back-office write
+#     (HTML fields, website-builder saves), chatter and portal messages, live
+#     chat, attachment and photo uploads. AppSec body inspection misreads those
+#     and would ban the sender ("Class B, not A, for machine traffic").
 #     Prefixes read on Odoo 18.0 in addons/web/controllers/{dataset,action,binary}.py,
 #     addons/mail/controllers/{thread,attachment}.py, mail/controllers/discuss/channel.py,
 #     im_livechat/controllers/main.py, html_editor/controllers/main.py,
 #     web_editor/controllers/main.py and bus/controllers/websocket.py.
-#   Rule 3 (class A, crowdsec-bouncer): everything else.
+#   Rule 3 (public): everything else.
 # Traefik ranks longer PathPrefixes above "/", so rules 1 and 2 win over rule 3.
+#
+# The back office host bans by reputation (crowdsec-bouncer on rules 2 and 3,
+# the latter with AppSec too). The booking host does not: it exists to serve
+# customers filling in a form, so every rule there uses
+# crowdsec-bouncer-appsec-only, which 403s the one request that trips an AppSec
+# rule and never consults the ban list, the CAPI blocklist or bans earned on
+# other hosts (scripts/validations/booking-never-ban.sh enforces it). That is
+# why the booking host gets its own HTTPRoute: Gateway API filters cannot vary
+# by hostname within one rule.
 # The Odoo hosts are also in the CrowdSec agent's heuristic exemption
 # (workloads/crowdsec-agent/agent-booking-hosts.yaml): normal use looks like
 # crawling (/web/image thumbnails, /web/dataset calls) and must not ban.
@@ -32,76 +41,23 @@ spec:
       sectionName: {{ required "sectionName is required" .Values.sectionName }}
   hostnames:
     - {{ required "host is required" .Values.host }}
-  rules:
-    # Rule 1: LAN and tailnet only.
-    - matches:
-        - path: { type: PathPrefix, value: /web/database }
-        - path: { type: PathPrefix, value: /xmlrpc }
-        - path: { type: PathPrefix, value: /jsonrpc }
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: lan-only
-      backendRefs:
-        - name: odoo
-          namespace: {{ required "namespace is required" .Values.namespace }}
-          port: 80
-    # Rule 2: public, class B (arbitrary bodies; no AppSec).
-    - matches:
-        - path: { type: PathPrefix, value: /web/dataset }
-        - path: { type: PathPrefix, value: /web/action }
-        - path: { type: PathPrefix, value: /web/binary }
-        - path: { type: PathPrefix, value: /mail }
-        - path: { type: PathPrefix, value: /discuss }
-        - path: { type: PathPrefix, value: /im_livechat }
-        - path: { type: PathPrefix, value: /html_editor }
-        - path: { type: PathPrefix, value: /web_editor }
-        - path: { type: PathPrefix, value: /websocket }
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer-noappsec
-      backendRefs:
-        - name: odoo
-          namespace: {{ .Values.namespace }}
-          port: 80
-    # Rule 3: public, class A.
-    - matches:
-        - path: { type: PathPrefix, value: / }
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-rate-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: public-inflight-limit
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-      backendRefs:
-        - name: odoo
-          namespace: {{ .Values.namespace }}
-          port: 80
+  {{- include "odoo.routeRules" (dict "bouncer" "crowdsec-bouncer" "ns" .Values.namespace) | nindent 2 }}
+{{- if .Values.bookingHost }}
+---
+# The public booking page: no IP bans, ever (see the header).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: odoo-{{ .Values.id }}-booking
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: {{ .Values.sectionName }}
+  hostnames:
+    - {{ .Values.bookingHost }}
+  {{- include "odoo.routeRules" (dict "bouncer" "crowdsec-bouncer-appsec-only" "ns" .Values.namespace) | nindent 2 }}
+{{- end }}
 ---
 # http:// -> https:// for this host, separate from john2143-http-to-https, which
 # is at the Gateway API cap of 16 hostnames per HTTPRoute.
@@ -116,6 +72,9 @@ spec:
       sectionName: acme-http
   hostnames:
     - {{ .Values.host }}
+    {{- if .Values.bookingHost }}
+    - {{ .Values.bookingHost }}
+    {{- end }}
   rules:
     - matches:
         - path:

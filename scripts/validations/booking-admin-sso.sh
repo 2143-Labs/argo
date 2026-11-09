@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# The booking admin paths (everything on book.2143.me / book.aross.studio except
-# the public booking paths) must be gated twice: lan-only, and - when the
+# The Easy!Appointments admin paths (everything on book.aross.studio except the
+# public booking paths) must be gated twice: lan-only, and - when the
 # Application sets sso true - a Pocket ID session for group "booking" checked by
-# booking-oauth2-proxy. Losing either gate silently reopens the admin surface,
+# booking-oauth2-proxy. Easy!Appointments was retired on 2026-11-09 (no data
+# existed) and book.aross.studio now serves Odoo's booking page, so this file
+# has nothing to check until a restore adds an Application for
+# workloads/booking again; the loop below then applies unchanged. Losing either gate silently reopens the admin surface,
 # so this is an imperative check: policies/edge.yaml cannot express it, because
 # its `auth:` assertions cover every rule of the host and the public booking
 # rule must stay unauthenticated.
@@ -54,6 +57,9 @@ done < <(
   done
 )
 
-[[ "$n" -gt 0 ]] || { echo "::error::scanned 0 booking applications; refusing to pass"; exit 1; }
+# Deliberately not an error while Easy!Appointments is retired: the surface
+# this guards does not exist. Re-adding an Application for workloads/booking
+# brings the checks back automatically.
+[[ "$n" -gt 0 ]] || { echo "booking admin sso: no workloads/booking application, nothing to check"; exit 0; }
 [[ "$fail" -eq 0 ]] || exit 1
 echo "booking admin sso OK: $n apps"

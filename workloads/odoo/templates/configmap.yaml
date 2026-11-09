@@ -10,7 +10,7 @@ data:
   # (odoo/service/server.py) and runs the cron thread.
   odoo.conf: |
     [options]
-    addons_path = /opt/oca/addons
+    addons_path = /opt/oca/addons,/opt/aross/addons
     data_dir = /var/lib/odoo
     db_name = odoo
     dbfilter = ^odoo$

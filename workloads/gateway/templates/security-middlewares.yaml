@@ -166,7 +166,7 @@ spec:
         - fd00::/8
         - fe80::/10
 ---
-# Booking hosts (workloads/booking: book.2143.me, book.aross.studio) must NEVER
+# The booking host (book.aross.studio, workloads/odoo) must NEVER
 # IP-ban a potential client. crowdsecMode: appsec skips the decision stream
 # entirely: no LAPI bans, no CAPI community blocklist, no ban earned on another
 # host. It 403s only the one request that matches an in-band AppSec rule

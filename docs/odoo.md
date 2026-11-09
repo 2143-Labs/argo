@@ -1,6 +1,6 @@
 # Odoo (o.aross.studio, o.2143.me)
 
-One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (aross.studio, namespace `odoo-aross`) and `https://o.2143.me` (2143 Labs LLC, namespace `odoo-labs`). Each is one always-on pod, `strategy: Recreate`, with its own CNPG Postgres (`odoo-db`), its own filestore PVC (`odoo-filestore`), its own admin and users. Both start on OCA's US GAAP chart of accounts (`l10n_us_gaap`, template `us_gaap`).
+One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (aross.studio, namespace `odoo-aross`, also `https://book.aross.studio` for the public booking page) and `https://o.2143.me` (2143 Labs LLC, namespace `odoo-labs`). Each is one always-on pod, `strategy: Recreate`, with its own CNPG Postgres (`odoo-db`), its own filestore PVC (`odoo-filestore`), its own admin and users. Both start on OCA's US GAAP chart of accounts (`l10n_us_gaap`, template `us_gaap`).
 
 **No scheduled database backup exists** (deferred 2026-11-08). The filestore PVC is in the nightly Longhorn backup to the NAS; Postgres is not. Enter no real books until a database backup exists, and take the manual dump below before every change.
 
@@ -58,6 +58,24 @@ If `odoo-init` crash-loops during `-u all`, revert the `image` bump. If the old 
 
 Odoo supports 18.0 until about late 2027. The move to 19.0 goes through OpenUpgrade and is its own project; the OCA US modules (`OCA/l10n-usa`) exist only on 18.0 today.
 
+## Public booking page
+
+`https://book.aross.studio/book` is the in-repo addon `booking_public` (`workloads/odoo/image/addons/booking_public`, copied to `/opt/aross/addons` by the image and listed in `modules`). It is the public front door on top of OCA `resource_booking`; only the aross.studio instance has a `bookingHost`, because 2143 Labs takes no bookings.
+
+Publishing a service is done in the booking type (Resource bookings → Booking types → *Public page* tab):
+
+- **Show on the public booking page** publishes it at `/book`; *Public description* is rendered above the time picker.
+- **Days shown ahead** (default 60) bounds the horizon. `modifications_deadline` also applies, so with the usual 24 hours nobody can book for today.
+- **Service product** is invoiced when a customer books and is the base of a percentage deposit.
+- **Deposit**: none, a fixed amount, or a percentage. It becomes a confirmed sale order and a posted invoice for the deposit; the slot is held before payment, so an unpaid deposit does not free the time.
+- The type needs at least one **resource combination** holding the person doing the work, and that person's resource needs their working calendar. The type's availability calendar bounds the hours offered.
+
+A customer gives a name and a valid email and nothing else. The booking is created in state Confirmed with a `calendar.event` at the chosen time, the employee is the event organizer, and the calendar invitation goes out. With a deposit and an enabled payment provider the customer is sent to the invoice's payment page; otherwise to `/my/bookings/<id>?access_token=…`. Times are shown in the type's availability-calendar timezone and submitted as UTC, so the visitor's clock is irrelevant.
+
+The page is anonymous, so abuse control is the edge's: the booking host is an ordinary public host with `public-rate-limit`, `public-inflight-limit` and the three CrowdSec rules described under Edge. There is no captcha. If spam bookings appear, add a honeypot field before adding one.
+
+Easy!Appointments is retired: `apps/book-aross.yaml` and `apps/book-2143.yaml` are deleted and the `book-aross`/`book-2143` namespaces are gone. It had never been installed (no `ea_appointments` table in either MariaDB), so no booking, service or customer data was lost. The chart stays in `workloads/booking` for a restore if it is ever wanted again.
+
 ## Staff
 
 Two gates decide access:
@@ -84,11 +102,13 @@ bao kv put -mount=consumers john2143-com/<namespace>/odoo-admin @"$f"; shred -u 
 
 ## Edge
 
-`workloads/odoo/templates/httproute.yaml` has three rules on each host:
+`workloads/odoo/templates/httproute.yaml` has three rules on each host (`odoo.routeRules` in `templates/_helpers.tpl`):
 
-- `/web/database`, `/xmlrpc`, `/jsonrpc`: `lan-only` (home LAN and John's tailnet).
-- Paths that carry arbitrary request bodies (back-office writes, chatter, live chat, uploads, website editor, websocket): rate limits plus `crowdsec-bouncer-noappsec`. IP bans apply; AppSec body inspection does not.
-- Everything else: rate limits plus `crowdsec-bouncer` (AppSec and IP bans).
+- `/web/database`, `/xmlrpc`, `/jsonrpc`: `lan-only` (home LAN and John's tailnet), on every host.
+- Paths that carry arbitrary request bodies (back-office writes, chatter, live chat, uploads, website editor, websocket): rate limits plus the host's CrowdSec bouncer.
+- Everything else: rate limits plus the host's CrowdSec bouncer.
+
+The bouncer differs by host, which is why `book.aross.studio` has its own HTTPRoute (`odoo-<id>-booking`): on `o.*` it is `crowdsec-bouncer` (or `crowdsec-bouncer-noappsec` for bodies), which enforces IP bans; on the booking host it is `crowdsec-bouncer-appsec-only`, which 403s the single request that trips an AppSec rule and never consults the ban list, the community blocklist or bans earned on other hosts. A customer filling in the booking form must never be locked out of everything else (`scripts/validations/booking-never-ban.sh`). Both hostnames serve the same Odoo, so the back office is reachable on the booking host too — behind the same login, with `/web/database` and the XML-RPC APIs still LAN-only.
 
 `workloads/crowdsec-agent/agent-booking-hosts.yaml` switches off the crawl and probing scenarios for these hosts, because normal shop and back-office use looks like both.
 
