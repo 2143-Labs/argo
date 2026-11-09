@@ -9,9 +9,23 @@ USER root
 # account_statement_import_ofx (ofxparse), delivery_easypost_oca (easypost==7.15.0).
 # packaging: Odoo needs it to parse a versioned dependency such as easypost==7.15.0
 # (odoo/modules/module.py, 18.0); without it the module install fails.
+# caldav: the booking_public addon's two-way iCloud bridge (models/caldav_sync.py);
+# iCloud answers UID searches with 412, which caldav 3.x works around
+# (python-caldav issue #783). It is installed --no-deps with its dependencies
+# spelled out, because its declared dependency niquests installs urllib3-future,
+# which shadows the system urllib3 in /usr/local/lib/python3.12/dist-packages and
+# drops urllib3.contrib.pyopenssl.PyOpenSSLContext. Odoo's
+# base/models/ir_mail_server.py imports exactly that at load time, so with
+# niquests present Odoo does not start at all. Without niquests caldav falls back
+# to requests (caldav/lib/http_sync.py). The PyOpenSSLContext check below fails
+# the build if that ever changes again.
 RUN pip3 install --no-cache-dir --break-system-packages \
       python-jose==3.5.0 cssselect==1.6.0 ofxparse==0.21 easypost==7.15.0 packaging==26.3 \
- && python3 -c 'import jose, cssselect, ofxparse, easypost, packaging'
+      icalendar==7.3.0 recurring-ical-events==3.8.2 icalendar-searcher==1.3.0 \
+      calendaring-config==0.5.0 dnspython==2.9.2 \
+ && pip3 install --no-cache-dir --break-system-packages --no-deps caldav==3.7.0 \
+ && python3 -c 'import jose, cssselect, ofxparse, easypost, packaging, caldav, icalendar, recurring_ical_events' \
+ && python3 -c 'from urllib3.contrib.pyopenssl import PyOpenSSLContext'
 COPY oca-repos.txt /tmp/oca-repos.txt
 # One flat addons dir of symlinks: `ln -s` fails the build if two repos ship the same module name.
 RUN mkdir -p /opt/oca/src /opt/oca/addons \

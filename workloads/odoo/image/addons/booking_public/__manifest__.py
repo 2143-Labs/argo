@@ -8,6 +8,8 @@
     "data": [
         "views/resource_booking_type_views.xml",
         "views/templates.xml",
+        "views/resource_resource_views.xml",
+        "data/ir_cron.xml",
     ],
     "installable": True,
     "application": False,

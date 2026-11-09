@@ -8,3 +8,9 @@ class ResourceBooking(models.Model):
     deposit_invoice_id = fields.Many2one(
         "account.move", "Deposit invoice", copy=False, index=True
     )
+    caldav_uid = fields.Char(
+        "iCloud UID",
+        copy=False,
+        index=True,
+        help="UID of the iCloud event this booking was written to, while it exists.",
+    )
