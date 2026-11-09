@@ -2,12 +2,13 @@
 
 The games page on `status.john2143.com` (`games.html`) shows one card per
 2143-Labs game with its environments, replicas, ROTS fleet size and every open
-PR with its preview environment. This repository supplies three of its inputs:
-ArgoCD sync/health metrics, the label that marks an Application as a game, and
-the read-only GitHub token the gallery's chart renders. The game list, the feed
+PR with its preview environment. This repository supplies four of its inputs:
+ArgoCD sync/health metrics, the kube-state-metrics scrape behind the replica and
+namespace counts, the label that marks an Application as a game, and the
+read-only GitHub token the gallery's chart renders. The game list, the feed
 producer and the page all live in **2143-Labs/status**.
 
-## 1. ArgoCD status in Mimir
+## 1. Metrics in Mimir: ArgoCD status and replica counts
 
 `workloads/alloy/values-prod.yaml` scrapes `argocd-metrics.argocd.svc:8082`
 every 3 s as job `argocd`, then keeps only `argocd_app_info` before remote
@@ -32,12 +33,59 @@ If a card's sync/health stays blank, the metric is missing — the feed treats i
 as advisory and falls back to replica-derived state, so nothing breaks. Check
 the job in Grafana (`{job="argocd"}`) before touching the feed.
 
-Validate the Alloy config before pushing a change to it; a bad config stops
-metrics and logs on every node:
+Validate the Alloy config before pushing a change to it. A rejected config keeps
+the previous one running, so the cluster still looks healthy (`Synced`) and only
+the Alloy logs say otherwise:
 
 ```fish
 yq -r '.alloy.configMap.content' workloads/alloy/values-prod.yaml > /tmp/alloy.alloy
 nix run nixpkgs#grafana-alloy -- validate /tmp/alloy.alloy
+```
+
+`validate` parses and decodes the file but does not build the components, so
+per-argument constraints pass it. The one that bites: Prometheus rejects
+`scrape_timeout` > `scrape_interval`, and Alloy's default timeout is 10 s — a
+`scrape_interval = "3s"` alone fails the reload with `scrape_timeout (10s)
+greater than scrape_interval (3s)`. Check every scrape block:
+
+```fish
+python3 - /tmp/alloy.alloy <<'EOF'
+import re, sys
+src = open(sys.argv[1]).read()
+for name, body in re.findall(r'prometheus\.scrape\s+"([^"]+)"\s*\{(.*?)\n\s*\}', src, re.S):
+    def dur(key, default):
+        m = re.search(rf'{key}\s*=\s*"(\d+)s"', body)
+        return int(m.group(1)) if m else default
+    interval, timeout = dur("scrape_interval", 60), dur("scrape_timeout", 10)
+    print(f"{name:16s} {interval:>3}s / {timeout:>3}s", "" if timeout <= interval else "<-- invalid")
+EOF
+
+# after the sync: the only place a rejected config is visible
+kubectl -n observability logs -l app.kubernetes.io/name=alloy --tail=50 \
+  | grep -i 'failed to evaluate\|failed to reload'
+```
+
+### Replica counts: the filtered exporter and the 3 s scrape
+
+Replicas and preview namespaces reach the page in ~3 s, which the 30 s full
+gather cannot support — it covers 27 resource types and returns ~4.1 MB. So
+`workloads/kube-state-metrics-fast/` runs a second kube-state-metrics restricted
+to `--resources=deployments,statefulsets,namespaces` (2,920 samples / 336 KB per
+gather, ~7m CPU), Alloy scrapes it every 3 s in `prometheus.scrape "ksm_fast"`,
+and the 30 s scrape drops those families in `prometheus.relabel "ksm_slow"`. No
+series is reported by both jobs; the fast job keeps `job_name =
+"kube-state-metrics"` so every existing query and dashboard still matches.
+
+Two details are load-bearing. Its own namespace keeps it invisible to
+`discovery.kubernetes "ksm"`, which is scoped to `kube-state-metrics` — the two
+exporters never scrape each other. Its pod declares two ports (the chart shape),
+so `discovery.relabel "ksm_fast_port"` keeps only 8080.
+
+```fish
+# age of the newest deployment sample in seconds: <= ~4 when the fast path is live
+curl -sG http://192.168.6.23:8080/prometheus/api/v1/query \
+  --data-urlencode 'query=time() - timestamp(kube_deployment_spec_replicas)' \
+  | jq -r '.data.result[0].value[1]'
 ```
 
 ## 2. The `2143.me/tracker: game` label
@@ -111,6 +159,11 @@ needed.
   `curl -s https://status.john2143.com/games-live.json | jq .github` — it carries
   the reason (`no token`, or `<repo>: 401/403/404`). A 403 across all repos is
   almost always the pending org approval.
+- **Replica counts frozen or blank.** The fast exporter is the only source for
+  `kube_deployment_*`, `kube_statefulset_*` and `kube_namespace_*`, so a stopped
+  pod reads as no data rather than as stale values. In order:
+  `kubectl -n kube-state-metrics-fast get pods`, the age query above, and
+  `kubectl -n observability logs -l app.kubernetes.io/name=alloy --tail=50 | grep ksm_fast`.
 - **Feed not advancing.** `kubectl -n status-design logs deploy/status-design -c games`
   shows only failures; a Mimir outage makes the producer exit 2 and the sidecar
   keeps the last good file.
