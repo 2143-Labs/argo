@@ -1,0 +1,176 @@
+# One always-on Odoo pod (John, 2026-11-08). Recreate: the filestore is RWO and
+# threaded mode is a single process, so an image or module change takes the site
+# down while odoo-init runs (minutes with `-u all`). Push those outside business
+# hours. docs/odoo.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: odoo
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  # The first init installs about 200 modules.
+  progressDeadlineSeconds: 3600
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: odoo
+  template:
+    metadata:
+      labels:
+        app: odoo
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      # The entrypoint reads DB_PORT_5432_TCP_* service-link variables.
+      enableServiceLinks: false
+      affinity:
+        {{- include "odoo.affinity" . | nindent 8 }}
+      initContainers:
+        # Non-recursive chown, so files Odoo creates stay owned by odoo. By name:
+        # the image's odoo UID is assigned by the deb postinst.
+        - name: volume-owner
+          image: {{ .Values.image }}
+          command: ["chown", "odoo:odoo", "/var/lib/odoo"]
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: filestore
+              mountPath: /var/lib/odoo
+        # Installs and updates modules when INIT_HASH changed (files/init.sh).
+        - name: odoo-init
+          image: {{ .Values.image }}
+          command: ["/bin/bash", "/opt/odoo-scripts/init.sh"]
+          env:
+            {{- include "odoo.dbEnv" . | nindent 12 }}
+            - name: INIT_HASH
+              value: {{ include "odoo.initHash" . | quote }}
+            - name: IMAGE_HASH
+              value: {{ include "odoo.imageHash" . | quote }}
+            - name: ODOO_MODULES
+              value: {{ join "," .Values.modules | quote }}
+            - name: ODOO_HOST
+              value: {{ required "host is required" .Values.host | quote }}
+            - name: ODOO_COMPANY_NAME
+              value: {{ required "companyName is required" .Values.companyName | quote }}
+            - name: ODOO_COMPANY_STATE
+              value: {{ required "companyState is required" .Values.companyState | quote }}
+            - name: ODOO_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-admin
+                  key: ODOO_ADMIN_PASSWORD
+            {{- if .Values.oidc }}
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-oidc
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-oidc
+                  key: OIDC_CLIENT_SECRET
+            {{- end }}
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+          # No runAsNonRoot: the image's USER odoo is non-numeric, and the kubelet
+          # rejects runAsNonRoot with a named user.
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: filestore
+              mountPath: /var/lib/odoo
+            - name: config
+              mountPath: /etc/odoo/odoo.conf
+              subPath: odoo.conf
+            - name: scripts
+              mountPath: /opt/odoo-scripts
+      containers:
+        - name: odoo
+          image: {{ .Values.image }}
+          args: ["odoo", "--smtp-user=$(SMTP_USER)", "--smtp-password=$(SMTP_PASSWORD)"]
+          env:
+            {{- include "odoo.dbEnv" . | nindent 12 }}
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: tem-smtp
+                  key: TEM_USERNAME
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tem-smtp
+                  key: API_SECRET_KEY
+          ports:
+            - name: http
+              containerPort: 8069
+              protocol: TCP
+          # /web/health is auth='none' and opens no session (addons/web/controllers/home.py).
+          readinessProbe:
+            httpGet:
+              path: /web/health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /web/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: filestore
+              mountPath: /var/lib/odoo
+            - name: config
+              mountPath: /etc/odoo/odoo.conf
+              subPath: odoo.conf
+      volumes:
+        - name: filestore
+          persistentVolumeClaim:
+            claimName: odoo-filestore
+        - name: config
+          configMap:
+            name: odoo-config
+        - name: scripts
+          configMap:
+            name: odoo-scripts
+            defaultMode: 0555

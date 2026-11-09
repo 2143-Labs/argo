@@ -8,6 +8,14 @@
 # apply. No flood scenario: the routes' rate and in-flight limits are the
 # backstop. The mounted file name must sort after http-logs.yaml: s02 parsers
 # run in file-name order.
+#
+# Odoo hosts (o.2143.me, o.aross.studio; workloads/odoo). Normal use looks like
+# crawling and probing: shop pages fetch many extension-less /web/image/...
+# thumbnails, the back office makes many /web/dataset/call_kw calls, and
+# missing product images 404. Neither is an attack, so the same two scenarios
+# are off for them. Unlike the booking hosts, the Odoo routes DO enforce bans
+# (crowdsec-bouncer / crowdsec-bouncer-noappsec): exploit-signature scenarios
+# and AppSec on the class-A rule still ban malicious clients.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,8 +24,8 @@ metadata:
 data:
   booking-hosts.yaml: |
     name: john2143/booking-hosts
-    description: "Booking hosts: no request counts as crawling or probing"
-    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^book[.]2143[.]me$|^book[.]aross[.]studio$'"
+    description: "Booking and Odoo hosts: no request counts as crawling or probing"
+    filter: "evt.Meta.service == 'http' && evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Meta.target_fqdn matches '^book[.]2143[.]me$|^book[.]aross[.]studio$|^o[.]2143[.]me$|^o[.]aross[.]studio$'"
     statics:
       - parsed: static_ressource
         value: "true"

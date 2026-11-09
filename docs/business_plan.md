@@ -1,4 +1,5 @@
 # Business platform: research and decisions (2026-11-07)
+> **Correction 2026-11-08:** OCA US localisation exists on 18.0 only (OCA/l10n-usa 18.0), and the instances run at o.aross.studio / o.2143.me under the existing wildcard listeners, so no listeners were added. See [Odoo](odoo.md).
 
 Running record of the 2026-11-07 evaluation of self-hosted business software (booking, HR,
 payroll, e-signature, store, subscriptions, accounting). Terse by design: the big ideas and

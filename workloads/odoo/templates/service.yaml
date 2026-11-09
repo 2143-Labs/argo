@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    app: odoo
+spec:
+  type: ClusterIP
+  selector:
+    app: odoo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-config
+  namespace: {{ required "namespace is required" .Values.namespace }}
+data:
+  # Odoo always adds its own core addons path to addons_path. The SMTP user and
+  # password come from Secret tem-smtp on the command line (templates/deployment.yaml).
+  # workers = 0 is threaded mode: one process serves HTTP and /websocket on 8069
+  # (odoo/service/server.py) and runs the cron thread.
+  odoo.conf: |
+    [options]
+    addons_path = /opt/oca/addons
+    data_dir = /var/lib/odoo
+    db_name = odoo
+    dbfilter = ^odoo$
+    ; list_db = False also disables every /web/database/* operation (odoo/service/db.py:48
+    ; check_db_management_enabled), so the master password is never consulted.
+    list_db = False
+    proxy_mode = True
+    workers = 0
+    max_cron_threads = 1
+    db_maxconn = 32
+    http_port = 8069
+    smtp_server = smtp.tem.scaleway.com
+    smtp_port = 587
+    ; smtp_ssl means STARTTLS (odoo/addons/base/models/ir_mail_server.py:441-442)
+    smtp_ssl = True
+    email_from = {{ required "mailFrom is required" .Values.mailFrom }}
+    ; Mail whose From is outside m.2143.me is rewritten to "<Name>" <email_from> (ir_mail_server.py:678-686)
+    from_filter = m.2143.me
+    log_level = info
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-scripts
+  namespace: {{ .Values.namespace }}
+data:
+  init.sh: |
+{{ .Files.Get "files/init.sh" | indent 4 }}
+  company.py: |
+{{ .Files.Get "files/company.py" | indent 4 }}
+  chart.py: |
+{{ .Files.Get "files/chart.py" | indent 4 }}
+  setup.py: |
+{{ .Files.Get "files/setup.py" | indent 4 }}

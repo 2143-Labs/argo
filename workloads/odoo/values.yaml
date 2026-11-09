@@ -1,0 +1,94 @@
+# Per-instance values come from helm.parameters in apps/odoo-*.yaml.
+# Comma-bearing values must live here, never in apps/: Argo and the CI inventory
+# pass helm.parameters as --set, which splits on commas.
+namespace: ""      # odoo-aross | odoo-labs
+id: ""             # route names odoo-<id>, odoo-<id>-http-to-https (namespace default)
+host: ""           # public hostname; also Odoo's web.base.url
+sectionName: ""    # shared-gateway listener whose wildcard certificate covers host
+mailFrom: ""       # sender; must be @m.2143.me, the only TEM-verified domain
+companyName: ""    # written on first init only; edit later in Odoo
+companyState: ""   # US state code of the company, first init only
+filestoreSize: ""  # odoo-filestore PVC size
+oidc: false        # true once OpenBao john2143-com/<namespace>/oidc exists (docs/odoo.md)
+
+# Built by .github/workflows/odoo-image.yml from workloads/odoo/image.
+image: ghcr.io/2143-labs/odoo:sha-8c303da25fbcc771dbe6d617684689a8013d0d95
+db:
+  instances: 2
+  size: 10Gi
+  walSize: 4Gi
+# Installed with -i on every init (already-installed modules are skipped); Odoo
+# resolves dependencies. Removing a name does not uninstall it: uninstall in Odoo first.
+modules:
+  # Odoo Community 18.0 (free)
+  - calendar
+  - contacts
+  - crm
+  - sale_management
+  - sale_project
+  - sale_timesheet
+  - purchase
+  - point_of_sale
+  - pos_restaurant
+  - stock
+  - mrp
+  - repair
+  - maintenance
+  - project
+  - project_todo
+  - hr
+  - hr_contract
+  - hr_holidays
+  - hr_attendance
+  - hr_recruitment
+  - hr_skills
+  - hr_expense
+  - hr_timesheet
+  - hr_work_entry
+  - hr_homeworking
+  - fleet
+  - lunch
+  - account
+  - l10n_us
+  - website
+  - website_sale
+  - payment_stripe
+  - website_blog
+  - website_forum
+  - website_event
+  - website_slides
+  - website_livechat
+  - survey
+  - mass_mailing
+  - sms
+  - delivery
+  - auth_oauth
+  # OCA replacements for Enterprise apps (image: workloads/odoo/image/oca-repos.txt)
+  - auth_oidc
+  - resource_booking
+  - hr_timesheet_sheet
+  - project_timeline
+  - hr_appraisal_oca
+  - payroll
+  - payroll_account
+  - sign_oca
+  - contract
+  - contract_sale
+  - helpdesk_mgmt
+  - fieldservice
+  - account_financial_report
+  - account_reconcile_oca
+  - account_fiscal_year_closing
+  - account_statement_import_ofx
+  - account_statement_import_sheet_file
+  - l10n_us_form_1099
+  - l10n_us_gaap
+  - l10n_us_sales_tax_engine
+  - l10n_us_sales_tax_provider_ziptax
+  - l10n_us_sales_tax_provider_api_ninjas
+  - dms
+  - document_page
+  - quality_control_oca
+  - mrp_multi_level
+  - delivery_ups_oca
+  - delivery_easypost_oca

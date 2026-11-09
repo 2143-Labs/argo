@@ -1,0 +1,53 @@
+# https://o.2143.me - 2143 Labs LLC's Odoo (Maryland; software and hosting).
+# workloads/odoo: Odoo Community 18.0 + OCA, one always-on pod, its own CNPG
+# Postgres (odoo-db) and filestore PVC in namespace odoo-labs. OpenBao (mount consumers):
+# john2143-com/odoo-labs/odoo-admin (first-init admin password) and
+# john2143-com/odoo-labs/oidc (Pocket ID client). oidc flips to "true" once the
+# Pocket ID client secret is in OpenBao. docs/odoo.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: odoo-labs
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/odoo
+    helm:
+      parameters:
+        - { name: namespace, value: odoo-labs }
+        - { name: id, value: "labs", forceString: true }
+        - { name: host, value: o.2143.me }
+        - { name: sectionName, value: 2143-me-wildcard-https }
+        - { name: mailFrom, value: labs_odoo@m.2143.me }
+        - { name: companyName, value: "2143 Labs LLC" }
+        - { name: companyState, value: MD }
+        - { name: filestoreSize, value: 10Gi }
+        - { name: oidc, value: "false" }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo-labs
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest

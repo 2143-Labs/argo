@@ -1,0 +1,29 @@
+# odoo-init, every init (files/init.sh).
+import os
+icp = env['ir.config_parameter'].sudo()
+icp.set_param('web.base.url', 'https://' + os.environ['ODOO_HOST'])
+icp.set_param('web.base.url.freeze', 'True')
+# wkhtmltopdf fetches report CSS from report.url; the pod cannot rely on resolving its own public name
+icp.set_param('report.url', 'http://127.0.0.1:8069')
+Provider = env['auth.oauth.provider'].sudo()
+# auth_oauth ships provider_openerp (Odoo.com) enabled; only Pocket ID may show
+Provider.search([('name', '!=', 'Pocket ID')]).write({'enabled': False})
+if os.environ.get('OIDC_CLIENT_ID'):
+    # Pocket ID's discovery document, https://au.2143.me/.well-known/openid-configuration
+    vals = {
+        'name': 'Pocket ID',
+        'flow': 'id_token_code',
+        'client_id': os.environ['OIDC_CLIENT_ID'],
+        'client_secret': os.environ['OIDC_CLIENT_SECRET'],
+        'auth_endpoint': 'https://au.2143.me/authorize',
+        'token_endpoint': 'https://au.2143.me/api/oidc/token',
+        'jwks_uri': 'https://au.2143.me/.well-known/jwks.json',
+        'end_session_endpoint': 'https://au.2143.me/api/oidc/end-session',
+        'validation_endpoint': 'https://au.2143.me/api/oidc/userinfo',
+        'scope': 'openid email profile',
+        'body': 'Log in with Pocket ID',
+        'enabled': True,
+    }
+    p = Provider.search([('name', '=', 'Pocket ID')], limit=1)
+    p.write(vals) if p else Provider.create(vals)
+env.cr.commit()

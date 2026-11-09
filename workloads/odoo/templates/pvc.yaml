@@ -1,0 +1,19 @@
+# Odoo's data_dir: attachments (filestore/odoo), sessions, and the odoo-init
+# markers (files/init.sh). Prune/Delete=false: a volume lost to an Argo prune
+# cannot be restored from git.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odoo-filestore
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  labels:
+    # Nightly Longhorn backup (workloads/storage/templates/longhorn-backup-job.yaml).
+    recurring-job-group.longhorn.io/default: enabled
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-3
+  resources:
+    requests:
+      storage: {{ required "filestoreSize is required" .Values.filestoreSize }}

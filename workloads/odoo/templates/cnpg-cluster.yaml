@@ -1,0 +1,61 @@
+# This company's Odoo database. CNPG renders Secret odoo-db-app (username,
+# password), which odoo.dbEnv reads. docs/adding-a-cnpg-database.md.
+# No backup is configured (deferred 2026-11-08): docs/odoo.md has the manual dump.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: odoo-db
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  annotations:
+    # Company books: an Argo prune must never delete them. Remove only by hand.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  instances: {{ .Values.db.instances }}
+  # Promote a replica before touching the primary; `restart` deletes it in place
+  # and forces a Longhorn detach/attach.
+  primaryUpdateMethod: switchover
+  affinity:
+    enablePodAntiAffinity: true
+    # Required: the copies must never share a node, or the second copy is no
+    # protection at all.
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      # arch's Longhorn disk cannot provision new volumes (below the 25% floor).
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+      # Preferred only: a required rule would stop the operator from recreating
+      # a lost instance on the remaining node.
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [big, nas]
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  storage:
+    size: {{ .Values.db.size }}
+    storageClass: longhorn-cnpg
+  walStorage:
+    size: {{ .Values.db.walSize }}
+    storageClass: longhorn-cnpg
+  bootstrap:
+    initdb:
+      database: odoo
+      owner: odoo
+      # Odoo builds trigram search indexes only when pg_trgm exists
+      # (odoo/modules/registry.py:202).
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS pg_trgm

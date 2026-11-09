@@ -1,0 +1,53 @@
+# https://o.aross.studio - aross.studio LLC's Odoo (Amanda; NYC photography).
+# workloads/odoo: Odoo Community 18.0 + OCA, one always-on pod, its own CNPG
+# Postgres (odoo-db) and filestore PVC in namespace odoo-aross. OpenBao (mount consumers):
+# john2143-com/odoo-aross/odoo-admin (first-init admin password) and
+# john2143-com/odoo-aross/oidc (Pocket ID client). oidc flips to "true" once the
+# Pocket ID client secret is in OpenBao. docs/odoo.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: odoo-aross
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/odoo
+    helm:
+      parameters:
+        - { name: namespace, value: odoo-aross }
+        - { name: id, value: "aross", forceString: true }
+        - { name: host, value: o.aross.studio }
+        - { name: sectionName, value: aross-studio-wildcard-https }
+        - { name: mailFrom, value: aross_odoo@m.2143.me }
+        - { name: companyName, value: "aross.studio" }
+        - { name: companyState, value: NY }
+        - { name: filestoreSize, value: 20Gi }
+        - { name: oidc, value: "false" }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo-aross
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting (see status-design.yaml).
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest

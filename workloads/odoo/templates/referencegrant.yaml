@@ -1,0 +1,16 @@
+# Lets the HTTPRoutes in default (templates/httproute.yaml) reach this
+# namespace's odoo Service, and nothing else here.
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: allow-default-httproutes
+  namespace: {{ required "namespace is required" .Values.namespace }}
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: default
+  to:
+    - group: ""
+      kind: Service
+      name: odoo

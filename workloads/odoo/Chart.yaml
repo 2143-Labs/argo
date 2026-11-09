@@ -1,0 +1,6 @@
+apiVersion: v2
+name: odoo
+description: Odoo Community 18.0 + OCA (one company per Application) - Odoo, its own CNPG Postgres, a filestore PVC, and HTTPRoutes in default with LAN-only RPC/database-manager paths
+type: application
+version: 0.1.0
+appVersion: "18.0"
