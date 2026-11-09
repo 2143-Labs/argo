@@ -16,8 +16,11 @@
 # 5. Every route hostname is served by one of its pinned listeners (Traefik's
 #    hostname match), and on TLS-terminating listeners is covered by the
 #    Certificate's dnsNames.
-# 6. shared-gateway has at most 16 listeners: Traefik writes one
-#    BackendTLSPolicy ancestor per listener and fails status writes beyond 16.
+# 6. No BackendTLSPolicy anywhere: Traefik 3.7 records one status ancestor per
+#    listener of every Gateway a policy's routes name, never prunes them, and
+#    caps the list at 16, so any policy would cap shared-gateway at 16
+#    listeners. Re-encrypt with a traefik.io ServersTransport + TraefikService
+#    backendRef instead. shared-gateway keeps the Gateway API limit of 64.
 #
 # Every Helm chart that emits edge objects is rendered by scripts/lib/inventory.sh
 # as the Application owning it renders it (prod values); the rendered objects are
@@ -88,10 +91,20 @@ if [[ -z "$n_listeners" || "$n_listeners" -eq 0 ]]; then
   echo "::error file=$(ri_src "$gw")::shared-gateway has no listeners in the rendered chart; refusing to report a green check with nothing to validate"
   exit 1
 fi
-if [[ "$n_listeners" -gt 16 ]]; then
-  echo "::error file=$(ri_src "$gw")::shared-gateway has $n_listeners listeners; Traefik fails BackendTLSPolicy status writes above 16 (one ancestor per listener)"
+if [[ "$n_listeners" -gt 64 ]]; then
+  echo "::error file=$(ri_src "$gw")::shared-gateway has $n_listeners listeners; the Gateway API allows at most 64 per Gateway"
   fail=1
 fi
+
+btlsp=$(
+  yq e -N 'select(.kind == "BackendTLSPolicy") | filename + " " + (.metadata.namespace // "-") + "/" + .metadata.name' "${RI_FILES[@]}"
+  yq e -N 'filename as $f | select(.kind == "Application") | (.spec.source.helm.values // "") | select(. != "") | from_yaml | .extraObjects[]? | select(.kind == "BackendTLSPolicy") | $f + " " + (.metadata.namespace // "-") + "/" + .metadata.name' "${RI_APPS[@]}"
+)
+while read -r bf id; do
+  [[ -z "$bf" ]] && continue
+  echo "::error file=$(ri_src "$bf")::BackendTLSPolicy $id is not allowed: Traefik records one status ancestor per listener of every Gateway its routes name and caps the list at 16, which caps shared-gateway at 16 listeners. Re-encrypt with a traefik.io ServersTransport + TraefikService backendRef (pattern: workloads/unifi-os/backend-tls.yaml)"
+  fail=1
+done <<<"$btlsp"
 
 declare -A lhost=() lsecret=()
 while read -r name host secret; do
@@ -146,4 +159,4 @@ done
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
-echo "gateway certs OK: $(grep -c . <<<"$refs") listener secrets, each backed by one Certificate; $(grep -c . <<<"$pairs") listener hostnames covered; $n_routes shared-gateway route hostnames pinned and covered; $n_listeners/16 shared-gateway listeners"
+echo "gateway certs OK: $(grep -c . <<<"$refs") listener secrets, each backed by one Certificate; $(grep -c . <<<"$pairs") listener hostnames covered; $n_routes shared-gateway route hostnames pinned and covered; $n_listeners/64 shared-gateway listeners; no BackendTLSPolicy"

@@ -29,10 +29,10 @@ spec:
 
     # One listener per wildcard certificate. Routes attach by sectionName; a
     # hostname must be one label under the wildcard (the certificate covers
-    # nothing deeper — scripts/validate-gateway-certs.sh enforces it). Traefik
-    # writes one BackendTLSPolicy ancestor per listener and refuses more than
-    # 16, so keep this Gateway at 16 listeners or fewer: add a namespace to an
-    # allowlist below instead of adding a listener.
+    # nothing deeper — scripts/validate-gateway-certs.sh enforces it).
+    # BackendTLSPolicy is banned by CI check 6 (it caps this Gateway at 16
+    # listeners); the Gateway API limit is 64 listeners. Prefer adding a
+    # namespace to an allowlist below over adding a listener.
     - name: john2143-wildcard-https
       protocol: HTTPS
       port: 8443

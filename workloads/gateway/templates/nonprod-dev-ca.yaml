@@ -1,7 +1,7 @@
 {{- if .Values.prodOnly }}
 # Public CA for the bigp nonprod cluster's static *.dev.john2143.com /
 # au-dev.2143.me cert (private key: dotfiles secrets/nonprod-dev-tls.age).
-# BackendTLSPolicy below validates nonprod Traefik against it.
+# The ServersTransports in dev-route.yaml validate nonprod Traefik against it.
 apiVersion: v1
 kind: ConfigMap
 metadata:

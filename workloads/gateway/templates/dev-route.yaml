@@ -1,8 +1,11 @@
 {{- if .Values.prodOnly }}
 # *.dev.john2143.com and au-dev.2143.me -> bigp nonprod cluster Traefik
 # (192.168.7.7). Prod terminates TLS (public LE certs) and re-encrypts to
-# nonprod, validated against nonprod-dev-ca. The BackendTLSPolicies are
-# mandatory: from Traefik v3.7.15 port 443 no longer implies HTTPS.
+# nonprod through the per-backend ServersTransport below (SNI + nonprod-dev-ca)
+# on a TraefikService that the routes reference. BackendTLSPolicy is not used:
+# Traefik records one status ancestor per listener of every Gateway a policy's
+# routes name, never prunes them, and caps the list at 16, which would cap
+# shared-gateway at 16 listeners (scripts/validate-gateway-certs.sh check 6).
 # Selectorless Service + custom EndpointSlice, same pattern as
 # workloads/metallb/templates/kubernetes-api-lb.yaml.
 {{- range $name, $host := dict "nonprod-traefik" "gateway.dev.john2143.com" "nonprod-traefik-2143me" "au-dev.2143.me" }}
@@ -36,24 +39,6 @@ ports:
   - name: https
     port: 443
     protocol: TCP
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: BackendTLSPolicy
-metadata:
-  name: {{ $name }}
-  namespace: default
-spec:
-  targetRefs:
-    - group: ""
-      kind: Service
-      name: {{ $name }}
-  validation:
-    # SNI and verified name; covered by the static cert's SANs.
-    hostname: {{ $host }}
-    caCertificateRefs:
-      - group: ""
-        kind: ConfigMap
-        name: nonprod-dev-ca
 ---
 apiVersion: traefik.io/v1alpha1
 kind: ServersTransport
@@ -112,8 +97,9 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: nonprod-traefik
-          port: 443
+        - group: traefik.io
+          kind: TraefikService
+          name: nonprod-traefik-tls
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -144,6 +130,7 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: nonprod-traefik-2143me
-          port: 443
+        - group: traefik.io
+          kind: TraefikService
+          name: nonprod-traefik-2143me-tls
 {{- end }}
