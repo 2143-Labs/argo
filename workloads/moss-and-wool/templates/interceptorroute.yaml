@@ -7,6 +7,48 @@ spec:
   target:
     service: moss-and-wool
     port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504. Same pattern as
+  # workloads/rots-web/templates/interceptorroute.yaml.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>Moss &amp; Wool is starting</title>
+          <meta name="theme-color" content="#eee9d8">
+          <meta http-equiv="refresh" content="5">
+          <style>
+          html,body{margin:0;height:100%;background:#f2eddc;color-scheme:light}
+          body{display:grid;place-items:center;text-align:center;
+               font:14px/1.5 system-ui,-apple-system,sans-serif;color:#403b42}
+          .box{background:#fbf9f3;border:1px solid #c9cbb3;border-radius:7px;padding:24px 30px}
+          h1{margin:0 0 .35rem;font:29px Georgia,serif;color:#596447}
+          .tag{margin:0 0 .9rem;font-size:12px;letter-spacing:.06em;color:#347b80}
+          p{margin:0;font-size:13px;color:#60654f}
+          </style>
+          </head>
+          <body>
+          <div class="box">
+          <h1>Moss &amp; Wool is starting...</h1>
+          <p class="tag">A little meadow. A little patience.</p>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - "{{ required "host is required" .Values.host }}"

@@ -7,6 +7,45 @@ spec:
   target:
     service: aross-studio
     port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504. Same pattern as
+  # workloads/rots-web/templates/interceptorroute.yaml.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>aross.studio is starting</title>
+          <meta name="theme-color" content="#2f2f2f">
+          <meta http-equiv="refresh" content="5">
+          <style>
+          html,body{margin:0;height:100%;background:#2f2f2f;color-scheme:light}
+          body{display:grid;place-items:center;text-align:center;font-family:Georgia,serif;color:#000}
+          .page{background:#f5f5f5;border:2px solid #000;padding:30px 38px}
+          h1{margin:0 0 .5rem;font-size:24px;font-weight:bold}
+          p{margin:0;font-size:15px;color:#333}
+          </style>
+          </head>
+          <body>
+          <div class="page">
+          <h1>aross.studio is starting...</h1>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - aross.studio

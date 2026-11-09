@@ -7,6 +7,48 @@ spec:
   target:
     service: dino-dash-web
     port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504. Same pattern as
+  # workloads/rots-web/templates/interceptorroute.yaml.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>PRIMAL is starting</title>
+          <meta name="theme-color" content="#1e1828">
+          <meta http-equiv="refresh" content="5">
+          <style>
+          html,body{margin:0;height:100%;background:#1e1828;color-scheme:dark}
+          body{display:grid;place-items:center;text-align:center;
+               font-family:"Silkscreen","Courier New",monospace;color:#f4edd8}
+          .box{border:2px solid #d9cfb0;padding:22px 26px}
+          h1{margin:0 0 .6rem;font-size:20px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+          .tag{margin:0 0 .9rem;font-size:11px;letter-spacing:.16em;color:#d9cfb0;text-transform:uppercase}
+          p{margin:0;font-size:11px;line-height:1.6;color:#a79bb0}
+          </style>
+          </head>
+          <body>
+          <div class="box">
+          <h1>PRIMAL is starting...</h1>
+          <p class="tag">HATCH. HUNT. HIDE. EVOLVE.</p>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - "{{ required "host is required" .Values.host }}"

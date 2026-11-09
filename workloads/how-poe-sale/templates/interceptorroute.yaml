@@ -10,6 +10,49 @@ spec:
   target:
     service: how-poe-sale
     port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504. Same pattern as
+  # workloads/rots-web/templates/interceptorroute.yaml. Previews only: prod is
+  # always-on (keda.enabled false), so this never renders there.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>how.poe.sale is starting</title>
+          <meta name="theme-color" content="#12131a">
+          <meta http-equiv="refresh" content="5">
+          <style>
+          html,body{margin:0;height:100%;background:#12131a;color-scheme:dark}
+          body{display:grid;place-items:center;text-align:center;
+               font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:#e6e7ee}
+          .box{background:#1b1d27;border:1px solid #2f3345;border-radius:6px;padding:20px 26px}
+          h1{margin:0 0 .35rem;font-size:18px;font-weight:600;color:#f0b44d}
+          .tag{margin:0 0 .9rem;font-size:12px;color:#9aa0b4}
+          p{margin:0;font-size:12px;color:#9aa0b4}
+          </style>
+          </head>
+          <body>
+          <div class="box">
+          <h1>how.poe.sale is starting...</h1>
+          <p class="tag">Path of Exile crafting solver</p>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - "{{ required "host is required" .Values.host }}"

@@ -7,6 +7,48 @@ spec:
   target:
     service: anni
     port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504. Same pattern as
+  # workloads/rots-web/templates/interceptorroute.yaml.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "5"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>Anni is starting</title>
+          <meta name="theme-color" content="#fafaf7">
+          <meta http-equiv="refresh" content="5">
+          <style>
+          html,body{margin:0;height:100%;background:#fafaf7;color-scheme:light}
+          body{display:grid;place-items:center;text-align:center;
+               font:16px/1.7 "Inter","Noto Sans SC",system-ui,-apple-system,sans-serif;color:#1a1a1a}
+          .rule{width:56px;height:2px;background:#b5532b;margin:0 auto 18px}
+          h1{margin:0 0 .5rem;font-family:"Fraunces","Noto Serif SC",Georgia,serif;
+             font-size:1.6rem;font-weight:600}
+          p{margin:0;font-size:.95rem;color:#6b6b66}
+          </style>
+          </head>
+          <body>
+          <div>
+          <div class="rule"></div>
+          <h1>Anni is starting...</h1>
+          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          </div>
+          </body>
+          </html>
   rules:
     - hosts:
         - anni.2143.me
