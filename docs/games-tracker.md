@@ -10,7 +10,7 @@ producer and the page all live in **2143-Labs/status**.
 ## 1. ArgoCD status in Mimir
 
 `workloads/alloy/values-prod.yaml` scrapes `argocd-metrics.argocd.svc:8082`
-every 30 s as job `argocd`, then keeps only `argocd_app_info` before remote
+every 3 s as job `argocd`, then keeps only `argocd_app_info` before remote
 write. That single metric carries `name`, `sync_status` and `health_status` per
 Application (134 series today). The controller's Service admits ingress from
 every namespace (`argocd-application-controller-network-policy`), and Alloy
