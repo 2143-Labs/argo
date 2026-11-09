@@ -1,0 +1,27 @@
+# The tracker's fast kube-state-metrics: deployments, statefulsets and namespaces
+# only, in its own namespace so the chart-managed exporter's pod discovery is
+# untouched. Inert until Alloy scrapes it (workloads/alloy/values-prod.yaml,
+# `prometheus.scrape "ksm_fast"`), which is why this Application is merged first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics-fast
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/kube-state-metrics-fast
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-state-metrics-fast
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
