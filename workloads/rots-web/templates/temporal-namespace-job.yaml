@@ -37,6 +37,21 @@ spec:
               set -e
               NS={{ .Values.temporal.namespace }}
               temporal operator namespace describe "$NS" >/dev/null 2>&1 || temporal operator namespace create "$NS" --retention 72h
+              # Custom search attributes the authserver copies onto every session
+              # workflow, so the UI names the player and `temporal workflow list -q`
+              # can filter by them. A namespace that lacks one makes the authserver
+              # start sessions without attributes (degraded UI, no failed login),
+              # so this must stay idempotent and run before the authserver rolls.
+              # `create` fails when the name exists; `list` is the guard.
+              for attr in \
+                RotsPlayerName:Keyword RotsCharacterId:Int RotsAccountId:Int \
+                RotsProvider:Keyword RotsKind:Keyword
+              do
+                name=${attr%%:*}
+                type=${attr##*:}
+                temporal operator search-attribute list --namespace "$NS" | grep -qw "$name" \
+                  || temporal operator search-attribute create --namespace "$NS" --name "$name" --type "$type"
+              done
           resources:
             requests:
               cpu: 10m
