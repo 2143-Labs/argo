@@ -12,7 +12,7 @@ spec:
     port: 80
   # A page view that finds no ready pod gets this page instead of a held request:
   # KEDA answers with the placeholder while the target has no ready endpoints, and the
-  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # page reloads every 2s (`Refresh`) until the app answers. `readiness: 0s` = no
   # deadline, so no cold start on this route can end in a 504. Same pattern as
   # workloads/rots-web/templates/interceptorroute.yaml. Previews only: prod is
   # always-on (keda.enabled false), so this never renders there.
@@ -24,7 +24,7 @@ spec:
         statusCode: 503
         headers:
           Content-Type: "text/html; charset=utf-8"
-          Refresh: "5"
+          Refresh: "2"
           Cache-Control: "no-store"
         body: |
           <!doctype html>
@@ -34,7 +34,7 @@ spec:
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <title>how.poe.sale is starting</title>
           <meta name="theme-color" content="#12131a">
-          <meta http-equiv="refresh" content="5">
+          <meta http-equiv="refresh" content="2">
           <style>
           html,body{margin:0;height:100%;background:#12131a;color-scheme:dark}
           body{display:grid;place-items:center;text-align:center;
@@ -43,13 +43,26 @@ spec:
           h1{margin:0 0 .35rem;font-size:18px;font-weight:600;color:#f0b44d}
           .tag{margin:0 0 .9rem;font-size:12px;color:#9aa0b4}
           p{margin:0;font-size:12px;color:#9aa0b4}
+          /* The spinner says "working"; the bar is the reload countdown. It runs 2s and the
+             page itself reloads every 2s, so the bar restarts at zero with each reload. */
+          .spin{box-sizing:border-box;width:18px;height:18px;border-radius:50%;margin:0 auto 12px;
+                border:2px solid #2f3345;border-top-color:#f0b44d;
+                animation:spin .7s linear infinite}
+          .bar{height:2px;margin:14px 0 0;background:#2f3345;overflow:hidden}
+          .bar i{display:block;height:100%;width:100%;background:#f0b44d;transform-origin:left;
+                 animation:fill 2s linear forwards}
+          @keyframes spin{to{transform:rotate(360deg)}}
+          @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+          @media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{animation:none;transform:none}}
           </style>
           </head>
           <body>
           <div class="box">
           <h1>how.poe.sale is starting...</h1>
           <p class="tag">Path of Exile crafting solver</p>
-          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          <div class="spin"></div>
+          <p>The server is waking up. This page refreshes every 2 seconds.</p>
+          <div class="bar"><i></i></div>
           </div>
           </body>
           </html>

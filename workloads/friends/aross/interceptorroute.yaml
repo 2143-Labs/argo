@@ -9,7 +9,7 @@ spec:
     port: 80
   # A page view that finds no ready pod gets this page instead of a held request:
   # KEDA answers with the placeholder while the target has no ready endpoints, and the
-  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # page reloads every 2s (`Refresh`) until the app answers. `readiness: 0s` = no
   # deadline, so no cold start on this route can end in a 504. Same pattern as
   # workloads/rots-web/templates/interceptorroute.yaml.
   timeouts:
@@ -20,7 +20,7 @@ spec:
         statusCode: 503
         headers:
           Content-Type: "text/html; charset=utf-8"
-          Refresh: "5"
+          Refresh: "2"
           Cache-Control: "no-store"
         body: |
           <!doctype html>
@@ -30,19 +30,32 @@ spec:
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <title>aross.studio is starting</title>
           <meta name="theme-color" content="#2f2f2f">
-          <meta http-equiv="refresh" content="5">
+          <meta http-equiv="refresh" content="2">
           <style>
           html,body{margin:0;height:100%;background:#2f2f2f;color-scheme:light}
           body{display:grid;place-items:center;text-align:center;font-family:Georgia,serif;color:#000}
           .page{background:#f5f5f5;border:2px solid #000;padding:30px 38px}
           h1{margin:0 0 .5rem;font-size:24px;font-weight:bold}
           p{margin:0;font-size:15px;color:#333}
+          /* The spinner says "working"; the bar is the reload countdown. It runs 2s and the
+             page itself reloads every 2s, so the bar restarts at zero with each reload. */
+          .spin{box-sizing:border-box;width:18px;height:18px;border-radius:50%;margin:0 auto 12px;
+                border:2px solid #c8c8c8;border-top-color:#2f2f2f;
+                animation:spin .7s linear infinite}
+          .bar{height:2px;margin:14px 0 0;background:#c8c8c8;overflow:hidden}
+          .bar i{display:block;height:100%;width:100%;background:#2f2f2f;transform-origin:left;
+                 animation:fill 2s linear forwards}
+          @keyframes spin{to{transform:rotate(360deg)}}
+          @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+          @media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{animation:none;transform:none}}
           </style>
           </head>
           <body>
           <div class="page">
           <h1>aross.studio is starting...</h1>
-          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          <div class="spin"></div>
+          <p>The server is waking up. This page refreshes every 2 seconds.</p>
+          <div class="bar"><i></i></div>
           </div>
           </body>
           </html>

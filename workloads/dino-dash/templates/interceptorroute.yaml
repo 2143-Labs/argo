@@ -9,7 +9,7 @@ spec:
     port: 80
   # A page view that finds no ready pod gets this page instead of a held request:
   # KEDA answers with the placeholder while the target has no ready endpoints, and the
-  # page reloads every 5s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # page reloads every 2s (`Refresh`) until the app answers. `readiness: 0s` = no
   # deadline, so no cold start on this route can end in a 504. Same pattern as
   # workloads/rots-web/templates/interceptorroute.yaml.
   timeouts:
@@ -20,7 +20,7 @@ spec:
         statusCode: 503
         headers:
           Content-Type: "text/html; charset=utf-8"
-          Refresh: "5"
+          Refresh: "2"
           Cache-Control: "no-store"
         body: |
           <!doctype html>
@@ -30,7 +30,7 @@ spec:
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <title>PRIMAL is starting</title>
           <meta name="theme-color" content="#1e1828">
-          <meta http-equiv="refresh" content="5">
+          <meta http-equiv="refresh" content="2">
           <style>
           html,body{margin:0;height:100%;background:#1e1828;color-scheme:dark}
           body{display:grid;place-items:center;text-align:center;
@@ -39,13 +39,26 @@ spec:
           h1{margin:0 0 .6rem;font-size:20px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
           .tag{margin:0 0 .9rem;font-size:11px;letter-spacing:.16em;color:#d9cfb0;text-transform:uppercase}
           p{margin:0;font-size:11px;line-height:1.6;color:#a79bb0}
+          /* The spinner says "working"; the bar is the reload countdown. It runs 2s and the
+             page itself reloads every 2s, so the bar restarts at zero with each reload. */
+          .spin{box-sizing:border-box;width:18px;height:18px;border-radius:50%;margin:0 auto 12px;
+                border:2px solid rgba(217,207,176,.25);border-top-color:#d9cfb0;
+                animation:spin .7s linear infinite}
+          .bar{height:2px;margin:14px 0 0;background:rgba(217,207,176,.25);overflow:hidden}
+          .bar i{display:block;height:100%;width:100%;background:#d9cfb0;transform-origin:left;
+                 animation:fill 2s linear forwards}
+          @keyframes spin{to{transform:rotate(360deg)}}
+          @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+          @media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{animation:none;transform:none}}
           </style>
           </head>
           <body>
           <div class="box">
           <h1>PRIMAL is starting...</h1>
           <p class="tag">HATCH. HUNT. HIDE. EVOLVE.</p>
-          <p>The server is waking up. This page refreshes every 5 seconds.</p>
+          <div class="spin"></div>
+          <p>The server is waking up. This page refreshes every 2 seconds.</p>
+          <div class="bar"><i></i></div>
           </div>
           </body>
           </html>
