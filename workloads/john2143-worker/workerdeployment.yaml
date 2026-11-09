@@ -11,7 +11,7 @@ spec:
   workerOptions:
     connectionRef: {name: john2143-temporal}
     temporalNamespace: john2143-com
-    unsafeCustomBuildID: "220"
+    unsafeCustomBuildID: "223"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -37,7 +37,7 @@ spec:
                       - general
       containers:
         - name: worker
-          image: ghcr.io/john2143/john2143.com-worker:220
+          image: ghcr.io/john2143/john2143.com-worker:223
           imagePullPolicy: IfNotPresent
           env:
             - name: RUN_MODE
