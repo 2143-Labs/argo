@@ -68,7 +68,7 @@ Two gates decide access:
 Sign-up is invitation-only (`auth_signup.invitation_scope = b2b`, set in `files/setup.py`; the Website app would otherwise default it to free sign-up, which turns every Pocket ID user into a portal account on first sign-in). A Pocket ID user with no Odoo account and no invitation is refused.
 
 - **Onboarding:** add the person to the Pocket ID group; in Odoo (Settings → Users & Companies → Users → New) create them with their email, set the user type and app groups, then use *Invite*. They click the invitation link, choose "Log in with Pocket ID", and Odoo binds that Pocket ID identity to the account. Later logins are matched by Pocket ID's `sub`.
-- **Admin:** set the user type to Internal User and add *Administration → Settings*. The password account `admin` is the break-glass login; see Admin password below.
+- **Admin:** set the user type to Internal User and add *Administration → Settings*. An administrator still only sees the apps whose groups they hold, so tick the app groups too; to give someone exactly what the `admin` account has, mirror its groups: `env['res.users'].search([('login', '=', '<login>')], limit=1).write({'groups_id': [(6, 0, env.ref('base.user_admin').groups_id.ids)]})`. The password account `admin` is the break-glass login; see Admin password below.
 - **Offboarding:** archive the user in Odoo, then remove them from the Pocket ID group.
 - **Unblocking someone** who cannot get in: `kubectl -n <namespace> exec deploy/odoo -c odoo -- bash -c 'odoo shell -d odoo --db_host="$HOST" --db_port="$PORT" --db_user="$USER" --db_password="$PASSWORD"'` and inspect `env['res.users'].search([('login','=',...)]).groups_id`, or the `auth_oauth_provider` record.
 
