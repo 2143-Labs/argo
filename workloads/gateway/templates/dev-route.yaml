@@ -54,6 +54,31 @@ spec:
       - group: ""
         kind: ConfigMap
         name: nonprod-dev-ca
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: {{ $name }}-tls
+  namespace: default
+spec:
+  # SNI and verified name; covered by the static cert's SANs.
+  serverName: {{ $host }}
+  rootCAs:
+    - configMap: nonprod-dev-ca
+---
+apiVersion: traefik.io/v1alpha1
+kind: TraefikService
+metadata:
+  name: {{ $name }}-tls
+  namespace: default
+spec:
+  weighted:
+    services:
+      - name: {{ $name }}
+        port: 443
+        # Never infer HTTPS from the port (Traefik >=3.7.15 does not).
+        scheme: https
+        serversTransport: {{ $name }}-tls
 {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1

@@ -345,6 +345,29 @@ spec:
                 hostname: openbao.ts.2143.me
                 wellKnownCACertificates: System
 
+          # Backend TLS for the openbao routes: openbao.ts.2143.me's Let's
+          # Encrypt cert, verified against system roots.
+          - apiVersion: traefik.io/v1alpha1
+            kind: ServersTransport
+            metadata:
+              name: openbao-active-tls
+              namespace: openbao
+            spec:
+              serverName: openbao.ts.2143.me
+          - apiVersion: traefik.io/v1alpha1
+            kind: TraefikService
+            metadata:
+              name: openbao-active-tls
+              namespace: openbao
+            spec:
+              weighted:
+                services:
+                  - name: openbao-active
+                    port: 8200
+                    # Never infer HTTPS from the port (Traefik >=3.7.15 does not).
+                    scheme: https
+                    serversTransport: openbao-active-tls
+
           # In-cluster ClusterIP for ESO: publishes only the plaintext 8210
           # listener, reachable nowhere outside the cluster network.
           - apiVersion: v1
