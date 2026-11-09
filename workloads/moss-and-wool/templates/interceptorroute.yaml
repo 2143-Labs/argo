@@ -68,3 +68,9 @@ spec:
   scalingMetric:
     concurrency:
       targetValue: 10
+    # The placeholder is answered in ~1ms, so a page view never appears in the
+    # instantaneous concurrency count the scaler samples: without this the app would
+    # never wake and the page above would reload for ever. Request rate buckets a
+    # request across its window (1m), so one page load keeps the route above zero.
+    requestRate:
+      targetValue: 1
