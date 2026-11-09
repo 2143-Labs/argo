@@ -4,7 +4,9 @@
 # Postgres (odoo-db) and filestore PVC in namespace odoo-aross. OpenBao (mount consumers):
 # john2143-com/odoo-aross/odoo-admin (first-init admin password) and
 # john2143-com/odoo-aross/oidc (Pocket ID client). oidc flips to "true" once the
-# Pocket ID client secret is in OpenBao. docs/odoo.md.
+# Pocket ID client secret is in OpenBao. caldav reads
+# john2143-com/odoo-aross/caldav (iCloud app-specific passwords, optional:
+# no entry means no sync). docs/odoo.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -30,6 +32,7 @@ spec:
         - { name: companyState, value: NY }
         - { name: filestoreSize, value: 20Gi }
         - { name: oidc, value: "true" }
+        - { name: caldav, value: "true" }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross

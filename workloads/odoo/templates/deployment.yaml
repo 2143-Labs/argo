@@ -126,6 +126,17 @@ spec:
                 secretKeyRef:
                   name: tem-smtp
                   key: API_SECRET_KEY
+            {{- if .Values.caldav }}
+            # Read by the CalDAV cron thread (models/caldav_sync.py). Optional:
+            # a missing OpenBao entry disables the bridge instead of blocking
+            # the pod.
+            - name: CALDAV_CREDENTIALS
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-caldav
+                  key: CALDAV_CREDENTIALS
+                  optional: true
+            {{- end }}
           ports:
             - name: http
               containerPort: 8069

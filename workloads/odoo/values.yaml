@@ -11,9 +11,10 @@ companyName: ""    # written on first init only; edit later in Odoo
 companyState: ""   # US state code of the company, first init only
 filestoreSize: ""  # odoo-filestore PVC size
 oidc: false        # true once OpenBao john2143-com/<namespace>/oidc exists (docs/odoo.md)
+caldav: false      # true to inject CALDAV_CREDENTIALS (iCloud bridge, docs/odoo.md)
 
 # Built by .github/workflows/odoo-image.yml from workloads/odoo/image.
-image: ghcr.io/2143-labs/odoo:sha-4e64d198d33fe54c8c4f4e3692147df8a5923a70
+image: ghcr.io/2143-labs/odoo:sha-3b5c707bd5839677b299d726e26077101559920c
 db:
   instances: 2
   size: 10Gi

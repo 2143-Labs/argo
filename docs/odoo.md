@@ -8,7 +8,7 @@ One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (ar
 
 - Chart `workloads/odoo`, one Application per company: `apps/odoo-aross.yaml`, `apps/odoo-labs.yaml`. Per-company values are the `helm.parameters` there; shared ones (image, module list, DB size) are in `workloads/odoo/values.yaml`.
 - Image `ghcr.io/2143-labs/odoo:sha-<commit>`, built by `.github/workflows/odoo-image.yml` from `workloads/odoo/image/` (the `Dockerfile` pins the Odoo base image by digest; `oca-repos.txt` pins every OCA repo by commit).
-- OpenBao, mount `consumers`: `john2143-com/<namespace>/odoo-admin` (first-init admin password), `john2143-com/<namespace>/oidc` (Pocket ID client), `john2143-com/stalwart/scaleway-tem-smtp` (outgoing mail, shared).
+- OpenBao, mount `consumers`: `john2143-com/<namespace>/odoo-admin` (first-init admin password), `john2143-com/<namespace>/oidc` (Pocket ID client), `john2143-com/<namespace>/caldav` (iCloud app-specific passwords, optional), `john2143-com/stalwart/scaleway-tem-smtp` (outgoing mail, shared).
 - Pocket ID (`https://au.2143.me`): one OIDC client per company, allowed groups `aross` and `labs`.
 - Mail goes out through Scaleway TEM as `aross_odoo@m.2143.me` / `labs_odoo@m.2143.me` (`m.2143.me` is the only TEM-verified domain).
 
@@ -74,7 +74,41 @@ A customer gives a name and a valid email and nothing else. The booking is creat
 
 The page is anonymous, so abuse control is the edge's: the booking host is an ordinary public host with `public-rate-limit`, `public-inflight-limit` and the three CrowdSec rules described under Edge. There is no captcha. If spam bookings appear, add a honeypot field before adding one.
 
-Easy!Appointments is retired: `apps/book-aross.yaml` and `apps/book-2143.yaml` are deleted and the `book-aross`/`book-2143` namespaces are gone. It had never been installed (no `ea_appointments` table in either MariaDB), so no booking, service or customer data was lost. The chart stays in `workloads/booking` for a restore if it is ever wanted again.
+Easy!Appointments is retired: its two Applications (`book-aross` and `book-2143`) and their namespaces are deleted. It had never been installed (no `ea_appointments` table in either MariaDB), so no booking, service or customer data was lost. The chart stays in `workloads/booking` for a restore if it is ever wanted again.
+
+### iCloud calendar sync
+
+A booking only avoids an appointment that Odoo can see, and staff keep their real calendar in iCloud. With `caldav` set for the instance (only `odoo-aross`), the cron `Public booking: iCloud CalDAV sync` runs every 15 minutes and bridges one person at a time:
+
+- **In:** each iCloud event in the next 90 days becomes a busy event owned by that person in Odoo, so the availability engine stops offering the time. Recurrences are expanded; events that disappear from iCloud are archived in Odoo.
+- **Out:** a confirmed booking is written into that person's calendar once, so it appears on their phone.
+- **Cancel:** cancelling the booking in Odoo deletes the iCloud event.
+
+To bridge a person:
+
+1. Create an app-specific password at `account.apple.com` → *Sign-In and Security* → **App-Specific Passwords**. It needs two-factor authentication on the Apple Account, it is not in the iPhone's iCloud settings, and the Apple Account password itself does not work.
+2. Put every bridged employee of one company in one JSON document:
+
+   ```json
+   {"employees": [
+     {"email": "amanda@aross.studio", "username": "amanda@aross.studio",
+      "app_password": "abcd-efgh-ijkl-mnop", "calendar": "Work"}
+   ]}
+   ```
+
+   `calendar` is the calendar's display name in Apple Calendar, not a URL; the collection is discovered.
+3. Store it without the value appearing on screen or in argv:
+
+   ```bash
+   read -rsp 'json: ' j; echo
+   f=$(mktemp /dev/shm/cd-XXXXXX); printf '%s' "$j" > "$f"
+   bao kv put -mount=consumers john2143-com/<namespace>/caldav CALDAV_CREDENTIALS=@"$f"
+   shred -u "$f"; unset j
+   ```
+
+4. Tick **Sync iCloud calendar** on that person's resource (Settings → Technical → Resources, if you are an administrator). A credential entry alone does nothing; the flag is the opt-in. Rotating a password needs only a new OpenBao value and `kubectl -n <namespace> rollout restart deploy/odoo`.
+
+Odoo is authoritative for bookings: editing or deleting the booking's copy in Apple Calendar changes nothing in Odoo, and the next pull puts it back. iCloud is authoritative for everything else. To stop the bridge, blank the OpenBao value and restart the pod: the cron logs `no CALDAV_CREDENTIALS, nothing to sync` and touches no booking. A wrong password or a renamed calendar is logged for that employee and skipped, so it costs one person's sync rather than the booking page.
 
 ## Staff
 
