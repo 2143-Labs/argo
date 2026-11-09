@@ -25,4 +25,7 @@ RUN mkdir -p /opt/oca/src /opt/oca/addons \
     done < /tmp/oca-repos.txt \
  && rm /tmp/oca-repos.txt \
  && test -f /opt/oca/addons/auth_oidc/__manifest__.py
+# In-repo addons. The OCA tree above is third-party; this one is ours.
+COPY --chown=odoo:odoo addons/ /opt/aross/addons/
+RUN test -f /opt/aross/addons/booking_public/__manifest__.py
 USER odoo

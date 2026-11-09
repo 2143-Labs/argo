@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <template id="index" name="Booking: services">
+        <t t-call="website.layout">
+            <div id="wrap" class="o_booking_public">
+                <div class="container py-5">
+                    <h1 class="mb-4">Book a session</h1>
+                    <t t-if="types">
+                        <div class="row">
+                            <t t-foreach="types" t-as="btype">
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-body d-flex flex-column">
+                                            <h2 class="h4">
+                                                <t t-esc="btype.name" />
+                                            </h2>
+                                            <p class="mb-2">
+                                                <span class="badge text-bg-light">
+                                                    <t t-esc="'%g' % btype.duration" /> h
+                                                </span>
+                                                <span t-if="btype.product_id and btype.product_id.list_price" class="ms-2">
+                                                    <t t-esc="btype.currency_id.symbol" /><t t-esc="'%.2f' % btype.product_id.list_price" />
+                                                </span>
+                                            </p>
+                                            <p t-if="btype.deposit_mode != 'none'" class="text-muted small">
+                                                Deposit on booking:
+                                                <t t-esc="btype.currency_id.symbol" /><t t-esc="'%.2f' % btype.deposit_amount" />
+                                            </p>
+                                            <a class="btn btn-primary mt-auto" t-attf-href="/book/#{btype.id}">Choose a time</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </t>
+                    <p t-else="" class="lead">No sessions are open for booking yet. Please get in touch.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="type_page" name="Booking: pick a time">
+        <t t-call="website.layout">
+            <div id="wrap" class="o_booking_public">
+                <div class="container py-5">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/book">All sessions</a></li>
+                        <li class="breadcrumb-item active"><t t-esc="btype.name" /></li>
+                    </ol>
+                    <h1><t t-esc="btype.name" /></h1>
+                    <div t-if="btype.public_intro" class="mb-4"><t t-out="btype.public_intro" /></div>
+                    <p class="text-muted">
+                        <t t-esc="'%g' % btype.duration" /> h · times shown in <t t-esc="btype.resource_calendar_id.tz or 'UTC'" />
+                        <span t-if="btype.deposit_mode != 'none'">
+                            · deposit <t t-esc="btype.currency_id.symbol" /><t t-esc="'%.2f' % btype.deposit_amount" />
+                            when you book
+                        </span>
+                    </p>
+                    <div t-if="error" class="alert alert-warning" role="alert"><t t-esc="error" /></div>
+                    <form method="post" t-attf-action="/book/#{btype.id}/confirm" class="row g-3">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()" />
+                        <div class="col-md-4">
+                            <label class="form-label" for="booking_name">Your name</label>
+                            <input type="text" class="form-control" id="booking_name" name="name" required="required" t-att-value="values.get('name', '')" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="booking_email">Email</label>
+                            <input type="email" class="form-control" id="booking_email" name="email" required="required" t-att-value="values.get('email', '')" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="booking_phone">Phone (optional)</label>
+                            <input type="tel" class="form-control" id="booking_phone" name="phone" t-att-value="values.get('phone', '')" />
+                        </div>
+                        <div class="col-12">
+                            <t t-if="days">
+                                <t t-foreach="days" t-as="day">
+                                    <h2 class="h6 mt-4"><t t-esc="day['label']" /></h2>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <t t-foreach="day['slots']" t-as="slot">
+                                            <button type="submit" class="btn btn-outline-primary" name="when" t-att-value="slot['value']"><t t-esc="slot['label']" /></button>
+                                        </t>
+                                    </div>
+                                </t>
+                            </t>
+                            <p t-else="" class="alert alert-info mt-3"><t t-esc="no_slot_text" /></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

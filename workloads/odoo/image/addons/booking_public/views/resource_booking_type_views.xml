@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="resource_booking_type_view_form_public" model="ir.ui.view">
+        <field name="name">resource.booking.type.form.public page</field>
+        <field name="model">resource.booking.type</field>
+        <field name="inherit_id" ref="resource_booking.resource_booking_type_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='main']" position="inside">
+                <group string="Public page" name="booking_public" colspan="2">
+                    <field name="public_page" />
+                    <field name="public_horizon_days" />
+                    <field name="public_intro" colspan="2" placeholder="Shown above the time picker." />
+                    <field name="product_id" />
+                    <field name="deposit_mode" />
+                    <field name="deposit_fixed" invisible="deposit_mode != 'fixed'" />
+                    <field name="deposit_percent" invisible="deposit_mode != 'percent'" />
+                    <field name="currency_id" invisible="1" />
+                    <field name="deposit_amount" readonly="1" />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
