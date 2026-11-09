@@ -123,6 +123,12 @@ spec:
 a Helm-managed consumer, set it through the chart's `podAnnotations` value
 rather than editing a rendered file.
 
+Rotating an existing value is not the same job as adding one: the credential has
+to be valid in both places during the changeover. `2026-11-09-seaweedfs-s3-credential-rotation.md`
+works through that pattern (issue alongside the old value, move the consumers,
+verify, then retire) and documents `scripts/seaweedfs-rotate.py`, which automates
+it for the SeaweedFS identities.
+
 ## 6. Rules
 
 - Never commit a secret value. This repository is **public**.
