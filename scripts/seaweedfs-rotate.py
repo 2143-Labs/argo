@@ -69,8 +69,8 @@ CONSUMERS = {
                                   keys=("S3_ACCESS_KEY", "S3_SECRET_KEY"),
                                   es=("default", "minio-creds"))],
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
-    "rots4-ci": [dict(kind="manual",
-                      note="GitHub Actions secret outside this checkout; locate before retiring")],
+    "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
+                      keys=("access_key_id", "secret_access_key"), es=None)],
     "rain-marvel": [dict(kind="manual", note="consumer unknown; locate before retiring")],
 }
 

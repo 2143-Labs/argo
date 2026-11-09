@@ -94,7 +94,8 @@ Two mechanisms, and it matters which one applies:
   lost; `mimir` and `loki-*` have two each. Never restart the whole StatefulSet at once.
 
 `edge-tofu` needs no propagation step: it reads `consumers/edge/s3` per command, so writing
-that path is the propagation. `rots4-ci` and `rain-marvel` are `MANUAL` — see §7.
+that path is the propagation. `rots4-ci` reads `consumers/john2143-com/default/rots4-ci-s3` at
+build time (§7), so the same applies. `rain-marvel` is `MANUAL` — its consumer is unknown.
 
 ## 4. Verification checklist
 
@@ -185,14 +186,15 @@ Always `KEY=@file` with the file at mode 0600.
 
 ## 7. What remains unresolved
 
-- **`rots4-ci`** writes `rots4-releases` (the last object appeared 2026-11-09 06:00) but no
-  workflow in this checkout references that bucket, so its consumer is outside the repository.
-  Its credential was rotated and both credentials were left valid: retire only after locating
-  the consumer (`gh secret list -R <org>/<repo>`, or the runner configuration) and setting the
-  new value there.
+- **`rots4-ci`** does not use a GitHub secret. `.github/workflows/build_nix.yml` in
+  `2143-Labs/rots4` fetches its key at run time from OpenBao
+  `john2143-com/default/rots4-ci-s3` through `scripts/ci-openbao-read.sh` (role
+  `rots4-ci-releases`) and reads the fields **`access_key_id`** and **`secret_access_key`**.
+  Propagation for this identity is therefore just a write to that path; a rotation that leaves
+  it stale breaks the release build with `InvalidAccessKeyId`.
 - **`rain-marvel`** has no located consumer and its bucket has been idle since 2026-07-22.
-  Rotated and narrowed to `marvel3-logs`, but not retired and not deleted — deletion is
-  irreversible and no owner confirmed the identity is dead.
+  Rotated and narrowed to `marvel3-logs`, but not deleted — deletion is irreversible and no
+  owner confirmed the identity is dead.
 - **Dormant buckets** with no confirmed owner: `shares` (13 objects, idle since 2026-06-25),
   `marvel3-logs` (1 object, 2026-07-22), `tuwunel-media` (consumer unknown), `history-old`
   (1000+ objects, last write 2026-10-20). `ha-backups` was empty and deleted. None of the four
