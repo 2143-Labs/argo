@@ -60,8 +60,17 @@ Odoo supports 18.0 until about late 2027. The move to 19.0 goes through OpenUpgr
 
 ## Staff
 
-- Onboarding: add the person to the company's Pocket ID group (`aross` or `labs`); in Odoo, Settings → Users → New user with their email; they open the invitation email and click "Log in with Pocket ID".
-- Offboarding: archive the user in Odoo, then remove them from the Pocket ID group.
+Two gates decide access:
+
+1. **The Pocket ID group** (`aross` or `labs`) decides who may authenticate at all. Pocket ID shows its own refusal to anyone outside the group.
+2. **The Odoo user** decides what they can do: user type (Internal User, or Portal for customers) and app groups.
+
+Sign-up is invitation-only (`auth_signup.invitation_scope = b2b`, set in `files/setup.py`; the Website app would otherwise default it to free sign-up, which turns every Pocket ID user into a portal account on first sign-in). A Pocket ID user with no Odoo account and no invitation is refused.
+
+- **Onboarding:** add the person to the Pocket ID group; in Odoo (Settings → Users & Companies → Users → New) create them with their email, set the user type and app groups, then use *Invite*. They click the invitation link, choose "Log in with Pocket ID", and Odoo binds that Pocket ID identity to the account. Later logins are matched by Pocket ID's `sub`.
+- **Admin:** set the user type to Internal User and add *Administration → Settings*. The password account `admin` is the break-glass login; see Admin password below.
+- **Offboarding:** archive the user in Odoo, then remove them from the Pocket ID group.
+- **Unblocking someone** who cannot get in: `kubectl -n <namespace> exec deploy/odoo -c odoo -- bash -c 'odoo shell -d odoo --db_host="$HOST" --db_port="$PORT" --db_user="$USER" --db_password="$PASSWORD"'` and inspect `env['res.users'].search([('login','=',...)]).groups_id`, or the `auth_oauth_provider` record.
 
 ## Admin password
 
