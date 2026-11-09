@@ -327,25 +327,9 @@ spec:
                         kind: Middleware
                         name: lan-only
                   backendRefs:
-                    - group: ""
-                      kind: Service
-                      name: openbao-active
-                      port: 8200
-
-          # Backend TLS re-encryption and validation for the active server Service.
-          - apiVersion: gateway.networking.k8s.io/v1
-            kind: BackendTLSPolicy
-            metadata:
-              name: openbao
-              namespace: openbao
-            spec:
-              targetRefs:
-                - group: ""
-                  kind: Service
-                  name: openbao-active
-              validation:
-                hostname: openbao.ts.2143.me
-                wellKnownCACertificates: System
+                    - group: traefik.io
+                      kind: TraefikService
+                      name: openbao-active-tls
 
           # Backend TLS for the openbao routes: openbao.ts.2143.me's Let's
           # Encrypt cert, verified against system roots.
@@ -541,10 +525,9 @@ spec:
                         kind: Middleware
                         name: crowdsec-bouncer-noappsec
                   backendRefs:
-                    - group: ""
-                      kind: Service
-                      name: openbao-active
-                      port: 8200
+                    - group: traefik.io
+                      kind: TraefikService
+                      name: openbao-active-tls
 
   destination:
     server: https://kubernetes.default.svc

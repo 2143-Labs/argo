@@ -82,7 +82,9 @@ nonprod value or a `templatePatch`.
 
 - `workloads/gateway/templates/dev-route.yaml` + listener
   `dev-john2143-wildcard-https`: `*.dev.john2143.com` and `au-dev.2143.me` →
-  `192.168.7.7`, re-encrypted, validated against `nonprod-dev-ca.yaml`.
+  `192.168.7.7`, re-encrypted through the `nonprod-traefik-tls` /
+  `nonprod-traefik-2143me-tls` ServersTransports, validated against
+  `nonprod-dev-ca`.
 - `workloads/observability/lb-services.yaml` `tempo-otlp-lb` (`.6.27:4317`)
   and the np1-3 rule in `workloads/network-policies/observability.yaml`.
 - Prod alert rules select prod series only: Mimir `cluster=""`, Loki
