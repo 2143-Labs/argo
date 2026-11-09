@@ -1,4 +1,8 @@
 # mm.b.hero.rehab /joinlobby -> steam-lobby service /steam/joinlobby.
+# Only /joinlobby* is routed, and the app needs /steam/{action}/{params} with an
+# allowlisted app id, so bare https://mm.b.hero.rehab/ and .../joinlobby answer
+# 404 by design - not a broken route. Working form:
+#   /joinlobby/357190/<lobby_id>/<owner_steamid>   (what timestone-lobby-watcher links to)
 # The timestone mirrors (mm.timestone.2143.me, mm.timestone.john2143.com) lost
 # their listeners in 1333576; re-add both here if those listeners come back.
 apiVersion: gateway.networking.k8s.io/v1

@@ -29,7 +29,7 @@ Two of the three Traefik replicas started during the node-reboot wave with an in
 
 `./scripts/check-traefik-replicas.sh` (argo `824757c`) asks every replica directly at `<podIP>:8443` with the real SNI and `Host`, and names any replica that answers Traefik's own 404 for a hostname another replica routes. Backend 404s, 5xx and timeouts are not compared, so a flaky app cannot raise a false alarm. Run it after any control-plane churn, node reboot or Traefik rollout.
 
-Known gap: a listener with no hostname that answers (today `mm-b-hero-rehab-https`) cannot show a stale replica; the script prints a warning for those.
+The script has since closed the one gap this record noted: `mm-b-hero-rehab-https` was unprobeable because its only route matches `PathPrefix /joinlobby` and the script asked for `/`, and `dev-john2143-wildcard-https` was unprobeable because a wildcard cannot be requested literally and its backend is another Traefik whose own 404 is byte-identical to a stale replica's. It now probes the path a route matches, substitutes a label for `*`, and `dev-to-nonprod` names a concrete hostname, so every HTTPS listener produces a canary. Current behaviour is documented in `docs/public-edge.md`.
 
 ## Fix and prevention
 

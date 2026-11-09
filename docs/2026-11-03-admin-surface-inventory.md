@@ -3,6 +3,8 @@
 **Date:** 2026-11-03  
 > **Correction 2026-11-03:** `ts-files` no longer exists — its `30033/TCP` moved onto `ts-voice` (`192.168.6.15`), so the LoadBalancer table below lists one TeamSpeak VIP instead of two.
 
+> **Correction 2026-11-09:** `default/steam-lobby-mm-joinlobby` (`mm.b.hero.rehab`) is not unreachable. The route matches only `PathPrefix /joinlobby`, so the method's `GET /` probe falls outside its match set and Traefik answers 404. The backend also 404s a parameterless path on purpose: `lobby-server/src/steam_redirect.rs` requires `/steam/{action}/{params}` with an allowlisted app id. The table keeps `404` because that is what `/` returns, but the class is `path-scoped-404`, not a reachability finding. `https://mm.b.hero.rehab/joinlobby/357190/<lobby_id>/<owner_steamid>` — the form `timestone-lobby-watcher` links to — returns 200 through the public WAN with a valid certificate, on the `fd00:6::6` VIP as well, and :80 redirects to it.
+
 **Context:** the SeaweedFS admin lockdown (filer UI behind oauth2-proxy, `seaweedfs.yaml` ingress policies). This record lists every other admin surface and its auth state. It fixes nothing; the follow-ups are the backlog.
 
 ## Method
@@ -73,7 +75,7 @@ Data came from `kubectl get httproute,tlsroute,tcproute,grpcroute,svc,networkpol
 | `default/status-pr-3` | `status-3.john2143.com` | `crowdsec-bouncer`<br>`public-inflight-limit`<br>`public-rate-limit` | `status-design:80` | 200 | open | internet | no |
 | `default/status-route` | `status.2143.me` | `crowdsec-bouncer`<br>`public-inflight-limit`<br>`public-rate-limit` | `status-anubis:null` | 200 | open | internet | no |
 | `default/steam-lobby` | `pvp.john2143.com` | `crowdsec-bouncer`<br>`public-inflight-limit`<br>`public-rate-limit` | `steam-lobby:80` | 200 | open | internet | no |
-| `default/steam-lobby-mm-joinlobby` | `mm.b.hero.rehab` | `crowdsec-bouncer-noappsec`<br>`public-inflight-limit`<br>`public-rate-limit` | `steam-lobby:80` | 404 | unreachable-404 | internet | no |
+| `default/steam-lobby-mm-joinlobby` | `mm.b.hero.rehab` | `crowdsec-bouncer-noappsec`<br>`public-inflight-limit`<br>`public-rate-limit` | `steam-lobby:80` | 404 | path-scoped-404 | internet | no |
 | `default/temporal-internal` | `temporal.ts.2143.me` | `auth-security-headers`<br>`lan-only` | `temporal-web:8080` | 200 | open | LAN | yes |
 | `default/temporal-public` | `temporal.john2143.com` | `crowdsec-bouncer`<br>`public-inflight-limit`<br>`public-rate-limit` | `oauth2-proxy-temporal:4180` | 403 | proxy | internet | yes |
 | `default/unifi-os-ts-2143` | `unifi.ts.2143.me` | `lan-only` | `unifi-os:11443` | 200 | open | LAN | yes |
