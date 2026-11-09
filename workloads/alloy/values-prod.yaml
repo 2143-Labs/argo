@@ -123,10 +123,65 @@ alloy:
         targets         = discovery.kubernetes.ksm.targets
         job_name        = "kube-state-metrics"
         scrape_interval = "30s"
-        forward_to      = [prometheus.remote_write.mimir.receiver]
+        forward_to      = [prometheus.relabel.ksm_slow.receiver]
         clustering {
           enabled = true
         }
+      }
+
+      // The tracker's fast dimension. Deployments, statefulsets and namespaces change on
+      // every KEDA wake and every preview create/delete, and the full kube-state-metrics
+      // gather takes ~1.9 s for 4.1 MB, so they come from a resource-filtered exporter
+      // scraped every 3 s instead of from a faster scrape of the big one.
+      discovery.kubernetes "ksm_fast" {
+        role = "pod"
+        namespaces {
+          names = ["kube-state-metrics-fast"]
+        }
+      }
+
+      // The fast exporter declares two ports, so pod discovery yields two targets;
+      // scrape the metrics port only. Same shape as discovery.relabel "traefik".
+      discovery.relabel "ksm_fast_port" {
+        targets = discovery.kubernetes.ksm_fast.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_number"]
+          regex         = "8080"
+          action        = "keep"
+        }
+      }
+
+      prometheus.scrape "ksm_fast" {
+        targets = discovery.relabel.ksm_fast_port.output
+        // Same job label as the 30 s exporter on purpose: the two are disjoint by
+        // metric family, so every existing query and dashboard keeps working, and
+        // these families simply get 3 s resolution.
+        job_name        = "kube-state-metrics"
+        scrape_interval = "3s"
+        forward_to      = [prometheus.relabel.ksm_fast_metrics.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      prometheus.relabel "ksm_fast_metrics" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "(up|kube_(deployment|statefulset|namespace)_.*)"
+          action        = "keep"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
+      }
+
+      // The 30 s exporter keeps pods and the other resource types; the families the
+      // fast exporter owns are dropped here so no series is reported by both.
+      prometheus.relabel "ksm_slow" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "kube_(deployment|statefulset|namespace)_.*"
+          action        = "drop"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
       }
 
       // traefik (kube-system, metrics port 9100 declared)
@@ -260,7 +315,7 @@ alloy:
       prometheus.scrape "argocd" {
         targets         = [{ __address__ = "argocd-metrics.argocd.svc:8082" }]
         job_name        = "argocd"
-        scrape_interval = "30s"
+        scrape_interval = "3s"
         forward_to      = [prometheus.relabel.argocd_app_info.receiver]
         clustering {
           enabled = true
