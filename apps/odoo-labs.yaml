@@ -3,7 +3,10 @@
 # Postgres (odoo-db) and filestore PVC in namespace odoo-labs. OpenBao (mount consumers):
 # john2143-com/odoo-labs/odoo-admin (first-init admin password) and
 # john2143-com/odoo-labs/oidc (Pocket ID client). oidc flips to "true" once the
-# Pocket ID client secret is in OpenBao. docs/odoo.md.
+# Pocket ID client secret is in OpenBao. caldav is on: ExternalSecret
+# odoo-caldav reads john2143-com/odoo-labs/caldav. There is no booking
+# host here, but the employee calendars are bridged all the same.
+# docs/odoo.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -28,6 +31,7 @@ spec:
         - { name: companyState, value: MD }
         - { name: filestoreSize, value: 10Gi }
         - { name: oidc, value: "true" }
+        - { name: caldav, value: "true" }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-labs
