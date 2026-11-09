@@ -27,7 +27,7 @@ spec:
         - { name: companyName, value: "aross.studio" }
         - { name: companyState, value: NY }
         - { name: filestoreSize, value: 20Gi }
-        - { name: oidc, value: "false" }
+        - { name: oidc, value: "true" }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross
