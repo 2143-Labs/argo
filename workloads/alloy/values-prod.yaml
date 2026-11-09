@@ -158,6 +158,9 @@ alloy:
         // these families simply get 3 s resolution.
         job_name        = "kube-state-metrics"
         scrape_interval = "3s"
+        // Prometheus rejects a timeout longer than the interval, and Alloy's default
+        // timeout is 10 s. The gather itself measures ~15 ms.
+        scrape_timeout  = "2s"
         forward_to      = [prometheus.relabel.ksm_fast_metrics.receiver]
         clustering {
           enabled = true
@@ -316,6 +319,7 @@ alloy:
         targets         = [{ __address__ = "argocd-metrics.argocd.svc:8082" }]
         job_name        = "argocd"
         scrape_interval = "3s"
+        scrape_timeout  = "2s"
         forward_to      = [prometheus.relabel.argocd_app_info.receiver]
         clustering {
           enabled = true
