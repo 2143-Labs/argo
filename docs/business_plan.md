@@ -135,9 +135,10 @@ ERP is chosen proves its booking page.
 
 - **Cluster capacity**: `closet` is at 99 % CPU requests / 92 % memory requests, `nas` 69/82.
   New workloads belong on `big` (54/55, ~33 GiB of unrequested memory).
-- **Gateway listeners are 15/16** (`scripts/validate-gateway-certs.sh`). A wildcard covers one
-  label, so `*.o.aross.studio` and `*.o.2143.me` would need two more listeners and break the
-  cap; single-label `o.aross.studio` / `o.2143.me` are already covered by existing certs.
+- **Gateway listeners are 15 of 64** (`scripts/validate-gateway-certs.sh`). A wildcard covers
+  one label, so `*.o.aross.studio` and `*.o.2143.me` would need a listener each — affordable
+  now that the old 16 ceiling is gone (it came from `BackendTLSPolicy`, removed and banned in
+  CI). Single-label `o.aross.studio` / `o.2143.me` are already covered by existing certs.
 - **Every app costs the same integration work**: chart, OpenBao secret + ExternalSecret,
   NetworkPolicy, route + cert/listener, public DNS + lan-dns + headscale, CI validator,
   backup label, SSO gate. This is why "many small apps" is not cheaper than one suite.
