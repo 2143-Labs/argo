@@ -77,6 +77,12 @@ spec:
       sectionName: dev-john2143-wildcard-https
   hostnames:
     - "*.dev.john2143.com"
+    # Named explicitly, though the wildcard already covers it, so that
+    # scripts/check-traefik-replicas.sh has a hostname that answers. The
+    # backend here is another Traefik, and its "404 page not found" is
+    # byte-identical to a prod replica's own no-route 404, so a substituted
+    # wildcard probe cannot tell a stale replica from a healthy one.
+    - docs.dev.john2143.com
   rules:
     # Class A (browser surfaces, docs/public-edge.md): these are whole
     # applications behind the nonprod Traefik, page loads included.
