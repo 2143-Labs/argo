@@ -86,6 +86,7 @@ Every entry below was committed in plaintext and must be considered public. Rota
 | Frigate+ licence key | `workloads/frigate/config-tpl.yaml` (`model.path`, `plus://…`) | Regenerate the key in the Frigate+ account portal; the old key should be revoked there. |
 | MQTT password | `workloads/frigate/config-tpl.yaml` | Change on the broker, then update the client credential. |
 | Tuwunel / SeaweedFS S3 keys | `workloads/tuwunel/application.yaml` (`extraEnv`) | Rotate the access key in SeaweedFS; `ACCESS_KEY`/`SECRET_KEY` both exposed. |
+| SeaweedFS S3 identities (all 8, 9 credentials) | **never committed** — printed into a session transcript by a `jq` error, and the live `default/seaweedfs-s3-config` was identical to the leaked copy | **Done 2026-11-09.** SeaweedFS accepts several credentials per identity, so the rotation was issue → propagate → verify → retire with no consumer downtime; all eight identities were also narrowed to per-bucket `Read:`/`Write:`/`List:` scopes, which six of them had never had. `john2143-worker` was deleted with its two orphan Secrets, and the empty `ha-backups` bucket was removed. See `2026-11-09-seaweedfs-s3-credential-rotation.md`. |
 | openrct2 server password | `workloads/openrct2/openrct2.yaml` (CLI arg) | Change in the openrct2 server config (workload runs at `replicas: 0`). |
 | litellm DB password | `workloads/llm-proxy/secret-litellm-db-password.yaml` (`stringData`) | Already **removed from tracking** — see §4. The value itself is unchanged and still disclosed in git history; rotate with `ALTER ROLE litellm PASSWORD '<new>'`, after which CNPG re-syncs `litellm-db-app`. |
 | Seafile MariaDB root + app password | `apps/seafile.yaml` (Secret manifest) — `c6308e6`, `1f233da`, `8341b0e` | **Done 2026-09-20.** Was the literal `changeme-root` / `changeme-seafile`, live as `Secret/default/seafile-secret`. Rotated at all three `mysql.user` rows (`root@%`, `root@localhost`, `seafile@%`) and moved to OpenBao `consumers/data/john2143-com/default/seafile-secret`; both placeholders now return `ERROR 1045`. Note the app user cannot alter itself — the statements were run as root. See `2026-09-20-seafile-credential-rotation-and-sso-only.md`. |
@@ -192,6 +193,24 @@ The full recipe lives in [`adding-a-secret.md`](adding-a-secret.md): seeding the
 value with the `-mount=` form, the `ExternalSecret` shape, the parity check
 before trusting a rendered Secret, and where the Reloader annotation goes.
 
+### The SeaweedFS S3 identity file
+
+SeaweedFS is the one consumer whose OpenBao entry is not one secret per workload:
+`consumers/data/john2143-com/default/seaweedfs-s3-config` holds the whole S3 identity
+document under the key `s3.json`, rendered by
+`workloads/secrets/default-seaweedfs-s3-config.yaml` into
+`Secret/default/seaweedfs-s3-config`. The filer and the S3 gateway read that single file, so
+*every* identity's credential change is one write to that one entry and one filer restart —
+which is why rotations there are batched (`issue --all`, `retire --all`) rather than done
+per identity.
+
+The scope syntax inside that file is a trap worth recording here: `actions: ["Read", "Write",
+"List"]` combined with a `resources` list does **not** restrict an identity — that combination
+is what left `rain-marvel` able to list all 17 buckets and read 182,042 objects in
+`litellm-spend-logs`. Only the `Read:<bucket>` / `Write:<bucket>` / `List:<bucket>` form
+restricts. There is no `Delete` action; object deletion rides on `Write`. Rotation and
+verification procedure: `2026-11-09-seaweedfs-s3-credential-rotation.md`.
+
 ### Deliberately excluded
 
 - **CNPG** database credentials (`*-db-app`, `*-db-ca`, `*-db-server`, …) and
@@ -227,7 +246,7 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   this public repository.
 - **Scope gap.** The migration set covers the Secrets the workstream had
   enumerated. Live application Secrets still outside it include
-  `default/curseforge-api-key`, `default/s3-creds`, `default/rustfs-credentials`,
+  `default/curseforge-api-key`, `default/rustfs-credentials`,
   `default/seafile-admin` (`default/seafile-oidc` was **deleted on 2026-09-20** —
   its two values were byte-identical duplicates of `seafile-secret`'s and nothing
   referenced it; `seafile-admin` was kept because its `SEAFILE_ADMIN_PASSWORD`
@@ -236,6 +255,17 @@ before trusting a rendered Secret, and where the Reloader annotation goes.
   `observability/{grafana,grafana-oidc,rustfs-credentials}`,
   `matrix/au2143me-oidc`, `stalwart/stalwart-stalwart-env`,
   `authentik/authentik-secrets` and `kube-system/crowdsec-bouncer-key`.
+- **SeaweedFS orphans are gone (2026-11-09).** `matrix/seaweedfs-s3-creds` held a
+  4-character access key that returned `InvalidAccessKeyId` and had no consumer;
+  `default/seaweedfs-s3-creds` duplicated the filer's own identity file and nothing read it;
+  `default/s3-creds` was an unmanaged Secret carrying the deleted `john2143-worker` identity
+  and had no ExternalSecret. All three were deleted, the first two by removing
+  `workloads/secrets/{default,matrix}-seaweedfs-s3-creds.yaml`.
+- **Four SeaweedFS buckets remain dormant and unresolved.** `shares` (13 objects, last write
+  2026-06-25), `marvel3-logs` (1 object, 2026-07-22), `tuwunel-media` (consumer unknown) and
+  `history-old` (1000+ objects, last write 2026-10-20) were deliberately **not** deleted: an
+  unlocated consumer is not evidence of a dead bucket. `ha-backups` was empty and is gone.
+  Each is a candidate for removal once an owner confirms it.
 - **`refreshInterval: 10m`.** ESO does recreate a deleted rendered Secret
   promptly (verified), and a changed value now reaches the rendered Secret
   within about ten minutes. It reaches the *workload* only once the Pod
