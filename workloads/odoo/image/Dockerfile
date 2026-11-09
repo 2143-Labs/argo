@@ -7,9 +7,11 @@ SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 USER root
 # external_dependencies of auth_oidc (python-jose), resource_booking (cssselect),
 # account_statement_import_ofx (ofxparse), delivery_easypost_oca (easypost==7.15.0).
+# packaging: Odoo needs it to parse a versioned dependency such as easypost==7.15.0
+# (odoo/modules/module.py, 18.0); without it the module install fails.
 RUN pip3 install --no-cache-dir --break-system-packages \
-      python-jose==3.5.0 cssselect==1.6.0 ofxparse==0.21 easypost==7.15.0 \
- && python3 -c 'import jose, cssselect, ofxparse, easypost'
+      python-jose==3.5.0 cssselect==1.6.0 ofxparse==0.21 easypost==7.15.0 packaging==26.3 \
+ && python3 -c 'import jose, cssselect, ofxparse, easypost, packaging'
 COPY oca-repos.txt /tmp/oca-repos.txt
 # One flat addons dir of symlinks: `ln -s` fails the build if two repos ship the same module name.
 RUN mkdir -p /opt/oca/src /opt/oca/addons \
