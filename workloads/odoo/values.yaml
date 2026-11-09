@@ -92,3 +92,10 @@ modules:
   - mrp_multi_level
   - delivery_ups_oca
   - delivery_easypost_oca
+  # Added 2026-11-09 (John): a second payment provider, mail logging from the
+  # desktop mail client, SMS campaigns, and shop wishlist/comparison.
+  - payment_paypal
+  - mail_plugin
+  - mass_mailing_sms
+  - website_sale_wishlist
+  - website_sale_comparison
