@@ -327,7 +327,9 @@ spec:
                         kind: Middleware
                         name: lan-only
                   backendRefs:
-                    - name: openbao-active
+                    - group: ""
+                      kind: Service
+                      name: openbao-active
                       port: 8200
 
           # Backend TLS re-encryption and validation for the active server Service.
@@ -539,7 +541,9 @@ spec:
                         kind: Middleware
                         name: crowdsec-bouncer-noappsec
                   backendRefs:
-                    - name: openbao-active
+                    - group: ""
+                      kind: Service
+                      name: openbao-active
                       port: 8200
 
   destination:
