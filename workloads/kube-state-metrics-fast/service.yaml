@@ -1,0 +1,17 @@
+# Scraping is pod-to-pod, so this exists as the verification handle:
+#   kubectl get --raw /api/v1/namespaces/kube-state-metrics-fast/services/kube-state-metrics-fast:8080/proxy/metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics-fast
+  namespace: kube-state-metrics-fast
+  labels:
+    app.kubernetes.io/name: kube-state-metrics-fast
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: kube-state-metrics-fast
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
