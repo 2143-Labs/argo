@@ -4,9 +4,10 @@
 # Postgres (odoo-db) and filestore PVC in namespace odoo-aross. OpenBao (mount consumers):
 # john2143-com/odoo-aross/odoo-admin (first-init admin password) and
 # john2143-com/odoo-aross/oidc (Pocket ID client). oidc flips to "true" once the
-# Pocket ID client secret is in OpenBao. caldav reads
-# john2143-com/odoo-aross/caldav (iCloud app-specific passwords, optional:
-# no entry means no sync). docs/odoo.md.
+# Pocket ID client secret is in OpenBao. caldav flips to "true" once
+# john2143-com/odoo-aross/caldav exists (the iCloud app-specific passwords);
+# with the flag on and no key, ExternalSecret odoo-caldav reports an error
+# and Argo shows the Application Degraded. docs/odoo.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -32,7 +33,7 @@ spec:
         - { name: companyState, value: NY }
         - { name: filestoreSize, value: 20Gi }
         - { name: oidc, value: "true" }
-        - { name: caldav, value: "true" }
+        - { name: caldav, value: "false" }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross
