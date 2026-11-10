@@ -137,6 +137,16 @@ spec:
                   key: CALDAV_CREDENTIALS
                   optional: true
             {{- end }}
+            {{- if .Values.turn }}
+            # TURN REST secret for Discuss calls (models/mail_ice_server.py).
+            # Optional: without it calls fall back to Odoo's default STUN.
+            - name: TURN_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-turn
+                  key: turn_secret
+                  optional: true
+            {{- end }}
           ports:
             - name: http
               containerPort: 8069

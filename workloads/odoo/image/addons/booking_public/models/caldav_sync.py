@@ -287,6 +287,9 @@ class ResourceBooking(models.Model):
         event.add("dtstamp", datetime.now(pytz.utc))
         event.add("status", "CONFIRMED")
         event.add("transp", "OPAQUE")
+        # Guarded: event.add("url", False) would write a literal "False".
+        if self.videocall_location:
+            event.add("url", self.videocall_location)
         event.add(
             "description", self.get_base_url() + self.get_portal_url()
         )

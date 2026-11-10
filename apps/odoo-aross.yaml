@@ -6,7 +6,9 @@
 # john2143-com/odoo-aross/oidc (Pocket ID client). oidc flips to "true" once the
 # Pocket ID client secret is in OpenBao. caldav is on: ExternalSecret
 # odoo-caldav reads john2143-com/odoo-aross/caldav (the iCloud
-# app-specific passwords, one entry per bridged employee). docs/odoo.md.
+# app-specific passwords, one entry per bridged employee). turn is on:
+# ExternalSecret odoo-turn reads john2143-com/steam-lobby/steam-lobby-turn, the
+# steam-lobby coturn's TURN REST secret, for Discuss video calls. docs/odoo.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -33,6 +35,7 @@ spec:
         - { name: filestoreSize, value: 20Gi }
         - { name: oidc, value: "true" }
         - { name: caldav, value: "true" }
+        - { name: turn, value: "true" }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross

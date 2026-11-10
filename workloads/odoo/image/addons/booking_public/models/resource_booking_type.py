@@ -31,6 +31,12 @@ class ResourceBookingType(models.Model):
     deposit_amount = fields.Monetary(
         compute="_compute_deposit_amount", currency_field="currency_id"
     )
+    video_call = fields.Boolean(
+        "Create a video room per booking",
+        default=False,
+        help="Each booking gets its own private Odoo Discuss call link, sent in the "
+        "invitation. Leave Meeting URL empty when this is ticked.",
+    )
 
     @api.depends("deposit_mode", "deposit_fixed", "deposit_percent", "product_id.list_price")
     def _compute_deposit_amount(self):

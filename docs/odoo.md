@@ -110,6 +110,14 @@ To bridge a person:
 
 Odoo is authoritative for bookings: editing or deleting the booking's copy in Apple Calendar changes nothing in Odoo, and the next pull puts it back. iCloud is authoritative for everything else. To stop the bridge, blank the OpenBao value and restart the pod: the cron logs `no CALDAV_CREDENTIALS, nothing to sync` and touches no booking. A wrong password or a renamed calendar is logged for that employee and skipped, so it costs one person's sync rather than the booking page.
 
+### Video calls
+
+Tick **Create a video room per booking** on a booking type (the field sits under *Meeting URL*; leave *Meeting URL* empty). Each new booking of that type gets its own Odoo Discuss link, `https://<o. host>/calendar/join_videocall/<token>`, in the invitation email (*How to Join*), on the booking's portal page as **Join the video call**, and as the URL of its iCloud copy. The first visit creates a private group channel and opens the call; the customer joins as a guest, without an account. A two-person call goes browser to browser, with no media server. Cancelling, unscheduling or deleting the booking deletes the room; rescheduling it through Odoo sends a new invitation with a new link. Bookings made before the box was ticked get no link.
+
+The call rings the employee only while they have an Odoo tab open, so staff open the link at the start time.
+
+With `turn` set for the instance, each call gets 6-hour TURN credentials for `turn.john2143.com:3478` (UDP and TCP), minted from `TURN_AUTH_SECRET` by `models/mail_ice_server.py`. That relay is the steam-lobby coturn (`workloads/steam-lobby`), shared with `pvp.john2143.com`; it refuses to relay to private, CGNAT and link-local addresses. Without the variable Odoo falls back to Google STUN, and two people on networks that block direct connections see a call that connects but shows nothing. To check it, in `odoo shell`: `env["mail.ice.server"]._get_ice_servers()` returns three entries. The secret is OpenBao `john2143-com/steam-lobby/steam-lobby-turn`; after a rotation, Reloader restarts coturn, steam-lobby and both Odoo pods as each copy of the Secret refreshes (up to 10 minutes apart), and calls in that window fall back to STUN.
+
 ## Staff
 
 Two gates decide access:

@@ -18,6 +18,9 @@
                     <field name="deposit_amount" readonly="1" />
                 </group>
             </xpath>
+            <xpath expr="//field[@name='videocall_location']" position="after">
+                <field name="video_call" />
+            </xpath>
         </field>
     </record>
 </odoo>

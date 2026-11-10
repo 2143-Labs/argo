@@ -89,4 +89,19 @@
             </div>
         </t>
     </template>
+
+    <!-- OCA renders "Meeting URL:" on every booking, empty href included; show a
+         real button only when the booking has a link. -->
+    <template id="portal_meeting_url" inherit_id="resource_booking.resource_booking_portal_form">
+        <xpath expr="//strong[normalize-space(.)='Meeting URL:']/parent::div" position="replace">
+            <div t-if="booking_sudo.videocall_location" class="mb-1">
+                <a
+                    class="btn btn-primary btn-sm"
+                    t-att-href="booking_sudo.videocall_location"
+                    target="_blank"
+                    rel="noopener"
+                >Join the video call</a>
+            </div>
+        </xpath>
+    </template>
 </odoo>
