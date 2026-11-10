@@ -192,19 +192,32 @@ Always `KEY=@file` with the file at mode 0600.
   `rots4-ci-releases`) and reads the fields **`access_key_id`** and **`secret_access_key`**.
   Propagation for this identity is therefore just a write to that path; a rotation that leaves
   it stale breaks the release build with `InvalidAccessKeyId`.
-- **`rain-marvel`** has no located consumer and its bucket has been idle since 2026-07-22.
-  Rotated and narrowed to `marvel3-logs`, but not deleted — deletion is irreversible and no
-  owner confirmed the identity is dead.
-- **Dormant buckets** with no confirmed owner: `shares` (13 objects, idle since 2026-06-25),
-  `marvel3-logs` (1 object, 2026-07-22), `tuwunel-media` (consumer unknown), `history-old`
-  (1000+ objects, last write 2026-10-20). `ha-backups` was empty and deleted. None of the four
-  was deleted: an unresolved consumer is not evidence of a dead bucket.
+- **`rain-marvel` is gone** (2026-11-10). Its bucket `marvel3-logs` held a single 25-byte file,
+  `test_from_py.txt`, whose content was `hello from python script` — a smoke test, never a
+  consumer. No workflow, manifest, ConfigMap or repo in the org referenced either name. Identity
+  and bucket both deleted, and both are out of the tool's maps now.
+- **`shares` is gone** (2026-11-10), along with the `bigjuush` uploader that fed it
+  (`fish_functions/bigjuush.fish` and `.config/nas-share.sh` in `John2143/dotfiles`; `juush`
+  accepts large files and Seafile covers the rest). The bucket held 13 uploads totalling
+  **10.8 GB**, last written 2026-06-25, and anonymous access had already returned 403 — the
+  links were dead before the retirement.
+- **`tuwunel-media` is gone** (2026-11-10). It was empty, and its S3 backend was deleted in
+  `a8dd50d` during the matrix remediation, so nothing could have written to it.
+- **`history-old` is kept deliberately.** 5,000+ directories from a single burst on 2026-10-20
+  (10:01–10:57), each `<epoch.micros>-<rand>/agent/{messages.json,trace.txt,summary.txt,
+  differences.json,display_*.jpg}`: frigate-genai's pre-cutover run archive, superseded the same
+  evening by `frigate-genai/history/` with identical naming. No identity can read or write it.
 
 ## Gotchas for the next operator
 
 - **`-mount=consumers` takes no `data/` prefix.** `bao kv get -mount=consumers data/john2143-com/…`
   silently resolves to `consumers/data/data/…` and returns nothing, which reads exactly like an
   empty secret. Metadata is `kv metadata get -mount=consumers john2143-com/…`.
+- **Deleting a bucket needs no S3 key.** The filer's own API does it:
+  `kubectl -n default exec deploy/seaweedfs-filer -- curl -X DELETE
+  'http://localhost:8888/buckets/<bucket>/?recursive=true'` returns 204, and a follow-up GET of
+  any object inside returns 404. That is how a bucket is removed once its credentials are gone —
+  useful for retiring dead buckets without first rotating or reviving a key.
 - **A filer restart is the whole outage.** The S3 API, and therefore image serving on 2143.me,
   log/metric/trace writes and CI release pushes, are unavailable for 5–20 s per config write.
   Consumers retry; nothing is lost. Do not start consumer restarts while the filer is still
