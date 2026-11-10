@@ -1,8 +1,10 @@
 {{- /* Managed (kubernetes) provisioner only. Scoped by PriorityClass so only
-       game-server pods count, and the authserver's quota pre-check (which
-       reads this object) speaks the same numbers as the scheduler.
-       requests.cpu hard cap / game-server request (200m) = instances this
-       namespace may run; prod 32 CPU -> 160, previews 2 CPU -> 10. */}}
+       game-server pods count, and the authserver's quota pre-check (which reads
+       this object) speaks the same numbers as the scheduler. It is the only cap
+       on live instances: requests.cpu / the 200m game-server request. Prod's
+       value is measured free node capacity (prod: 24400m = 122 instances, measured
+       2026-11-10 - the kubelet's 110 pods per node binds first, not CPU);
+       previews 2 CPU -> 10. */}}
 {{- if eq (.Values.gameserver.provisioner | default "static") "kubernetes" }}
 {{- $ns := required "namespace is required" .Values.namespace }}
 {{- $quota := .Values.gameserver.quota }}
