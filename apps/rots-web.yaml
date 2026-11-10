@@ -37,12 +37,12 @@ spec:
         # rots4 CI (build_nix.yml job deploy, scripts/ci-argo-bump.sh) rewrites image.tag,
         # authserver.image and gameserver.tag to one commit's <sha7> tags after every green
         # main build; keep each on one line in this "- { name: …, value: … }" form.
-        - { name: image.tag, value: webserver-wasm-1f6ed83 }
+        - { name: image.tag, value: webserver-wasm-5bdc00e }
         # Serve the wasm bundle warm: one rots-web pod is always up (KEDA min 1)
         # instead of cold-starting behind the interceptor on the first page view.
         - { name: web.minReplicas, value: '1' }
         - { name: authserver.secretKey, value: john2143-com/rots-prod/rots-authserver-secret }
-        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-1f6ed83' }
+        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-5bdc00e' }
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
         - { name: db.size, value: 8Gi }
@@ -53,7 +53,7 @@ spec:
         - { name: db.resources.limits.cpu, value: '2' }
         - { name: db.resources.limits.memory, value: 2Gi }
         - { name: sync.replicas, value: '2' }
-        - { name: gameserver.tag, value: gameserver-1f6ed83 }
+        - { name: gameserver.tag, value: gameserver-5bdc00e }
         # Managed mode: no standing servers; the authserver spawns one instance per
         # new player (friends join by code) and destroys it when idle. slots caps
         # concurrent instances: UDP 36000-36063, /ws/0-63 (4 HTTPRoutes of 16).
