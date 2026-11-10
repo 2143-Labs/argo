@@ -6,7 +6,7 @@
 # player, destroyed when idle, up to 64 at once (wss /ws/<k>, native UDP
 # 192.168.6.32:36000-36063; the router forwards 36000-36400). One instance is
 # kept warm (booted in pre-game, paused) so a new player is placed on it in ~1 s
-# instead of waiting ~15 s for a pod and its volume. Because a warm pod keeps a
+# instead of waiting ~15 s for a pod. Because a warm pod keeps a
 # KEDA trigger lit, the authserver never drops below one replica (scale 1-3).
 # Previews are separate (see rots-web-preview.yaml).
 #
@@ -45,6 +45,14 @@ spec:
         - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-2804dec' }
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
+        - { name: db.size, value: 8Gi }
+        - { name: db.walSize, value: 4Gi }
+        - { name: db.maxSlotWalKeepSize, value: 2GB }
+        - { name: db.resources.requests.cpu, value: 250m }
+        - { name: db.resources.requests.memory, value: 512Mi }
+        - { name: db.resources.limits.cpu, value: '2' }
+        - { name: db.resources.limits.memory, value: 2Gi }
+        - { name: sync.replicas, value: '2' }
         - { name: gameserver.tag, value: gameserver-2804dec }
         # Managed mode: no standing servers; the authserver spawns one instance per
         # new player (friends join by code) and destroys it when idle. slots caps

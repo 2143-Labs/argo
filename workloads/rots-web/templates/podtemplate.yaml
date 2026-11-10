@@ -1,12 +1,10 @@
 {{- /* Managed (kubernetes) provisioner: the pod template the authserver's
        provisioner copies into one one-replica StatefulSet per instance
-       (rots-gs-<k>-g<g>). It is never run from this repo directly. A
-       StatefulSet is required rather than a bare Pod or a Job: Longhorn's
-       nodeDownPodDeletionPolicy only frees volumes of StatefulSet/Deployment
-       pods on node loss, and the volume must be reattachable for recovery.
-       The provisioner adds the per-instance labels and the slot/generation/
-       join-code/public-port env, and replaces the emptyDir volume with the
-       instance's Longhorn PVC. */}}
+       (rots-gs-<k>-g<g>). It is never run from this repo directly. The
+       StatefulSet keeps one stable pod name (<name>-0) for the liveness probe
+       and the forced kill. The provisioner adds the per-instance labels and
+       the slot/generation/join-code/public-port env and uses the emptyDir
+       volume as is: the world lives in rots-sync (sync.yaml), not on a volume. */}}
 {{- if eq (.Values.gameserver.provisioner | default "static") "kubernetes" }}
 {{- $ns := required "namespace is required" .Values.namespace }}
 apiVersion: v1
@@ -25,8 +23,8 @@ template:
     # by the controller, which is why it writes the shutdown sentinel first.
     restartPolicy: Always
     terminationGracePeriodSeconds: 30
-    # The server runs as 65534 and writes config.yaml and its statefile to /data,
-    # a fresh root-owned Longhorn volume; fsGroup hands it to that group.
+    # The server runs as 65534 and writes config.yaml and the shutdown sentinel to
+    # /data; fsGroup also covers a pre-emptyDir instance's root-owned Longhorn PVC.
     securityContext:
       fsGroup: 65534
       fsGroupChangePolicy: OnRootMismatch
@@ -41,6 +39,14 @@ template:
                   operator: In
                   values:
                     - general
+          # office is wifi-only: used only when the wired nodes are full.
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: NotIn
+                  values:
+                    - office
 {{- if .Values.imagePullSecret.key }}
     imagePullSecrets:
       - name: registry-pull
@@ -48,8 +54,9 @@ template:
     containers:
       {{- include "rots-web.gameserver-container" (dict "root" . "managed" true) | nindent 6 }}
     volumes:
-      # PodTemplate validation requires a volume for the mount; the provisioner
-      # replaces this with the instance's PVC (data-rots-gs-<k>-g<g>-0).
+      # config.yaml and the shutdown sentinel only; a pre-emptyDir authserver image
+      # replaces this volume with the instance's PVC.
       - name: data
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 1Gi
 {{- end }}
