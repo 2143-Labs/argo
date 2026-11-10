@@ -87,14 +87,15 @@ Two mechanisms, and it matters which one applies:
 - **Reloader restarts these automatically**, because they carry
   `reloader.stakater.com/auto: "true"`: `default/litellm`, the six `default/frigate-genai-*`
   workloads, `default/john2143-com-worker-220`. ESO rewrites the Secret, Reloader notices.
-- **`observability` needs an explicit restart.** Its StatefulSets are chart-created and were
-  verified *without* the annotation, so the credential change only lands when the pod restarts.
-  Restart one pod at a time — `kubectl -n observability delete pod <pod>` then wait Ready —
-  because `tempo` has a single replica (a ~20–40 s trace gap, in-flight spans lost) while
-  `mimir` and `loki-*` have two each.
+- **`observability` also reloads itself**, but the recovery is slower and worth expecting:
+  `statefulset/mimir`, `tempo`, `loki-write` and `loki-backend` all carry the annotation
+  (verified 2026-11-09), and the StatefulSet controller brings them back one pod at a time.
+  `tempo` has a single replica, so its restart is a ~20–40 s trace gap with in-flight spans
+  lost; `mimir` and `loki-*` have two each. Never restart the whole StatefulSet at once.
 
 `edge-tofu` needs no propagation step: it reads `consumers/edge/s3` per command, so writing
-that path is the propagation. `rots4-ci` and `rain-marvel` are `MANUAL` — see §7.
+that path is the propagation. `rots4-ci` reads `consumers/john2143-com/default/rots4-ci-s3` at
+build time (§7), so the same applies. `rain-marvel` is `MANUAL` — its consumer is unknown.
 
 ## 4. Verification checklist
 
@@ -109,7 +110,7 @@ After every rotation, confirm the consumers are actually healthy:
 ```bash
 kubectl --context closet-as-admin -n default rollout status deploy/litellm \
   deploy/john2143-com-worker-220 deploy/frigate-genai-dashboard \
-  deploy/frigate-genai-mqtt deploy/frigate-genai-triggers --timeout=300s
+  deploy/frigate-genai-mqtt deploy/frigate-genai-triggers-v288 --timeout=300s
 kubectl --context closet-as-admin -n observability rollout status \
   statefulset/mimir statefulset/tempo statefulset/loki-write statefulset/loki-backend --timeout=300s
 kubectl --context closet-as-admin -n <ns> logs <pod> --since=15m | grep -c AccessDenied   # want 0
@@ -185,14 +186,15 @@ Always `KEY=@file` with the file at mode 0600.
 
 ## 7. What remains unresolved
 
-- **`rots4-ci`** writes `rots4-releases` (the last object appeared 2026-11-09 06:00) but no
-  workflow in this checkout references that bucket, so its consumer is outside the repository.
-  Its credential was rotated and both credentials were left valid: retire only after locating
-  the consumer (`gh secret list -R <org>/<repo>`, or the runner configuration) and setting the
-  new value there.
+- **`rots4-ci`** does not use a GitHub secret. `.github/workflows/build_nix.yml` in
+  `2143-Labs/rots4` fetches its key at run time from OpenBao
+  `john2143-com/default/rots4-ci-s3` through `scripts/ci-openbao-read.sh` (role
+  `rots4-ci-releases`) and reads the fields **`access_key_id`** and **`secret_access_key`**.
+  Propagation for this identity is therefore just a write to that path; a rotation that leaves
+  it stale breaks the release build with `InvalidAccessKeyId`.
 - **`rain-marvel`** has no located consumer and its bucket has been idle since 2026-07-22.
-  Rotated and narrowed to `marvel3-logs`, but not retired and not deleted — deletion is
-  irreversible and no owner confirmed the identity is dead.
+  Rotated and narrowed to `marvel3-logs`, but not deleted — deletion is irreversible and no
+  owner confirmed the identity is dead.
 - **Dormant buckets** with no confirmed owner: `shares` (13 objects, idle since 2026-06-25),
   `marvel3-logs` (1 object, 2026-07-22), `tuwunel-media` (consumer unknown), `history-old`
   (1000+ objects, last write 2026-10-20). `ha-backups` was empty and deleted. None of the four
@@ -207,6 +209,18 @@ Always `KEY=@file` with the file at mode 0600.
   log/metric/trace writes and CI release pushes, are unavailable for 5–20 s per config write.
   Consumers retry; nothing is lost. Do not start consumer restarts while the filer is still
   restarting, or the two windows combine.
+- **Tempo does not retry its store at startup.** Its init calls `ListObjects` on `tempo-blocks`,
+  so any S3 unavailability — a routine filer restart is enough — puts it into
+  `CrashLoopBackOff` with `dial tcp …:8333: connect: connection refused`, and the backoff keeps
+  growing after the store is healthy again. Delete the pod once S3 answers; it recovers in about
+  a minute. It is never a credential problem when the message says `connection refused`.
+- **S3 `InternalError` (HTTP 500) is the filer's disk, not the credentials.** When the filer's
+  `/data` mount is an ext4 filesystem in the `shutdown` state (visible as `rw,...,shutdown` in
+  `/proc/mounts`, with `input/output error` on `filerldb2/*` in the filer log), every metadata
+  operation fails with HTTP 500 while some reads still succeed, which looks like a permission
+  bug. The metadata lives on a single-replica Longhorn volume; confirm
+  `volumes.longhorn.io/<pvc>` is `attached` and `healthy` before restarting the filer, since
+  restarting into a broken mount is what turns one bad service into a crashloop.
 - **`issue` and `retire` must be batched.** Rotating identity-by-identity multiplies filer
   restarts by seven for no benefit; the overlap window is what makes batching safe.
 - **Listing is not writing.** Any future scope change must be verified with a write and a

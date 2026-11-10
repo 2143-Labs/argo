@@ -69,8 +69,8 @@ CONSUMERS = {
                                   keys=("S3_ACCESS_KEY", "S3_SECRET_KEY"),
                                   es=("default", "minio-creds"))],
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
-    "rots4-ci": [dict(kind="manual",
-                      note="GitHub Actions secret outside this checkout; locate before retiring")],
+    "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
+                      keys=("access_key_id", "secret_access_key"), es=None)],
     "rain-marvel": [dict(kind="manual", note="consumer unknown; locate before retiring")],
 }
 
@@ -214,9 +214,21 @@ def scan_cluster(needles: list[str]) -> list[dict]:
         for field, value in values.items():
             for needle in needle_set:
                 if needle in value:
-                    hits.append({"kind": kind, "namespace": ns, "name": name, "field": field})
+                    hits.append({"kind": kind, "namespace": ns, "name": name,
+                                 "field": field, "needle": needle})
                     break
     return hits
+
+
+def meaningful_hits(needles: list[str]) -> list[dict]:
+    """Cluster references excluding the identity file itself.
+
+    Secret default/seaweedfs-s3-config is the rendering of the very file these commands
+    rewrite, so it always contains every identity's credential; counting it would make every
+    deletion and every retirement refuse."""
+    return [hit for hit in scan_cluster(needles)
+            if not (hit["kind"] == "secret" and hit["namespace"] == FILER_ES[0]
+                    and hit["name"] == FILER_ES[1])]
 
 
 # ---------------------------------------------------------------- S3 via rclone
@@ -304,9 +316,14 @@ def cmd_audit(args) -> int:
                 entry["holders"].append(f"bao:{holder['path']}")
             else:
                 entry["holders"].append("manual (consumer unlocated)")
+        keys = {c.get(field) for c in ident["credentials"] for field in ("accessKey", "secretKey")}
+        seen = set()
         for hit in hits:
-            if hit["field"] in [c.get("accessKey") for c in ident["credentials"]]:
-                entry["holders"].append(f"{hit['kind']}:{hit['namespace']}/{hit['name']}")
+            if hit.get("needle") in keys:
+                label = f"{hit['kind']}:{hit['namespace']}/{hit['name']}"
+                if label not in seen:
+                    seen.add(label)
+                    entry["holders"].append(label)
         for bucket in SCOPES.get(ident["name"], []):
             ok, err = probe_list(cred["accessKey"], cred["secretKey"], bucket)
             entry["probe"][bucket] = "ok" if ok else err[:120]
@@ -397,18 +414,35 @@ def cmd_propagate(args) -> int:
 
 # ---------------------------------------------------------------- verify
 
-def verify_identity(ident: dict, cfg: dict) -> tuple[bool, list[str]]:
-    problems = []
-    cred = newest(ident)
+def verify_identity(ident: dict, cfg: dict) -> tuple[list[str], list[str]]:
+    """Return (problems, notes). Problems mean broken; notes mean legitimate-but-pending."""
+    problems, notes = [], []
+    creds = ident.get("credentials") or []
+    cred = creds[-1]
     name = ident["name"]
+    overlap = len(creds) > 1
+    prior = {c.get("accessKey") for c in creds[:-1]}
     for holder in CONSUMERS.get(name, []):
-        if holder["kind"] != "bao" or not holder.get("es"):
+        if holder["kind"] != "bao":
             continue
-        ns, sec = holder["es"]
-        values = secret_keys(ns, sec)
         ak_key = holder["keys"][0]
-        if values.get(ak_key) != cred["accessKey"]:
-            problems.append(f"{ns}/{sec} does not hold the newest {ak_key}")
+        sources = [("bao " + holder["path"], (lambda h=holder: bao_kv_get(h["path"]).get(ak_key)))]
+        if holder.get("es"):
+            ns, sec = holder["es"]
+            sources.append((f"secret {ns}/{sec}",
+                            lambda n=ns, s=sec, k=ak_key: secret_keys(n, s).get(k)))
+        for label, fetch in sources:
+            try:
+                actual = fetch()
+            except Fail as exc:
+                problems.append(f"{label} unreadable: {exc}")
+                continue
+            if actual == cred["accessKey"]:
+                continue
+            if overlap and actual in prior:
+                notes.append(f"{label} still holds the previous credential")
+            else:
+                problems.append(f"{label} holds neither the newest nor the previous credential")
     for bucket in SCOPES.get(name, []):
         ok, err = probe_write(cred["accessKey"], cred["secretKey"], bucket)
         if not ok:
@@ -424,12 +458,12 @@ def verify_identity(ident: dict, cfg: dict) -> tuple[bool, list[str]]:
             problems.append(f"scope leak: {out_of_scope} is listable")
         elif "AccessDenied" not in err and "Forbidden" not in err and "403" not in err:
             problems.append(f"unexpected error on out-of-scope {out_of_scope}: {err[:100]}")
-    if len(ident.get("credentials", [])) > 1:
-        old = ident["credentials"][0]
+    if overlap:
+        old = creds[0]
         ok, err = probe_list(old["accessKey"], old["secretKey"], SCOPES.get(name, [name])[0])
         if not ok:
             problems.append(f"previous credential no longer authenticates: {err[:100]}")
-    return not problems, problems
+    return problems, notes
 
 
 def cmd_verify(args) -> int:
@@ -440,12 +474,15 @@ def cmd_verify(args) -> int:
     for ident in cfg["identities"]:
         if ident["name"] not in targets:
             continue
-        ok, problems = verify_identity(ident, cfg)
+        problems, notes = verify_identity(ident, cfg)
+        ok = not problems
         ok_all = ok_all and ok
-        results.append({"name": ident["name"], "ok": ok, "problems": problems})
+        results.append({"name": ident["name"], "ok": ok, "problems": problems, "notes": notes})
         status = "ok" if ok else "FAIL"
         print(f"{ident['name']}: {status}  (creds={len(ident.get('credentials', []))}, "
               f"buckets={len(SCOPES.get(ident['name'], []))})")
+        for note in notes:
+            print(f"  - {note}")
         for problem in problems:
             print(f"  ! {problem}")
     os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
@@ -466,13 +503,13 @@ def cmd_retire(args) -> int:
     for ident in cfg["identities"]:
         if ident["name"] not in targets:
             continue
-        ok, problems = verify_identity(ident, cfg)
-        if not ok:
+        problems, _notes = verify_identity(ident, cfg)
+        if problems:
             raise Fail(f"refusing to retire {ident['name']}: " + "; ".join(problems))
     retiring = [(i["name"], c) for i in cfg["identities"] if i["name"] in targets
                 for c in (i.get("credentials") or [])[:-1]]
     if retiring:
-        hits = scan_cluster([cred["accessKey"] for _, cred in retiring])
+        hits = meaningful_hits([cred["accessKey"] for _, cred in retiring])
         if hits:
             raise Fail("refusing to retire: cluster values still carry the old key in "
                        + ", ".join(f"{hit['kind']} {hit['namespace']}/{hit['name']}" for hit in hits))
@@ -512,7 +549,7 @@ def cmd_delete_identity(args) -> int:
     if not ident:
         raise Fail(f"no identity named {args.identity}")
     keys = [c.get("accessKey") for c in ident.get("credentials", [])]
-    hits = scan_cluster(keys)
+    hits = meaningful_hits(keys)
     references = [f"{h['kind']} {h['namespace']}/{h['name']} field {h['field']}" for h in hits]
     if references and not args.force:
         raise Fail("refusing to delete: still referenced by " + ", ".join(references))
