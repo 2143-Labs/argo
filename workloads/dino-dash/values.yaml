@@ -44,6 +44,13 @@ gameserver:
   # START AT L4 button, NPC population logs. dino-dev and PR previews only; never prod.
   debug: false
 
+# OpenTelemetry export (apps/server/src/telemetry.ts). Emptying `endpoint` turns the SDK off -
+# that is the rollback lever, and it needs no image rebuild.
+otel:
+  endpoint: "http://alloy.observability.svc:4318"   # "" disables tracing in this namespace
+  sampleRatio: "1.0"   # OTEL_TRACES_SAMPLER_ARG; event-only spans, so this is a safety valve
+  frameTraceMs: "100"  # PRIMAL_FRAME_TRACE_MS: a slower 20 Hz step emits one overrun span a second
+
 # Link previews (helm_modules/game-edge): the Open Graph payload the Anubis
 # challenge page carries for clients that cannot solve a challenge (Discord,
 # Slack, Telegram, ...). Only dino ships a raster, so only dino gets an og:image;

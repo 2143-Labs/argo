@@ -56,6 +56,15 @@
           key: COORDINATOR_TOKEN
     - name: RUST_LOG
       value: info
+    # OTLP/HTTP to Alloy: traces for joins/activation/shutdown, metrics for the tick and players.
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: {{ $root.Values.otel.endpoint | quote }}
+    - name: OTEL_TRACES_SAMPLER_ARG
+      value: {{ $root.Values.otel.sampleRatio | quote }}
+    - name: ROTS_ENV
+      value: {{ $root.Values.namespace | quote }}
+    - name: ROTS_FRAME_TRACE_MS
+      value: {{ $root.Values.otel.frameTraceMs | quote }}
   ports:
     - containerPort: 25565
       protocol: UDP

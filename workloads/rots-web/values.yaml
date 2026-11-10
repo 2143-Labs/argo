@@ -15,6 +15,14 @@ imagePullSecret:
   key: john2143-com/default/zot-cluster-pull
   registry: registry.ts.2143.me
 
+# OpenTelemetry export for the game servers and the authserver (server/src/telemetry.rs,
+# authserver/src/telemetry.rs). Emptying `endpoint` turns both SDKs off completely - that is
+# the rollback lever, and it needs no image rebuild.
+otel:
+  endpoint: "http://alloy.observability.svc:4318"   # "" disables tracing in this namespace
+  sampleRatio: "1.0"   # OTEL_TRACES_SAMPLER_ARG; event-only spans, so this is a safety valve
+  frameTraceMs: "50"   # ROTS_FRAME_TRACE_MS: a slower frame emits one overrun span a second
+
 web:
   # minReplicaCount on the ScaledObject rots-web (max is always 1). 0 (previews):
   # the KEDA interceptor holds a page view while the pod cold-starts. 1 (prod): a
