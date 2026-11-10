@@ -255,6 +255,21 @@ data:
         s3_aws_access_key_id: "os.environ/S3_ACCESS_KEY"
         s3_aws_secret_access_key: "os.environ/S3_SECRET_KEY"
       success_callback: ["s3_v2"]
+      # Serve request/response content in the UI from the S3 spend-log archive.
+      # With store_prompts_in_spend_logs=false (line 12) Postgres keeps only "{}"
+      # placeholders plus a ~60-byte metadata.cold_storage_object_key per row, and
+      # /spend/logs/ui/{request_id} downloads the real payload from that object
+      # (proxy/spend_tracking/spend_management_endpoints.py,
+      # _resolve_request_response_payload -> ColdStorageHandler).
+      #
+      # REQUIRES one S3 object per request: retrieval is by object key. Do NOT add
+      # s3_batch_file_upload to s3_callback_params above — litellm ignores it and
+      # warns on every flush when s3_v2 is the cold storage logger
+      # (integrations/s3_v2.py, _batch_file_mode_active). Do not set
+      # s3_use_team_prefix / s3_use_key_prefix either: the row key is built with
+      # prefix="" (litellm_core_utils/litellm_logging.py,
+      # _generate_cold_storage_object_key) and would stop matching the object path.
+      cold_storage_custom_logger: s3_v2
       cache_params:
         type: redis
         host: litellm-redis
