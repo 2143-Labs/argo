@@ -66,8 +66,10 @@ spec:
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
         - { name: gameserver.shareKey, value: rots-prod }
         - { name: gameserver.priorityClass.create, value: 'true' }
-        - { name: gameserver.quota.cpu, value: '32' }
-        - { name: gameserver.quota.memory, value: 40Gi }
+        # requests of 126 game servers at 200m/256Mi: free node capacity (big, closet, nas, arch,
+        # office) measured 2026-11-10 23:40Z + running game pods - 10. Re-measure when nodes change.
+        - { name: gameserver.quota.cpu, value: 25200m }
+        - { name: gameserver.quota.memory, value: 32256Mi }
         - { name: temporal.namespace, value: rots }
         - { name: temporal.taskQueue, value: rots-prod }
         - { name: authserver.scaleToZero.minReplicas, value: '1' }
