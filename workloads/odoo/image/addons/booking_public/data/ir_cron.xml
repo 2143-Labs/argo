@@ -11,4 +11,14 @@
             <field name="active" eval="True" />
         </record>
     </data>
+    <!-- The public booking POST sends the visitor's invitation itself and leaves
+         the staff invitation, the portal notifications and its own comment to the
+         queue, so the visitor does not wait for them. Core ships that queue on an
+         hourly run; one minute keeps a booking confirmation close to immediate.
+         Outside <data noupdate>, so an upgrade re-applies it. -->
+    <function
+        model="ir.cron"
+        name="write"
+        eval="[[ref('mail.ir_cron_mail_scheduler_action')], {'interval_number': 1, 'interval_type': 'minutes'}]"
+    />
 </odoo>

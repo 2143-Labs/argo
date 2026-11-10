@@ -1,4 +1,5 @@
 from . import (
+    calendar_attendee,
     calendar_event,
     caldav_sync,
     mail_ice_server,
@@ -8,6 +9,7 @@ from . import (
 )
 
 __all__ = [
+    "calendar_attendee",
     "calendar_event",
     "caldav_sync",
     "mail_ice_server",

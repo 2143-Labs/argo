@@ -20,6 +20,14 @@ class ResourceBooking(models.Model):
         index=True,
         help="UID of the iCloud event this booking was written to, while it exists.",
     )
+    booking_key = fields.Char(
+        "Public form key",
+        copy=False,
+        index=True,
+        help="Key of the public page that produced this booking. A second "
+        "submission of the same page is answered with this booking instead of "
+        "booking the visitor twice.",
+    )
 
     def _prepare_meeting_vals(self):
         vals = super()._prepare_meeting_vals()

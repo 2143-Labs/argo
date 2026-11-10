@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import timedelta
 
 import pytz
@@ -14,6 +15,12 @@ BOOKING_ROOT = "/book"
 NO_SLOT_TEXT = "No times are free in the next %(days)s days. Please get in touch."
 LOST_SLOT_TEXT = "That time is no longer available. Please pick another."
 BAD_VISITOR_TEXT = "Please give your name and a valid email address."
+# Mail sent while the visitor waits must be the visitor's own invitation only;
+# the rest (staff invitation, portal notifications, our comment) rides the queue.
+DEFER_MAIL = {
+    "mail_notify_force_send": False,
+    "booking_public_defer_staff_mail": True,
+}
 
 
 def _display_tz(booking_type):
@@ -97,6 +104,10 @@ class BookingPublic(http.Controller):
                 % {"days": booking_type.public_horizon_days},
                 "error": error,
                 "values": values or {},
+                # One key per rendered page: a resubmission of this form (double
+                # click, reload, retry after a dropped connection) is answered
+                # with the booking it already made instead of making another.
+                "booking_key": uuid.uuid4().hex,
             },
         )
 
@@ -128,10 +139,18 @@ class BookingPublic(http.Controller):
         website=True,
         methods=["POST"],
     )
-    def booking_confirm(self, type_id, name=None, email=None, phone=None, when=None, **kw):
+    def booking_confirm(
+        self, type_id, name=None, email=None, phone=None, when=None, booking_key=None, **kw
+    ):
         booking_type = self._get_public_type(type_id)
         if not booking_type:
             raise request.not_found()
+        # Before anything else: this page may already have booked. The visitor
+        # then gets their booking back instead of a second one, and instead of
+        # "that time is no longer available" (it is taken, by them).
+        existing = self._already_booked(booking_key)
+        if existing:
+            return request.redirect(existing.get_portal_url())
         values = {"name": name or "", "email": email or "", "phone": phone or ""}
         name = (name or "").strip()
         phone = (phone or "").strip() or False
@@ -154,15 +173,31 @@ class BookingPublic(http.Controller):
                 .create({"name": name, "email": normalized, "phone": phone})
             )
         tz = _display_tz(booking_type)
-        booking = self._book(booking_type, chosen, partner, tz)
+        booking, created = self._book(booking_type, chosen, partner, tz, booking_key)
         if booking is None:
             return self._render_type(booking_type, error=LOST_SLOT_TEXT, values=values)
+        if not created:
+            return request.redirect(booking.get_portal_url())
         invoice = self._deposit(booking, booking_type, partner)
         if invoice and _provider_is_live():
             return request.redirect(invoice.get_portal_url())
         return request.redirect(booking.get_portal_url())
 
-    def _book(self, booking_type, chosen, partner, tz):
+    def _already_booked(self, booking_key):
+        """The booking this form already made, if any."""
+        if not booking_key:
+            return request.env["resource.booking"]
+        return (
+            request.env["resource.booking"]
+            .sudo()
+            .search(
+                [("booking_key", "=", booking_key), ("state", "!=", "canceled")],
+                limit=1,
+            )
+        )
+
+    def _book(self, booking_type, chosen, partner, tz, booking_key=None):
+        """Create the booking. Returns ``(booking, created)``, or ``(None, False)``."""
         Booking = request.env["resource.booking"].sudo()
         context = {"tz": tz.zone}
         probe = Booking.with_context(**context).new(
@@ -176,15 +211,25 @@ class BookingPublic(http.Controller):
         try:
             combination = probe._get_best_combination()
         except ValidationError:
-            return None
+            return None, False
         if not combination:
-            return None
+            return None, False
         employee = combination.resource_ids.filtered(
             lambda res: res.resource_type == "user" and res.user_id
         )[:1].user_id
         try:
             with request.env.cr.savepoint():
-                booking = Booking.with_context(**context).create(
+                if booking_key:
+                    # Serialise the submissions of one form: a click that arrives
+                    # while the first is still in flight waits here, then finds
+                    # the booking the first one committed.
+                    request.env.cr.execute(
+                        "SELECT pg_advisory_xact_lock(hashtext(%s))", (booking_key,)
+                    )
+                    existing = self._already_booked(booking_key)
+                    if existing:
+                        return existing, False
+                booking = Booking.with_context(**context, **DEFER_MAIL).create(
                     {
                         "type_id": booking_type.id,
                         "partner_ids": [(6, 0, [partner.id])],
@@ -194,10 +239,11 @@ class BookingPublic(http.Controller):
                         "user_id": employee.id or False,
                         "start": chosen["utc"],
                         "duration": booking_type.duration,
+                        "booking_key": booking_key or False,
                     }
                 )
                 booking.action_confirm()
-                booking.message_post(
+                booking.with_context(**DEFER_MAIL).message_post(
                     body=request.env._(
                         "Booked online for %(when)s. Manage it here: %(url)s",
                         when=chosen["label"],
@@ -209,8 +255,8 @@ class BookingPublic(http.Controller):
         except ValidationError:
             # Lost the race against another booking, or the slot no longer fits
             # the calendar: tell the visitor instead of showing a 500.
-            return None
-        return booking
+            return None, False
+        return booking, True
 
     def _deposit(self, booking, booking_type, partner):
         """Invoice the deposit. Never loses the booking over it."""

@@ -74,6 +74,10 @@ A customer gives a name and a valid email and nothing else. The booking is creat
 
 The page is anonymous, so abuse control is the edge's: the booking host is an ordinary public host with `public-rate-limit`, `public-inflight-limit` and the three CrowdSec rules described under Edge. There is no captcha. If spam bookings appear, add a honeypot field before adding one.
 
+**One page, one booking.** Each rendered page carries a `booking_key`; a second submission of the same page — a double click, a reload, a retry after a dropped connection — is answered with the booking it already made instead of making another. Submissions of one key are serialised in the database (`pg_advisory_xact_lock`), so two clicks that overlap still produce one booking. A submission whose time is refused creates nothing and does not consume the key, so the visitor can simply try again, and a cancelled booking is not replayed.
+
+**Why a booking takes a second or two.** The visitor's invitation is sent inside the request; the staff invitation, the portal notifications and the addon's own comment are queued and go out on the next run of `Mail: Email Queue Manager`, which this addon retimes to every minute (core ships it hourly). Sending all of them inline made every booking POST wait for one SMTP round trip each — roughly ten seconds against the relay, which is what made visitors click again.
+
 Easy!Appointments is retired: its two Applications (`book-aross` and `book-2143`) and their namespaces are deleted. It had never been installed (no `ea_appointments` table in either MariaDB), so no booking, service or customer data was lost. The chart stays in `workloads/booking` for a restore if it is ever wanted again.
 
 ### iCloud calendar sync

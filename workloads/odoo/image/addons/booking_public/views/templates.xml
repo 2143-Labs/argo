@@ -57,8 +57,9 @@
                         </span>
                     </p>
                     <div t-if="error" class="alert alert-warning" role="alert"><t t-esc="error" /></div>
-                    <form method="post" t-attf-action="/book/#{btype.id}/confirm" class="row g-3">
+                    <form method="post" t-attf-action="/book/#{btype.id}/confirm" class="row g-3" id="booking_form">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()" />
+                        <input type="hidden" name="booking_key" t-att-value="booking_key" />
                         <div class="col-md-4">
                             <label class="form-label" for="booking_name">Your name</label>
                             <input type="text" class="form-control" id="booking_name" name="name" required="required" t-att-value="values.get('name', '')" />
@@ -72,6 +73,9 @@
                             <input type="tel" class="form-control" id="booking_phone" name="phone" t-att-value="values.get('phone', '')" />
                         </div>
                         <div class="col-12">
+                            <p id="booking_waiting" class="alert alert-info mt-3 d-none" role="status">
+                                Booking your time. This takes a few seconds.
+                            </p>
                             <t t-if="days">
                                 <t t-foreach="days" t-as="day">
                                     <h2 class="h6 mt-4"><t t-esc="day['label']" /></h2>
@@ -85,6 +89,37 @@
                             <p t-else="" class="alert alert-info mt-3"><t t-esc="no_slot_text" /></p>
                         </div>
                     </form>
+                    <script>
+                        (function () {
+                            var form = document.getElementById("booking_form");
+                            if (!form) return;
+                            var waiting = document.getElementById("booking_waiting");
+                            var timer = null;
+                            function setSending(on) {
+                                form.dataset.sending = on ? "1" : "";
+                                form.style.pointerEvents = on ? "none" : "";
+                                form.style.opacity = on ? "0.6" : "";
+                                if (waiting) waiting.classList.toggle("d-none", !on);
+                                if (!on) {
+                                    clearTimeout(timer);
+                                    timer = null;
+                                }
+                            }
+                            form.addEventListener("submit", function (ev) {
+                                // A slot clicked again while the first request is in
+                                // flight would be a second booking, not a faster one.
+                                if (form.dataset.sending === "1") {
+                                    ev.preventDefault();
+                                    return;
+                                }
+                                setSending(true);
+                                // A dropped connection must not leave the page dead.
+                                timer = setTimeout(function () { setSending(false); }, 60000);
+                            });
+                            // Back button, or a page restored from the cache.
+                            window.addEventListener("pageshow", function () { setSending(false); });
+                        })();
+                    </script>
                 </div>
             </div>
         </t>
