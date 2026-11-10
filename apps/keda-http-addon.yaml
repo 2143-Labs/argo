@@ -14,12 +14,31 @@ spec:
     helm:
       releaseName: keda-add-ons-http
       values: |
+        # ROTS's 2000 slots put ~4000 Services in rots-prod; at the chart defaults
+        # (0.5 CPU / 64Mi, 1 s probes) the interceptor pinned its CPU limit and its
+        # liveness probe timed out, and the external scaler crash-looped behind it
+        # ("there isn't any valid interceptor endpoint") - every /auth request then
+        # 502/504'd through Traefik (2026-11-10, first re-shard to 2000 slots).
         interceptor:
           replicas:
             min: 1
           readinessTimeout: "30s"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 64Mi
+            limits:
+              cpu: "2"
+              memory: 256Mi
         scaler:
           replicas: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 32Mi
+            limits:
+              cpu: "1"
+              memory: 128Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: keda
