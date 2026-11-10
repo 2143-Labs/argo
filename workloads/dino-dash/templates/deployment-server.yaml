@@ -72,6 +72,18 @@ spec:
             - name: PRIMAL_DEBUG
               value: "1"
             {{- end }}
+            # OTLP/HTTP to Alloy: traces for joins/disconnects/overruns, metrics for the tick and
+            # the population. PRIMAL_VERSION is the image tag, so a trace names the build.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.otel.sampleRatio | quote }}
+            - name: PRIMAL_ENV
+              value: {{ .Values.namespace | quote }}
+            - name: PRIMAL_VERSION
+              value: {{ .Values.image.tag | quote }}
+            - name: PRIMAL_FRAME_TRACE_MS
+              value: {{ .Values.otel.frameTraceMs | quote }}
 
           resources:
             requests:

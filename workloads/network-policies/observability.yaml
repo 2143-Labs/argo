@@ -7,6 +7,11 @@
 #     its pod, not a node.
 #   * observability/beyla -> alloy:4318, and Alloy -> tempo:4317 - both inside
 #     this namespace, so the same-namespace rule carries them.
+#   * rots-* and dino-* game pods -> alloy:4318 - the OTel SDKs in the game
+#     servers and the authserver push traces and metrics over OTLP/HTTP. The
+#     namespaceSelector matches `app.kubernetes.io/part-of`, which every
+#     rots-web and dino-dash namespace carries (prod, dev and the PR previews
+#     alike), so a new preview namespace needs no edit here.
 #   * same namespace - Alloy -> loki-gateway/mimir/tempo, loki-canary ->
 #     loki-gateway, grafana -> all three datasources, and the Loki/Mimir
 #     memberlist gossip (7946) between their own pods.
@@ -137,6 +142,18 @@ spec:
           protocol: TCP
         - port: 4317
           protocol: TCP
+        - port: 4318
+          protocol: TCP
+    # rots4 and Dino-Dash server pods export OTLP/HTTP traces and metrics to
+    # Alloy, pod-to-pod through the Service, so the source namespace is what the
+    # policy sees. 4317 is deliberately absent: both SDKs use OTLP/HTTP.
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values: ["rots-web", "dino-dash"]
+      ports:
         - port: 4318
           protocol: TCP
     # Alloy scrapes itself, and any future collector running in its own

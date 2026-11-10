@@ -1,0 +1,190 @@
+# Games fleet alerts: ROTS and Dino-Dash server telemetry. Same provisioning shape as
+# alert-rules.yaml (label grafana_alert: "1"), one contact point away from firing.
+#
+# Deliberately absent: an "instances == 0" alert. Both charts scale to zero when nobody is
+# playing, so zero instances is the healthy state most evenings.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: games-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  games-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: games
+        folder: Alerts
+        interval: 1m
+        rules:
+          # The server's 60 Hz tick has 16.6 ms; an observation above 20 ms at the 95th
+          # percentile means the frame budget is already gone for one player in twenty. Tick
+          # duration is a histogram, so the query is the quantile, not a counter.
+          - uid: rots-tick-budget
+            title: ROTS tick p95 above budget
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: histogram_quantile(0.95, sum by (le) (rate(rots_tick_duration_bucket[5m])))
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0.020
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: ROTS tick p95 above the 20 ms budget
+              description: >-
+                The 95th-percentile gap between two 60 Hz ticks is above 20 ms for ten minutes,
+                against a 16.6 ms budget. Look for a frame_overrun trace on the affected
+                instance in Tempo, and check whether entity count or players rose with it.
+
+          # A join that never reaches a world is a player who cannot play. The denominator is
+          # the span metric for game.join, so it counts attempts, not just accepted joins.
+          - uid: game-join-failure-rate
+            title: Game join failure rate
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: >-
+                    sum(rate(rots_join_rejected_total[10m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{span_name="game.join", service=~"rots-.*"}[10m])), 0.001)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0.05
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: More than 5% of game joins are being refused
+              description: >-
+                Over the last ten minutes more than one join in twenty was rejected. The
+                reason label on rots_join_rejected_total says which stage refused it: ticket
+                means the client's ticket was bad, coordinator means the authserver did not
+                answer in time, world_timeout means the instance never built its world.
+
+          # A restart is a lost world for everyone on that instance (managed instances keep
+          # their volume, static ones do not). kube-state-metrics is already scraped into
+          # Mimir, so this needs no new pipeline.
+          - uid: game-server-restarts
+            title: Game server restarted
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: >-
+                    increase(kube_pod_container_status_restarts_total{namespace="rots-prod", container="rots-gameserver"}[15m])
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: A ROTS game server container restarted
+              description: >-
+                kube_pod_container_status_restarts_total for namespace rots-prod increased in the
+                last 15 minutes. Check the previous container's exit code and the logs in Loki
+                (namespace rots-prod) before assuming it was a rollout.

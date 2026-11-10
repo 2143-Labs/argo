@@ -120,6 +120,13 @@ spec:
                   key: uri
             - name: RUST_LOG
               value: info
+            # Trace-only: the authserver's RED signals come from Beyla and Tempo span metrics.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.otel.sampleRatio | quote }}
+            - name: ROTS_ENV
+              value: {{ .Values.namespace | quote }}
 {{- if .Values.imagePullSecret.key }}
             # The warm pool's stale-image check reads the PodTemplate image digest from
             # the registry; private images need the pull credential (k8s.rs registry_digest).
