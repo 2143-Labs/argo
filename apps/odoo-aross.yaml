@@ -36,6 +36,9 @@ spec:
         - { name: oidc, value: "true" }
         - { name: caldav, value: "true" }
         - { name: turn, value: "true" }
+        # One instance at a time: aross runs the guard first; drop this line
+        # once workloads/odoo/values.yaml carries the same tag.
+        - { name: image, value: ghcr.io/2143-labs/odoo:sha-3525ecf446f18a285086d577e5358ca4303b1420 }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross
