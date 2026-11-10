@@ -22,14 +22,29 @@ odoo-db-app (username, password) for the bootstrap owner.
 {{- end }}
 
 {{/*
-The three rules of one Odoo host. Argument: dict "bouncer" (the CrowdSec
+The rules of one Odoo host. Argument: dict "bouncer" (the CrowdSec
 middleware gating the public rules: "crowdsec-bouncer", which IP-bans, for the
 back office, or "crowdsec-bouncer-appsec-only", which never IP-bans a client,
 for the booking host; scripts/validations/booking-never-ban.sh requires the
-latter on book.*) and "ns" (the namespace holding the Service).
+latter on book.*), "ns" (the namespace holding the Service) and optional
+"root" (a path that "/" redirects to; set only on booking hosts).
 */}}
 {{- define "odoo.routeRules" -}}
 rules:
+  {{- if .root }}
+  # The booking host's root has nothing of its own (it would render the default
+  # Odoo website), so send visitors straight to the booking page. Exact match,
+  # so Traefik ranks it above the PathPrefix / catch-all.
+  - matches:
+      - path: { type: Exact, value: / }
+    filters:
+      - type: RequestRedirect
+        requestRedirect:
+          path:
+            type: ReplaceFullPath
+            replaceFullPath: {{ .root }}
+          statusCode: 302
+  {{- end }}
   # Rule 1: LAN and tailnet only.
   - matches:
       - path: { type: PathPrefix, value: /web/database }

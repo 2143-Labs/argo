@@ -1,4 +1,5 @@
-# https://o.2143.me - 2143 Labs LLC's Odoo (Maryland; software and hosting).
+# https://o.2143.me (back office) and https://book.2143.me (public booking page) -
+# 2143 Labs LLC, Maryland; software and hosting.
 # workloads/odoo: Odoo Community 18.0 + OCA, one always-on pod, its own CNPG
 # Postgres (odoo-db) and filestore PVC in namespace odoo-labs. OpenBao (mount consumers):
 # john2143-com/odoo-labs/odoo-admin (first-init admin password) and
@@ -25,6 +26,7 @@ spec:
         - { name: namespace, value: odoo-labs }
         - { name: id, value: "labs", forceString: true }
         - { name: host, value: o.2143.me }
+        - { name: bookingHost, value: book.2143.me }
         - { name: sectionName, value: 2143-me-wildcard-https }
         - { name: mailFrom, value: labs_odoo@m.2143.me }
         - { name: companyName, value: "2143 Labs LLC" }

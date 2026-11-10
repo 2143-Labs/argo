@@ -1,6 +1,6 @@
 # Odoo (o.aross.studio, o.2143.me)
 
-One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (aross.studio, namespace `odoo-aross`, also `https://book.aross.studio` for the public booking page) and `https://o.2143.me` (2143 Labs LLC, namespace `odoo-labs`). Each is one always-on pod, `strategy: Recreate`, with its own CNPG Postgres (`odoo-db`), its own filestore PVC (`odoo-filestore`), its own admin and users. Both start on OCA's US GAAP chart of accounts (`l10n_us_gaap`, template `us_gaap`).
+One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (aross.studio, namespace `odoo-aross`, also `https://book.aross.studio` for the public booking page) and `https://o.2143.me` (2143 Labs LLC, namespace `odoo-labs`, also `https://book.2143.me` for its public booking page). Each is one always-on pod, `strategy: Recreate`, with its own CNPG Postgres (`odoo-db`), its own filestore PVC (`odoo-filestore`), its own admin and users. Both start on OCA's US GAAP chart of accounts (`l10n_us_gaap`, template `us_gaap`).
 
 **No scheduled database backup exists** (deferred 2026-11-08). The filestore PVC is in the nightly Longhorn backup to the NAS; Postgres is not. Enter no real books until a database backup exists, and take the manual dump below before every change.
 
@@ -60,7 +60,7 @@ Odoo supports 18.0 until about late 2027. The move to 19.0 goes through OpenUpgr
 
 ## Public booking page
 
-`https://book.aross.studio/book` is the in-repo addon `booking_public` (`workloads/odoo/image/addons/booking_public`, copied to `/opt/aross/addons` by the image and listed in `modules`). It is the public front door on top of OCA `resource_booking`; only the aross.studio instance has a `bookingHost`, because 2143 Labs takes no bookings.
+`https://book.aross.studio/book` is the in-repo addon `booking_public` (`workloads/odoo/image/addons/booking_public`, copied to `/opt/aross/addons` by the image and listed in `modules`). It is the public front door on top of OCA `resource_booking`. Both instances have a booking host (`book.aross.studio`, `book.2143.me`, the `bookingHost` value in their Application); each company publishes its own booking types. On those hosts `/` answers 302 to `/book`, because the root would otherwise render the empty default website.
 
 Publishing a service is done in the booking type (Resource bookings → Booking types → *Public page* tab):
 
@@ -142,7 +142,7 @@ bao kv put -mount=consumers john2143-com/<namespace>/odoo-admin @"$f"; shred -u 
 - Paths that carry arbitrary request bodies (back-office writes, chatter, live chat, uploads, website editor, websocket): rate limits plus the host's CrowdSec bouncer.
 - Everything else: rate limits plus the host's CrowdSec bouncer.
 
-The bouncer differs by host, which is why `book.aross.studio` has its own HTTPRoute (`odoo-<id>-booking`): on `o.*` it is `crowdsec-bouncer` (or `crowdsec-bouncer-noappsec` for bodies), which enforces IP bans; on the booking host it is `crowdsec-bouncer-appsec-only`, which 403s the single request that trips an AppSec rule and never consults the ban list, the community blocklist or bans earned on other hosts. A customer filling in the booking form must never be locked out of everything else (`scripts/validations/booking-never-ban.sh`). Both hostnames serve the same Odoo, so the back office is reachable on the booking host too — behind the same login, with `/web/database` and the XML-RPC APIs still LAN-only.
+The bouncer differs by host, which is why each booking host has its own HTTPRoute (`odoo-<id>-booking`): on `o.*` it is `crowdsec-bouncer` (or `crowdsec-bouncer-noappsec` for bodies), which enforces IP bans; on the booking host it is `crowdsec-bouncer-appsec-only`, which 403s the single request that trips an AppSec rule and never consults the ban list, the community blocklist or bans earned on other hosts. A customer filling in the booking form must never be locked out of everything else (`scripts/validations/booking-never-ban.sh`). Both hostnames serve the same Odoo, so the back office is reachable on the booking host too — behind the same login, with `/web/database` and the XML-RPC APIs still LAN-only.
 
 `workloads/crowdsec-agent/agent-booking-hosts.yaml` switches off the crawl and probing scenarios for these hosts, because normal shop and back-office use looks like both.
 
