@@ -56,6 +56,10 @@ authserver:
     minReplicas: 0          # prod 1
     maxReplicas: 1          # prod 3
 
+# rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.
+sync:
+  replicas: 1   # prod 2
+
 db:
   clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app
   instances: 1          # 2 (prod) or 1 (previews)
@@ -63,6 +67,17 @@ db:
   walSize: 1Gi
   storageClass: longhorn-cnpg
   protect: false        # true (prod): Prune=false,Delete=false on the Cluster and Namespace
+  # CNPG instance resources (templates/cnpg-cluster.yaml).
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  # max_slot_wal_keep_size: "" leaves it unset; prod sets 2GB, below walSize, so a stalled
+  # replica's HA slot cannot fill the WAL volume.
+  maxSlotWalKeepSize: ""
 
 gameserver:
   tag: ""          # gameserver-<sha7> (prod, written by rots4 CI) or gameserver-pr-<N>-<head sha>
@@ -84,7 +99,7 @@ gameserver:
   # Managed (kubernetes) mode only: instances kept booted in pre-game (sockets and the
   # coordinator link up, world paused) and activated when a player is placed on one, so
   # /play answers with a ticket in ~1 s instead of ~15 s. Each takes a slot from
-  # gameserver.slots, a 200m/256Mi pod and a 1Gi Longhorn volume.
+  # gameserver.slots and a 200m/256Mi pod.
   warmInstances: 0        # prod 1; previews 0 (a warm pod keeps the authserver awake)
   # How long an unclaimed warm instance may live before it is destroyed and replaced.
   warmMaxAgeSecs: 21600

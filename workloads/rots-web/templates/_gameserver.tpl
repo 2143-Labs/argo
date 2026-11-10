@@ -33,12 +33,16 @@
       value: {{ required "publicUrl is required" $root.Values.publicUrl | quote }}
 {{- if .managed }}
     # Managed mode: the provisioner adds ROTS_SERVER_SLOT, ROTS_SERVER_GENERATION,
-    # ROTS_SERVER_JOIN_CODE and ROTS_PUBLIC_UDP_PORT per instance. /data is that
-    # instance's Longhorn volume; ROTS_IDLE_SECS is when it destroys itself.
+    # ROTS_SERVER_JOIN_CODE and ROTS_PUBLIC_UDP_PORT per instance. /data is the pod's
+    # emptyDir (config.yaml and the shutdown sentinel); the world is claimed from and
+    # saved to rots-sync. ROTS_IDLE_SECS is when it destroys itself.
     - name: ROTS_STATE_DIR
       value: "/data"
     - name: ROTS_IDLE_SECS
       value: {{ $gs.idleSecs | quote }}
+    # World snapshots (claim on boot, save every 5 s), bearer ROTS_COORDINATOR_TOKEN.
+    - name: ROTS_SYNC_URL
+      value: "http://rots-sync.{{ $root.Values.namespace }}.svc:8002"
 {{- else }}
     # Slot = StatefulSet pod index; the coordinator gates every join and
     # receives the heartbeat roster through the authserver internal API.

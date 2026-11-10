@@ -40,18 +40,18 @@ spec:
                 values: [big, nas]
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
+    {{- toYaml .Values.db.resources | nindent 4 }}
   storage:
     size: {{ .Values.db.size }}
     storageClass: {{ .Values.db.storageClass }}
   walStorage:
     size: {{ .Values.db.walSize }}
     storageClass: {{ .Values.db.storageClass }}
+{{- with .Values.db.maxSlotWalKeepSize }}
+  postgresql:
+    parameters:
+      max_slot_wal_keep_size: {{ . | quote }}
+{{- end }}
   bootstrap:
     initdb:
       database: rots

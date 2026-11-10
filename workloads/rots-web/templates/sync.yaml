@@ -1,0 +1,134 @@
+{{- /* rots-sync: the game servers' world-snapshot store (rots-authserver src/sync.rs), run
+       from the authserver image as `rots-authserver sync`. Managed mode only. Game servers
+       reach it at http://rots-sync.<ns>.svc:8002 (ROTS_SYNC_URL, _gameserver.tpl) with the
+       bearer COORDINATOR_TOKEN. It never calls the Kubernetes API, so no token is mounted. */}}
+{{- if eq (.Values.gameserver.provisioner | default "static") "kubernetes" }}
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-sync
+  namespace: {{ $ns }}
+  labels:
+    app: rots-sync
+spec:
+  replicas: {{ int .Values.sync.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-sync
+  template:
+    metadata:
+      labels:
+        app: rots-sync
+    spec:
+      automountServiceAccountToken: false
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: rots-sync
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
+      containers:
+        - name: rots-sync
+          image: {{ required "authserver.image is required" .Values.authserver.image }}
+          imagePullPolicy: Always
+          args: ["sync"]
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: PUBLIC_URL
+              value: {{ required "publicUrl is required" .Values.publicUrl | quote }}
+            - name: SYNC_PORT
+              value: "8002"
+            - name: TEMPORAL_ADDRESS
+              value: "http://temporal-frontend.default.svc.cluster.local:7233"
+            - name: TEMPORAL_NAMESPACE
+              value: {{ required "temporal.namespace is required" .Values.temporal.namespace | quote }}
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ required "temporal.taskQueue is required" .Values.temporal.taskQueue | quote }}
+            - name: GAME_SERVER_PROVISIONER
+              value: {{ .Values.gameserver.provisioner | quote }}
+            - name: GAME_SERVER_SLOTS
+              value: {{ .Values.gameserver.slots | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.clusterName }}-app
+                  key: uri
+            - name: RUST_LOG
+              value: info
+          # TICKET_SIGNING_KEY and COORDINATOR_TOKEN (externalsecret.yaml).
+          envFrom:
+            - secretRef:
+                name: rots-authserver-secret
+          ports:
+            - containerPort: 8002
+              name: sync
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: sync
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: sync
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-sync
+  namespace: {{ $ns }}
+  labels:
+    app: rots-sync
+spec:
+  type: ClusterIP
+  selector:
+    app: rots-sync
+  ports:
+    - port: 8002
+      targetPort: 8002
+      protocol: TCP
+      name: sync
+{{- end }}
