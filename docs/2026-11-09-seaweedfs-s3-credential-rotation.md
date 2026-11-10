@@ -222,11 +222,27 @@ Always `KEY=@file` with the file at mode 0600.
   log/metric/trace writes and CI release pushes, are unavailable for 5–20 s per config write.
   Consumers retry; nothing is lost. Do not start consumer restarts while the filer is still
   restarting, or the two windows combine.
+- **`nas` is the single failure domain, so check it before blaming a config write.** Both the
+  filer pod (its PVC is a single-replica Longhorn volume pinned to nas) and the volume server's
+  `/tank/seaweedfs-data` live there. If nas is unhealthy, a filer rollout cannot schedule or
+  attach at all: endpoints stay `ready=false`, `192.168.6.31:8333` refuses connections, and the
+  outage lasts until the host is power-cycled. On 2026-11-10 nas stopped heartbeating at
+  08:22:48 while still answering ping and with *every* TCP port closed (22, 10250, 2379, 8333) —
+  a wedged userland, not a crashed kubelet. Because nas is also an etcd voter, the API VIP
+  flaps throughout (quorum holds at 2/3). Diagnostic order: `kubectl get node nas`, then the
+  filer's endpoints, then the Longhorn volume's `state/robustness` — the config write is the
+  last suspect, not the first.
 - **Tempo does not retry its store at startup.** Its init calls `ListObjects` on `tempo-blocks`,
   so any S3 unavailability — a routine filer restart is enough — puts it into
   `CrashLoopBackOff` with `dial tcp …:8333: connect: connection refused`, and the backoff keeps
   growing after the store is healthy again. Delete the pod once S3 answers; it recovers in about
   a minute. It is never a credential problem when the message says `connection refused`.
+  If tempo is *still* not ready with S3 healthy, grep the filer log for
+  `first read of tempo-blocks/single-tenant/<block>/meta.json`: a failed read there means that
+  block's chunk is gone. On 2026-11-10 two such blocks (written 2026-11-04) held `/ready` at 503
+  through 213 restarts. The block is unreadable for good — tempo cannot compact or query it —
+  so delete it with the same filer `DELETE …?recursive=true` used for buckets; tempo went ready
+  40 s after the two were removed.
 - **S3 `InternalError` (HTTP 500) is the filer's disk, not the credentials.** When the filer's
   `/data` mount is an ext4 filesystem in the `shutdown` state (visible as `rw,...,shutdown` in
   `/proc/mounts`, with `input/output error` on `filerldb2/*` in the filer log), every metadata
