@@ -42,7 +42,7 @@ spec:
         # instead of cold-starting behind the interceptor on the first page view.
         - { name: web.minReplicas, value: '1' }
         - { name: authserver.secretKey, value: john2143-com/rots-prod/rots-authserver-secret }
-        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-e4d75a4' }
+        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-pr-49-43bef08b675b13850f63be68d046d2cc7f7b7664' }
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
         - { name: db.size, value: 8Gi }
@@ -60,6 +60,7 @@ spec:
         - { name: gameserver.provisioner, value: kubernetes }
         - { name: gameserver.slots, value: '64' }
         - { name: gameserver.warmInstances, value: '1' }
+        - { name: gameserver.shards, value: '8' }
         - { name: gameserver.udpPortBase, value: '36000' }
         - { name: gameserver.lbIP, value: 192.168.6.32 }
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }

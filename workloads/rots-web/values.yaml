@@ -88,6 +88,10 @@ gameserver:
   provisioner: static
   replicas: 1      # static mode: 4 (prod) or 1 (previews)
   slots: 4         # network slots: per-slot Services and /ws/<k> routes range over this
+  # Coordinator shards (authserver GAME_SERVER_SHARDS, 1-8), each owning a contiguous slot range.
+  # Changing shards or slots on a running environment is a re-shard: pause the authserver,
+  # terminate every rots-coordinator-<queue>-shard-<k>, deploy, resume (stop-the-world).
+  shards: 1
   udpPortBase: 0   # 36000 (prod) or 31000 + 4*(N % 1000) (previews)
   lbIP: ""         # 192.168.6.32 (prod) or 192.168.6.33 (previews)
   lbIPv6: ""       # fd00:6::32 (prod) or fd00:6::33 (previews)

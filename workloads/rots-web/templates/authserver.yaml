@@ -11,6 +11,9 @@
 {{- if ge (int ($gs.warmInstances | default 0)) (int ($gs.slots | default 0)) }}
 {{- fail "gameserver.warmInstances must be smaller than gameserver.slots" }}
 {{- end }}
+{{- if or (lt (int ($gs.shards | default 1)) 1) (gt (int ($gs.shards | default 1)) 8) }}
+{{- fail "gameserver.shards must be between 1 and 8" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -101,6 +104,9 @@ spec:
               value: {{ $gs.provisioner | default "static" | quote }}
             - name: GAME_SERVER_SLOTS
               value: {{ ternary $gs.slots $gs.replicas $managed | quote }}
+            # Coordinator shards, each owning a contiguous slot range (rots-coordinator-<queue>-shard-<k>).
+            - name: GAME_SERVER_SHARDS
+              value: {{ $gs.shards | default 1 | quote }}
             - name: GAME_SERVER_CAPACITY_PER_SERVER
               value: {{ $gs.capacityPerServer | quote }}
             - name: GAME_SERVER_READY_TIMEOUT_SECS
