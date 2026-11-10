@@ -63,6 +63,12 @@ spec:
       port: 514
       targetPort: 1514
       protocol: UDP
+    # Edge request logs (Loki push API): each edge's Alloy -> WireGuard -> lab
+    # connector (socat) -> here -> Alloy loki.source.api "edge".
+    - name: edge-logs
+      port: 3500
+      targetPort: 3500
+      protocol: TCP
 ---
 # OTLP gRPC receiver for the nonprod cluster's alloy (bigp nonprod, egress
 # allowlisted to this address only). Tempo itself stays ClusterIP.

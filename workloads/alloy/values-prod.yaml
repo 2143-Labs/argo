@@ -475,6 +475,43 @@ alloy:
         relabel_rules = loki.relabel.syslog.rules
         forward_to    = [loki.write.home.receiver]
       }
+
+      // -- Edge request logs: each edge's Alloy pushes through the lab connector
+      // (10.61.0.11:3500 -> syslog-lb 192.168.6.25:3500). This is the trust
+      // boundary: an edge controls only `slot` (s1-s9, self-reported) and `kind`;
+      // job is forced and every other label dropped, so no edge can write into
+      // another stream.
+      loki.relabel "edge" {
+        forward_to = []
+        rule {
+          action = "labelkeep"
+          regex  = "slot|kind"
+        }
+        rule {
+          source_labels = ["slot"]
+          regex         = "s[1-9]"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["kind"]
+          regex         = "access|error"
+          action        = "keep"
+        }
+        rule {
+          target_label = "job"
+          replacement  = "edge-nginx"
+        }
+      }
+
+      loki.source.api "edge" {
+        http {
+          listen_address = "0.0.0.0"
+          listen_port    = 3500
+        }
+        use_incoming_timestamp = false
+        relabel_rules          = loki.relabel.edge.rules
+        forward_to             = [loki.write.home.receiver]
+      }
   clustering:
     enabled: true
     name: alloy
@@ -503,6 +540,10 @@ alloy:
       port: 1514
       targetPort: 1514
       protocol: UDP
+    - name: edge-logs
+      port: 3500
+      targetPort: 3500
+      protocol: TCP
 controller:
   volumes:
     extra:
