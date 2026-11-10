@@ -50,9 +50,9 @@ RCLONE_CONF = os.path.join(STATE_DIR, "rclone.conf")
 # create anything.
 KNOWN_BUCKETS = (
     "edge-tofu-state", "frigate-genai", "history-old", "imagehost-files",
-    "litellm-spend-logs", "loki-admin", "loki-chunks", "loki-ruler", "marvel3-logs",
-    "mimir-alertmanager", "mimir-blocks", "mimir-rules", "rots4-releases", "shares",
-    "tempo-blocks", "tuwunel-media",
+    "litellm-spend-logs", "loki-admin", "loki-chunks", "loki-ruler",
+    "mimir-alertmanager", "mimir-blocks", "mimir-rules", "rots4-releases",
+    "tempo-blocks",
 )
 
 CONSUMERS = {
@@ -71,7 +71,6 @@ CONSUMERS = {
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
     "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
                       keys=("access_key_id", "secret_access_key"), es=None)],
-    "rain-marvel": [dict(kind="manual", note="consumer unknown; locate before retiring")],
 }
 
 SCOPES = {
@@ -82,7 +81,6 @@ SCOPES = {
     "john2143-worker-home": ["imagehost-files"],
     "rots4-ci": ["rots4-releases"],
     "edge-tofu": ["edge-tofu-state"],
-    "rain-marvel": ["marvel3-logs"],
 }
 
 
