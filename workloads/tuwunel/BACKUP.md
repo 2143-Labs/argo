@@ -16,7 +16,8 @@
 ### Media
 - Media is stored on the **same** Longhorn volume as the database, under `/data/db/media`
 - Covered by the same daily `nightly-backup` RecurringJob as the RocksDB data
-- The `tuwunel-media` S3 bucket at `files.john2143.com` is no longer used by the homeserver
+- The `tuwunel-media` S3 bucket at `files.john2143.com` was never written to (the provider failed
+  from the start) and was **deleted 2026-11-10** — do not re-create it
 - Background: `docs/2026-09-15-matrix-homeserver-remediation.md`
 
 ### Configuration (ArgoCD GitOps)
