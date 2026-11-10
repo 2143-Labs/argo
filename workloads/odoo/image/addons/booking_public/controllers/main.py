@@ -161,17 +161,7 @@ class BookingPublic(http.Controller):
         chosen = next((row for row in _slot_rows(booking_type) if row["value"] == when), None)
         if chosen is None:
             return self._render_type(booking_type, error=LOST_SLOT_TEXT, values=values)
-        partner = (
-            request.env["res.partner"]
-            .sudo()
-            .search([("email", "=ilike", normalized)], limit=1)
-        )
-        if not partner:
-            partner = (
-                request.env["res.partner"]
-                .sudo()
-                .create({"name": name, "email": normalized, "phone": phone})
-            )
+        partner = self._visitor_partner(name, normalized, phone)
         tz = _display_tz(booking_type)
         booking, created = self._book(booking_type, chosen, partner, tz, booking_key)
         if booking is None:
@@ -195,6 +185,23 @@ class BookingPublic(http.Controller):
                 limit=1,
             )
         )
+
+    def _visitor_partner(self, name, email, phone):
+        """The visitor's partner, created once even for simultaneous submits."""
+        Partner = request.env["res.partner"].sudo()
+        with request.env.cr.savepoint():
+            # A retry, a second tab or the same person on two devices can reach
+            # this with one address at the same moment. Without the lock both
+            # search, both find nothing, both create: two contacts, two
+            # histories, one human. The lock makes the second wait, then find
+            # what the first committed.
+            request.env.cr.execute(
+                "SELECT pg_advisory_xact_lock(hashtext(%s))", ("partner:" + email,)
+            )
+            partner = Partner.search([("email", "=ilike", email)], limit=1)
+            if not partner:
+                partner = Partner.create({"name": name, "email": email, "phone": phone})
+        return partner
 
     def _book(self, booking_type, chosen, partner, tz, booking_key=None):
         """Create the booking. Returns ``(booking, created)``, or ``(None, False)``."""

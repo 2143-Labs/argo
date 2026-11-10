@@ -73,6 +73,28 @@ class TestBookingGuard(HttpCase):
         self.assertEqual(len(bookings), 1)
         self.assertEqual(bookings.state, "confirmed")
 
+    def test_a_repeat_visitor_keeps_one_contact(self):
+        # Two separate forms (so two keys, two bookings) from one address, the
+        # second spelled with stray case and a space: one booking each, but a
+        # single contact.
+        first = page(self)
+        self.assertEqual(
+            self._submit(first, self._key(first), first_slot(first)).status_code, 303
+        )
+        again = page(self)
+        answer = self._submit(
+            again,
+            self._key(again),
+            first_slot(again),
+            email="  Ada@Example.COM ",
+        )
+        self.assertEqual(answer.status_code, 303)
+        partners = self.env["res.partner"].search(
+            [("email", "=ilike", "ada@example.com")]
+        )
+        self.assertEqual(len(partners), 1)
+        self.assertEqual(len(self._bookings()), 2)
+
     def test_page_carries_the_key_and_the_submit_guard(self):
         html = page(self)
         self._key(html)
