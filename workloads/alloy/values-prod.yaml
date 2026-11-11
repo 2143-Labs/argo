@@ -59,6 +59,18 @@ alloy:
       prometheus.remote_write "mimir" {
         endpoint {
           url = "http://mimir.observability.svc:8080/api/v1/push"
+          // Classic histogram buckets are dropped only for infrastructure
+          // exporters. Application histograms keep theirs, because their p95 is
+          // the point of the metric (gRPC/HTTP latency, gameserver tick
+          // duration). Buckets were 185k of 414k series; these jobs are 105k
+          // (2026-11-11). job="etcd" buckets come from pite's Prometheus, not
+          // through here.
+          write_relabel_config {
+            source_labels = ["__name__", "job"]
+            separator     = ";"
+            regex         = ".*_bucket;(kubelet|cadvisor|temporal.*|longhorn.*|metallb.*|argocd.*|memberlist.*|keda.*|cnpg-system.*)"
+            action        = "drop"
+          }
         }
         // No cluster label on home series: adding one doubled every series
         // and hit Mimir's 500k per-tenant limit (2026-10-28). Home is the
@@ -105,10 +117,27 @@ alloy:
         tls_config {
           insecure_skip_verify = true
         }
-        forward_to = [prometheus.remote_write.mimir.receiver]
+        forward_to = [prometheus.relabel.cadvisor_metrics.receiver]
         clustering {
           enabled = true
         }
+      }
+
+      prometheus.relabel "cadvisor_metrics" {
+        // Longhorn's per-volume engine/replica containers dominate this job;
+        // kube-state-metrics already reports those pods.
+        rule {
+          source_labels = ["namespace"]
+          regex         = "longhorn-system"
+          action        = "drop"
+        }
+        // Families nothing queries (0 references in workloads/).
+        rule {
+          source_labels = ["__name__"]
+          regex         = "container_tasks_state|container_memory_failures_total|container_blkio_device_usage_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total"
+          action        = "drop"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
       }
 
       // kube-state-metrics (deployed in Step 2)
