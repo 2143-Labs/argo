@@ -66,6 +66,14 @@ Verified 2026-10-16 from check-host.net: TCP 80, 443, 587, 993, 3478, 7881, 8280
 18080, 25565 and 30033 connect from 3 of 3 nodes, and TCP 25 from 2 of 3; UDP
 3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik.
 
+Verified 2026-11-11 for the ROTS ranges, which is also the method worth reusing: a UDP
+probe that only times out proves nothing, because a closed Verizon forward and a silent far
+end look identical from outside — the router rule's own packet counter is the real signal.
+Fifteen check-host packets to 37999, 37000 and 36500 moved the `rots prod` rule's counter
+19 → 34 (all of them arrived); `36875` (slot 875, an instance running) drew a UDP reply from
+5 of 5 nodes; `36000` (slot 0, nothing running) drew ICMP unreachable from the VIP. So the
+whole range is open WAN → MikroTik → `192.168.6.32` → pod, not just the part with a listener.
+
 ## Adding a public port
 
 1. Give the service a pinned `.6.x` address ([adding-a-workload.md](adding-a-workload.md) §5).
