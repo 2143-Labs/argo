@@ -24,7 +24,7 @@ The upload itself is the small part. The decisions that determine whether QA wor
 | Steamworks in the client | `bevy-steamworks` (git pin) → `steamworks` 0.13.1 → `steamworks-sys` 0.13.0, which vendors the SDK redistributables and **links them dynamically** | Repo: `rots4/client/Cargo.toml:31`; crate `build.rs` |
 | Steam ownership | The authserver calls `ISteamUser/CheckAppOwnership` for 4346770 on every Steam login and stores the answer in `social.steam_app_ownership` | Repo: `rots4/authserver/src/providers.rs`, `authserver/README.md:61` |
 | CI | `rots4` `.github/workflows/build_nix.yml` on `[self-hosted, nixos]` only; builds Linux client/server/authserver; **no Windows or macOS job** | Repo |
-| Windows code signing | A 2143 Labs LLC Authenticode certificate exists and is unused: there is no Windows build to sign. Type (OV/EV) and key custody unrecorded | John; [open questions](#10-open-questions) |
+| Windows code signing | A 2143 Labs LLC Authenticode certificate, subject `CN=2143 Labs LLC, O=2143 Labs LLC, L=Kensington, S=Maryland, C=US`; unused, because there is no Windows build yet. Organization-validated, so the publisher shown in the signature is the company. OV vs EV and key custody unrecorded | John; [open questions](#10-open-questions) |
 | Binaries | `s3://rots4-releases/builds/<sha>/rots4-client-linux` (bare Nix-built ELF) plus `latest/` | Repo; [SeaweedFS section](deploying-a-private-repo-game.md#3-publish-binaries-to-seaweedfs) |
 | Backend | `apps/rots-web.yaml` (prod, bumped on every green `main`), `apps/rots-web-preview.yaml` (one environment per PR) | Repo |
 | Client backend selection | `--auth-url` CLI flag only, default `https://rots.john2143.com/auth` | Repo: `rots4/client/src/main.rs:51` |
@@ -229,7 +229,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - **Signed on Linux, not on Windows.** `jsign` does Authenticode from the NixOS runner over PKCS#11, YubiKey, DigiCert KeyLocker/ONE, Azure Key Vault or Google Cloud KMS (Project); `osslsigncode` with a PKCS#11 engine is the fallback.
 - **When:** inside the Windows depot build, before the manifest is written, so the recorded sha256 and the SBOM describe the signed bytes and one build still serves `qa` and `default` (D4, D8). Signing at promotion instead would produce a different file per channel.
 - **Rejected:** shipping unsigned (Smart App Control and antivirus exposure, for no saving); signing after a DRM wrap (no wrapper); a `.pfx` in OpenBao (against the CA/B rules, and it would put a long-lived signing key in reach of every job on the write lane); re-signing `steam_api64.dll`.
-- *Unverified:* whether the certificate is OV or EV and whether it is on a token or in a cloud service. Both change only how the key is reached, not the pipeline shape ([open questions](#10-open-questions) 13).
+- **Publisher identity:** the subject is `O=2143 Labs LLC` (Kensington, Maryland, US), so the signature presents the company rather than an individual. *Unverified:* whether the certificate is OV or EV, and whether the key is on a token or in a cloud service. Both change only how the key is reached, not the pipeline shape ([open questions](#10-open-questions) 13).
 
 ## 6. Pipeline
 
@@ -383,7 +383,7 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 | 10 | Does `../Resources/assets` work for Bevy in a bundle | First Mac build |
 | 11 | Which Mac is the build Mac, and is it the nix-darwin host `mac` in dotfiles | John |
 | 12 | Are all macOS testers on Apple Silicon (arm64-only QA builds) | Ask testers before Phase 4 |
-| 13 | Is the 2143 Labs LLC certificate OV or EV, and is the key on a USB token or in the CA's cloud signing service | Read the certificate's issuing CA and its key-custody record; decides whether `jsign` uses PKCS#11 or a cloud keystore |
+| 13 | Signing certificate: OV or EV, and is the key on a USB token or in the CA's cloud signing service? The distinguished name is settled (`O=2143 Labs LLC`), and it does not distinguish OV from EV | Certificate policies OID via `certutil -dump`, or the CA's portal; custody from what the CA issued at enrollment |
 | 14 | Does the signed `client.exe` arrive byte-identical through Steam's delivery | `osslsigncode verify` on the installed file (Phase 4 exit) |
 
 ## 11. References

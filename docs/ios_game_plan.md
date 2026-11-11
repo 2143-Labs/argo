@@ -445,7 +445,7 @@ Each phase ends with an observable exit criterion; the next phase that depends o
 
 | # | Question | How to resolve |
 |---|---|---|
-| 1 | Individual or organization enrollment? Is 2143 Labs a registered legal entity? (Public seller name, tester headroom ~51 vs 100) | John, before Phase 0 |
+| 1 | Individual or organization enrollment? (Public seller name, tester headroom ~51 vs 100) Is 2143 Labs LLC a registered legal entity? | Evidence for the entity: the Windows Authenticode certificate is issued to `O=2143 Labs LLC` of Kensington, Maryland, which means a CA has identity-vetted it ([current state](steam_game_plan.md#2-current-state)). Organization enrollment additionally needs a D-U-N-S number; John confirms, before Phase 0 |
 | 2 | Is the build Mac company-managed (FileVault, MDM, policy on holding signing keys)? | John, before Phase 1 |
 | 3 | Which macOS and Xcode are on the Mac? | `sw_vers; xcodebuild -version` |
 | 4 | Is the Mac on the LAN with `192.168.6.31:8333`, or only reachable over Tailscale? | `curl -sI http://192.168.6.31:8333` from the Mac |
