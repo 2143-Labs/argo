@@ -22,6 +22,11 @@ data:
           # The tick *interval* is not the tick *cost*: a healthy 60 Hz fixed step already pauses
           # ~16.7 ms between runs, so a latency rule at 20 ms fires forever. What matters is whether
           # the sim still runs 60 ticks a second (`rots_tick_duration_count` counts observations).
+          #
+          # Only while the loop is busy: `tick_cadence` records nothing when the main loop is idle
+          # (nobody connected and no join in flight), so an idle pod's counter is flat and an
+          # ungated rule would call a healthy pre-game instance a stalled one. `rots_loop_idle`
+          # is that state, exported by the server for exactly this comparison.
           - uid: rots-tick-rate
             title: ROTS tick rate below 55/s
             condition: C
@@ -33,7 +38,7 @@ data:
                 datasourceUid: mimir
                 model:
                   editorMode: code
-                  expr: rate(rots_tick_duration_count[5m])
+                  expr: rate(rots_tick_duration_count[5m]) and on(instance) (rots_loop_idle == 0)
                   instant: true
                   intervalMs: 60000
                   maxDataPoints: 43200
