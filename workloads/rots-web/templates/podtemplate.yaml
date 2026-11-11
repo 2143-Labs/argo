@@ -23,7 +23,7 @@ template:
     # by the controller, which is why it writes the shutdown sentinel first.
     restartPolicy: Always
     terminationGracePeriodSeconds: 30
-    # The server runs as 65534 and writes config.yaml and the shutdown sentinel to
+    # The server runs as 65534 and writes the shutdown sentinel to
     # /data; fsGroup also covers a pre-emptyDir instance's root-owned Longhorn PVC.
     securityContext:
       fsGroup: 65534
@@ -54,7 +54,7 @@ template:
     containers:
       {{- include "rots-web.gameserver-container" (dict "root" . "managed" true) | nindent 6 }}
     volumes:
-      # config.yaml and the shutdown sentinel only; a pre-emptyDir authserver image
+      # The shutdown sentinel only; a pre-emptyDir authserver image
       # replaces this volume with the instance's PVC.
       - name: data
         emptyDir:

@@ -12,7 +12,8 @@
   # <component>-pr-<N>-<head sha>). Always stays: a re-run CI build re-pushes the same
   # tag, and the warm pool's digest check expects new pods to run the registry's current digest.
   imagePullPolicy: Always
-  # Config::load_from_main_dir writes config.yaml into the cwd.
+  # Config::load_from_main_dir reads config.yaml from the cwd when present (images before
+  # rots4#57 also created it there).
   workingDir: /data
   securityContext:
     runAsUser: 65534
@@ -34,7 +35,7 @@
 {{- if .managed }}
     # Managed mode: the provisioner adds ROTS_SERVER_SLOT, ROTS_SERVER_GENERATION,
     # ROTS_SERVER_JOIN_CODE and ROTS_PUBLIC_UDP_PORT per instance. /data is the pod's
-    # emptyDir (config.yaml and the shutdown sentinel); the world is claimed from and
+    # emptyDir (the shutdown sentinel); the world is claimed from and
     # saved to rots-sync. ROTS_IDLE_SECS is when it destroys itself.
     - name: ROTS_STATE_DIR
       value: "/data"

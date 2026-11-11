@@ -70,7 +70,17 @@ settings:
   # The settings database (one CNPG cluster, templates/settings-db.yaml). A row is a few
   # hundred bytes of JSON, so this stays small; it is never pruned.
   dbSize: 1Gi
-  dbWalSize: 512Mi
+  # pg_wal settles at wal_keep_size (set to 128MB in settings-db.yaml; CNPG's default 512MB
+  # alone would overfill a 512Mi volume) plus up to max_wal_size between checkpoints.
+  dbWalSize: 1Gi
+  # Burstable, the same shape as db.resources (docs/adding-a-cnpg-database.md).
+  dbResources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 # rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.
 sync:

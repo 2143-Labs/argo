@@ -1,8 +1,9 @@
 {{- if .Values.settings.enabled }}
 # rots-settings: the central account-settings service (the authserver image, subcommand
 # `settings`). It lives once, in rots-prod (settings.enabled); every environment's
-# authserver proxies to it at <settings.url>/api/v1/settings, so a player's controls,
-# sensitivity and colour follow them across machines, browsers and environments.
+# authserver serves /api/v1/settings by calling <settings.url>/v1/settings/<provider>/<subject>
+# (and .../history), so a player's controls, sensitivity and colour follow them across
+# machines, browsers and environments.
 # The service stores opaque JSON and knows no field names: only the clients do.
 {{- $ns := required "namespace is required" .Values.namespace }}
 apiVersion: apps/v1
@@ -65,11 +66,14 @@ spec:
               value: {{ int .Values.settings.port | quote }}
             - name: RUST_LOG
               value: info
-          # SETTINGS_TOKEN: the bearer this service requires and every authserver presents
-          # (externalsecret.yaml extracts it from the same OpenBao path as the rest).
-          envFrom:
-            - secretRef:
-                name: rots-authserver-secret
+            # The bearer this service requires and every authserver presents. Only this key:
+            # the rest of rots-authserver-secret (signing key, provider secrets) stays out of
+            # the one prod pod every preview namespace can reach.
+            - name: SETTINGS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-authserver-secret
+                  key: SETTINGS_TOKEN
           ports:
             - containerPort: {{ int .Values.settings.port }}
               name: http

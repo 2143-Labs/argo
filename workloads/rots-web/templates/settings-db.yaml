@@ -30,6 +30,13 @@ spec:
                 operator: NotIn
                 values: [arch]
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  resources:
+    {{- toYaml .Values.settings.dbResources | nindent 4 }}
+  postgresql:
+    parameters:
+      # No standby to keep WAL for; CNPG's default (512MB) would fill pg_wal at its
+      # archive_timeout pace (a 16MB segment per 5 minutes with any write).
+      wal_keep_size: 128MB
   storage:
     size: {{ .Values.settings.dbSize }}
     storageClass: longhorn-cnpg
