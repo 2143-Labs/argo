@@ -81,6 +81,9 @@ settings:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Barman Cloud WAL archive + daily base backup for settings-db (settings-db-offsite.yaml).
+  # Prod true; a preview never renders settings-db at all (settings.enabled is false).
+  offsiteBackup: false
 
 # rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.
 sync:

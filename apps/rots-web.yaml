@@ -62,6 +62,7 @@ spec:
         # environments. Enabling it only here is what keeps a single copy of the truth.
         - { name: settings.enabled, value: 'true' }
         - { name: settings.url, value: http://rots-settings:8100 }
+        - { name: settings.offsiteBackup, value: 'true' }
         - { name: sync.replicas, value: '2' }
         - { name: gameserver.tag, value: gameserver-9eadefa }
         # Managed mode: no standing servers; the authserver spawns one instance per
