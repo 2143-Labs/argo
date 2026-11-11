@@ -24,7 +24,7 @@ spec:
         - { name: host, value: dino-dev.dsstar.us }
         - { name: routeName, value: dino-dev }
         # Starts at the image prod serves; dev's next build bumps it to sha-<commit>.
-        - { name: image.tag, value: sha-e465d475b8c5806ee3b3cbf28ee61a7f7d50e99e }
+        - { name: image.tag, value: sha-454fdcb6bbacf2e583845f04450ff8333b4e4502 }
         - { name: gameserver.replicas, value: '1' }
         - { name: gameserver.debug, value: 'true' }
   destination:
