@@ -43,7 +43,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(rots_players)",
+              "expr": "sum(rots_players{deployment_environment_name=~\"$env\"})",
               "legendFormat": "ROTS players online",
               "range": false,
               "refId": "A"
@@ -99,7 +99,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "count(count by (service_instance_id) (rots_players))",
+              "expr": "count(count by (instance) (rots_players{deployment_environment_name=~\"$env\"}))",
               "legendFormat": "ROTS instances reporting",
               "range": false,
               "refId": "A"
@@ -155,7 +155,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(dino_players)",
+              "expr": "sum(dino_players{deployment_environment_name=~\"$env\"})",
               "legendFormat": "Dino players online",
               "range": false,
               "refId": "A"
@@ -211,8 +211,8 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(rots_tick_duration_bucket[5m])))",
-              "legendFormat": "{{service_name}} p95",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(rots_tick_duration_bucket{deployment_environment_name=~\"$env\"}[5m])))",
+              "legendFormat": "rots p95",
               "range": true,
               "refId": "A"
             },
@@ -222,7 +222,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum by (le) (rate(dino_tick_duration_bucket[5m])))",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(dino_tick_duration_bucket{deployment_environment_name=~\"$env\"}[5m])))",
               "legendFormat": "dino p95",
               "range": true,
               "refId": "B"
@@ -275,8 +275,8 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum by (service_name) (rate(rots_frame_overruns_total[5m]))",
-              "legendFormat": "{{service_name}}",
+              "expr": "sum(rate(rots_frame_overruns{deployment_environment_name=~\"$env\"}[5m]))",
+              "legendFormat": "rots",
               "range": true,
               "refId": "A"
             },
@@ -286,7 +286,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(rate(dino_frame_overruns_total[5m]))",
+              "expr": "sum(rate(dino_frame_overruns{deployment_environment_name=~\"$env\"}[5m]))",
               "legendFormat": "dino",
               "range": true,
               "refId": "B"
@@ -392,8 +392,8 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum by (service_name, reason) (rate(rots_join_rejected_total[5m]))",
-              "legendFormat": "{{service_name}} {{reason}}",
+              "expr": "sum by (reason) (rate(rots_join_rejected{deployment_environment_name=~\"$env\"}[5m]))",
+              "legendFormat": "{{reason}}",
               "range": true,
               "refId": "A"
             },
@@ -403,7 +403,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum by (reason) (rate(dino_join_rejected_total[5m]))",
+              "expr": "sum by (reason) (rate(dino_join_rejected{deployment_environment_name=~\"$env\"}[5m]))",
               "legendFormat": "dino {{reason}}",
               "range": true,
               "refId": "B"
@@ -509,7 +509,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(dino_fauna{dino_active=\"true\"})",
+              "expr": "sum(dino_fauna{dino_active=\"true\", deployment_environment_name=~\"$env\"})",
               "legendFormat": "fauna active",
               "range": true,
               "refId": "A"
@@ -520,7 +520,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(dino_fauna{dino_active=\"false\"})",
+              "expr": "sum(dino_fauna{dino_active=\"false\", deployment_environment_name=~\"$env\"})",
               "legendFormat": "fauna dormant",
               "range": true,
               "refId": "B"
@@ -531,7 +531,7 @@ data:
                 "uid": "mimir"
               },
               "editorMode": "code",
-              "expr": "sum(dino_npcs)",
+              "expr": "sum(dino_npcs{deployment_environment_name=~\"$env\"})",
               "legendFormat": "artificial players",
               "range": true,
               "refId": "C"
@@ -569,7 +569,35 @@ data:
         "games"
       ],
       "templating": {
-        "list": []
+        "list": [
+          {
+            "current": {
+              "selected": true,
+              "text": [
+                "All"
+              ],
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "mimir"
+            },
+            "includeAll": true,
+            "allValue": ".*",
+            "label": "environment",
+            "multi": true,
+            "name": "env",
+            "query": {
+              "query": "label_values({__name__=~\"rots_players|dino_players\"}, deployment_environment_name)",
+              "refId": "StandardVariableQuery"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
       },
       "time": {
         "from": "now-6h",
