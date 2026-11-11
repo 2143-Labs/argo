@@ -22,6 +22,9 @@ The audit that came with the leak found three separate problems worth fixing in 
   17 buckets and read 182,042 objects in `litellm-spend-logs`, a bucket unrelated to it.
 - **A dead identity with a dead key.** `john2143-worker` had no live consumer and
   `matrix/seaweedfs-s3-creds` held a 4-character access key that returned `InvalidAccessKeyId`.
+  *Correction 2026-11-11:* `john2143-worker` did have one, the DOKS `john2143-com` deployment
+  (`2143prod`, `default/minio-credentials`). The tool scanned only the home cluster. Uploads
+  failed ingest until the dedicated `john2143-worker-doks` identity replaced it.
 - **Orphans.** Two ExternalSecrets and one unmanaged Secret rendered credentials nothing read,
   and one empty bucket nobody had written to.
 
@@ -35,9 +38,9 @@ Seven identities remain. Each is scoped with one `Read:`/`Write:`/`List:` triple
 | `litellm` | `litellm-spend-logs` | `default/litellm-s3-creds` |
 | `seaweedfs-frigate-genai` | `frigate-genai` | `default/frigate-genai-worker-creds` |
 | `john2143-worker-home` | `imagehost-files` | `default/minio-creds` |
-| `rots4-ci` | `rots4-releases` | GitHub Actions secret (outside this checkout) |
+| `rots4-ci` | `rots4-releases` | OpenBao `consumers/john2143-com/default/rots4-ci-s3` (read at CI build time) |
 | `edge-tofu` | `edge-tofu-state` | OpenBao `consumers/edge/s3` (read per command) |
-| `rain-marvel` | `marvel3-logs` | consumer unlocated; keep both credentials |
+| `john2143-worker-doks` | `imagehost-files` | DOKS `default/minio-credentials` (patched by `propagate`) + OpenBao `consumers/doks/default/minio-credentials` |
 
 The identity file itself is `consumers/data/john2143-com/default/seaweedfs-s3-config`, key
 `s3.json`, rendered by `workloads/secrets/default-seaweedfs-s3-config.yaml` into
@@ -95,7 +98,13 @@ Two mechanisms, and it matters which one applies:
 
 `edge-tofu` needs no propagation step: it reads `consumers/edge/s3` per command, so writing
 that path is the propagation. `rots4-ci` reads `consumers/john2143-com/default/rots4-ci-s3` at
-build time (§7), so the same applies. `rain-marvel` is `MANUAL` — its consumer is unknown.
+build time (§7), so the same applies.
+
+`john2143-worker-doks` is a `kind="kube"` consumer in another cluster. `propagate`
+merge-patches only `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` of `2143prod:default/minio-credentials`
+(leaving the Spaces `S3_*` keys) and restarts `deploy/john2143-com`, because DOKS has no ESO or
+Reloader. `retire` and `delete-identity` read that Secret and refuse while it holds the key.
+They fail closed if `2143prod` is unreachable.
 
 ## 4. Verification checklist
 
