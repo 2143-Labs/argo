@@ -67,6 +67,7 @@ db:
   walSize: 1Gi
   storageClass: longhorn-cnpg
   protect: false        # true (prod): Prune=false,Delete=false on the Cluster and Namespace
+  offsiteBackup: false  # true (prod): Barman Cloud WAL archive + daily base backup to Backblaze B2 (docs/db-backups.md)
   # CNPG instance resources (templates/cnpg-cluster.yaml).
   resources:
     requests:

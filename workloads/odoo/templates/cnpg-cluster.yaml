@@ -1,6 +1,6 @@
 # This company's Odoo database. CNPG renders Secret odoo-db-app (username,
 # password), which odoo.dbEnv reads. docs/adding-a-cnpg-database.md.
-# No backup is configured (deferred 2026-11-08): docs/odoo.md has the manual dump.
+# Offsite backups: offsite-backup.yaml (Barman Cloud plugin -> Backblaze B2, docs/db-backups.md).
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -59,3 +59,11 @@ spec:
       # (odoo/modules/registry.py:202).
       postInitApplicationSQL:
         - CREATE EXTENSION IF NOT EXISTS pg_trgm
+  # Continuous WAL archiving + base backups offsite via ObjectStore odoo-db-offsite
+  # (offsite-backup.yaml). docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: odoo-db-offsite
