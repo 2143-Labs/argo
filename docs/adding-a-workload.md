@@ -54,6 +54,14 @@ with storage stay on wired nodes automatically. A pod that tolerates the wifi
 taint while mounting network storage is rejected. Wired nodes are always
 preferred; wifi nodes are overflow.
 
+**A toleration never makes `office` the choice.** It carries a second, soft taint
+`wifi-overflow=true:PreferNoSchedule`, and the policy deliberately does not tolerate that one, so a
+storage-free pod lands on a wired node whenever one fits. Measured 2026-11-11: the `frigate-genai`
+trigger workers scaled 1→5 under a reprocess burst and took big, arch ×2, nas and closet with zero
+replicas on `office`. Hand-adding the `wifi` toleration to a manifest therefore buys nothing — the
+mutation is the only supported path. Deliberate placement on `office` needs `nodeAffinity`, which
+this policy does not provide.
+
 ## 3. Expose via HTTPS (HTTPRoute)
 
 A LAN/tailnet name `<sub>.ts.2143.me` needs a route on the existing wildcard listener carrying `lan-only` (b) and a headscale record (c). A public name needs the route plus an edge gate instead of `lan-only` (d).
