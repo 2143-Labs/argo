@@ -4,7 +4,7 @@
 **Date:** 2026-11-11
 **Owner:** John (Steamworks partner account, Apple account, runner hosts); implementation split across `2143-Labs/rots4`, this repo, and `dotfiles`.
 **Scope:** getting every green `main` build of the ROTS client onto Steam for QA testers on Linux, Windows and macOS, and pointing those builds at an isolated QA backend. Store page, pricing, release and marketing are out of scope.
-**Related:** [Deploying a private-repo game](deploying-a-private-repo-game.md) (the existing SeaweedFS binary and OpenBao CI-credential pattern this plan extends), [Multi-cluster](multi-cluster.md).
+**Related:** [Deploying a private-repo game](deploying-a-private-repo-game.md) (the existing SeaweedFS binary and OpenBao CI-credential pattern this plan extends), [Multi-cluster](multi-cluster.md), [iOS delivery plan](ios_game_plan.md) (shares the build Mac, `rots-qa` and the protocol-version work).
 
 Evidence labels used below: **Valve** — Steamworks documentation (`partner.steamgames.com/doc/...`, public); **Apple** — Apple developer documentation; **Repo** — read from the named file on 2026-11-11; **Probe** — reproduced on a 2143-Labs host on 2026-11-10/11; **Inferred** — reasoning no source states directly. Anything marked *Unverified* has a test in [Open questions](#10-open-questions).
 
@@ -165,7 +165,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 
 ### D10. macOS: build on the Mac, ship a `.app`, ad-hoc sign for QA
 
-- **Build host:** a self-hosted GitHub runner on the new Mac (nix-darwin or plain), labelled `macos`. The Apple SDK licence permits it only "FOR EXECUTION ON AN APPLE-BRANDED PRODUCT RUNNING MACOS", so the NixOS runners cannot produce this binary (Apple). Hosted macOS runners are excluded by [this repo's rule for private-repo games](deploying-a-private-repo-game.md#3-publish-binaries-to-seaweedfs).
+- **Build host:** the self-hosted GitHub runner on the new Mac that the [iOS plan (D13)](ios_game_plan.md#d13-build-host-the-mac-one-runner-two-job-labels) defines; this job runs on `[self-hosted, macOS, ARM64, steam]`. A `macos` label would separate nothing: GitHub already gives every macOS runner the `macOS` label, and labels are case-insensitive. The Apple SDK licence permits the build only "FOR EXECUTION ON AN APPLE-BRANDED PRODUCT RUNNING MACOS", so the NixOS runners cannot produce this binary (Apple). Hosted macOS runners are excluded by [this repo's rule for private-repo games](deploying-a-private-repo-game.md#3-publish-binaries-to-seaweedfs).
 - **Target:** `aarch64-apple-darwin`, `MACOSX_DEPLOYMENT_TARGET=11.0`. The Steam client's floor is macOS 12 and the client is native arm64 (Valve FAQ, client beta notes, Probe of the shipping client).
 - **Bundle:** assembled by a short script, not `cargo-bundle`/`cargo-packager`.
   - `Info.plist`: `CFBundleExecutable` = `client`, `CFBundleIdentifier` (chosen once, never changed), `CFBundlePackageType` `APPL`, `CFBundleShortVersionString`, `CFBundleVersion`, `LSMinimumSystemVersion` `11.0`, `NSHighResolutionCapable` `true`.
