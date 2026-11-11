@@ -1655,7 +1655,7 @@ a
 <rect x="120" y="92" width="1000" height="104" rx="9" class="router"/>
 <text x="140" y="116" class="title">MikroTik · 192.168.5.1 · RouterOS 7.24.5</text>
 <text x="140" y="136" class="">dst-nat:</text>
-<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.15 · 36000-36003→.6.32 · 31000-34999→.6.33</text>
+<text x="250" y="136" class="">80,443→.6.6 · 25,587,993→.6.13 · 3478+45000-45063→.6.14 · 9987→.6.15 · 30033→.6.15 · 36000-37999→.6.32 · 31000-34999→.6.33</text>
 <text x="140" y="154" class="">11753→.6.17 · 3479→.6.18 · 7881→.6.22 · 34197→.6.28 · 25565→.6.29 · 18080→.5.76 (node)</text>
 <text x="140" y="174" class="">BGP 65001 · BFD 3784 · DNS FWD ×6 zones → .6.30 · WireGuard 51820 (10.99.0.1/24)</text>
 <path d="M36,208 L1120,208" class="wire" opacity=".35"/>
@@ -1807,7 +1807,7 @@ a
 <text x="627.8" y="838" class="note">all speakers</text>
 <a href="#vip-6-32"><rect x="848" y="786" width="240" height="62" rx="9" class="vip cluster"/>
 <text x="858" y="805" class="" style=" font-weight:700; font-size:12.5px;">.6.32 / .6.33  rots gameservers</text>
-<text x="858" y="821" class="muted" style="font-size:9.3px;">prod 36000–36003 · previews 31000–34999 /udp</text>
+<text x="858" y="821" class="muted" style="font-size:9.3px;">prod 36000–36999 of 36000–37999 · previews 31000–34999 /udp</text>
 <text x="858" y="838" class="wan">WAN udp</text>
 <text x="908" y="838" class="wg">WG</text>
 <text x="930" y="838" class="note">all speakers</text>
@@ -2761,7 +2761,7 @@ placement fact rather than a security one.</p>
 <tr id="vip-6-29"><td class="mono">.6.29</td><td class="mono">::29</td><td>minecraft-game</td><td class="mono">25565/tcp</td><td><span class="pill local">Local</span> closet</td><td class="mono">closet</td><td><span class="pill wan">25565</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-30"><td class="mono">.6.30</td><td class="mono">::30</td><td>lan-dns</td><td class="mono">53 tcp+udp → 1053</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-31"><td class="mono">.6.31</td><td class="mono">::31</td><td>seaweedfs-s3-lan</td><td class="mono">8333/tcp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">in use</span></td></tr>
-<tr id="vip-6-32"><td class="mono">.6.32</td><td class="mono">::32</td><td>rots-gs-&lt;i&gt;-udp (rots-prod)</td><td class="mono">36000–36003/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">36000–36003/udp</span></td><td><span class="pill wg">routed</span></td></tr>
+<tr id="vip-6-32"><td class="mono">.6.32</td><td class="mono">::32</td><td>rots-gs-&lt;i&gt;-udp (rots-prod)</td><td class="mono">36000–37999/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">36000–37999/udp</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-6-33"><td class="mono">.6.33</td><td class="mono">::33</td><td>rots-gs-0-udp (rots-pr-*)</td><td class="mono">31000–34999/udp</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill wan">31000–34999/udp</span></td><td><span class="pill wg">routed</span></td></tr>
 <tr id="vip-5-10"><td class="mono">.5.10</td><td class="mono">—</td><td>kubernetes-api</td><td class="mono">6443</td><td><span class="pill cluster">Cluster</span> all speakers</td><td class="mono">closet</td><td><span class="pill muted">—</span></td><td><span class="pill wg">routed</span></td></tr>
 </tbody>
