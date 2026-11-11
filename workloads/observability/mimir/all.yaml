@@ -5,7 +5,7 @@ metadata:
   namespace: observability
 spec:
   serviceName: mimir-headless
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: mimir
@@ -55,12 +55,13 @@ spec:
             name: mimir-config
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
                   - key: kubernetes.io/hostname
                     operator: In
-                    values: ["big", "closet", "office"]
+                    values: ["big"]
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
@@ -102,7 +103,7 @@ data:
       s3:
         bucket_name: mimir-blocks
       # Write idle series to a block as soon as an ingester holds 200k in memory
-      # (limit is 250k per ingester: 750k per user / 3 ingesters). Without this,
+      # (limit is 375k per ingester: 750k per user / 2 ingesters). Without this,
       # series that stopped receiving samples count against the limit until the
       # next 2 h block boundary; on 2026-10-28 that caused hours of rejections.
       tsdb:
