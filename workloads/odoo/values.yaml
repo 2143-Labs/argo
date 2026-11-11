@@ -15,7 +15,7 @@ caldav: false      # true to inject CALDAV_CREDENTIALS (iCloud bridge, docs/odoo
 turn: false        # true to inject TURN_AUTH_SECRET (Discuss call relay, docs/odoo.md)
 
 # Built by .github/workflows/odoo-image.yml from workloads/odoo/image.
-image: ghcr.io/2143-labs/odoo:sha-3525ecf446f18a285086d577e5358ca4303b1420
+image: ghcr.io/2143-labs/odoo:sha-a71417017aaab47da8e20d471b342592962e61b0
 db:
   instances: 2
   size: 10Gi
