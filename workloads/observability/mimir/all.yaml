@@ -128,6 +128,12 @@ data:
       # Promote the deployment environment to a label. Without it rots-prod, dino-prod and every
       # preview namespace write identical series and overwrite each other.
       promote_otel_resource_attributes: deployment.environment.name
+      # Keep the OTLP identifying resource attributes (`service.name`, `service.instance.id`,
+      # `service.namespace`) on target_info as well as converting them to `job`/`instance`. The
+      # `instance` label is what makes per-replica series distinct: the gameserver sends
+      # `service.instance.id` (Tempo shows `service.instance.id=rots-gs-875-g120-0` on its span
+      # resource), and without it every replica writes one series per metric.
+      otel_keep_identifying_resource_attributes: true
     memberlist:
       bind_port: 7946
       join_members:
