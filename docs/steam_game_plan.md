@@ -12,7 +12,7 @@ Evidence labels used below: **Valve** — Steamworks documentation (`partner.ste
 
 ## 1. Summary
 
-ROTS ships QA builds on a **password-protected `qa` beta branch of the main app (4346770)**. CI uploads one Steam build containing a Linux, a Windows and a macOS depot after every green `main`, using `steamcmd` on a dedicated self-hosted uploader with a cached login token, so GitHub stores no Steam credential. Testers get access through the Steamworks partner account (staff) or Release State Override keys (everyone else). The client reads which Steam branch launched it and talks to a new **`rots-qa` environment** in this repo when that branch is `qa`, so one set of bytes can be promoted from `qa` to `default` without a rebuild.
+ROTS ships QA builds on a **password-protected `qa` beta branch of the main app (4346770)**. CI uploads one Steam build containing a Linux, a Windows and a macOS depot after every green `main` (the Windows executable Authenticode-signed, since Valve ships whatever it is given), using `steamcmd` on a dedicated self-hosted uploader with a cached login token, so GitHub stores no Steam credential. Testers get access through the Steamworks partner account (staff) or Release State Override keys (everyone else). The client reads which Steam branch launched it and talks to a new **`rots-qa` environment** in this repo when that branch is `qa`, so one set of bytes can be promoted from `qa` to `default` without a rebuild.
 
 The upload itself is the small part. The decisions that determine whether QA works are **who owns the app** (entitlement) and **which backend a build talks to** (identity); both are recorded below.
 
@@ -24,6 +24,7 @@ The upload itself is the small part. The decisions that determine whether QA wor
 | Steamworks in the client | `bevy-steamworks` (git pin) → `steamworks` 0.13.1 → `steamworks-sys` 0.13.0, which vendors the SDK redistributables and **links them dynamically** | Repo: `rots4/client/Cargo.toml:31`; crate `build.rs` |
 | Steam ownership | The authserver calls `ISteamUser/CheckAppOwnership` for 4346770 on every Steam login and stores the answer in `social.steam_app_ownership` | Repo: `rots4/authserver/src/providers.rs`, `authserver/README.md:61` |
 | CI | `rots4` `.github/workflows/build_nix.yml` on `[self-hosted, nixos]` only; builds Linux client/server/authserver; **no Windows or macOS job** | Repo |
+| Windows code signing | A 2143 Labs LLC Authenticode certificate exists and is unused: there is no Windows build to sign. Type (OV/EV) and key custody unrecorded | John; [open questions](#10-open-questions) |
 | Binaries | `s3://rots4-releases/builds/<sha>/rots4-client-linux` (bare Nix-built ELF) plus `latest/` | Repo; [SeaweedFS section](deploying-a-private-repo-game.md#3-publish-binaries-to-seaweedfs) |
 | Backend | `apps/rots-web.yaml` (prod, bumped on every green `main`), `apps/rots-web-preview.yaml` (one environment per PR) | Repo |
 | Client backend selection | `--auth-url` CLI flag only, default `https://rots.john2143.com/auth` | Repo: `rots4/client/src/main.rs:51` |
@@ -38,7 +39,7 @@ The upload itself is the small part. The decisions that determine whether QA wor
 1. Every green `main` reaches QA testers through the Steam client within minutes, on all three platforms, from one commit.
 2. QA builds talk to an isolated backend; QA activity never creates prod accounts, sessions, characters or ownership rows.
 3. Any build can be promoted to another branch or rolled back by pointing a branch at an existing BuildID, without rebuilding.
-4. No Steam, Apple or S3 credential is stored in GitHub.
+4. No Steam, Apple, S3 or code-signing credential is stored in GitHub, and no signing key material is stored in the repository or in OpenBao (D16).
 5. Every bug report can name the exact commit, Steam branch and BuildID.
 
 **Non-goals**
@@ -142,7 +143,7 @@ s3://rots4-releases/builds/<sha>/steam/
 | Depot tree | Contents |
 |---|---|
 | `linux/` | `client` (mode 0755), `libsteam_api.so`, `assets/` |
-| `windows/` | `client.exe`, `steam_api64.dll`, `assets/` |
+| `windows/` | `client.exe` (Authenticode-signed, D16), `steam_api64.dll` (Valve-signed), `assets/` |
 | `macos/` | `ROTS.app/Contents/{Info.plist, MacOS/client, MacOS/libsteam_api.dylib, Resources/assets/}` |
 
 Invariants, asserted by the producer **and** re-asserted by the uploader:
@@ -150,6 +151,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - **The Steam API library sits beside the executable.** `steamworks-sys` links it dynamically, so a missing library is a loader failure before `main`, which the client's "Steam unavailable" fallback cannot catch (Repo). Copy it from `steamworks-sys`'s `OUT_DIR` so it matches the crate (crate issue #63).
 - **`assets/` is in the depot root** (Linux, Windows). Bevy resolves assets relative to the executable, and Steam launches with the install directory as the working directory.
 - **No `steam_appid.txt`.** Valve: "Make sure to remove the steam_appid.txt file when uploading the game to your Steam depot!"
+- **The Windows executable is signed, and Valve's DLL is not.** `client.exe` carries the 2143 Labs LLC signature with an RFC 3161 timestamp; `steam_api64.dll` keeps the signature Valve shipped (D16). The uploader re-asserts both on the extracted tree.
 - **No symlinks, no `.DS_Store`, `._*`, `__MACOSX`, `Thumbs.db`, `desktop.ini`, `*Zone.Identifier`.** Reports conflict on symlink handling in bundles; ship none.
 - **Tar, never zip, never GitHub Actions artifacts.** `actions/upload-artifact` resets modes to 644, stripping the executable bit; this repo's guide already forbids Actions artifacts for these builds.
 - **No archive inside a depot.** SteamPipe chunks files at ~1 MB and uploads only chunks the server lacks (Valve, Probe), so loose files re-upload almost nothing when unchanged; an archive changes nearly every chunk.
@@ -207,7 +209,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 
 - **Decision:** the Windows depot is created in Phase 0 but stays out of the build script until a CI job produces `rots4-windows.tar.zst`. A hand-built executable is never uploaded.
 - **Open:** where the Windows build runs — cross-compiled on the NixOS runners or a self-hosted Windows runner. Not researched; decided in Phase 4.
-- **Client fixes that ship with it:** `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` so no console window opens behind the game; `steam_api64.dll` beside `client.exe`.
+- **Client fixes that ship with it:** `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` so no console window opens behind the game; `steam_api64.dll` beside `client.exe`; and the executable signed at build time (D16).
 
 ### D15. Promotion to `default` stays manual
 
@@ -215,12 +217,26 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - The Web API `ISteamApps/SetAppBuildLive` with `betakey=public` may be able to set `default` on an *unreleased* app without confirmation (Valve parameter docs; *Unverified*, contradicts the upload doc). Optional experiment; nothing depends on it.
 - **Required before release:** prod's `deploy` job currently moves prod servers on every green `main`, while customers sit on a manually promoted `default`. Before release, prod deploys must follow the `default` promotion, or D13 must cover every gap.
 
+### D16. Sign the Windows executable; never apply the Steam DRM wrapper
+
+- **Decision:** `client.exe` is Authenticode-signed with the 2143 Labs LLC certificate at build time, with an RFC 3161 timestamp. `steam_api64.dll` ships exactly as `steamworks-sys` vendors it. No Steam DRM wrapper.
+- **Valve neither signs nor re-signs uploaded files.** SteamPipe ships the bytes that are in the depot. The only server-side modification Valve documents is the opt-in wrapper: `drm_wrap` "posts your plaintext executable to the Steam back end… The wrap is performed server side, and then steamcmd downloads the wrapped executable", which is then uploaded and served (Valve).
+- **No wrapper, because ownership is already gated in the client.** Valve: "use the API instead of the Steam DRM wrapper", and their FAQ warns the wrapper "is modifying your binary in the same way a virus might do" and draws antivirus false positives. The client initialises through `SteamworksPlugin::init_app(ROTS_STEAM_APP_ID)` and the authserver checks ownership (Repo), so the wrapper would buy obfuscation at the cost of a wrap step per commit and a signature that must be applied after wrapping.
+- **If it is ever adopted:** wrap first, sign second. Wrapping rewrites the executable and invalidates any existing signature.
+- **Why sign, given Steam:** SmartScreen is not the reason — Steam downloads and launches the game itself, so the file never gets the Mark of the Web that SmartScreen keys on (Inferred from Microsoft's scoping plus community reports of Steam installs). **Windows 11 Smart App Control is the reason**: it treats an executable that is "unsigned, or the signature is invalid" as untrusted and blocks it when its cloud reputation service cannot vouch for it (Microsoft), and a Rust binary rebuilt every commit has no reputation. Signing also lowers the antivirus false-positive rate, though by reputation rather than by guarantee (Inferred).
+- **Do not re-sign Valve's DLL.** The vendored `steam_api64.dll` already carries an Authenticode certificate table whose subject is "Valve Corp." (Probe of the crate's `redistributable_bin/win64`); a second signature adds nothing and risks the chain.
+- **The key does not live in OpenBao.** Since 2023-06-01 the CA/Browser Forum baseline requirements keep OV and EV code-signing keys in certified hardware (FIPS 140-2 Level 2 or Common Criteria EAL 4+) (CA/B Forum), so the signable material is a USB token or the CA's cloud signing service. OpenBao holds the token PIN or the cloud-signing credential, bound to the push-to-`main` lane, never to a pull request. Even if the current certificate predates the rule and still has an exportable `.pfx`, that file does not go into OpenBao.
+- **Signed on Linux, not on Windows.** `jsign` does Authenticode from the NixOS runner over PKCS#11, YubiKey, DigiCert KeyLocker/ONE, Azure Key Vault or Google Cloud KMS (Project); `osslsigncode` with a PKCS#11 engine is the fallback.
+- **When:** inside the Windows depot build, before the manifest is written, so the recorded sha256 and the SBOM describe the signed bytes and one build still serves `qa` and `default` (D4, D8). Signing at promotion instead would produce a different file per channel.
+- **Rejected:** shipping unsigned (Smart App Control and antivirus exposure, for no saving); signing after a DRM wrap (no wrapper); a `.pfx` in OpenBao (against the CA/B rules, and it would put a long-lived signing key in reach of every job on the write lane); re-signing `steam_api64.dll`.
+- *Unverified:* whether the certificate is OV or EV and whether it is on a token or in a cloud service. Both change only how the key is reached, not the pipeline shape ([open questions](#10-open-questions) 13).
+
 ## 6. Pipeline
 
 ```
 rots4 CI (green main)
   build-linux   (NixOS runner, Steam runtime)  ─┐
-  build-windows (D14, later)                    ├─► s3://rots4-releases/builds/<sha>/steam/*.tar.zst
+  build-windows (D14; signed per D16, later)    ├─► s3://rots4-releases/builds/<sha>/steam/*.tar.zst
   build-macos   (Mac runner)                   ─┘          + manifest.json
                                                                 │
   steam-publish (needs all builds; runs-on [self-hosted, steam-upload]; concurrency per D6)
@@ -228,7 +244,7 @@ rots4 CI (green main)
     2. read S3 via OpenBao role rots4-steam-releases; verify manifest sha256s
     3. bump apps/rots-qa.yaml image tags to <sha7> in this repo (servers first)
     4. wipe /var/lib/rots-steam/content; extract each tarball into content/<platform>/
-    5. delete junk; assert D8 invariants (no symlinks, no steam_appid.txt, no /nix/store interpreter, 0755 client)
+    5. delete junk; assert D8 invariants (no symlinks, no steam_appid.txt, no /nix/store interpreter, 0755 client, client.exe signature verifies)
     6. render steam/app_build.vdf (Desc = "<sha> run <id>.<attempt>", SetLive = qa, Preview = 0)
     7. steamcmd +@ShutdownOnFailedCommand 1 +@NoPromptForPassword 1 +login <builder> +run_app_build <abs vdf> +quit
     8. gate per D7; write build.json; upload BuildOutput/*.log as artifacts
@@ -321,10 +337,10 @@ Each phase ends with an observable exit criterion; the next phase does not start
 ### Phase 4 — macOS and Windows depots (parallel)
 
 - [ ] Mac: runner, toolchain, bundle script, `AssetPlugin` path fix, ad-hoc sign, publish `rots4-macos.tar.zst` (D10).
-- [ ] Windows: choose the build host, `windows_subsystem`, publish `rots4-windows.tar.zst` (D14).
+- [ ] Windows: choose the build host, `windows_subsystem`, sign `client.exe` (D16), publish `rots4-windows.tar.zst` (D14).
 - [ ] Add both depots to the build script.
 
-**Exit:** one BuildID carries all three depots; a tester on each OS installs it from Steam (macOS verified on a Mac other than the build Mac).
+**Exit:** one BuildID carries all three depots; a tester on each OS installs it from Steam (macOS verified on a Mac other than the build Mac, Windows on a machine with Smart App Control on); `osslsigncode verify` passes on the installed `client.exe`.
 
 ### Phase 5 — External QA
 
@@ -348,6 +364,8 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 | Nix-linked Linux binary shipped | High without D9 | Linux client fails on every non-Nix machine | D9 build; uploader's interpreter check |
 | Key request blocked by the 3-week rule | Depends on AppID age | External QA date slips | Check in Phase 0 |
 | Valve enforces notarisation later | Low | macOS uploads rejected | D10 release path is already defined |
+| Windows build blocked by Smart App Control on a tester's machine | Certain without D16 | Tester cannot launch; reads as a virus report | D16 signing with a timestamp; Phase 4 exit tests on a Smart App Control machine |
+| Signing key custody stalls Windows CI | Medium until the certificate's form is known | No signed builds; Phase 4 slips | Open question 13; token on the runner's host or the CA's cloud service, both reachable from `jsign` |
 
 ## 10. Open questions
 
@@ -365,6 +383,8 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 | 10 | Does `../Resources/assets` work for Bevy in a bundle | First Mac build |
 | 11 | Which Mac is the build Mac, and is it the nix-darwin host `mac` in dotfiles | John |
 | 12 | Are all macOS testers on Apple Silicon (arm64-only QA builds) | Ask testers before Phase 4 |
+| 13 | Is the 2143 Labs LLC certificate OV or EV, and is the key on a USB token or in the CA's cloud signing service | Read the certificate's issuing CA and its key-custody record; decides whether `jsign` uses PKCS#11 or a cloud keystore |
+| 14 | Does the signed `client.exe` arrive byte-identical through Steam's delivery | `osslsigncode verify` on the installed file (Phase 4 exit) |
 
 ## 11. References
 
@@ -382,6 +402,7 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 - ISteamApps Web API (`SetAppBuildLive`) — https://partner.steamgames.com/doc/webapi/ISteamApps
 - ISteamApps client API (`GetCurrentBetaName`, `GetAppBuildId`) — https://partner.steamgames.com/doc/api/ISteamApps
 - Steam macOS 11 support (client floor) — https://help.steampowered.com/en/faqs/view/659D-A19E-018A-81A6
+- Steam DRM wrapper (`drm_wrap`, server-side wrap, antivirus caveat) — https://partner.steamgames.com/doc/features/drm
 
 **Apple**
 - Notarizing macOS software — https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution
@@ -391,8 +412,14 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 - Rosetta changes — https://developer.apple.com/news/?id=w5ngl9k2
 - Xcode and Apple SDKs Agreement — https://www.apple.com/legal/sla/docs/xcode.pdf
 
+**Microsoft**
+- Smart App Control FAQ (unsigned or invalidly signed apps are blocked) — https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions
+- Sign your app for Smart App Control compliance (RSA and ECC both supported) — https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control
+
 **Tooling**
 - nixpkgs `steamcmd` — https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/st/steamcmd/package.nix
 - nixpkgs GitHub runner module — https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/continuous-integration/github-runner/service.nix
 - steamworks-rs (`build.rs`, issue #63) — https://github.com/Noxime/steamworks-rs
+- `jsign` (Authenticode from Linux over PKCS#11, YubiKey, DigiCert KeyLocker/ONE, Azure Key Vault, Google Cloud KMS) — https://ebourg.github.io/jsign/
+- CA/Browser Forum code signing baseline requirements (private-key hardware since 2023-06-01) — https://cabforum.org/working-groups/code-signing/requirements/
 - GitHub Actions concurrency — https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
