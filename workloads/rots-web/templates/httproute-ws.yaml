@@ -4,7 +4,7 @@
 Game-server WebSocket routes: slot k is wss://<host>/ws/<k> -> Service
 rots-gs-<k>. They are split out of httproute.yaml because Gateway API v1.6.2
 caps one HTTPRoute at 16 rules (rules.maxItems), and `gameserver.slots` is the
-number of slots that exist - 2000 in prod, i.e. 125 routes of 16. The `game-`
+number of slots that exist - 1000 in prod, i.e. 63 routes of 16. The `game-`
 prefix in the route name is what the CrowdSec agent keys on, so it comes from
 helm_modules/game-edge like the main route's.
 They live in `default` for the same reason the main route does: the Traefik
