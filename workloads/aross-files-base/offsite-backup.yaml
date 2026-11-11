@@ -1,0 +1,142 @@
+---
+# Nightly offsite dump of the Seafile MariaDB in namespace aross-files (ccnet/seafile/seahub
+# databases) to Backblaze B2, j2143-argo-db-backups. MariaDB is not a CNPG cluster, so it gets a
+# logical dump rather than WAL archiving. Objects carry Object Lock COMPLIANCE 30d and
+# SSE-C; the writer key in Secret db-backup-s3 can technically ask to delete, and the
+# COMPLIANCE lock is what refuses it. docs/db-backups.md.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: seafile-mariadb-offsite
+  namespace: aross-files
+spec:
+  schedule: "45 5 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  # A missed run (node down, image pull failing) is retried for an hour, then dropped
+  # rather than piling up: the next night's dump supersedes it anyway.
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: seafile-mariadb-offsite
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          # Resolver pin (same as ddns/cronjob.yaml): the rclone image is musl, and the
+          # IPv6 kube-dns ClusterIP never answers.
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            searches:
+              - aross-files.svc.cluster.local
+              - svc.cluster.local
+              - cluster.local
+            options:
+              - name: ndots
+                value: "5"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: work
+              emptyDir:
+                sizeLimit: 1Gi
+          initContainers:
+            - name: dump
+              image: mariadb:11.4   # same tag as the server, so the client matches
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  mariadb-dump -h seafile-mariadb -u root \
+                    --single-transaction --routines --triggers --events \
+                    --databases ccnet_db seafile_db seahub_db \
+                    | gzip -6 > /work/dump.sql.gz
+                  # Fail here rather than upload a truncated dump: a dump that cannot be
+                  # decompressed is worse than no dump, because it looks like a backup.
+                  gzip -t /work/dump.sql.gz
+                  cd /work && sha256sum dump.sql.gz > dump.sql.gz.sha256
+              env:
+                - name: MYSQL_PWD
+                  valueFrom:
+                    secretKeyRef:
+                      name: seafile-secret
+                      key: INIT_SEAFILE_MYSQL_ROOT_PASSWORD
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests: {cpu: 50m, memory: 128Mi}
+                limits: {cpu: 500m, memory: 512Mi}
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+          containers:
+            - name: upload
+              image: docker.io/rclone/rclone:1.76.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  dest="hz:${BUCKET}/databases/mariadb/${NAMESPACE}/seafile-mariadb/$(date -u +%Y%m%dT%H%M%SZ)"
+                  rclone copyto /work/dump.sql.gz "${dest}.sql.gz"
+                  rclone copyto /work/dump.sql.gz.sha256 "${dest}.sql.gz.sha256"
+                  echo "uploaded ${dest}.sql.gz"
+              env:
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: BUCKET
+                  value: j2143-argo-db-backups
+                - name: HOME
+                  value: /work
+                - name: RCLONE_CONFIG_HZ_TYPE
+                  value: s3
+                # "Other" (not "Ceph") is what the pre-flight proved against B2.
+                - name: RCLONE_CONFIG_HZ_PROVIDER
+                  value: Other
+                - name: RCLONE_CONFIG_HZ_ENDPOINT
+                  value: https://s3.us-east-005.backblazeb2.com
+                - name: RCLONE_CONFIG_HZ_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_CONFIG_HZ_SSE_CUSTOMER_ALGORITHM
+                  value: AES256
+                - name: RCLONE_CONFIG_HZ_REGION
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: REGION}
+                - name: RCLONE_CONFIG_HZ_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: ACCESS_KEY_ID}
+                - name: RCLONE_CONFIG_HZ_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: ACCESS_SECRET_KEY}
+                - name: RCLONE_CONFIG_HZ_SSE_CUSTOMER_KEY_BASE64
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: SSE_CUSTOMER_KEY}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests: {cpu: 50m, memory: 128Mi}
+                limits: {cpu: 500m, memory: 512Mi}
+              volumeMounts:
+                - name: work
+                  mountPath: /work

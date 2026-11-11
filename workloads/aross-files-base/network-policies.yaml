@@ -145,6 +145,14 @@ spec:
       ports:
         - port: 3306
           protocol: TCP
+    # The nightly offsite dump reads the same databases.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seafile-mariadb-offsite
+      ports:
+        - port: 3306
+          protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -163,4 +171,37 @@ spec:
               app: seafile
       ports:
         - port: 11211
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: seafile-mariadb-offsite
+  namespace: aross-files
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-mariadb-offsite
+  policyTypes: [Egress]
+  egress:
+    # The dump itself.
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-mariadb
+      ports:
+        - port: 3306
+          protocol: TCP
+    # Upload to Backblaze. Everything private is excluded, so this cannot reach the
+    # cluster or the LAN even though it is the only hole in the namespace.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 100.64.0.0/10
+              - 192.168.0.0/16
+      ports:
+        - port: 443
           protocol: TCP

@@ -79,9 +79,14 @@ What that means in practice:
   nothing can bypass it.
 - A stolen writer key could lower the bucket's **default retention**, which would leave
   *future* uploads unlocked while uploads keep succeeding. That is the one real gap.
-- It is watched: the `db-backup-bucket-check` CronJob asserts the lock config is still
-  `COMPLIANCE/30d` and that the newest object carries ~30 days of retention, exiting
-  non-zero on drift, which fires `db-backup-config-drift`.
+- It is watched: the `db-backup-bucket-check` CronJob (`workloads/db-backup-check/`, one
+  per bucket, every 6 hours) asserts the lock config is still `COMPLIANCE/30d` and that the
+  newest object is SSE-C and carries ~30 days of retention, exiting non-zero on drift,
+  which fires `db-backup-config-drift`.
+- It also **re-applies** `COMPLIANCE/30d` when it finds the default retention changed, so
+  a weakened bucket heals within one run. If you ever change the retention on purpose,
+  change the check's `EXPECT_DAYS` and the heal target in the same commit, or it will
+  put the old value back.
 
 If you ever want a genuinely write-only key: take the account's **master application key**
 from the console, mint one with exactly `listBuckets,listFiles,readFiles,writeFiles` and
