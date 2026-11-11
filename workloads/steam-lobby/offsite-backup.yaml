@@ -1,0 +1,55 @@
+---
+# Offsite WAL archive + daily base backup for steam-lobby-db (Barman Cloud plugin): Backblaze
+# B2, home bucket j2143-argo-db-backups-home, Object Lock COMPLIANCE 30d, SSE-C,
+# lifecycle expiry 31d. The writer key in Secret db-backup-s3 cannot be trusted to
+# stop at the lock, so the lock is the control. docs/db-backups.md.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: steam-lobby-db-offsite
+  namespace: steam-lobby
+  annotations:
+    # exists before the Cluster gains the plugin that references it
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  configuration:
+    destinationPath: s3://j2143-argo-db-backups-home/databases/cnpg/steam-lobby
+    endpointURL: https://s3.us-east-005.backblazeb2.com
+    s3Credentials:
+      accessKeyId: {name: db-backup-s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: db-backup-s3, key: ACCESS_SECRET_KEY}
+      region: {name: db-backup-s3, key: REGION}
+      sseCustomerKey: {name: db-backup-s3, key: SSE_CUSTOMER_KEY}
+    wal:
+      compression: zstd
+      maxParallel: 4
+    data:
+      compression: zstd
+      jobs: 2
+  instanceSidecarConfiguration:
+    # CRD defaults stated explicitly: these apps use ServerSideApply where
+    # server-defaulted fields otherwise show up as permanent drift.
+    logLevel: info
+    retentionPolicyIntervalSeconds: 1800
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 512Mi}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: steam-lobby-db-offsite-daily
+  namespace: steam-lobby
+  annotations:
+    # after the Cluster has rolled with the plugin
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # CNPG uses six-field cron, seconds first, in UTC.
+  schedule: "0 20 4 * * *"
+  immediate: true
+  backupOwnerReference: self
+  cluster:
+    name: steam-lobby-db
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
