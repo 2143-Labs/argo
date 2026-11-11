@@ -31,9 +31,14 @@ spec:
     # server-defaulted fields otherwise show up as permanent drift.
     logLevel: info
     retentionPolicyIntervalSeconds: 1800
+    # PROFILE G: requests equal limits so the pod stays Guaranteed. Kept small:
+    # every instance pays this on its node, and closet is overcommitted on
+    # requests (a 250m sidecar left mattermost-db's primary unschedulable there on
+    # 2026-11-11). 100m throttles base-backup compression, which only makes the
+    # nightly backup slower.
     resources:
-      requests: {cpu: 250m, memory: 512Mi}
-      limits: {cpu: 250m, memory: 512Mi}
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {cpu: 100m, memory: 256Mi}
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
