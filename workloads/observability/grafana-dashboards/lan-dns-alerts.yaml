@@ -1,6 +1,5 @@
-# lan-dns alerts (docs/lan-dns.md). No Grafana contact point is provisioned in
-# git and Grafana's storage is an emptyDir, so these appear in Grafana's alert
-# list; they notify nobody until a contact point exists.
+# lan-dns alerts (docs/lan-dns.md). Notifies ntfy via the contact point in
+# workloads/secrets/observability-grafana-alert-contactpoint.yaml.
 apiVersion: v1
 kind: ConfigMap
 metadata:
