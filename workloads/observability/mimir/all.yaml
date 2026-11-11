@@ -125,6 +125,9 @@ data:
       compactor_blocks_retention_period: 720h
       ingestion_rate: 100000
       ingestion_burst_size: 500000
+      # Promote the deployment environment to a label. Without it rots-prod, dino-prod and every
+      # preview namespace write identical series and overwrite each other.
+      promote_otel_resource_attributes: deployment.environment.name
     memberlist:
       bind_port: 7946
       join_members:

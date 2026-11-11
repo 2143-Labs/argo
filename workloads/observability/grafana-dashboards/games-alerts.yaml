@@ -19,11 +19,11 @@ data:
         folder: Alerts
         interval: 1m
         rules:
-          # The server's 60 Hz tick has 16.6 ms; an observation above 20 ms at the 95th
-          # percentile means the frame budget is already gone for one player in twenty. Tick
-          # duration is a histogram, so the query is the quantile, not a counter.
-          - uid: rots-tick-budget
-            title: ROTS tick p95 above budget
+          # The tick *interval* is not the tick *cost*: a healthy 60 Hz fixed step already pauses
+          # ~16.7 ms between runs, so a latency rule at 20 ms fires forever. What matters is whether
+          # the sim still runs 60 ticks a second (`rots_tick_duration_count` counts observations).
+          - uid: rots-tick-rate
+            title: ROTS tick rate below 55/s
             condition: C
             data:
               - refId: A
@@ -33,7 +33,7 @@ data:
                 datasourceUid: mimir
                 model:
                   editorMode: code
-                  expr: histogram_quantile(0.95, sum by (le) (rate(rots_tick_duration_bucket[5m])))
+                  expr: rate(rots_tick_duration_count[5m])
                   instant: true
                   intervalMs: 60000
                   maxDataPoints: 43200
@@ -44,7 +44,62 @@ data:
                   conditions:
                     - evaluator:
                         params:
-                          - 0.020
+                          - 55
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: A game server is ticking below 55 Hz
+              description: >-
+                One instance's tick counter has advanced fewer than 55 times a second for ten
+                minutes, against a 60 Hz fixed step. The alert carries the `instance` label; look
+                for a `game.frame_overrun` span on it in Tempo.
+
+          # Frames long enough to trip ROTS_FRAME_TRACE_MS. The counter increments once per overrun
+          # and is exported per instance, so a rate above 0.5/s is a continuously stalling sim.
+          - uid: rots-frame-overruns
+            title: ROTS frames over the trace threshold
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: rate(rots_frame_overruns[10m])
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0.5
                         type: gt
                       operator:
                         type: and
@@ -69,11 +124,10 @@ data:
             labels:
               severity: warning
             annotations:
-              summary: ROTS tick p95 above the 20 ms budget
+              summary: A game server is dropping frames
               description: >-
-                The 95th-percentile gap between two 60 Hz ticks is above 20 ms for ten minutes,
-                against a 16.6 ms budget. Look for a frame_overrun trace on the affected
-                instance in Tempo, and check whether entity count or players rose with it.
+                More than half a frame per second exceeds ROTS_FRAME_TRACE_MS on one instance for
+                ten minutes. Compare its player and entity counts before blaming the host.
 
           # A join that never reaches a world is a player who cannot play. The denominator is
           # the span metric for game.join, so it counts attempts, not just accepted joins.
@@ -89,7 +143,7 @@ data:
                 model:
                   editorMode: code
                   expr: >-
-                    sum(rate(rots_join_rejected_total[10m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{span_name="game.join", service=~"rots-.*"}[10m])), 0.001)
+                    sum(rate(rots_join_rejected[10m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{span_name="game.join", service=~"rots-.*"}[10m])), 0.001)
                   instant: true
                   intervalMs: 60000
                   maxDataPoints: 43200
