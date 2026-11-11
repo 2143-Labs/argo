@@ -51,7 +51,7 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 | LiveKit WebRTC TCP (TCP only) | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` | `.6.22` | matrix/livekit-server-rtc |
 | factorio | 34197 | `factorio (udp/34197) -> .6.28` | `.6.28` | factorio-game |
 | mc | 25565 | `minecraft (tcp/25565) -> .6.29` | `.6.29` | minecraft-game |
-| rots prod | 36000-37999 | `rots prod gameservers (udp/36000-37999) -> .6.32` (MikroTik live 2026-11-10; the Verizon forward still ends near 36400, so WAN UDP above that is closed until it is widened) | `.6.32` | `rots-prod/rots-gs-<i>-udp`, 1000 slots in use (`36000 + i`) |
+| rots prod | 36000-37999 | `rots prod gameservers (udp/36000-37999) -> .6.32` (MikroTik 2026-11-10, Verizon `36000-37999 -> 192.168.0.2` added 2026-11-11) | `.6.32` | `rots-prod/rots-gs-<i>-udp`, 1000 slots in use (`36000 + i`) |
 | rots previews (UDP only. Factorio's udp/34197 falls inside it (only PR N%1000=799 would collide; the factorio rule is listed first)) | 31000-34999 | `rots previews gameservers (udp/31000-34999) -> .6.33` | `.6.33` | `rots-pr-<N>/rots-gs-0-udp`, port `31000+4*(N%1000)` |
 | monero | 18080 | `monero p2p (tcp/18080) -> .5.76` | `192.168.5.76` | Monero on arch (bare metal) |
 | wg | 51820 | none: input rule `wireguard remote access` | the router | `wg-remote` tunnel to the DigitalOcean cluster |
