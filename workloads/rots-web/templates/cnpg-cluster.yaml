@@ -56,3 +56,13 @@ spec:
     initdb:
       database: rots
       owner: rots
+{{ if .Values.db.offsiteBackup }}
+  # Continuous WAL archiving + base backups offsite via ObjectStore
+  # <clusterName>-offsite (offsite-backup.yaml). Prod only. docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.db.clusterName }}-offsite
+{{ end }}

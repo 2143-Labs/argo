@@ -49,6 +49,7 @@ spec:
         - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-1e3b731' }
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
+        - { name: db.offsiteBackup, value: 'true' }
         - { name: db.size, value: 8Gi }
         - { name: db.walSize, value: 4Gi }
         - { name: db.maxSlotWalKeepSize, value: 2GB }
