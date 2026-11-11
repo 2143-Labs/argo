@@ -39,7 +39,9 @@ Two other knobs, deliberately **not** set:
 
 This is a **name-based** cordon, not an authorization boundary: any valid proxy key can still ask for either group. Separating *who* may spend which account needs virtual keys/teams plus `model_info.access_groups` — card #348 (task 2189).
 
-## Session affinity: what works on wildcard groups (for later)
+## Session affinity: what works on wildcard groups
+
+> **Correction 2026-11-11 (later the same day):** this is no longer "for later". It shipped in PR #110 as `router_settings.optional_pre_call_checks: ["session_affinity"]` with `deployment_affinity_ttl_seconds: 3600`, and the pairing it was measured against (two same-order home keys) is now what `deepseek/*` is. See [Per-conversation pins and per-subagent keys](#per-conversation-pins-and-per-subagent-keys-verified-live) for the live re-measurement.
 
 Load balancing *across sessions* instead of across requests is available and was measured, in case the pair ever becomes two same-order home keys:
 
@@ -99,3 +101,35 @@ Cooldown semantics are unchanged (401/402/404/408/429/5xx, 5s default, shared ac
 ### Reading the split off a live response
 
 Each deployment carries a named `model_info.id`, so the `x-litellm-model-id` response header (and the same id in spend-log metadata) says which key served: `deepseek-home-key1`, `deepseek-home-key2`, `deepseek-home-backup`, `deepseek-labs`. Left unset, litellm generates a uuid4 per process, which is neither readable nor stable across a rollout. Measured live through the deployed proxy, 30 calls to `deepseek/deepseek-v4-flash` split 16/14 across the two home ids with no errors and no backup picks.
+
+## Per-conversation pins and per-subagent keys (verified live)
+
+PR #109 named the deployments (`deepseek-home-key1`, `deepseek-home-key2`, `deepseek-home-backup`, `deepseek-labs`), which turns the pin from an opaque uuid4 into the answer to "which account did this conversation get?" — per conversation, and per subagent.
+
+**What the client actually sends.** The pin key is built from the caller's session id, and the client (OMP, `litellm` provider) sends it as `x-litellm-session-id`; it never sends `x-litellm-trace-id`. Measured: two separate invocations of one conversation (`omp -p`, then `omp -c -p`) logged the same session id `01a1c9ce-…`, that id held a pin, and the second turn created no new pin — the pin was looked up and reused. litellm's own precedence (`x-litellm-trace-id` → `x-litellm-session-id` → vendor session headers, `proxy/litellm_pre_call_utils.py`) still holds, but a client that sends no trace id never reaches that branch. Reading the uuid7-shaped pin ids as per-request trace ids was wrong: they are per-conversation ids.
+
+**Per-subagent keys.** Each subagent conversation carries its own session id (the agent name), so it takes its own pin and therefore its own account:
+
+| subagent | `deepseek/*` pin | deployment served | weight |
+|---|---|---|---|
+| `AffinityProbeA` | created | `259426e4676a…` | 1 |
+| `AffinityProbeB` | created | `2a808caf7ab9…` | 1 |
+
+Two subagents, two accounts, one each, backup never selected. Spinning out many subagents therefore spreads them over both accounts while each individual conversation stays on one, keeping that conversation's DeepSeek prefix cache warm.
+
+**The pin itself.** `deployment_affinity:v1:session:<model_group>:<user_key_hash>:<session_id>` → `{"model_id": "<model_info.id>"}`, TTL 3600 refreshed on every use, held in `litellm-redis` and therefore shared by both replicas:
+
+```sh
+kubectl --context closet-as-admin -n default exec deploy/litellm-redis -- \
+  redis-cli --scan --pattern 'deployment_affinity*deepseek*'
+```
+
+**Re-measured on the rolled pods** (#109, `6b9706b`; both replicas ready, 0 restarts):
+
+| check | result |
+|---|---|
+| `x-litellm-model-id`, two turns of one session id | `deepseek-home-key1` both times |
+| 40 calls, fresh session id each, unique prompts | 19 `key1` / 21 `key2`, 0 errors, 0 backup picks |
+| 20 repeated *identical* prompts | 14 `key2` / 6 `key1` — those are response-cache hits, and the header reports the deployment that populated the cache, so an identical-prompt split is not a routing measurement |
+
+**Renaming ids invalidates existing pins.** The pin is claimed write-once (`_claim_pin` → `claim_affinity_pin`), so an existing pin that points at an id no longer among the healthy deployments is not replaced: the session logs `pinned deployment=… not found in healthy_deployments` and re-picks on every request until the 3600s TTL runs out. Pins are only a cache, so the ones still pointing at the pre-rename uuid4 ids were deleted after the rollout rather than waiting out the hour.
