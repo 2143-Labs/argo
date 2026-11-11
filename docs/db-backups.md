@@ -259,9 +259,12 @@ The alerts give you the countdown:
 - `db-wal-volume-filling` — WAL volume over 70% full. This is the hard deadline.
 
 If the object store is unreachable and the volume is filling, set `isWALArchiver: false`
-on the affected Clusters via PR (this restarts them, one switchover each) and re-enable it
-afterwards. The first scheduled backup after re-enabling starts a fresh chain; the old
-objects expire on their normal timer, so there is nothing to clean up.
+on the affected Clusters via PR and re-enable it afterwards. Both changes roll the
+cluster, and do not count on that being a switchover: on 2026-11-11 CNPG restarted the
+primary in place twice despite `primaryUpdateMethod: switchover` (cause unconfirmed), so
+expect a brief primary restart per cluster and check node headroom first (see
+`adding-a-cnpg-database.md` §9). The first scheduled backup after re-enabling starts a
+fresh chain; the old objects expire on their normal timer, so there is nothing to clean up.
 
 ## 8. Writer-key rotation
 
