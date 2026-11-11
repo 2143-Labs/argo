@@ -39,3 +39,11 @@ spec:
   postgresql:
     pg_hba:
       - host all all 0.0.0.0/0 scram-sha-256
+  # Continuous WAL archiving + base backups offsite via ObjectStore litellm-db-offsite
+  # (offsite-backup.yaml). docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: litellm-db-offsite
