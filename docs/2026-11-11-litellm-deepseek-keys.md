@@ -3,6 +3,8 @@
 Date: 2026-11-11
 Commits: `2232e49` (llm-proxy: order deepseek primary before its backup, cordon labs key — PR #104).
 
+> **Correction 2026-11-11 (later the same day):** `DEEPSEEK_API_KEY` was split into `DEEPSEEK_API_KEY1` + `DEEPSEEK_API_KEY2`, so the ordered pair below became a 50/50 pool with the backup at `weight: 0`. Every statement about `order: 1` / `order: 2` in this record is superseded by [Two balanced keys](#two-balanced-keys-superseding-the-ordered-pair).
+
 ## What was added
 
 `deepseek/*` used to be a single deployment on `DEEPSEEK_API_KEY`. It is now an ordered pair plus a second group for the org account, all in `workloads/llm-proxy/configmap.yaml`:
@@ -60,3 +62,36 @@ Against the image the proxy pins (`ghcr.io/berriai/litellm:v1.108.1`), with `mod
 | end-to-end `acompletion`, `deepseek-labs/*` | 4/4 on the labs key |
 
 Rollout: ArgoCD `llm-proxy` synced to `2232e49`, then the reloader rolled both replicas.
+
+## Two balanced keys (superseding the ordered pair)
+
+The same day, the home account grew a second key: `DEEPSEEK_API_KEY` was replaced by `DEEPSEEK_API_KEY1` + `DEEPSEEK_API_KEY2`, and the goal changed from "primary, then backup" to "spend both evenly, keep the backup".
+
+| group | key | `weight` |
+|---|---|---|
+| `deepseek/*` | `DEEPSEEK_API_KEY1` | 1 |
+| `deepseek/*` | `DEEPSEEK_API_KEY2` | 1 |
+| `deepseek/*` | `DEEPSEEK_API_KEY_BACKUP1` | 0 |
+
+`weight` drives `simple-shuffle`, and `weight: 0` is never picked by the shuffle, so the backup is reachable only through `router_settings.enable_weighted_failover: true`, which re-picks among the other deployments in the same group after a failure.
+
+### Why the order tiers had to go
+
+`order` escalation fires on the first failure *inside* a tier, not after the tier is exhausted. With one of the two balanced keys answering 402 and its sibling healthy, the dead key's entire share landed on the **backup** (11 of 30 calls) instead of on the sibling (19 of 30). Weighted failover keeps the sibling first and reaches the backup only when no weight-bearing key is left.
+
+`enable_weighted_failover` is load-bearing rather than tuning: without it the generic retry re-picks at random, so a dead key failed 8 of 30 calls and the both-dead case failed 30/30 without ever trying the backup.
+
+### Measured
+
+Against `ghcr.io/berriai/litellm:v1.108.1`, `model_list` and `router_settings` read straight out of the ConfigMap, mock upstream 402ing named keys:
+
+| state | result |
+|---|---|
+| both keys healthy, 30 calls | 14 `KEY1` / 16 `KEY2`, zero backup |
+| both keys healthy, 200 selections | 103 `KEY1` / 97 `KEY2`, zero backup |
+| `KEY1` 402ing | 30/30 `KEY2`, no errors |
+| `KEY2` 402ing | 30/30 `KEY1`, no errors |
+| both 402ing | 30/30 `BACKUP1`, no requests failed |
+| `deepseek-labs/*` | 5/5 labs key |
+
+Cooldown semantics are unchanged (401/402/404/408/429/5xx, 5s default, shared across replicas through `litellm-redis`). The labs group still has a single deployment, so it has neither weights nor failover.
