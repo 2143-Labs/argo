@@ -1,0 +1,29 @@
+# Front door for the homeserver when traffic comes from the KEDA interceptor.
+#
+# The chart's own Service (tuwunel-conduwuit) is HEADLESS — the StatefulSet's
+# governing service — with `port: 8008, targetPort: http` while the container
+# actually listens on 80. Traefik dialled the EndpointSlice port directly, so
+# that mismatch was invisible. The interceptor instead dials
+# <service>:<target.port> by name, and a headless service has no kube-proxy
+# VIP to DNAT 8008 -> 80: requests to matrix.2143.me hung for 60s and returned
+# 504. This Service is a real ClusterIP, and it exposes port 80 so both
+# name-based dialling and endpoint-based dialling land on the port the
+# container listens on.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tuwunel-http
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: conduwuit
+    app.kubernetes.io/instance: tuwunel
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: conduwuit
+    app.kubernetes.io/instance: tuwunel
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

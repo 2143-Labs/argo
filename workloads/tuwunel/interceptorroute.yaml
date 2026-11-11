@@ -14,8 +14,9 @@ metadata:
   namespace: matrix
 spec:
   target:
-    service: tuwunel-conduwuit
-    port: 8008
+    # service.yaml, not the chart's headless Service: see the comment there.
+    service: tuwunel-http
+    port: 80
   rules:
     - hosts:
         - matrix.2143.me

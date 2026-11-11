@@ -1,0 +1,34 @@
+# Idle the homeserver: 0 pods when matrix.2143.me has been quiet for
+# `cooldownPeriod`, 1 while it is in use. The scale target is a StatefulSet,
+# which is why the InterceptorRoute's chart-hardcoded `replicas: 1` is ignored
+# via apps/tuwunel.yaml (`/spec/replicas` in ignoreDifferences) — otherwise
+# selfHeal would restore 1 the moment KEDA scaled to 0.
+#
+# Deliberately a separate commit from the InterceptorRoute: the scaler must not
+# report a live site idle before its traffic actually flows through the
+# interceptor (docs/2026-08-07-keda-http-addon-poc.md §5).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: tuwunel
+  namespace: matrix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: tuwunel-conduwuit
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  # A homeserver should not vanish mid-session: 30 min after the last request,
+  # matching element-web/heorot.
+  cooldownPeriod: 1800
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 600
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: tuwunel
