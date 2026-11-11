@@ -1,0 +1,150 @@
+---
+# Guards what the Object Lock actually promises. The writer key in Secret db-backup-s3
+# can technically ask to delete (Backblaze has no capability-restricted key), so the
+# protection is the bucket policy itself; this CronJob fails if that policy weakens,
+# which is what makes the db-backup-config-drift alert mean something.
+# It checks the bucket's default retention and the newest archived object's lock and
+# encryption, and re-applies the default retention if it finds drift so a weakened
+# bucket heals within one run. docs/db-backups.md.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup-bucket-check
+  namespace: default
+spec:
+  schedule: "0 */6 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0          # one failure is a signal, not something to retry blindly
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: db-backup-bucket-check
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            searches:
+              - default.svc.cluster.local
+              - svc.cluster.local
+              - cluster.local
+            options:
+              - name: ndots
+                value: "5"
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: check
+              # The sidecar image's boto3 is the one the gate proved against B2;
+              # awscli is not reliable for object-level calls there.
+              image: ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar:v0.16.0
+              command: ["/venv/bin/python"]
+              args:
+                - "-c"
+                - |
+                  import base64, datetime, os, sys
+                  import boto3
+                  from botocore.config import Config
+
+                  bucket   = os.environ["BUCKET"]
+                  endpoint = os.environ["ENDPOINT"]
+                  expect_mode = os.environ.get("EXPECT_MODE", "COMPLIANCE")
+                  expect_days = int(os.environ.get("EXPECT_DAYS", "30"))
+                  min_remaining = int(os.environ.get("MIN_REMAINING_DAYS", "25"))
+
+                  s3 = boto3.client(
+                      "s3", endpoint_url=endpoint, region_name=os.environ["REGION"],
+                      aws_access_key_id=os.environ["ACCESS_KEY_ID"],
+                      aws_secret_access_key=os.environ["ACCESS_SECRET_KEY"],
+                      config=Config(retries={"max_attempts": 5, "mode": "standard"}),
+                  )
+                  # boto3 wants the raw key and base64-encodes it itself: handing it the already
+                  # base64 string makes the header 60 bytes and B2 answers "secret key was invalid".
+                  sse = base64.b64decode(os.environ["SSE_CUSTOMER_KEY"])
+                  failures = []
+
+                  # 1. The bucket's default retention: what every new object inherits.
+                  conf = s3.get_object_lock_configuration(Bucket=bucket).get("ObjectLockConfiguration", {})
+                  dr = (conf.get("Rule") or {}).get("DefaultRetention") or {}
+                  print(f"bucket lock: enabled={conf.get('ObjectLockEnabled')} mode={dr.get('Mode')} days={dr.get('Days')}")
+                  if conf.get("ObjectLockEnabled") != "Enabled":
+                      failures.append("Object Lock is not Enabled on the bucket")
+                  if dr.get("Mode") != expect_mode or dr.get("Days") != expect_days:
+                      failures.append(f"default retention is {dr.get('Mode')}/{dr.get('Days')}, expected {expect_mode}/{expect_days}")
+                      # Heal, but only towards the real policy: a wrong expectation must not rewrite it.
+                      if (expect_mode, expect_days) == ("COMPLIANCE", 30):
+                          s3.put_object_lock_configuration(Bucket=bucket, ObjectLockConfiguration={
+                              "ObjectLockEnabled": "Enabled",
+                              "Rule": {"DefaultRetention": {"Mode": "COMPLIANCE", "Days": 30}}})
+                          print("re-applied COMPLIANCE/30 default retention")
+
+                  # 2. A real object: encryption and a retention date that is still in the future.
+                  newest = None
+                  for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix="databases/cnpg/"):
+                      for o in page.get("Contents", []):
+                          if newest is None or o["LastModified"] > newest["LastModified"]:
+                              newest = o
+                  if newest is None:
+                      print("no objects under databases/cnpg/ yet: bucket-level checks only")
+                  else:
+                      print(f"newest object: {newest['Key']} at {newest['LastModified']}")
+                      # A ranged GET, not head_object: B2 answers HeadObject with SSE-C with a bare
+                      # 400, while GET with SSE-C is what restores already use. One byte is enough
+                      # for the response headers.
+                      head = s3.get_object(Bucket=bucket, Key=newest["Key"], Range="bytes=0-0",
+                                           SSECustomerAlgorithm="AES256", SSECustomerKey=sse)
+                      mode  = head.get("ObjectLockMode")
+                      until = head.get("ObjectLockRetainUntilDate")
+                      alg   = head.get("SSECustomerAlgorithm")
+                      print(f"newest metadata: sse={alg} lock={mode} until={until}")
+                      if mode != "COMPLIANCE":
+                          failures.append(f"newest object lock mode is {mode}, expected COMPLIANCE")
+                      if until is None:
+                          failures.append("newest object has no retention date")
+                      elif (until - datetime.datetime.now(datetime.timezone.utc)).days < min_remaining:
+                          failures.append(f"newest object is locked until {until}, under {min_remaining} days out")
+                      # ServerSideEncryption stays empty for SSE-C; the algorithm header is the signal.
+                      if alg != "AES256":
+                          failures.append(f"newest object is not SSE-C (algorithm={alg})")
+
+                  print("RESULT:", "FAIL" if failures else "PASS")
+                  for f in failures:
+                      print(" -", f)
+                  sys.exit(1 if failures else 0)
+              env:
+                - name: BUCKET
+                  value: j2143-argo-db-backups-home
+                - name: ENDPOINT
+                  value: https://s3.us-east-005.backblazeb2.com
+                - name: REGION
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: REGION}
+                - name: ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: ACCESS_KEY_ID}
+                - name: ACCESS_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: ACCESS_SECRET_KEY}
+                - name: SSE_CUSTOMER_KEY
+                  valueFrom:
+                    secretKeyRef: {name: db-backup-s3, key: SSE_CUSTOMER_KEY}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests: {cpu: 50m, memory: 128Mi}
+                limits: {cpu: 500m, memory: 512Mi}

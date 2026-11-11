@@ -1,0 +1,24 @@
+# Watches the odoo-aross bucket's Object Lock and the newest archived object, and fails if
+# either weakens. This is the compensating control for the writer key being able to
+# ask for a delete: the lock is what refuses, so its health is what must be alarmed
+# on. docs/db-backups.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: db-backup-check-biz
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/db-backup-check/biz
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo-aross
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
