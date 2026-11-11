@@ -74,6 +74,15 @@ Fifteen check-host packets to 37999, 37000 and 36500 moved the `rots prod` rule'
 5 of 5 nodes; `36000` (slot 0, nothing running) drew ICMP unreachable from the VIP. So the
 whole range is open WAN → MikroTik → `192.168.6.32` → pod, not just the part with a listener.
 
+**Five rows above are dead as of 2026-11-11**, found with the same counter method while checking
+the ROTS previews rule: `3478/tcp` and `45000-45063/udp` (coturn), `7881/tcp` (livekit),
+`11753/tcp` (openrct2) and `18080/tcp` (monero). The MikroTik still dst-nats every one of them,
+but their packet counters stay flat under a probe from outside, so the packets never reach the
+router — the Verizon forward is gone, not the service. All five connected from check-host on
+2026-10-16. `34197/udp` (factorio) still arrives, so this is five forwards, not a blanket change;
+it may have been a deliberate trim. Restore the Verizon entries (same ports → `192.168.0.2`) or
+retire the MikroTik rules, but do not trust the table's rows until one of the two happens.
+
 ## Adding a public port
 
 1. Give the service a pinned `.6.x` address ([adding-a-workload.md](adding-a-workload.md) §5).
