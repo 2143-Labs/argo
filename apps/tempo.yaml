@@ -37,10 +37,9 @@ spec:
                 access_key: ${S3_ACCESS_KEY}
                 secret_key: ${S3_SECRET_KEY}
           retention: 168h
-          # TraceQL metrics / Traces Drilldown via local-blocks. Span metrics are off:
-          # they were 33.5k series in Mimir (26k of them buckets) against the series
-          # cap. Without storage.path Tempo runs the generator as an idle no-op and its
-          # ring stays empty ("empty ring").
+          # Span metrics (RED per service/operation, remote-written to Mimir) and
+          # TraceQL metrics / Traces Drilldown. Without storage.path Tempo runs the
+          # generator as an idle no-op and its ring stays empty ("empty ring").
           metricsGenerator:
             enabled: true
             remoteWriteUrl: http://mimir.observability.svc:8080/api/v1/push
@@ -51,11 +50,18 @@ spec:
             processor:
               local_blocks:
                 flush_to_storage: true
+              # traces_spanmetrics_{calls,latency,duration,size}_* in Mimir, grouped by
+              # service/span_name/span_kind/status_code (the defaults - no resource
+              # attributes, which would be one series set per instance). The 60 s top
+              # bucket is for `k8s.provision`, which creates a StatefulSet and a PVC.
+              span_metrics:
+                histogram_buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60]
           overrides:
             defaults:
               metrics_generator:
                 processors:
                   - local-blocks
+                  - span-metrics
           resources:
             requests:
               cpu: 500m
