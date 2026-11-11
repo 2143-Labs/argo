@@ -61,3 +61,11 @@ spec:
     parameters:
       max_connections: "200"
       shared_buffers: "256MB"
+  # Continuous WAL archiving + base backups offsite via ObjectStore pelican-db-offsite
+  # (offsite-backup.yaml). docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: pelican-db-offsite

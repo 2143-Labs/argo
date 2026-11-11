@@ -59,3 +59,11 @@ spec:
         login: true
         passwordSecret:
           name: steam-lobby-db-password
+  # Continuous WAL archiving + base backups offsite via ObjectStore steam-lobby-db-offsite
+  # (offsite-backup.yaml). docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: steam-lobby-db-offsite
