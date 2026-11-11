@@ -1,0 +1,26 @@
+# KEDA HTTP add-on wiring for the tuwunel homeserver, kept out of apps/tuwunel.yaml
+# because that Application's source is a Helm chart — extra manifests cannot join it.
+# Both objects land in `matrix` (an InterceptorRoute resolves its target service in
+# its own namespace): workloads/tuwunel/{interceptorroute,scaledobject}.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tuwunel-keda
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/tuwunel
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: matrix
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

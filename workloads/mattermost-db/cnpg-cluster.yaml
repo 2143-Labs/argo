@@ -3,8 +3,16 @@ kind: Cluster
 metadata:
   name: mattermost-db
   namespace: mattermost
+  annotations:
+    # No running pods, PVCs retained. The operator only honours this once the
+    # Cluster reports Ready — a not-Ready cluster keeps retrying instead, which
+    # is what made 0f1bbd1 revert. Hence `instances: 1` as well: the second copy
+    # never became healthy (closet has no memory headroom), so it both blocked
+    # hibernation and held a 1Gi request on the node that needs it most.
+    # Rehydrate by setting this to "off" (mattermost is at 0 replicas since Jul).
+    cnpg.io/hibernation: "on"
 spec:
-  instances: 2
+  instances: 1
   primaryUpdateMethod: switchover
   affinity:
     enablePodAntiAffinity: true

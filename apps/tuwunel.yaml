@@ -82,6 +82,10 @@ spec:
     - group: apps
       kind: StatefulSet
       jsonPointers:
+        # KEDA (apps/tuwunel-keda.yaml) owns the replica count; the chart hardcodes
+        # replicas: 1 with no value to override, so without this selfHeal would
+        # bounce the app 1→0→1 forever against the idle scale-to-zero.
+        - /spec/replicas
         - /spec/template/spec/volumes
         - /spec/template/spec/containers/0/volumeMounts
     - group: ""

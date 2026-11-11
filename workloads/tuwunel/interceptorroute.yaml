@@ -1,0 +1,33 @@
+# Scale-to-zero wiring for the tuwunel homeserver (looks up `tuwunel-conduwuit`;
+# its Argo source is a Helm chart with no replica knob — apps/tuwunel.yaml).
+#
+# Traffic: matrix.2143.me → shared-gateway → HTTPRoute matrix-tuwunel
+# (workloads/gateway/templates/matrix-route.yaml) → keda interceptor proxy →
+# this route's target → tuwunel-conduwuit:8008.
+#
+# An InterceptorRoute resolves `target` in its OWN namespace, so this lives in
+# matrix next to the Service it fronts (docs/2026-08-07-keda-http-addon-poc.md §9.2).
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: tuwunel
+  namespace: matrix
+spec:
+  target:
+    service: tuwunel-conduwuit
+    port: 8008
+  rules:
+    - hosts:
+        - matrix.2143.me
+  scalingMetric:
+    # A Matrix client's /sync is a long-poll, so one connected client already puts
+    # ~1 request in flight; concurrency 10 keeps a single replica, which is all
+    # this StatefulSet can have (RWO volume).
+    concurrency:
+      targetValue: 10
+    # ...but a short request (/_matrix/client/versions, the .well-known probe)
+    # can open and close inside one metric window and never register as
+    # concurrency, stranding the route at zero (the 1f017c4 fix). One request per
+    # 60s is enough to wake it.
+    requestRate:
+      targetValue: 1

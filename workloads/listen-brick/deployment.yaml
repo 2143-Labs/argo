@@ -6,7 +6,7 @@ metadata:
   labels:
     app: listen-brick
 spec:
-  replicas: 1
+  replicas: 0
   revisionHistoryLimit: 3
   strategy:
     type: Recreate            # SQLite + RWO volume: never two writers
