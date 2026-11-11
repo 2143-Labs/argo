@@ -1,6 +1,6 @@
-# Traefik edge alerts (docs/public-edge.md "Troubleshooting"). Grafana has no
-# contact point in git (see lan-dns-alerts.yaml), so this appears in Grafana's
-# alert list and notifies nobody until one exists. Deliberately one rule.
+# Traefik edge alerts (docs/public-edge.md "Troubleshooting"). Notifies ntfy via
+# the contact point in workloads/secrets/observability-grafana-alert-contactpoint.yaml.
+# Deliberately one rule.
 apiVersion: v1
 kind: ConfigMap
 metadata:

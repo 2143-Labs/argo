@@ -270,6 +270,59 @@ alloy:
       }
 
 
+      // CNPG instances (:9187): WAL-archive backlog and Barman Cloud plugin backup
+      // timestamps for db-backup-alerts.yaml. docs/db-backups.md.
+      discovery.kubernetes "cnpg" {
+        role = "pod"
+        namespaces {
+          names = ["default", "mattermost", "steam-lobby", "odoo-aross", "odoo-labs", "rots-prod"]
+        }
+        selectors {
+          role  = "pod"
+          label = "cnpg.io/podRole=instance"
+        }
+      }
+
+      discovery.relabel "cnpg" {
+        targets = discovery.kubernetes.cnpg.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_number"]
+          regex         = "9187"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_cnpg_io_cluster"]
+          target_label  = "cnpg_cluster"
+        }
+      }
+
+      prometheus.scrape "cnpg" {
+        targets         = discovery.relabel.cnpg.output
+        job_name        = "cnpg"
+        scrape_interval = "60s"
+        forward_to      = [prometheus.relabel.cnpg_metrics.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+      prometheus.relabel "cnpg_metrics" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "(up|cnpg_collector_pg_wal|cnpg_collector_pg_wal_archive_status|cnpg_pg_stat_archiver_.*|barman_cloud_cloudnative_pg_io_.*)"
+          action        = "keep"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
+      }
+
       // LGTM + Alloy self-metrics (static targets — services are stable)
       prometheus.scrape "observability" {
         targets = [

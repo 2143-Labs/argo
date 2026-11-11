@@ -1,0 +1,300 @@
+# Offsite database backup alerts (docs/db-backups.md). Notifies ntfy via the
+# contact point in workloads/secrets/observability-grafana-alert-contactpoint.yaml.
+# Covers both halves of the offsite path: the CNPG WAL-archive and Barman Cloud
+# plugin backup timestamps, and the Seafile MariaDB dump CronJob. A cluster that
+# stops archiving is the failure this whole design exists to survive, and it is
+# silent without these rules.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-backup-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  db-backup-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: db-backups
+        folder: Alerts
+        interval: 1m
+        rules:
+          # 26h, not 24h: the daily base backup plus one missed run is still
+          # recoverable by hand, a second missed run is not worth waiting on.
+          - uid: db-offsite-backup-stale
+            title: Offsite DB backup is stale
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 3600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: time() - max by (namespace, cnpg_cluster) (barman_cloud_cloudnative_pg_io_last_available_backup_timestamp)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 93600
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Offsite backup of {{ $labels.namespace }}/{{ $labels.cnpg_cluster }} is over 26h old'
+              description: >-
+                No completed base backup in the last 26 hours. Check the cluster's Backup objects
+                and the barman sidecar log, then docs/db-backups.md "WAL-archive outage lever".
+
+          # About an hour of queued 16 MB segments. Fix archiving before the WAL
+          # volume fills: roughly 18 hours at the 5-minute archive_timeout.
+          - uid: db-wal-archive-backlog
+            title: WAL archive backing up
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (namespace, cnpg_cluster) (cnpg_collector_pg_wal_archive_status{value="ready"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 12
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: '{{ $labels.namespace }}/{{ $labels.cnpg_cluster }} has {{ $value }} WAL segments waiting to archive'
+              description: >-
+                Archiving is failing or slow. Fix it before the WAL volume fills and Postgres stops:
+                about 18 hours at the 5-minute archive_timeout. See docs/db-backups.md
+                "WAL-archive outage lever".
+
+          # The hard deadline of the previous alert.
+          - uid: db-wal-volume-filling
+            title: WAL volume filling
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (namespace, cnpg_cluster) (cnpg_collector_pg_wal{value="size"} / ignoring(value) cnpg_collector_pg_wal{value="volume_size"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0.7
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: '{{ $labels.namespace }}/{{ $labels.cnpg_cluster }} WAL volume is {{ $value | humanizePercentage }} full'
+              description: >-
+                Postgres stops writing when this fills. If the object store is unreachable, set
+                isWALArchiver false on the Cluster via PR. See docs/db-backups.md
+                "WAL-archive outage lever".
+
+          # The MariaDB half: no metric from the dump job itself until it succeeds,
+          # so staleness is the only signal.
+          - uid: seafile-offsite-backup-stale
+            title: Seafile offsite dump is stale
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 3600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: time() - max by (namespace) (kube_cronjob_status_last_successful_time{cluster="", cronjob="seafile-mariadb-offsite"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 93600
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Seafile MariaDB dump in {{ $labels.namespace }} is over 26h old'
+              description: >-
+                The seafile-mariadb-offsite CronJob has not succeeded in 26 hours. Check
+                kubectl -n {{ $labels.namespace }} get jobs and the upload container log, then
+                docs/db-backups.md "Seafile restore".
+
+          # The capability layer is weak on Backblaze: the console can only create keys with
+          # the full read/write set, so the in-cluster writer key carries deleteFiles and
+          # writeBucketRetentions. Immutability comes from Object Lock COMPLIANCE, which no
+          # key can bypass - what a stolen key CAN do is lower the bucket's default
+          # retention, quietly leaving future uploads unlocked while backups keep arriving.
+          # The bucket-check CronJob asserts lock config and the newest object's retention
+          # every run; this fires when a run fails.
+          - uid: db-backup-config-drift
+            title: Backup bucket protection drifted
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (namespace) (kube_job_status_failed{cluster="", job_name=~"db-backup-bucket-check-.*"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Backup bucket check failed in {{ $labels.namespace }}'
+              description: >-
+                Either the bucket's Object Lock default retention is no longer COMPLIANCE/30d,
+                or the newest backup object no longer carries ~30 days of retention. Check
+                kubectl -n {{ $labels.namespace }} logs job/<check-job>, then docs/db-backups.md
+                "Protection model".
