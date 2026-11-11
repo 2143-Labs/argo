@@ -127,21 +127,34 @@ data:
       # attempt per 5s window. Keys are benched on 401/402/404/408/429 and 5xx
       # (litellm/router_utils/cooldown_handlers.py, _is_cooldown_required), which
       # covers DeepSeek's 402 "Insufficient Balance".
+      #
+      # `model_info.id` is named on purpose. Every response carries the deployment
+      # that served it in the `x-litellm-model-id` header, and litellm's spend-log
+      # rows carry the same id in their metadata, so `deepseek-home-key1` /
+      # `-key2` / `-backup` make the split readable. Left unset, litellm generates
+      # a fresh uuid4 per process, so the header is unreadable and changes on every
+      # rollout — nothing to compare against.
       - model_name: "deepseek/*"
         litellm_params:
           model: "deepseek/*"
           api_key: "os.environ/DEEPSEEK_API_KEY1"
           weight: 1
+        model_info:
+          id: "deepseek-home-key1"
       - model_name: "deepseek/*"
         litellm_params:
           model: "deepseek/*"
           api_key: "os.environ/DEEPSEEK_API_KEY2"
           weight: 1
+        model_info:
+          id: "deepseek-home-key2"
       - model_name: "deepseek/*"
         litellm_params:
           model: "deepseek/*"
           api_key: "os.environ/DEEPSEEK_API_KEY_BACKUP1"
           weight: 0
+        model_info:
+          id: "deepseek-home-backup"
       # Org / lab traffic stays on its own key, cordoned by model-group name:
       # callers ask for `deepseek-labs/<model>` and `deepseek/*` stays home-only, so
       # spend logs, budgets and failover decisions never mix the two accounts.
@@ -154,6 +167,8 @@ data:
         litellm_params:
           model: "deepseek/*"
           api_key: "os.environ/DEEPSEEK_API_KEY_LABS"
+        model_info:
+          id: "deepseek-labs"
       # Anthropic (Claude)
       - model_name: "anthropic/*"
         litellm_params:

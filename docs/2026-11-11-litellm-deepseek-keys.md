@@ -95,3 +95,7 @@ Against `ghcr.io/berriai/litellm:v1.108.1`, `model_list` and `router_settings` r
 | `deepseek-labs/*` | 5/5 labs key |
 
 Cooldown semantics are unchanged (401/402/404/408/429/5xx, 5s default, shared across replicas through `litellm-redis`). The labs group still has a single deployment, so it has neither weights nor failover.
+
+### Reading the split off a live response
+
+Each deployment carries a named `model_info.id`, so the `x-litellm-model-id` response header (and the same id in spend-log metadata) says which key served: `deepseek-home-key1`, `deepseek-home-key2`, `deepseek-home-backup`, `deepseek-labs`. Left unset, litellm generates a uuid4 per process, which is neither readable nor stable across a rollout. Measured live through the deployed proxy, 30 calls to `deepseek/deepseek-v4-flash` split 16/14 across the two home ids with no errors and no backup picks.
