@@ -38,7 +38,7 @@ spec:
         - { name: turn, value: "true" }
         # One instance at a time: aross runs the contact lock first; drop this
         # line once workloads/odoo/values.yaml carries the same tag.
-        - { name: image, value: ghcr.io/2143-labs/odoo:sha-62d723bb54e05e930239a57191fadcb02f7bd6da }
+        - { name: image, value: ghcr.io/2143-labs/odoo:sha-a71417017aaab47da8e20d471b342592962e61b0 }
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo-aross
