@@ -301,6 +301,38 @@ data:
       # router_settings key in litellm/constants.py ROUTER_SETTINGS_KEYS).
       enable_weighted_failover: true
 
+      # Session stickiness: a conversation stays on the deployment it landed on
+      # instead of flipping per request. This matters for DeepSeek's prefix cache,
+      # which is per account — `DEEPSEEK_API_KEY1` and `DEEPSEEK_API_KEY2` are
+      # different accounts (balances $76.38 vs $51.73 on 2026-11-11), so a
+      # request-by-request split warms one account's cache and then misses on the
+      # other. With a pin, balancing becomes 50/50 across *sessions* and each
+      # session keeps its cache warm.
+      #
+      # The pin key is a session id: `x-litellm-session-id` (or `x-litellm-trace-id`,
+      # which litellm treats as interchangeable), any `x-<vendor>-session-id` such
+      # as `x-claude-code-session-id`, or `metadata.session_id` in the request body.
+      # A client that sends none is unaffected — it keeps the plain weighted split.
+      # If a client sends a *per-request* id (a random trace id), the pin churns on
+      # every call and is worth nothing, so only count this as working once a client
+      # is observed sending a stable id.
+      #
+      # A pinned deployment in cooldown does not strand the session: the request
+      # falls through to the remaining healthy deployments and the pin is kept, so
+      # it returns to its deployment when that recovers
+      # (litellm/router_utils/pre_call_checks/deployment_affinity_check.py).
+      # `session_affinity_repin_on_failover: true` would instead keep whichever
+      # deployment answered — deliberately off, so a 5s cooldown does not
+      # permanently migrate a session to the other account.
+      #
+      # Global on purpose: per-group `model_group_affinity_config` silently does
+      # nothing for wildcard groups on this image (the read path resolves flags
+      # with the requested model name, the write path with the deployment's
+      # `deepseek/*` pattern). Single-deployment groups (everything else, and
+      # `deepseek-labs/*`) have nothing to pin, so this costs them nothing.
+      optional_pre_call_checks: ["session_affinity"]
+      deployment_affinity_ttl_seconds: 3600
+
     litellm_settings:
       drop_params: true
       set_verbose: false
