@@ -1,6 +1,9 @@
 """One page submission, one booking."""
 
 import re
+import threading
+
+import requests
 
 from odoo.tests import tagged
 from odoo.tests.common import HttpCase
@@ -94,6 +97,80 @@ class TestBookingGuard(HttpCase):
         )
         self.assertEqual(len(partners), 1)
         self.assertEqual(len(self._bookings()), 2)
+
+    def test_simultaneous_clicks_of_one_form_book_once(self):
+        """Two clicks arriving in the same instant still make one booking."""
+        base = self.base_url()
+        session = requests.Session()
+        html = session.get("%s/book/%d" % (base, self.btype.id), timeout=30).text
+        payload = {
+            "csrf_token": CSRF.search(html).group(1),
+            "booking_key": KEY.search(html).group(1),
+            "name": "Ada Lovelace",
+            "email": "ada@example.com",
+            "when": re.findall(r'name="when" value="([^"]+)"', html)[0],
+        }
+        answers = []
+
+        def click():
+            try:
+                answer = session.post(
+                    "%s/book/%d/confirm" % (base, self.btype.id),
+                    data=payload,
+                    allow_redirects=False,
+                    timeout=120,
+                )
+                answers.append((answer.status_code, answer.headers.get("Location")))
+            except Exception as error:  # surfaced by the assertion below
+                answers.append(repr(error))
+
+        threads = [threading.Thread(target=click) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual([code for code, _ in answers], [303, 303])
+        self.assertEqual(answers[0][1], answers[1][1])
+        self.assertEqual(len(self._bookings(payload["booking_key"])), 1)
+
+    def test_simultaneous_forms_from_one_address_make_one_contact(self):
+        """Two tabs submitting at once may book twice, but must not fork the contact."""
+        base = self.base_url()
+        answers = {}
+
+        def submit(label, slot_index):
+            try:
+                session = requests.Session()
+                url = "%s/book/%d" % (base, self.btype.id)
+                html = session.get(url, timeout=30).text
+                answer = session.post(
+                    url + "/confirm",
+                    data={
+                        "csrf_token": CSRF.search(html).group(1),
+                        "booking_key": KEY.search(html).group(1),
+                        "name": "Ada Lovelace",
+                        "email": "ada@example.com",
+                        "when": re.findall(r'name="when" value="([^"]+)"', html)[slot_index],
+                    },
+                    allow_redirects=False,
+                    timeout=120,
+                )
+                answers[label] = answer.status_code
+            except Exception as error:  # surfaced by the assertion below
+                answers[label] = repr(error)
+
+        threads = [
+            threading.Thread(target=submit, args=("a", 0)),
+            threading.Thread(target=submit, args=("b", 1)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(answers, {"a": 303, "b": 303})
+        self.assertEqual(len(self._bookings()), 2)
+        partners = self.env["res.partner"].search([("email", "=ilike", "ada@example.com")])
+        self.assertEqual(len(partners), 1)
 
     def test_page_carries_the_key_and_the_submit_guard(self):
         html = page(self)

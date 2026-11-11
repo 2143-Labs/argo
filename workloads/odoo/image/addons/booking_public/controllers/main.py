@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 
 import pytz
+from psycopg2 import errors
 
 from odoo import fields, http
 from odoo.exceptions import ValidationError
@@ -188,19 +189,46 @@ class BookingPublic(http.Controller):
 
     def _visitor_partner(self, name, email, phone):
         """The visitor's partner, created once even for simultaneous submits."""
+        cr = request.env.cr
         Partner = request.env["res.partner"].sudo()
-        with request.env.cr.savepoint():
-            # A retry, a second tab or the same person on two devices can reach
-            # this with one address at the same moment. Without the lock both
-            # search, both find nothing, both create: two contacts, two
-            # histories, one human. The lock makes the second wait, then find
-            # what the first committed.
-            request.env.cr.execute(
-                "SELECT pg_advisory_xact_lock(hashtext(%s))", ("partner:" + email,)
-            )
-            partner = Partner.search([("email", "=ilike", email)], limit=1)
-            if not partner:
-                partner = Partner.create({"name": name, "email": email, "phone": phone})
+        Contact = request.env["booking.contact"].sudo()
+        uid = request.env.uid
+        # Claim the address first. The insert is atomic, so two requests that
+        # arrive together agree on one row instead of both searching, both
+        # finding nothing and both creating a contact.
+        cr.execute(
+            "INSERT INTO booking_contact "
+            "(email, create_uid, create_date, write_uid, write_date) "
+            "VALUES (%s, %s, now(), %s, now()) ON CONFLICT (email) DO NOTHING",
+            (email, uid, uid),
+        )
+        partner = Partner.search([("email", "=ilike", email)], limit=1)
+        if partner:
+            Contact.search([("email", "=", email)]).partner_id = partner.id
+            return partner
+        partner = Partner.create({"name": name, "email": email, "phone": phone})
+        # Whoever fills the empty slot owns the address; the other drops the
+        # contact it just created and uses the winner's.
+        cr.execute(
+            "UPDATE booking_contact "
+            "SET partner_id = %s, write_uid = %s, write_date = now() "
+            "WHERE email = %s AND partner_id IS NULL RETURNING id",
+            (partner.id, uid, email),
+        )
+        if cr.fetchone():
+            return partner
+        cr.execute("SELECT partner_id FROM booking_contact WHERE email = %s", (email,))
+        row = cr.fetchone()
+        winner = row and row[0]
+        if winner and winner != partner.id:
+            try:
+                with cr.savepoint():
+                    partner.unlink()
+            except Exception:
+                _logger.warning(
+                    "kept duplicate contact %s for %s", partner.id, email, exc_info=True
+                )
+            return Partner.browse(winner)
         return partner
 
     def _book(self, booking_type, chosen, partner, tz, booking_key=None):
@@ -227,12 +255,6 @@ class BookingPublic(http.Controller):
         try:
             with request.env.cr.savepoint():
                 if booking_key:
-                    # Serialise the submissions of one form: a click that arrives
-                    # while the first is still in flight waits here, then finds
-                    # the booking the first one committed.
-                    request.env.cr.execute(
-                        "SELECT pg_advisory_xact_lock(hashtext(%s))", (booking_key,)
-                    )
                     existing = self._already_booked(booking_key)
                     if existing:
                         return existing, False
@@ -259,6 +281,14 @@ class BookingPublic(http.Controller):
                     partner_ids=[partner.id],
                     subtype_xmlid="mail.mt_comment",
                 )
+        except errors.UniqueViolation:
+            # Two submissions of one page arrived together and both got past the
+            # check above; the unique index let exactly one through. Answer with
+            # the booking that won, which is committed by now.
+            existing = self._already_booked(booking_key)
+            if existing:
+                return existing, False
+            return None, False
         except ValidationError:
             # Lost the race against another booking, or the slot no longer fits
             # the calendar: tell the visitor instead of showing a 500.

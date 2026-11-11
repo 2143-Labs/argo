@@ -29,6 +29,20 @@ class ResourceBooking(models.Model):
         "booking the visitor twice.",
     )
 
+    def init(self):
+        super().init()
+        # One active booking per public page. Two submissions of one form can
+        # arrive in the same millisecond, and an advisory lock does not stop
+        # them (measured in production: two bookings, one key, six milliseconds
+        # apart), so the database holds the rule instead: the loser's insert
+        # fails, and the controller answers with the booking that won.
+        # OCA archives a cancelled booking, so its key is free for a retry.
+        self.env.cr.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS resource_booking_booking_key_active "
+            "ON resource_booking (booking_key) "
+            "WHERE booking_key IS NOT NULL AND active"
+        )
+
     def _prepare_meeting_vals(self):
         vals = super()._prepare_meeting_vals()
         meeting = self.meeting_id

@@ -1,4 +1,5 @@
 from . import (
+    booking_contact,
     calendar_attendee,
     calendar_event,
     caldav_sync,
@@ -9,6 +10,7 @@ from . import (
 )
 
 __all__ = [
+    "booking_contact",
     "calendar_attendee",
     "calendar_event",
     "caldav_sync",

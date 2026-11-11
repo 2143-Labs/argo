@@ -6,6 +6,7 @@
     "author": "2143 Labs",
     "depends": ["resource_booking", "website", "sale", "payment", "portal", "mail"],
     "data": [
+        "security/ir.model.access.csv",
         "views/resource_booking_type_views.xml",
         "views/templates.xml",
         "views/resource_resource_views.xml",
