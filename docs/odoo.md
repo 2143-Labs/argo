@@ -2,7 +2,7 @@
 
 One Odoo Community 18.0 + OCA instance per company: `https://o.aross.studio` (aross.studio, namespace `odoo-aross`, also `https://book.aross.studio` for the public booking page) and `https://o.2143.me` (2143 Labs LLC, namespace `odoo-labs`, also `https://book.2143.me` for its public booking page). Each is one always-on pod, `strategy: Recreate`, with its own CNPG Postgres (`odoo-db`), its own filestore PVC (`odoo-filestore`), its own admin and users. Both start on OCA's US GAAP chart of accounts (`l10n_us_gaap`, template `us_gaap`).
 
-**No scheduled database backup exists** (deferred 2026-11-08). The filestore PVC is in the nightly Longhorn backup to the NAS; Postgres is not. Enter no real books until a database backup exists, and take the manual dump below before every change.
+**Offsite database backups exist** — see `docs/db-backups.md`. `odoo-db` archives WAL continuously and takes a daily base backup to the business bucket, under a 30-day Object Lock. Those objects contain the database only: the filestore PVC is in the nightly Longhorn backup to the NAS, so a full restore needs both. The manual dump below is still the quickest snapshot before a risky change.
 
 ## What runs where
 
@@ -38,7 +38,7 @@ P=$(kubectl -n <namespace> get cluster odoo-db -o jsonpath='{.status.currentPrim
 kubectl -n <namespace> exec "$P" -c postgres -- pg_dump -Fc -d odoo > <namespace>-$(date +%F).dump
 ```
 
-Keep the file off the cluster. No restore procedure is written yet: a `-Fc` dump restores with `pg_restore` into an empty `odoo` database, together with the filestore from the Longhorn backup of the same night. Writing and testing that procedure belongs to the database-backup work. Until then, if an update leaves the database broken, stop and keep the dump; do not improvise a restore on the live cluster.
+Keep the file off the cluster. The restore procedure is in `docs/db-backups.md`: recover the cluster beside production from the offsite objects, verify it, then `pg_restore --clean --if-exists` into the live database. A `-Fc` dump still restores with `pg_restore` into an empty `odoo` database, and the filestore comes from the Longhorn backup of the same night. If an update leaves the database broken, prefer the offsite restore over improvising on the live cluster.
 
 ## Add a module
 

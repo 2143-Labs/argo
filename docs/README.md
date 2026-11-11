@@ -8,6 +8,7 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Adding a Secret](adding-a-secret.md)
 - [Deploying a private-repo game (private images and binaries)](deploying-a-private-repo-game.md)
 - [Adding a CNPG Database](adding-a-cnpg-database.md)
+- [Offsite Database Backups](db-backups.md)
 - [Odoo: o.aross.studio and o.2143.me](odoo.md)
 - [LAN and cluster DNS (lan-dns)](lan-dns.md)
 - [Internet edge: Verizon → MikroTik → MetalLB (port forwards, router recovery)](network-edge.md)

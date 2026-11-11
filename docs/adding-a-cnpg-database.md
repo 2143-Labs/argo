@@ -254,9 +254,11 @@ switchover when the primary changes. Two consequences:
 
 ## 9. Known gaps and gotchas
 
-- **No backups are configured on any CNPG cluster in this repo.** There is no
-  `barmanObjectStore`/`ObjectStore`; durability is one node-pinned Longhorn copy plus
-  `Retain`. If the data matters, that is the thing to add next.
+- **Offsite backups are opt-in per cluster** — see `docs/db-backups.md`. A new cluster has
+  none until you add three things: the `plugins` block on the Cluster, its
+  `offsite-backup.yaml` (ObjectStore + ScheduledBackup), and, for a namespace that has none
+  yet, a `workloads/secrets/<ns>-db-backup-s3.yaml` ExternalSecret. Without them the only
+  copy is one node-pinned Longhorn volume plus `Retain`.
 - **`strict-local` + 1 replica means node loss = volume loss** for that instance. The
   second Postgres instance protects against *process* and *node* failure differently:
   it holds the data, not a storage mirror.
