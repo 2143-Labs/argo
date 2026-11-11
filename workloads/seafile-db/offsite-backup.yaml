@@ -61,6 +61,16 @@ spec:
               args:
                 - |
                   set -euo pipefail
+                  # A new pod is not in the NetworkPolicy allow-sets for its first few
+                  # seconds where the namespace is default-deny (aross-files): the first
+                  # connects are dropped with errno 115 (measured 2026-11-11: refused at
+                  # t+0s and t+2s, answered at t+4s). Wait for the server rather than
+                  # failing the dump. Harmless where there are no policies.
+                  for i in $(seq 1 30); do
+                    mariadb-admin -h seafile-mariadb -u root --connect-timeout=3 ping >/dev/null 2>&1 && break
+                    [ "$i" = 30 ] && { echo "seafile-mariadb unreachable after 60s" >&2; exit 1; }
+                    sleep 2
+                  done
                   mariadb-dump -h seafile-mariadb -u root \
                     --single-transaction --routines --triggers --events \
                     --databases ccnet_db seafile_db seahub_db \
