@@ -1,0 +1,43 @@
+{{- if .Values.settings.enabled }}
+# rots-settings' database: the one copy of every player's account settings, keyed by
+# external identity (provider, subject) - settings.account_settings, created by the
+# authserver's migrations-settings. Prod only (settings.enabled); previews store nothing
+# locally and proxy to this cluster through prod's rots-settings Service.
+# CNPG renders Secret settings-db-app (key `uri`), which settings.yaml reads as DATABASE_URL.
+# docs/adding-a-cnpg-database.md, templates/cnpg-cluster.yaml.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: settings-db
+  namespace: {{ $ns }}
+  annotations:
+    # An Argo prune must never delete this: it is the only store of every player's
+    # account settings. Remove it only by hand, deliberately.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  # One instance: a short outage of this database only means clients keep their cached
+  # settings for a while, so it does not justify a second Longhorn volume.
+  instances: 1
+  affinity:
+    nodeAffinity:
+      # Same rule as templates/cnpg-cluster.yaml: arch's Longhorn disk cannot provision new
+      # volumes (below the 25% floor).
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  storage:
+    size: {{ .Values.settings.dbSize }}
+    storageClass: longhorn-cnpg
+  walStorage:
+    size: {{ .Values.settings.dbWalSize }}
+    storageClass: longhorn-cnpg
+  bootstrap:
+    initdb:
+      database: settings
+      owner: settings
+{{- end }}

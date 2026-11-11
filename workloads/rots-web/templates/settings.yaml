@@ -1,0 +1,116 @@
+{{- if .Values.settings.enabled }}
+# rots-settings: the central account-settings service (the authserver image, subcommand
+# `settings`). It lives once, in rots-prod (settings.enabled); every environment's
+# authserver proxies to it at <settings.url>/api/v1/settings, so a player's controls,
+# sensitivity and colour follow them across machines, browsers and environments.
+# The service stores opaque JSON and knows no field names: only the clients do.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-settings
+  namespace: {{ $ns }}
+  labels:
+    app: rots-settings
+spec:
+  # One replica: it holds no state of its own (settings live in settings-db), and every
+  # authserver in the cluster proxies to this one Service.
+  replicas: 1
+  # maxUnavailable 0: a rollout must not take account-settings sync down for the whole
+  # cluster while the replacement starts.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-settings
+  template:
+    metadata:
+      labels:
+        app: rots-settings
+    spec:
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
+      containers:
+        - name: rots-settings
+          image: {{ required "authserver.image is required" .Values.authserver.image }}
+          # Same per-commit tag as the authserver: the two subcommands ship in one image.
+          imagePullPolicy: Always
+          # clap subcommand (Action::Settings) is required: without it the binary would
+          # start an auth server.
+          args: ["settings"]
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            # CNPG renders Secret settings-db-app (initdb.database: settings). Until the
+            # cluster has created it the pod waits in CreateContainerConfigError and
+            # starts on its own afterwards; no manual step.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: settings-db-app
+                  key: uri
+            - name: SETTINGS_PORT
+              value: {{ int .Values.settings.port | quote }}
+            - name: RUST_LOG
+              value: info
+          # SETTINGS_TOKEN: the bearer this service requires and every authserver presents
+          # (externalsecret.yaml extracts it from the same OpenBao path as the rest).
+          envFrom:
+            - secretRef:
+                name: rots-authserver-secret
+          ports:
+            - containerPort: {{ int .Values.settings.port }}
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-settings
+  namespace: {{ $ns }}
+  labels:
+    app: rots-settings
+spec:
+  type: ClusterIP
+  selector:
+    app: rots-settings
+  ports:
+    - port: {{ int .Values.settings.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+{{- end }}
