@@ -44,9 +44,36 @@ reserved for future Longhorn backups:
 - MariaDB: `databases/mariadb/<namespace>/seafile-mariadb/<timestamp>.sql.gz` + `.sha256`
 - Gate artefacts: `databases/preflight/` (expire on the normal 31-day cycle)
 
-**Not backed up here:** SQLite-backed apps and filestores. Those rely on Longhorn →
-NAS, which is a different copy in the same building. This system exists so a database
-does not depend on that.
+One CNPG cluster is **not** covered yet: `settings-db` in `rots-prod` (the account
+settings store added after this rollout). It has a single instance and no standby, so
+enabling its archive restarts it in place once; PR #111 does that.
+
+**Not backed up here:** file-class data (filestores, mail, game saves, the secret store) and
+SQLite-backed apps. Those rely on Longhorn → NAS, which is a different copy in the same
+building. This system exists so a database does not depend on that.
+
+A database restore alone is also **not** an application restore: `odoo-db` without
+`odoo-filestore` has no attachments or images, and `seafile_db` without `seafile-data` has
+no documents. Closing that gap is tracked in card #353.
+
+### Hibernated clusters
+
+CNPG hibernation (`cnpg.io/hibernation: "on"`) removes every instance, so WAL archiving and
+the daily base backup both stop. Nothing purges the offsite copy, but the lifecycle rule
+hides it at day 31 and deletes it at day 32 — so a cluster hibernated for longer than about
+a month ends up with **no offsite copy at all**, while its alerts stay silent: every rule in
+`db-backup-alerts.yaml` uses `noDataState: OK`, because a cluster with no series must not
+page forever.
+
+Therefore:
+
+- Hibernating for less than ~30 days is harmless.
+- Longer needs either a rehydrate-and-back-up before the last object expires, or an
+  explicit decision to accept the loss. `mattermost-db` is the precedent: hibernated on
+  2026-11-11, its offsite copy expired around 2026-12-12, and the decision to accept was
+  recorded rather than assumed.
+- While hibernated, the only remaining copy is the retained Longhorn volume.
+
 
 ## 2. Protection model
 
