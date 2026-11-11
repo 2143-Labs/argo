@@ -71,6 +71,11 @@ CONSUMERS = {
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
     "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
                       keys=("access_key_id", "secret_access_key"), es=None)],
+    "john2143-worker-doks": [dict(kind="bao", path="doks/default/minio-credentials",
+                                  keys=("MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"), es=None),
+                             dict(kind="kube", context="2143prod", secret=("default", "minio-credentials"),
+                                  keys=("MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"),
+                                  restart="deploy/john2143-com")],
 }
 
 SCOPES = {
@@ -81,6 +86,7 @@ SCOPES = {
     "john2143-worker-home": ["imagehost-files"],
     "rots4-ci": ["rots4-releases"],
     "edge-tofu": ["edge-tofu-state"],
+    "john2143-worker-doks": ["imagehost-files"],
 }
 
 
@@ -121,10 +127,24 @@ def require_token() -> None:
 
 # ---------------------------------------------------------------- OpenBao
 
-def bao_kv_get(path: str) -> dict:
-    _, out, _ = run(["bao", "kv", "get", "-mount=" + BAO_MOUNT, "-format=json", path])
+def bao_kv_get(path: str, missing_ok: bool = False) -> dict:
+    rc, out, err = run(["bao", "kv", "get", "-mount=" + BAO_MOUNT, "-format=json", path], check=False)
+    if rc != 0:
+        if missing_ok and "No value found" in err:
+            return {}
+        raise Fail(redact(f"bao kv get {path} failed ({rc}): {err.strip()[:300]}"))
     body = json.loads(out)["data"]
     return body.get("data", body)
+
+
+def _scrub(path: str) -> None:
+    """Zero a temp file that held a value, then unlink it."""
+    try:
+        with open(path, "r+b") as handle:
+            handle.write(b"\0" * os.path.getsize(path))
+        os.unlink(path)
+    except OSError:
+        pass
 
 
 def bao_kv_put(path: str, fields: dict) -> None:
@@ -143,12 +163,7 @@ def bao_kv_put(path: str, fields: dict) -> None:
         run(["bao", "kv", "put", "-mount=" + BAO_MOUNT, path, *pairs])
     finally:
         for name in temps:
-            try:
-                with open(name, "r+b") as handle:
-                    handle.write(b"\0" * os.path.getsize(name))
-                os.unlink(name)
-            except OSError:
-                pass
+            _scrub(name)
 
 
 def load_config() -> dict:
@@ -180,15 +195,30 @@ def force_sync(namespace: str, name: str) -> None:
          f"force-sync={int(time.time())}", "--overwrite"])
 
 
-def secret_keys(namespace: str, name: str) -> dict:
+def secret_keys(namespace: str, name: str, context: str = CONTEXT) -> dict:
     """Return the Secret's data keys mapped to their decoded values (never printed)."""
-    rc, out, _ = run(["kubectl", "--context", CONTEXT, "-n", namespace, "get", "secret", name,
+    rc, out, _ = run(["kubectl", "--context", context, "-n", namespace, "get", "secret", name,
                       "-o", "json"], check=False)
     if rc != 0:
         return {}
     import base64
     data = json.loads(out).get("data") or {}
     return {k: base64.b64decode(v).decode("utf-8", "replace") for k, v in data.items()}
+
+
+def patch_secret(context: str, namespace: str, name: str, fields: dict) -> None:
+    """Merge-patch only the given keys into a Secret through a 0600 patch file; no value reaches argv."""
+    import base64
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    fd, path = tempfile.mkstemp(dir=STATE_DIR, prefix=".patch-")
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w") as handle:
+            json.dump({"data": {k: base64.b64encode(v.encode()).decode() for k, v in fields.items()}}, handle)
+        run(["kubectl", "--context", context, "-n", namespace, "patch", "secret", name,
+             "--type", "merge", "--patch-file", path])
+    finally:
+        _scrub(path)
 
 
 def scan_cluster(needles: list[str]) -> list[dict]:
@@ -218,6 +248,29 @@ def scan_cluster(needles: list[str]) -> list[dict]:
     return hits
 
 
+def remote_hits(needles: list[str]) -> list[dict]:
+    """References held by kind="kube" consumers in other clusters.
+
+    scan_cluster only sees CONTEXT; a consumer in another cluster was invisible to it, which is how
+    john2143-worker was deleted while DOKS still used it. An unreadable holder fails closed."""
+    hits = []
+    for holders in CONSUMERS.values():
+        for holder in holders:
+            if holder["kind"] != "kube":
+                continue
+            ns, sec = holder["secret"]
+            values = secret_keys(ns, sec, holder["context"])
+            if not values:
+                raise Fail(f"cannot read {holder['context']}:{ns}/{sec}; refusing to assume it is unused")
+            for field, value in values.items():
+                for needle in needles:
+                    if needle and needle in value:
+                        hits.append({"kind": "secret", "namespace": f"{holder['context']}:{ns}",
+                                     "name": sec, "field": field, "needle": needle})
+                        break
+    return hits
+
+
 def meaningful_hits(needles: list[str]) -> list[dict]:
     """Cluster references excluding the identity file itself.
 
@@ -226,7 +279,7 @@ def meaningful_hits(needles: list[str]) -> list[dict]:
     deletion and every retirement refuse."""
     return [hit for hit in scan_cluster(needles)
             if not (hit["kind"] == "secret" and hit["namespace"] == FILER_ES[0]
-                    and hit["name"] == FILER_ES[1])]
+                    and hit["name"] == FILER_ES[1])] + remote_hits(needles)
 
 
 # ---------------------------------------------------------------- S3 via rclone
@@ -312,6 +365,8 @@ def cmd_audit(args) -> int:
         for holder in CONSUMERS.get(ident["name"], []):
             if holder["kind"] == "bao":
                 entry["holders"].append(f"bao:{holder['path']}")
+            elif holder["kind"] == "kube":
+                entry["holders"].append(f"kube:{holder['context']}:{holder['secret'][0]}/{holder['secret'][1]}")
             else:
                 entry["holders"].append("manual (consumer unlocated)")
         keys = {c.get(field) for c in ident["credentials"] for field in ("accessKey", "secretKey")}
@@ -356,6 +411,11 @@ def scoped_actions(buckets: list[str]) -> list[str]:
 def cmd_issue(args) -> int:
     require_token()
     cfg = load_config()
+    existing = {i["name"] for i in cfg["identities"]}
+    for name in getattr(args, "identities", []) or []:
+        if name not in existing and name in SCOPES:
+            cfg["identities"].append({"name": name, "credentials": [], "actions": []})
+            print(f"{name}: new identity")
     targets = select_targets(args, cfg)
     before = config_version()
     for ident in cfg["identities"]:
@@ -391,10 +451,24 @@ def cmd_propagate(args) -> int:
             continue
         cred = newest(ident)
         for holder in CONSUMERS.get(ident["name"], []):
+            if holder["kind"] == "kube":
+                ns, sec = holder["secret"]
+                ak_key, sk_key = holder["keys"]
+                print(f"{ident['name']}: {holder['context']}:{ns}/{sec} <- newest credential "
+                      f"({ak_key}, {sk_key}){' [dry run]' if not args.apply else ''}")
+                if args.apply:
+                    patch_secret(holder["context"], ns, sec,
+                                 {ak_key: cred["accessKey"], sk_key: cred["secretKey"]})
+                    if holder.get("restart"):
+                        for verb in (["rollout", "restart", holder["restart"]],
+                                     ["rollout", "status", holder["restart"], "--timeout=300s"]):
+                            run(["kubectl", "--context", holder["context"], "-n", ns, *verb])
+                        print(f"  restarted {holder['context']}:{ns}/{holder['restart']}")
+                continue
             if holder["kind"] != "bao":
                 print(f"{ident['name']}: MANUAL: {holder.get('note')}")
                 continue
-            existing = bao_kv_get(holder["path"])
+            existing = bao_kv_get(holder["path"], missing_ok=True)
             ak_key, sk_key = holder["keys"]
             existing[ak_key] = cred["accessKey"]
             existing[sk_key] = cred["secretKey"]
@@ -421,14 +495,19 @@ def verify_identity(ident: dict, cfg: dict) -> tuple[list[str], list[str]]:
     overlap = len(creds) > 1
     prior = {c.get("accessKey") for c in creds[:-1]}
     for holder in CONSUMERS.get(name, []):
-        if holder["kind"] != "bao":
-            continue
         ak_key = holder["keys"][0]
-        sources = [("bao " + holder["path"], (lambda h=holder: bao_kv_get(h["path"]).get(ak_key)))]
-        if holder.get("es"):
-            ns, sec = holder["es"]
-            sources.append((f"secret {ns}/{sec}",
-                            lambda n=ns, s=sec, k=ak_key: secret_keys(n, s).get(k)))
+        if holder["kind"] == "kube":
+            ctx, (ns, sec) = holder["context"], holder["secret"]
+            sources = [(f"secret {ctx}:{ns}/{sec}",
+                        lambda n=ns, s=sec, c=ctx, k=ak_key: secret_keys(n, s, c).get(k))]
+        elif holder["kind"] == "bao":
+            sources = [("bao " + holder["path"], (lambda h=holder: bao_kv_get(h["path"]).get(ak_key)))]
+            if holder.get("es"):
+                ns, sec = holder["es"]
+                sources.append((f"secret {ns}/{sec}",
+                                lambda n=ns, s=sec, k=ak_key: secret_keys(n, s).get(k)))
+        else:
+            continue
         for label, fetch in sources:
             try:
                 actual = fetch()
