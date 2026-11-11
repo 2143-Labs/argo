@@ -52,3 +52,11 @@ spec:
     initdb:
       database: asciinema
       owner: asciinema
+  # Continuous WAL archiving + base backups offsite via ObjectStore asciinema-db-offsite
+  # (offsite-backup.yaml). docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: asciinema-db-offsite
