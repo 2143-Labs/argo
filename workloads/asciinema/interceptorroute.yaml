@@ -1,0 +1,88 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: asciinema
+  namespace: default
+  annotations:
+    # Order matters inside one sync: the route must exist before traffic is pointed
+    # at the interceptor, and traffic must flow before the ScaledObject can
+    # zero-scale (it reads this route's queue). Wave 1 of 3; see ingress.yaml (2)
+    # and scaledobject.yaml (3).
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  target:
+    service: asciinema
+    port: 80
+  # A page view that finds no ready pod gets this page instead of a held request:
+  # KEDA answers with the placeholder while the target has no ready endpoints, and the
+  # page reloads every 2s (`Refresh`) until the app answers. `readiness: 0s` = no
+  # deadline, so no cold start on this route can end in a 504; a cold start here is
+  # ~60-90s because asciinema-data has to attach on Longhorn before Phoenix boots.
+  #
+  # Accepted with this page: the placeholder answers *every* cold request, so a cold
+  # `asciinema upload` (POST /api/v1/recordings) gets this 503 and has to be retried
+  # once the site is up. A /api/ path split would hold uploads instead, at the cost of
+  # a second InterceptorRoute and a second ScaledObject trigger. Same pattern as
+  # workloads/moss-and-wool/templates/interceptorroute.yaml.
+  timeouts:
+    readiness: 0s
+  coldStart:
+    placeholder:
+      response:
+        statusCode: 503
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          Refresh: "2"
+          Cache-Control: "no-store"
+        body: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>asciinema is starting</title>
+          <meta name="theme-color" content="#0d1117">
+          <meta http-equiv="refresh" content="2">
+          <style>
+          html,body{margin:0;height:100%;background:#0d1117;color-scheme:dark}
+          body{display:grid;place-items:center;text-align:center;
+               font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#c9d1d9}
+          .box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:24px 30px}
+          h1{margin:0 0 .35rem;font-size:22px;font-weight:600;color:#e6edf3}
+          .tag{margin:0 0 .9rem;font-size:12px;color:#56d364}
+          p{margin:0;font-size:13px;color:#8b949e}
+          /* The spinner says "working"; the bar is the reload countdown. It runs 2s and the
+             page itself reloads every 2s, so the bar restarts at zero with each reload. */
+          .spin{box-sizing:border-box;width:18px;height:18px;border-radius:50%;margin:0 auto 12px;
+                border:2px solid #30363d;border-top-color:#56d364;
+                animation:spin .7s linear infinite}
+          .bar{height:2px;margin:14px 0 0;background:#30363d;overflow:hidden}
+          .bar i{display:block;height:100%;width:100%;background:#56d364;transform-origin:left;
+                 animation:fill 2s linear forwards}
+          @keyframes spin{to{transform:rotate(360deg)}}
+          @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+          @media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{animation:none;transform:none}}
+          </style>
+          </head>
+          <body>
+          <div class="box">
+          <h1>asciinema is starting</h1>
+          <p class="tag">Terminal recordings, waking up.</p>
+          <div class="spin"></div>
+          <p>The server is waking up. This page refreshes every 2 seconds.</p>
+          <div class="bar"><i></i></div>
+          </div>
+          </body>
+          </html>
+  rules:
+    - hosts:
+        - terminals.john2143.com
+  scalingMetric:
+    concurrency:
+      targetValue: 10
+    # The placeholder is answered in ~1ms, so a page view never appears in the
+    # instantaneous concurrency count the scaler samples: without this the app would
+    # never wake and the page above would reload for ever. Request rate buckets a
+    # request across its window (1m), so one page load keeps the route above zero.
+    requestRate:
+      targetValue: 1

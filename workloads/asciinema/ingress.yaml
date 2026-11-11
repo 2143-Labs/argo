@@ -3,6 +3,11 @@ kind: HTTPRoute
 metadata:
   name: asciinema
   namespace: default
+  annotations:
+    # Wave 2 of 3: the InterceptorRoute (wave 1) must exist before traffic moves to
+    # the interceptor, and the ScaledObject (wave 3) must land only after traffic
+    # flows through it.
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   hostnames:
     - terminals.john2143.com
@@ -36,5 +41,6 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: asciinema
-          port: 80
+          name: keda-add-ons-http-interceptor-proxy
+          namespace: keda
+          port: 8080

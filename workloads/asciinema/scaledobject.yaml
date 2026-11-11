@@ -1,0 +1,28 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: asciinema
+  namespace: default
+  annotations:
+    # Wave 3 of 3: landing this before the InterceptorRoute exists, or before traffic
+    # reaches the interceptor, makes the HPA fall back to a CPU metric and breaks
+    # scale-up from zero until KEDA re-reconciles.
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  scaleTargetRef:
+    name: asciinema
+  minReplicaCount: 0
+  # 1, never more: asciinema-data is a ReadWriteOnce Longhorn volume and the
+  # Deployment's Recreate strategy cannot run two pods anyway.
+  maxReplicaCount: 1
+  cooldownPeriod: 1800
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 600
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+        interceptorRoute: asciinema
