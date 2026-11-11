@@ -3,9 +3,10 @@
 # page view never waits on a cold start),
 # rots-authserver + its CNPG database, and game servers provisioned just in time
 # by the authserver (gameserver.provisioner: kubernetes): one instance per new
-# player, destroyed when idle, out of 2000 slots (wss /ws/0-1999 in 125 routes of
-# 16, native UDP 192.168.6.32:36000-37999; Verizon and the MikroTik forward that
-# range). Live instances are capped by `gameserver.quota`, not by the slot count.
+# player, destroyed when idle, out of 1000 slots (wss /ws/0-999 in 63 routes of
+# 16, native UDP 192.168.6.32:36000-37999 - the range Verizon and the MikroTik
+# forward, so slots are headroom the WAN already covers). Live instances are capped
+# by `gameserver.quota`, not by the slot count.
 # Placement is spread over 8 coordinator shards of 250 slots; changing slots or
 # shards is a re-shard and needs the stop-the-world cutover. One instance is
 # kept warm (booted in pre-game, paused) so a new player is placed on it in ~1 s
@@ -59,10 +60,10 @@ spec:
         - { name: gameserver.tag, value: gameserver-70adec6 }
         # Managed mode: no standing servers; the authserver spawns one instance per
         # new player (friends join by code) and destroys it when idle. slots is the
-        # address space (UDP 36000-37999, /ws/0-1999 in 125 HTTPRoutes of 16); live
-        # instances are capped by gameserver.quota. 2000 slots over 8 shards = 250 each.
+        # address space (UDP 36000-37999, /ws/0-999 in 63 HTTPRoutes of 16); live
+        # instances are capped by gameserver.quota. 1000 slots over 8 shards = 125 each.
         - { name: gameserver.provisioner, value: kubernetes }
-        - { name: gameserver.slots, value: '2000' }
+        - { name: gameserver.slots, value: '1000' }
         - { name: gameserver.warmInstances, value: '1' }
         - { name: gameserver.shards, value: '8' }
         - { name: gameserver.udpPortBase, value: '36000' }
