@@ -1,5 +1,14 @@
 # KEDA HTTP Add-on scale-to-zero POC for aross.studio — execution log (2026-08-07)
 
+> **Correction 2026-11-11:** §5's four-step recipe is incomplete for two target shapes.
+> (a) If the target's Service is **headless** (`clusterIP: None`) or its Service port
+> differs from the container port, the interceptor's `<service>:<target.port>` dial lands
+> on nothing — matrix.2143.me 504'd for 60s until `tuwunel-http` (a real ClusterIP on the
+> container's port) was added. (b) If the chart renders `replicas` explicitly (a
+> StatefulSet, here), step 1's "delete `replicas`" is impossible and `/spec/replicas` must
+> go into the Application's `ignoreDifferences` instead, or selfHeal fights the scaler.
+> See [idling closet workloads](2026-11-11-idling-closet-workloads.md).
+
 **Status: COMPLETE and verified.** aross.studio now runs behind the KEDA HTTP Add-on: 1 pod under traffic, **0 pods when idle (~15 min after the last request — retention raised from ~2 min on 2026-08-09)**, cold-starting in ~3.5–4s on the first request. Two full idle→0→curl→1 cycles verified identically; ArgoCD reads `friend-aross` **Synced/Healthy** at 0 replicas.
 
 ## 1. Commits (pushed to origin/main, in order)
