@@ -57,6 +57,11 @@ spec:
         - { name: db.resources.requests.memory, value: 512Mi }
         - { name: db.resources.limits.cpu, value: '2' }
         - { name: db.resources.limits.memory, value: 2Gi }
+        # The one central account-settings store (templates/settings.yaml, settings-db.yaml):
+        # every preview's authserver proxies to it, so players' controls follow them across
+        # environments. Enabling it only here is what keeps a single copy of the truth.
+        - { name: settings.enabled, value: 'true' }
+        - { name: settings.url, value: http://rots-settings:8100 }
         - { name: sync.replicas, value: '2' }
         - { name: gameserver.tag, value: gameserver-9eadefa }
         # Managed mode: no standing servers; the authserver spawns one instance per

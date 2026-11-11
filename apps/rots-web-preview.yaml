@@ -53,6 +53,11 @@ spec:
             - { name: authserver.secretKey, value: john2143-com/rots-preview/rots-authserver-secret }
             - { name: authserver.disabledProviders, value: discord }
             - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-pr-{{.number}}-{{.head_sha}}' }
+            # Account settings are shared, not per-environment: this preview's authserver
+            # proxies to prod's rots-settings Service (settings.enabled stays false, so no
+            # second store and no second database is created here). SETTINGS_TOKEN comes
+            # from the preview secret.
+            - { name: settings.url, value: 'http://rots-settings.rots-prod.svc.cluster.local:8100' }
             - { name: gameserver.tag, value: 'gameserver-pr-{{.number}}-{{.head_sha}}' }
             - { name: gameserver.replicas, value: '1' }
             # Managed mode: the authserver spawns one instance per new player.

@@ -56,6 +56,32 @@ authserver:
     minReplicas: 0          # prod 1
     maxReplicas: 1          # prod 3
 
+# rots-settings (templates/settings.yaml, settings-db.yaml): the central account-settings
+# service. Account settings (controls, sensitivity, colour) follow a player across machines
+# *and* environments, so there is exactly one copy: this one, in rots-prod. Every preview's
+# authserver proxies to it over ClusterIP, which is why only prod sets `enabled`; a preview
+# that set it would run a second, divergent store.
+settings:
+  enabled: false   # prod true; previews false (they call prod's service)
+  port: 8100       # SETTINGS_PORT and the Service port
+  # SETTINGS_URL for templates/authserver.yaml: prod's own Service, or the identical
+  # service seen from a preview namespace. "" turns account-settings sync off.
+  url: ""          # prod http://rots-settings:8100; previews http://rots-settings.rots-prod.svc.cluster.local:8100
+  # The settings database (one CNPG cluster, templates/settings-db.yaml). A row is a few
+  # hundred bytes of JSON, so this stays small; it is never pruned.
+  dbSize: 1Gi
+  # pg_wal settles at wal_keep_size (set to 128MB in settings-db.yaml; CNPG's default 512MB
+  # alone would overfill a 512Mi volume) plus up to max_wal_size between checkpoints.
+  dbWalSize: 1Gi
+  # Burstable, the same shape as db.resources (docs/adding-a-cnpg-database.md).
+  dbResources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
 # rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.
 sync:
   replicas: 1   # prod 2

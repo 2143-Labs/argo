@@ -124,6 +124,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.clusterName }}-app
                   key: uri
+            {{- if .Values.settings.url }}
+            # Central account-settings service (settings.yaml): /api/v1/settings is proxied
+            # here, so every environment shares one store. SETTINGS_TOKEN comes from the
+            # secret below.
+            - name: SETTINGS_URL
+              value: {{ .Values.settings.url | quote }}
+            {{- end }}
             - name: RUST_LOG
               value: info
             # Trace-only: the authserver's RED signals come from Beyla and Tempo span metrics.
