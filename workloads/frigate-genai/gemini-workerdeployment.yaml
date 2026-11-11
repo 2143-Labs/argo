@@ -26,6 +26,7 @@ spec:
       terminationGracePeriodSeconds: 180
       tolerations:
         - {key: pi, operator: Exists, effect: NoSchedule}
+        - {key: wifi, operator: Exists, effect: NoSchedule} # office: batch worker, no block storage
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

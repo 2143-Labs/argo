@@ -23,6 +23,10 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: frigate-genai
+      # Batch worker: no PVC and no block storage, so it may run on office, whose
+      # wifi=no-network-storage taint otherwise keeps storage off that node.
+      tolerations:
+        - {key: wifi, operator: Exists, effect: NoSchedule}
       terminationGracePeriodSeconds: 180
       containers:
         - name: worker
