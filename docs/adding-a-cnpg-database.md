@@ -259,6 +259,16 @@ switchover when the primary changes. Two consequences:
   `offsite-backup.yaml` (ObjectStore + ScheduledBackup), and, for a namespace that has none
   yet, a `workloads/secrets/<ns>-db-backup-s3.yaml` ExternalSecret. Without them the only
   copy is one node-pinned Longhorn volume plus `Retain`.
+- **Adding the plugin rolls the cluster, and the new pods must fit where they are.**
+  `strict-local` pins every instance to the node holding its volume, so a recreated pod
+  cannot go anywhere else. The sidecar adds 100m/256Mi (Guaranteed clusters, requests =
+  limits) or 50m/128Mi requests (the rest). Before merging, for each instance:
+  `free CPU on its node + its current request - requests of any Pending pod that can only
+  land on that node >= its new request` (`kubectl describe node` → "Allocated
+  resources"). A Pending pod queued for the node takes freed CPU first. Do not rely on
+  `primaryUpdateMethod: switchover` either: on 2026-11-11 CNPG restarted the primary in
+  place twice despite it, and both times the replacement sat Pending on closet
+  (mattermost-db ~25 min, temporal-db ~74 min).
 - **`strict-local` + 1 replica means node loss = volume loss** for that instance. The
   second Postgres instance protects against *process* and *node* failure differently:
   it holds the data, not a storage mirror.
