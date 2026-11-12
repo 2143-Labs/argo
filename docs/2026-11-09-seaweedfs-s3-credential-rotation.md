@@ -37,10 +37,10 @@ Seven identities remain. Each is scoped with one `Read:`/`Write:`/`List:` triple
 | `observability` | `mimir-alertmanager`, `mimir-blocks`, `mimir-rules`, `loki-admin`, `loki-chunks`, `loki-ruler`, `tempo-blocks` | `observability/o11y-rustfs-buckets` |
 | `litellm` | `litellm-spend-logs` | `default/litellm-s3-creds` |
 | `seaweedfs-frigate-genai` | `frigate-genai` | `default/frigate-genai-worker-creds` |
-| `john2143-worker-home` | `imagehost-files` | `default/minio-creds` |
+| `john2143-worker-home` | `imagehost-files` | `default/seaweedfs-credentials` (OpenBao `consumers/john2143-com/default/seaweedfs-credentials`) |
 | `rots4-ci` | `rots4-releases` | OpenBao `consumers/john2143-com/default/rots4-ci-s3` (read at CI build time) |
 | `edge-tofu` | `edge-tofu-state` | OpenBao `consumers/edge/s3` (read per command) |
-| `john2143-worker-doks` | `imagehost-files` | DOKS `default/minio-credentials` (patched by `propagate`) + OpenBao `consumers/doks/default/minio-credentials` |
+| `john2143-worker-doks` | `imagehost-files` | DOKS `default/seaweedfs-credentials`, rendered by DOKS ESO from OpenBao `consumers/doks/default/seaweedfs-credentials` |
 
 The identity file itself is `consumers/data/john2143-com/default/seaweedfs-s3-config`, key
 `s3.json`, rendered by `workloads/secrets/default-seaweedfs-s3-config.yaml` into
@@ -100,11 +100,13 @@ Two mechanisms, and it matters which one applies:
 that path is the propagation. `rots4-ci` reads `consumers/john2143-com/default/rots4-ci-s3` at
 build time (§7), so the same applies.
 
-`john2143-worker-doks` is a `kind="kube"` consumer in another cluster. `propagate`
-merge-patches only `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` of `2143prod:default/minio-credentials`
-(leaving the Spaces `S3_*` keys) and restarts `deploy/john2143-com`, because DOKS has no ESO or
-Reloader. `retire` and `delete-identity` read that Secret and refuse while it holds the key.
-They fail closed if `2143prod` is unreachable.
+`john2143-worker-doks` lives in another cluster. `propagate` writes
+`consumers/doks/default/seaweedfs-credentials` and force-syncs the DOKS ExternalSecret
+`default/seaweedfs-credentials` (`kubectl --context 2143prod`); DOKS Reloader then rolls
+`deploy/john2143-com`. The `kind="kube"` holder on `2143prod:default/seaweedfs-credentials` is
+kept with `patch=False`: `propagate` never writes it (ESO owns it), but `retire` and
+`delete-identity` read it and refuse while it holds the key. They fail closed if `2143prod` is
+unreachable. See `docs/2026-11-11-doks-openbao-auth.md`.
 
 ## 4. Verification checklist
 
