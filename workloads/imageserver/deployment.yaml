@@ -64,13 +64,13 @@ spec:
         - name: MINIO_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: minio-creds
-              key: S3_ACCESS_KEY
+              name: seaweedfs-credentials
+              key: SEAWEEDFS_ACCESS_KEY
         - name: MINIO_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: minio-creds
-              key: S3_SECRET_KEY
+              name: seaweedfs-credentials
+              key: SEAWEEDFS_SECRET_KEY
         - name: BUCKET
           value: "imagehost-files"
         - name: FOLDER
