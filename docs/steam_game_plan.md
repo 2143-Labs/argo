@@ -1,6 +1,6 @@
 # Steam QA delivery plan for ROTS
 
-**Status:** Proposed — not started.
+**Status:** Proposed — not started. Revised 2026-11-12 after a pre-execution review; the findings, and what changed, are in the [appendix](#appendix--evidence-re-check-2026-11-12).
 **Date:** 2026-11-11
 **Owner:** John (Steamworks partner account, Apple account, runner hosts); implementation split across `2143-Labs/rots4`, this repo, and `dotfiles`.
 **Scope:** getting every green `main` build of the ROTS client onto Steam for QA testers on Linux, Windows and macOS, and pointing those builds at an isolated QA backend. Store page, pricing, release and marketing are out of scope.
@@ -14,6 +14,8 @@ Evidence labels used below: **Valve** — Steamworks documentation (`partner.ste
 
 ROTS ships QA builds on a **password-protected `qa` beta branch of the main app (4346770)**. CI uploads one Steam build containing a Linux, a Windows and a macOS depot after every green `main` (the Windows executable Authenticode-signed, since Valve ships whatever it is given), using `steamcmd` on a dedicated self-hosted uploader with a cached login token, so GitHub stores no Steam credential. Testers get access through the Steamworks partner account (staff) or Release State Override keys (everyone else). The client reads which Steam branch launched it and talks to a new **`rots-qa` environment** in this repo when that branch is `qa`, so one set of bytes can be promoted from `qa` to `default` without a rebuild.
 
+**This is deliberately the interim shape.** The [release pipeline plan](release_pipeline_plan.md) gives the every-green-`main` stream to a `dev` branch backed by `rots-dev`, and makes `qa` a promoted candidate. This plan ships the one-branch version first because it is what the first QA milestone needs; the migration is a `SetLive` target change plus a promote job, and D3 and D11 say exactly what changes and what must not be built on top of the current names.
+
 The upload itself is the small part. The decisions that determine whether QA works are **who owns the app** (entitlement) and **which backend a build talks to** (identity); both are recorded below.
 
 ## 2. Current state
@@ -21,7 +23,7 @@ The upload itself is the small part. The decisions that determine whether QA wor
 | Area | Today | Source |
 |---|---|---|
 | Steam app | App id `4346770`, paid, unreleased, store page in progress | Repo: `rots4/client/src/auth/steam.rs:15` |
-| Steamworks in the client | `bevy-steamworks` (git pin) → `steamworks` 0.13.1 → `steamworks-sys` 0.13.0, which vendors the SDK redistributables and **links them dynamically** | Repo: `rots4/client/Cargo.toml:31`; crate `build.rs` |
+| Steamworks in the client | `bevy-steamworks` (git pin) → `steamworks` 0.13.1 → `steamworks-sys` 0.13.0, which vendors the SDK redistributables and **links them dynamically**. 0.13.1 is crates.io's latest (2026-05-05); `steamworks-sys` 0.13.0 vendors **SDK 1.64** while Valve ships 1.65, whose headers are on steamworks-rs `master` but unreleased — so the client is one SDK minor behind | Repo: `rots4/client/Cargo.toml:31`; crate `build.rs`; crates.io; steamworks-rs `v0.13.1` README |
 | Steam ownership | The authserver calls `ISteamUser/CheckAppOwnership` for 4346770 on every Steam login and stores the answer in `social.steam_app_ownership` | Repo: `rots4/authserver/src/providers.rs`, `authserver/README.md:61` |
 | CI | `rots4` `.github/workflows/build_nix.yml` on `[self-hosted, nixos]` only; builds Linux client/server/authserver; **no Windows or macOS job** | Repo |
 | Windows code signing | A 2143 Labs LLC Authenticode certificate, subject `CN=2143 Labs LLC, O=2143 Labs LLC, L=Kensington, S=Maryland, C=US`; unused, because there is no Windows build yet. Organization-validated, so the publisher shown in the signature is the company. OV vs EV and key custody unrecorded | John; [open questions](#10-open-questions) |
@@ -36,7 +38,7 @@ The upload itself is the small part. The decisions that determine whether QA wor
 
 **Goals**
 
-1. Every green `main` reaches QA testers through the Steam client within minutes, on all three platforms, from one commit.
+1. Every green `main` reaches QA testers through the Steam client within minutes, on all three platforms, from one commit (on `qa` today; on `dev` once the pipeline plan's Stage 2 lands).
 2. QA builds talk to an isolated backend; QA activity never creates prod accounts, sessions, characters or ownership rows.
 3. Any build can be promoted to another branch or rolled back by pointing a branch at an existing BuildID, without rebuilding.
 4. No Steam, Apple, S3 or code-signing credential is stored in GitHub, and no signing key material is stored in the repository or in OpenBao (D16).
@@ -82,9 +84,12 @@ Before release, an app is owned only by "the Steam accounts in the Steamworks pa
 | Branch | Who sets builds live | Password | Purpose |
 |---|---|---|---|
 | `default` | Human, App Admin only | n/a | Pre-release: what owners get unless they opt in. Post-release: what customers get |
-| `qa` | CI, every green `main` | yes | Primary QA stream |
+| `dev` | CI, every green `main`; **target state** once `rots-dev` exists (pipeline plan Stage 2) | yes | The continuous stream — today's tip, for anyone who wants it |
+| `qa` | CI, every green `main` **today**; the promote job once `dev` exists | yes | The stream QA testers are pointed at |
 | `qa-<feature>` | Human, on demand | yes, per branch | Focused testing of one PR without freezing `qa` |
 | `press` | Human | yes | Later; press and influencer builds |
+
+- **Interim, and the only thing that changes later:** CI sets `qa` live on every green `main` because it is the only branch with a backend (`rots-qa`). The [release pipeline plan](release_pipeline_plan.md) moves the continuous stream to `dev` → `rots-dev` and puts `qa` behind a promote dispatch. When that lands, CI's `SetLive` becomes `dev` and a promote job sets `qa`; nothing else in this document changes. Do not build launch options, tester documentation or debugging advice around the branch names until then.
 
 - A branch and its password must exist **before** its first set-live. Valve: "if you wish for branch contents to remain private, you should set your branch password before setting a build live on the branch." Order: create branch → set password → issue keys → first set-live.
 - Build scripts can set any branch live **except** `default` (Valve), and committing to a branch that does not exist fails after the upload completes.
@@ -101,10 +106,11 @@ Before release, an app is owned only by "the Steam accounts in the Steamworks pa
 
 - **Where:** a new org runner on VM 101 (defined beside the others in `dotfiles/nixos/github-configuration.nix`) labelled `steam-upload`, running as its **own Unix user** (`rots-steam`), not `github-runner`. Compose it as `runnerCommon // { user = "rots-steam"; group = "rots-steam"; … }`: `orgRunner` merges `runnerCommon` last, which would reset the user.
   - **Why its own user:** every existing runner runs as `github-runner`, so a token in one runner's home is readable by any job, including pull-request jobs, on that VM (Repo).
-- **Tool:** nixpkgs `steamcmd` (a `steam-run`-wrapped bootstrap that self-updates). It is unfree: allow `steamcmd` **and** `steam-unwrapped` (Probe). No Docker, no Steamworks SDK checkout: `run_app_build` is built into steamcmd and the SDK download is login-walled (Probe).
+- **Tool:** nixpkgs `steamcmd` (a `steam-run`-wrapped bootstrap that self-updates). It is unfree: allow `steamcmd` **and** `steam-unwrapped` (Probe). No Docker, no Steamworks SDK checkout: `run_app_build` is built into steamcmd and the SDK download is login-walled (Probe). **It is also unpinned and self-updating:** nixpkgs pins the 2018 bootstrap (`steamcmd-20180104`), which copies itself into `$HOME/.local/share/Steam` and updates from Valve's CDN on first run, so the binary that actually uploads is whatever Valve published. Log its version at the start of every run, treat an upload failure that follows a version change as the first suspect, and keep a known-good copy of `$HOME` — the persistent HOME that keeps the token is also the rollback.
 - **Sandbox:** reuse the existing `runnerCommon` overrides. `steam-run`'s bubblewrap needs user namespaces and mount syscalls (Probe), which those overrides already permit (Repo).
 - **Token persistence:** the runner module sets `HOME` to `workDir` and deletes `workDir` on every start (Probe, nixpkgs `service.nix`), which would delete the login token. Set `extraEnvironment.HOME = "/var/lib/rots-steam/home"` (0700, owned by `rots-steam`); the token lives at `$HOME/.local/share/Steam/config/config.vdf`.
 - **Login (Valve, "Using SteamPipe In A CI/CD Environment"):** a human runs `steamcmd +login <builder>` once on the host as `rots-steam`, enters the password and the emailed Steam Guard code, then `quit`. Every CI run uses `+login <builder>` **with no password**. Supplying the password again "will issue a new SteamGuard token", invalidating the cache. `+@NoPromptForPassword 1` makes a missing token fail fast (exit 5, Probe) instead of hanging.
+  - **Rule: the builder password is typed exactly once, on the uploader, ever.** A password login from anywhere else — a workstation hand-upload, someone's laptop — mints a new SteamGuard token and invalidates the runner's cache (Valve). Phase 0's throwaway upload therefore runs either *before* the runner's one-time login or from a second account; after Phase 3, any hand-upload means repeating the uploader login.
 - **Build account:** a fresh Steam account with exactly **Edit App Metadata** and **Publish App Changes To Steam** (Valve). Never logged in to a desktop client: one account allows one session at a time (Valve wiki).
 - **Credentials in GitHub:** none. S3 read access uses the existing OIDC → OpenBao pattern ([CI credentials](deploying-a-private-repo-game.md#ci-credentials-github-oidc-to-openbao)) with a new read-only identity (D8).
 - **Rejected:** `game-ci/steam-deploy` (passes the Steam password on every run, which Valve says mints a new guard token; its v3.2.2 defaults `releaseBranch` to `default`, which Valve refuses); community TOTP generation (needs the authenticator `shared_secret` in CI; not Valve-documented); containers (adds a root-equivalent socket to solve a problem the host already solves).
@@ -149,7 +155,8 @@ s3://rots4-releases/builds/<sha>/steam/
 Invariants, asserted by the producer **and** re-asserted by the uploader:
 
 - **The Steam API library sits beside the executable.** `steamworks-sys` links it dynamically, so a missing library is a loader failure before `main`, which the client's "Steam unavailable" fallback cannot catch (Repo). Copy it from `steamworks-sys`'s `OUT_DIR` so it matches the crate (crate issue #63).
-- **`assets/` is in the depot root** (Linux, Windows). Bevy resolves assets relative to the executable, and Steam launches with the install directory as the working directory.
+- **Built with the shipping feature set, not the development default.** `client/Cargo.toml:62` has `default = ["steam", "udp", "clipboard", "testing"]`, and `testing` pulls in `dep:server`, compiling `host_testing_server` into the binary (`client/src/ui/home_menu.rs:380`). The depot client is built `--no-default-features --features udp,steam,clipboard` — the same shape the iOS plan uses — from a dedicated flake output, so CI cannot drift back to the default set.
+- **`assets/` is in the depot root** (Linux, Windows) — and the reason is not the one it looks like. Bevy's default `AssetPlugin.file_path` is `assets` **relative to the process working directory**, not to the executable; the repo says so itself (`client/src/headless.rs:71-73`: a packaged build "fall[s] back to Bevy's own resolution", i.e. the CWD's `assets`) and the native client sets no override at all. Steam launches the executable with the install directory as the working directory, so this layout works **from Steam only**. That is an accepted dependency, not a fact about the executable: Phase 2's extraction test must `cd` into the extracted directory, and macOS needs an absolute path (D10) because a Finder launch has CWD `/`.
 - **No `steam_appid.txt`.** Valve: "Make sure to remove the steam_appid.txt file when uploading the game to your Steam depot!"
 - **The Windows executable is signed, and Valve's DLL is not.** `client.exe` carries the 2143 Labs LLC signature with an RFC 3161 timestamp; `steam_api64.dll` keeps the signature Valve shipped (D16). The uploader re-asserts both on the extracted tree.
 - **No symlinks, no `.DS_Store`, `._*`, `__MACOSX`, `Thumbs.db`, `desktop.ini`, `*Zone.Identifier`.** Reports conflict on symlink handling in bundles; ship none.
@@ -161,9 +168,13 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 ### D9. Linux depot client must not be a Nix-linked ELF
 
 - **Problem:** a crane-built binary's ELF interpreter and RUNPATH point into `/nix/store`, which does not exist on a tester's Ubuntu or Steam Deck, so the client would fail to start and look like a broken download. (Inferred from how Nix links; the uploader's `patchelf --print-interpreter` check catches it.)
-- **Decision:** build the Linux depot client against Valve's Steam Linux Runtime SDK container, as a separate flake output or CI step, with `libsteam_api.so` beside the binary and `RUNPATH=$ORIGIN`.
-- **Fallback** if the runtime build is impractical: `patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath '$ORIGIN'` plus bundling the non-system libraries the client links directly.
-- **Status:** chosen direction, validated in Phase 2. *Unverified* which runtime generation (scout vs sniper) and which libraries must be bundled.
+- **Decision:** build the Linux depot client inside a Valve Steam Linux Runtime SDK container, as a separate flake output or CI step, with `libsteam_api.so` beside the binary and `RUNPATH=$ORIGIN`.
+- **Which runtime — three options, not two** (Valve `steam-runtime` README, re-checked 2026-11-12):
+  - **Steam Linux Runtime 4.0** (Debian 13 trixie, container-only via pressure-vessel) is what Valve now calls "the recommended environment for developers of new native Linux games". Building here means the game *runs inside* the container, so the app must declare the runtime in its launch configuration — an App Admin setting this plan would have to add, plus a dependency on pressure-vessel working on the tester's machine.
+  - **Steam Linux Runtime 3.0, sniper** (Debian 11, glibc 2.31) — Valve now calls it "an older runtime", but its SDK still produces a plain binary that runs directly on Debian 11+/Ubuntu 20.04+, with no container declaration. **This is the plan's default for QA**, because it removes a moving part from the first milestone.
+  - **Scout** (Ubuntu 12.04 ABI) is still what Steam assumes when a developer publishes a native Linux game, and is the wrong trade for a new Bevy client: it pins every dependency to a 2012 stack.
+- **Fallback** if no runtime build is practical: `patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath '$ORIGIN'` plus bundling the non-system libraries the client links directly. Last resort: Bevy's dependency set (wayland, xkbcommon, the Vulkan loader) makes that bundle list long and easy to get subtly wrong.
+- **Status:** chosen direction, validated in Phase 2. *Unverified* which libraries must be bundled even under sniper, and whether steamrt4's container path is worth adopting for release.
 
 ### D10. macOS: build on the Mac, ship a `.app`, ad-hoc sign for QA
 
@@ -172,7 +183,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - **Bundle:** assembled by a short script, not `cargo-bundle`/`cargo-packager`.
   - `Info.plist`: `CFBundleExecutable` = `client`, `CFBundleIdentifier` (chosen once, never changed), `CFBundlePackageType` `APPL`, `CFBundleShortVersionString`, `CFBundleVersion`, `LSMinimumSystemVersion` `11.0`, `NSHighResolutionCapable` `true`.
   - `libsteam_api.dylib` goes in `Contents/MacOS/`, beside `client` — **not** `Contents/Frameworks/`. It is a universal x86_64+arm64 dylib whose install name is `@loader_path/libsteam_api.dylib`, and it is already Developer ID-signed by Valve; do not re-sign it (Probe of the vendored file).
-  - Assets go in `Contents/Resources/assets/`; the client sets `AssetPlugin.file_path` to `../Resources/assets` on macOS when no manifest-dir assets exist (Bevy resolves from the executable's directory, which is `Contents/MacOS`).
+  - Assets go in `Contents/Resources/assets/`, and the client sets `AssetPlugin.file_path` from `std::env::current_exe().parent()` to `../Resources/assets` on macOS. It cannot be left relative: Bevy resolves a relative `file_path` against the **working directory**, and a Finder-launched `.app` has CWD `/` (D8). `client/src/headless.rs:73` already has the shape of the helper — an absolute path computed from a known base — but it uses `CARGO_MANIFEST_DIR`, which does not exist in a bundle.
 - **Signing for QA:** ad-hoc (`codesign --force -s -`), after `lipo` and bundle assembly. Mandatory on Apple Silicon; free (Apple).
 - **Gatekeeper:** a Steam-installed, unsigned, unnotarised app is not blocked, because Gatekeeper checks only files with `com.apple.quarantine` and Steam's downloader never sets it (Apple; Probe of the shipping `steamclient.dylib`). A copy taken out of Steam (zip, AirDrop) *is* quarantined and blocked on macOS 15+.
 - **Launch option:** App Admin → Installation → General Installation, OS macOS, Executable `ROTS.app`. Valve: bundle launches pick the best architecture; direct binary launches inherit the Steam process's.
@@ -185,13 +196,15 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - **Why:** one binary and one depot set per commit; promoting a BuildID from `qa` to `default` switches it to prod with no rebuild, so "we shipped the staging build" cannot happen.
 - **Also:** register a second App Admin launch option, "Play (QA backend)", passing `--auth-url` explicitly, so a human can force QA from any branch.
 - **Rejected:** separate QA and prod builds/depots (doubles every artifact and invites publishing the wrong one); relying only on launch options (invisible mistakes from a dropdown).
+- **Interim status:** this is what ships for the first QA milestone; the pipeline plan's D3 — a server-side directory keyed by commit sha, where the store signal can only *force* prod — is the intended replacement, because a branch cannot distinguish a TestFlight-style reviewer from a tester and does not survive a third environment. Keep the implementation to a dozen lines (read branch, compute default, honour `--auth-url`, log it) so replacing it is a patch, not a rewrite.
 
 **The QA environment** (this repo):
 
 - A new Application `apps/rots-qa.yaml` (proposed) from the existing `workloads/rots-web` chart: namespace `rots-qa`, host `rots-qa.john2143.com`, its own authserver secret key path, its own CNPG database, its own Temporal task queue, managed game servers.
 - Images track the same `<sha7>` tags as the Steam `qa` build. The upload job bumps them **before** running steamcmd, mirroring `rots4/scripts/ci-argo-bump.sh`, so servers move first and clients follow minutes later.
 - Steam ticket login and ownership checks must work there: it needs the same Steamworks publisher Web API key the prod authserver uses (stored under its own OpenBao path; see [Adding a secret](adding-a-secret.md)).
-- *Open:* UDP port range and LoadBalancer address (prod uses 36000–37999 on `192.168.6.32`, previews 31000–34999 on `192.168.6.33`), and whether it runs on prod or the bigp nonprod cluster.
+- **Size it explicitly; inherit nothing.** The chart defaults to `slots: 4` / `replicas: 1`, while prod runs `slots: 64` (`apps/rots-web.yaml:53`) with `quota.cpu: 32` / `quota.memory: 40Gi`. `rots4/docs/decisions.md` (2026-11-10) records why guessing upward is expensive: a 2,000-slot experiment produced 4,157 tracked resources and ~1.48 MB of Application status against etcd's 1.5 MiB per-object limit, which would have broken every sync of the app including CI's bumps. Set `slots` and `quota` for the expected tester count. Note also that prod's own quota disagrees with the measured values in that decision log, so copying either blindly is wrong.
+- *Open:* UDP port range and LoadBalancer address (prod holds 36000–37999 on `192.168.6.32`, previews 31000–34999 on `192.168.6.33`), and whether it runs on prod or the bigp nonprod cluster.
 
 ### D12. Build identity on every binary
 
@@ -236,7 +249,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 
 ```
 rots4 CI (green main)
-  build-linux   (NixOS runner, Steam runtime)  ─┐
+  build-linux   (NixOS runner, SteamRT SDK, shipping features)  ─┐
   build-windows (D14; signed per D16, later)    ├─► s3://rots4-releases/builds/<sha>/steam/*.tar.zst
   build-macos   (Mac runner)                   ─┘          + manifest.json
                                                                 │
@@ -246,7 +259,7 @@ rots4 CI (green main)
     3. bump apps/rots-qa.yaml image tags to <sha7> in this repo (servers first)
     4. wipe /var/lib/rots-steam/content; extract each tarball into content/<platform>/
     5. delete junk; assert D8 invariants (no symlinks, no steam_appid.txt, no /nix/store interpreter, 0755 client, client.exe signature verifies)
-    6. render steam/app_build.vdf (Desc = "<sha> run <id>.<attempt>", SetLive = qa, Preview = 0)
+    6. render steam/app_build.vdf (Desc = "<sha> run <id>.<attempt>", SetLive = qa [interim; `dev` per D3], Preview = 0)
     7. steamcmd +@ShutdownOnFailedCommand 1 +@NoPromptForPassword 1 +login <builder> +run_app_build <abs vdf> +quit
     8. gate per D7; write build.json; upload BuildOutput/*.log as artifacts
 ```
@@ -293,6 +306,8 @@ rots4 CI (green main)
 | `Invalid content configuration` on launch | No build live on the selected branch, bad launch option, or depot not owned (Valve) |
 | Mac app bounces and quits | `libsteam_api.dylib` not beside the binary (`otool -L` should show `@loader_path/libsteam_api.dylib`) |
 | Linux client "does nothing" | Nix interpreter in the depot binary (D9) or missing `libsteam_api.so` |
+| Client starts with a black window or missing assets | Launched with the wrong working directory — assets are CWD-relative (D8). Launch through Steam, or `cd` into the install directory |
+| Every upload starts failing after a long gap, with no repo change | steamcmd self-updated to a broken build. Log the version, restore the known-good `$HOME` copy (D5) |
 
 ## 8. Implementation plan
 
@@ -305,6 +320,7 @@ Each phase ends with an observable exit criterion; the next phase does not start
 - [ ] Set the install folder name; add launch options: Linux `client`, Windows `client.exe`, macOS `ROTS.app`, plus "Play (QA backend)" variants (D11).
 - [ ] Create branch `qa` and set its password before any build exists.
 - [ ] Create the builder Steam account; grant Edit App Metadata + Publish App Changes To Steam.
+- [ ] Decide whether the throwaway upload below uses the builder account **before** the uploader's one-time login, or a second account: any password login mints a new SteamGuard token and invalidates the uploader's cache (D5).
 - [ ] Note the 3-week key clock (D2); request a first batch of Release State Override keys when allowed.
 - [ ] Hand-upload a throwaway Linux build from a workstation to `qa`.
 
@@ -314,24 +330,28 @@ Each phase ends with an observable exit criterion; the next phase does not start
 
 - [ ] `ROTS_BUILD_HASH` from the flake (D12); menu shows sha, branch, BuildID.
 - [ ] `protocol_version` in `ConnectRequest` with a readable rejection (D13).
-- [ ] Branch-derived auth URL with logging and `--auth-url` override (D11).
+- [ ] Branch-derived auth URL with logging and `--auth-url` override (D11) — deliberately the interim mechanism, kept small.
+- [ ] Record this plan's decisions in `rots4/docs/decisions.md`, which already carries the repo's Steam auth decisions.
 
 **Exit:** a Nix build reports its commit; a mismatched client gets the rejection message; launching with `--auth-url` still overrides.
 
 ### Phase 2 — Steam-ready Linux depot tree (rots4)
 
-- [ ] Steam Linux Runtime build of the client (D9), or the patchelf fallback.
+- [ ] Steam Runtime build of the client (D9): start with sniper 3.0's SDK; record whether steamrt4's container path is worth adopting.
+- [ ] A dedicated flake output built `--no-default-features --features udp,steam,clipboard`, and the assertion that CI publishes that output (D8).
 - [ ] Assemble `linux/` per D8; publish `rots4-linux.tar.zst` + `manifest.json` from `build_nix.yml`.
 
-**Exit:** the tarball extracted into an empty directory on a non-Nix Linux machine launches the client, which finds its assets and initialises Steamworks when started from Steam.
+**Exit:** the tarball extracted into an empty directory on a non-Nix Linux machine launches the client **with that directory as the working directory** (the asset path is CWD-relative, D8), finds its assets, and initialises Steamworks when started from Steam.
 
 ### Phase 3 — Uploader and QA environment (dotfiles, this repo, rots4)
 
 - [ ] dotfiles: `rots-steam` user and group, `/var/lib/rots-steam` (0700), runner `2143-labs-steam` with label `steam-upload`, `extraEnvironment.HOME`, unfree predicate for `steamcmd` and `steam-unwrapped`, `steamcmd` in `extraPackages`.
 - [ ] One-time interactive login as `rots-steam` (D5).
 - [ ] SeaweedFS read-only identity + OpenBao role `rots4-steam-releases` (D8).
-- [ ] This repo: `apps/rots-qa.yaml` and its secrets; decide ports and cluster (D11).
+- [ ] This repo: `apps/rots-qa.yaml` and its secrets; decide ports, cluster and **its own** `slots`/`quota` (D11).
 - [ ] rots4: `steam/app_build.vdf.in`, `scripts/steam-upload.sh`, `steam-publish` job (D6, D7); first run with `"Preview" "1"`, then real.
+- [ ] `rots4/steam/README.md`: the runbook — one-time login, the upload command, the D7 log gate, the §7 failure table, where the token lives, and the rule that nobody else ever types the builder password.
+- [ ] The tester guide committed to `rots4/docs/` (the copy sent with each key), so it is versioned and diffable.
 
 **Exit:** a green `main` produces a BuildID on `qa` without human action; the Phase 0 tester's Steam client updates to it within minutes and it talks to `rots-qa`; the smoke-test command succeeds.
 
@@ -366,6 +386,8 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 | Key request blocked by the 3-week rule | Depends on AppID age | External QA date slips | Check in Phase 0 |
 | Valve enforces notarisation later | Low | macOS uploads rejected | D10 release path is already defined |
 | Windows build blocked by Smart App Control on a tester's machine | Certain without D16 | Tester cannot launch; reads as a virus report | D16 signing with a timestamp; Phase 4 exit tests on a Smart App Control machine |
+| Client finds no assets outside Steam | Low for QA; certain if a tester launches from a shell elsewhere | Black window, reads as a broken build | Assets are CWD-relative (D8), macOS uses an absolute path (D10), the tester guide says launch from Steam |
+| steamcmd's self-update breaks the upload | Low | Every push fails until Valve fixes it | Log the version each run; keep a known-good `$HOME` copy (D5) |
 | Signing key custody stalls Windows CI | Medium until the certificate's form is known | No signed builds; Phase 4 slips | Open question 13; token on the runner's host or the CA's cloud service, both reachable from `jsign` |
 
 ## 10. Open questions
@@ -373,15 +395,15 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 | # | Question | How to resolve |
 |---|---|---|
 | 1 | Does the current Nix `.#client` even find `libsteam_api.so`? | `nix build .#client && readelf -d result/bin/client \| grep -iE 'needed\|runpath'` |
-| 2 | Steam Linux Runtime: which generation, which libraries to bundle (D9) | Phase 2 spike |
+| 2 | Steam Runtime: does sniper 3.0's SDK produce a clean build of this client, and is steamrt4's container path worth adopting for release (D9) | Phase 2 spike: build in each SDK, run on a clean Debian/Ubuntu and on a Steam Deck |
 | 3 | Where does the Windows build run (D14) | Decide in Phase 4 |
-| 4 | `rots-qa`: prod or bigp cluster; UDP range; LB address | Decide in Phase 3 against `apps/rots-web.yaml` and [Multi-cluster](multi-cluster.md) |
+| 4 | `rots-qa`: prod or bigp cluster; UDP range; LB address; `slots` and `quota` (D11) | Decide in Phase 3 against `apps/rots-web.yaml` and [Multi-cluster](multi-cluster.md) |
 | 5 | Does a partial-depot build keep the branch's other depots (D4) | Throwaway branch, two builds |
 | 6 | Does `SetAppBuildLive betakey=public` set `default` on an unreleased app (D15) | One API call against a throwaway build |
 | 7 | Does an unchanged re-upload create a new BuildID | Re-run the upload job on the same sha |
 | 8 | Does the uploader preserve the executable bit from file mode | Install the Linux depot on a clean machine, `ls -l` |
 | 9 | Do `FileExclusion` patterns match dotfiles in subdirectories | Inspect a `"Preview" "1"` manifest |
-| 10 | Does `../Resources/assets` work for Bevy in a bundle | First Mac build |
+| 10 | Does a `current_exe()`-relative asset path work for Bevy in a bundle (a CWD-relative one cannot, D8) | First Mac build, launched from Finder rather than a terminal |
 | 11 | Which Mac is the build Mac, and is it the nix-darwin host `mac` in dotfiles | John |
 | 12 | Are all macOS testers on Apple Silicon (arm64-only QA builds) | Ask testers before Phase 4 |
 | 13 | Signing certificate: OV or EV, and is the key on a USB token or in the CA's cloud signing service? The distinguished name is settled (`O=2143 Labs LLC`), and it does not distinguish OV from EV | Certificate policies OID via `certutil -dump`, or the CA's portal; custody from what the CA issued at enrollment |
@@ -404,6 +426,7 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 - ISteamApps client API (`GetCurrentBetaName`, `GetAppBuildId`) — https://partner.steamgames.com/doc/api/ISteamApps
 - Steam macOS 11 support (client floor) — https://help.steampowered.com/en/faqs/view/659D-A19E-018A-81A6
 - Steam DRM wrapper (`drm_wrap`, server-side wrap, antivirus caveat) — https://partner.steamgames.com/doc/features/drm
+- Steam Runtime generations, and SteamRT 4.0 as the recommendation for new native Linux games — https://github.com/ValveSoftware/steam-runtime
 
 **Apple**
 - Notarizing macOS software — https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution
@@ -416,11 +439,31 @@ D10 release requirements (universal binary, Developer ID, notarisation, stapling
 **Microsoft**
 - Smart App Control FAQ (unsigned or invalidly signed apps are blocked) — https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions
 - Sign your app for Smart App Control compliance (RSA and ECC both supported) — https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control
+- Smart App Control without a clean install (Windows 11 26H2, 2026-09-29) — https://learn.microsoft.com/en-us/windows/whats-new/whats-new-windows-11-version-26h2
 
 **Tooling**
 - nixpkgs `steamcmd` — https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/st/steamcmd/package.nix
 - nixpkgs GitHub runner module — https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/continuous-integration/github-runner/service.nix
 - steamworks-rs (`build.rs`, issue #63) — https://github.com/Noxime/steamworks-rs
+- `steamworks` crate (0.13.1, current; vendors SDK 1.64 via steamworks-sys 0.13.0) — https://crates.io/crates/steamworks
 - `jsign` (Authenticode from Linux over PKCS#11, YubiKey, DigiCert KeyLocker/ONE, Azure Key Vault, Google Cloud KMS) — https://ebourg.github.io/jsign/
 - CA/Browser Forum code signing baseline requirements (private-key hardware since 2023-06-01) — https://cabforum.org/working-groups/code-signing/requirements/
 - GitHub Actions concurrency — https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+
+---
+
+## Appendix — evidence re-check (2026-11-12)
+
+Before execution, every external claim in this plan was re-verified against live sources: 23 claims (10 Valve, 6 platform, 7 tooling). All ten Valve claims held as written. Seven things changed or were missing:
+
+| Claim | Was | Now | Effect |
+|---|---|---|---|
+| Linux runtime | scout vs sniper | SteamRT 4.0 is Valve's recommendation for new native games; sniper is "an older runtime"; scout is still the publish default | D9 rewritten; sniper is the QA default, steamrt4 the release question |
+| Bundled SDK | unstated | `steamworks-sys` 0.13.0 vendors SDK 1.64; Valve ships 1.65, headers on master only | One minor behind; no action before QA, revisit at release |
+| Smart App Control | new Windows installs only | toggleable without a clean install since Windows 11 26H2 | Strengthens D16 and makes Phase 4's exit criterion executable |
+| Asset resolution | "relative to the executable" | relative to the **working directory** | D8 corrected; D10 must use `current_exe()`; Phase 2's test needs a `cd` |
+| Depot feature set | unstated | default features include `testing`, which links the game server and a host function | D8 gained the shipping-feature-set invariant |
+| Builder password | one-time login on the uploader | same, plus: a password login anywhere else invalidates it | D5 gained the rule; Phase 0 gained the ordering note |
+| steamcmd version | self-updating bootstrap | nixpkgs pins `steamcmd-20180104`, which updates itself from Valve's CDN | D5 gained version logging and the known-good `$HOME` rollback |
+
+Confirmed unchanged: the 3-week key clock and 2,500 override-key cap; branch passwords hiding a branch name; `SetLive` refusing `default`; `SetAppBuildLive` with `betakey=public` needing no Mobile/SMS step on an unreleased app; one BuildID per app build after all depots; Valve neither signing nor re-signing uploaded executables; no documented upload lock and no Valve steamcmd/CI image, so D6's serialisation stands; Steam's macOS floor of 12; Rosetta general support ending after macOS 27; notarisation required by Apple but unenforced by Valve.

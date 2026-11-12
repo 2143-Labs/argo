@@ -48,6 +48,7 @@ The forge is currently the weak link: on GitHub Free a private repository has no
 | **prod** | one release | Web; Steam `default`; App Store; `channels/stable` | John promotes |
 
 - One qa candidate at a time: `rots-qa` runs one server version.
+- **Steam migrates to this shape, it does not start there.** [Its plan](steam_game_plan.md) ships with `qa` taking every green `main`, because that branch is the only one with a backend on day one; Stage 2 below is the cutover to `dev` + a promote-gated `qa`, and Steam D3 spells out that it is a `SetLive` target change plus a promote job.
 - Web is the one client that cannot skew: the deployment serving the page *is* the environment (Repo). Web tabs left open across a deploy behave like any other old client.
 - `rots-qa` needs its own public UDP range and LoadBalancer IP, because outside testers play on cellular; prod holds 36000-37999 end to end, previews 31000-34999 (Repo: `rots4/docs/decisions.md:155-158`, `argo/apps/rots-web.yaml:6-7`). Each environment gets its own Argo Application.
 
