@@ -65,17 +65,17 @@ CONSUMERS = {
     "seaweedfs-frigate-genai": [dict(kind="bao", path="john2143-com/default/frigate-genai-worker-creds",
                                      keys=("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"),
                                      es=("default", "frigate-genai-worker-creds"))],
-    "john2143-worker-home": [dict(kind="bao", path="john2143-com/default/minio-creds",
-                                  keys=("S3_ACCESS_KEY", "S3_SECRET_KEY"),
-                                  es=("default", "minio-creds"))],
+    "john2143-worker-home": [dict(kind="bao", path="john2143-com/default/seaweedfs-credentials",
+                                  keys=("SEAWEEDFS_ACCESS_KEY", "SEAWEEDFS_SECRET_KEY"),
+                                  es=("default", "seaweedfs-credentials"))],
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
     "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
                       keys=("access_key_id", "secret_access_key"), es=None)],
-    "john2143-worker-doks": [dict(kind="bao", path="doks/default/minio-credentials",
-                                  keys=("MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"), es=None),
-                             dict(kind="kube", context="2143prod", secret=("default", "minio-credentials"),
-                                  keys=("MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"),
-                                  restart="deploy/john2143-com")],
+    "john2143-worker-doks": [dict(kind="bao", path="doks/default/seaweedfs-credentials",
+                                  keys=("SEAWEEDFS_ACCESS_KEY", "SEAWEEDFS_SECRET_KEY"),
+                                  es=("default", "seaweedfs-credentials"), es_context="2143prod"),
+                             dict(kind="kube", context="2143prod", secret=("default", "seaweedfs-credentials"),
+                                  keys=("SEAWEEDFS_ACCESS_KEY", "SEAWEEDFS_SECRET_KEY"), patch=False)],
 }
 
 SCOPES = {
@@ -190,8 +190,8 @@ def config_version() -> int:
 
 # ---------------------------------------------------------------- cluster
 
-def force_sync(namespace: str, name: str) -> None:
-    run(["kubectl", "--context", CONTEXT, "-n", namespace, "annotate", "externalsecret", name,
+def force_sync(namespace: str, name: str, context: str = CONTEXT) -> None:
+    run(["kubectl", "--context", context, "-n", namespace, "annotate", "externalsecret", name,
          f"force-sync={int(time.time())}", "--overwrite"])
 
 
@@ -453,6 +453,10 @@ def cmd_propagate(args) -> int:
         for holder in CONSUMERS.get(ident["name"], []):
             if holder["kind"] == "kube":
                 ns, sec = holder["secret"]
+                if not holder.get("patch", True):
+                    print(f"{ident['name']}: {holder['context']}:{ns}/{sec} is rendered by ExternalSecret; "
+                          "refreshed by the force-sync above")
+                    continue
                 ak_key, sk_key = holder["keys"]
                 print(f"{ident['name']}: {holder['context']}:{ns}/{sec} <- newest credential "
                       f"({ak_key}, {sk_key}){' [dry run]' if not args.apply else ''}")
@@ -477,7 +481,7 @@ def cmd_propagate(args) -> int:
             if args.apply:
                 bao_kv_put(holder["path"], existing)
                 if holder.get("es"):
-                    force_sync(*holder["es"])
+                    force_sync(*holder["es"], context=holder.get("es_context", CONTEXT))
                     print(f"  force-synced externalsecret {holder['es'][0]}/{holder['es'][1]}")
     if not args.apply:
         print("\nDRY RUN. Re-run with --apply.")
@@ -505,7 +509,8 @@ def verify_identity(ident: dict, cfg: dict) -> tuple[list[str], list[str]]:
             if holder.get("es"):
                 ns, sec = holder["es"]
                 sources.append((f"secret {ns}/{sec}",
-                                lambda n=ns, s=sec, k=ak_key: secret_keys(n, s).get(k)))
+                                lambda n=ns, s=sec, c=holder.get("es_context", CONTEXT), k=ak_key:
+                                secret_keys(n, s, c).get(k)))
         else:
             continue
         for label, fetch in sources:

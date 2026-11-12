@@ -124,7 +124,8 @@ CNPG's own documented pattern for rotating these — ESO's `Password` generator 
 **Update 2026-09-15:** the "candidates for a follow-up migration" this section
 used to list — `litellm-secrets`, `litellm-s3-creds`, `frigate-creds`,
 `frigate-genai-worker-creds`, `headscale-oidc`, `listen-brick-secret`,
-`minio-credentials`, `minio-creds`, `mongo-creds`, `mosquitto-credentials`,
+`minio-credentials`, `minio-creds` (renamed 2026-11-12 to `spaces-credentials` and
+`seaweedfs-credentials`), `mongo-creds`, `mosquitto-credentials`,
 `oauth-creds`, `oauth2-proxy-cameras`, `oauth2-proxy-temporal`,
 `steam-lobby-secret`, `steam-lobby-turn` — **are now migrated**; see §6 for the
 design and §6 "Known gaps" for the live Secrets still outside it.
