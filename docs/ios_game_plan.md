@@ -4,7 +4,7 @@
 **Date:** 2026-11-11
 **Owner:** John (Apple Developer account, App Store Connect, the build Mac); implementation split across `2143-Labs/rots4`, this repo, and `dotfiles`.
 **Scope:** shipping the ROTS client as a native iOS app. Every green `main` reaches internal TestFlight testers without human action, and the plan defines what must hold before external TestFlight and before App Store release. Android, iPad-specific layout, in-app purchase, and marketing are out of scope.
-**Related:** [Steam QA delivery plan](steam_game_plan.md) (shares the build Mac, the `rots-qa` environment and the protocol-version work), [Deploying a private-repo game](deploying-a-private-repo-game.md) (the SeaweedFS binary and OpenBao CI-credential patterns this plan extends), [Adding a secret](adding-a-secret.md).
+**Related:** [Steam QA delivery plan](steam_game_plan.md) (shares the build Mac, the `rots-qa` environment and the protocol-version work), [Release pipeline plan](release_pipeline_plan.md) (how one build is promoted across web, Steam and iOS; it proposes replacing D8's two flavours with run-time routing), [Deploying a private-repo game](deploying-a-private-repo-game.md) (the SeaweedFS binary and OpenBao CI-credential patterns this plan extends), [Adding a secret](adding-a-secret.md).
 
 Evidence labels used below: **Apple** — Apple developer documentation, App Store Review Guidelines (as published 2026-10-16), App Store Connect help; **Project** — upstream project source, docs and issue trackers (Bevy, winit, crates, GitHub); **Repo** — read from the named file on 2026-11-11; **Probe** — reproduced on a 2143-Labs host on 2026-11-11; **Inferred** — reasoning no source states directly. Anything marked *Unverified* has a test in [Open questions](#10-open-questions). The research behind this plan is in `~/repos/ios-{bevy-port,ci-signing,distribution-policy,auth-backend}.md`, with audit trails under `~/repos/ai_research/`.
 
@@ -241,7 +241,7 @@ This extends [Steam plan D13](steam_game_plan.md#d13-add-a-protocol-version-to-t
   - Never touch the login keychain, and never sign as root.
 - **WWDR intermediates** must be in the System keychain for a launchd context to build the chain (Project, community); install once in the nix-darwin activation script.
 - **Repository hygiene first:** add `*.p8`, `AuthKey_*.p8`, `*.p12`, `*.mobileprovision`, `*.provisionprofile`, `*.ipa`, `*.xcarchive`, `DerivedData/`, `xcuserdata/` to `rots4/.gitignore`.
-- **Triggers:** `push` to `main` and `workflow_dispatch` only, in a GitHub environment whose deployment-branch policy allows only `main`. On a private repository anyone who can open a pull request can compromise a self-hosted runner (Project), so no PR ever reaches this job.
+- **Triggers:** `push` to `main` and `workflow_dispatch` only. A GitHub environment cannot enforce that here — this organization is on GitHub Free and `rots4` is private, where environments, branch protection and required reviewers are all unavailable (GitHub, Probe). The gate is the OpenBao role instead: `event_name=push`, `ref=refs/heads/main`, `runner_environment=self-hosted` for the continuous builds, and a separate release role bound to `event_name=workflow_dispatch` + `workflow_ref` + `actor_id=John` for anything store-facing ([release pipeline plan](release_pipeline_plan.md)). On a private repository anyone who can open a pull request can compromise a self-hosted runner (Project), so no PR ever reaches this job.
 
 ### D15. Upload and distribution
 

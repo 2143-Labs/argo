@@ -4,7 +4,7 @@
 **Date:** 2026-11-11
 **Owner:** John (Steamworks partner account, Apple account, runner hosts); implementation split across `2143-Labs/rots4`, this repo, and `dotfiles`.
 **Scope:** getting every green `main` build of the ROTS client onto Steam for QA testers on Linux, Windows and macOS, and pointing those builds at an isolated QA backend. Store page, pricing, release and marketing are out of scope.
-**Related:** [Deploying a private-repo game](deploying-a-private-repo-game.md) (the existing SeaweedFS binary and OpenBao CI-credential pattern this plan extends), [Multi-cluster](multi-cluster.md), [iOS delivery plan](ios_game_plan.md) (shares the build Mac, `rots-qa` and the protocol-version work).
+**Related:** [Deploying a private-repo game](deploying-a-private-repo-game.md) (the existing SeaweedFS binary and OpenBao CI-credential pattern this plan extends), [Multi-cluster](multi-cluster.md), [iOS delivery plan](ios_game_plan.md) (shares the build Mac, `rots-qa` and the protocol-version work), [Release pipeline plan](release_pipeline_plan.md) (one build promoted across web, Steam and iOS; it proposes replacing D11's branch-derived backend with run-time routing).
 
 Evidence labels used below: **Valve** — Steamworks documentation (`partner.steamgames.com/doc/...`, public); **Apple** — Apple developer documentation; **Repo** — read from the named file on 2026-11-11; **Probe** — reproduced on a 2143-Labs host on 2026-11-10/11; **Inferred** — reasoning no source states directly. Anything marked *Unverified* has a test in [Open questions](#10-open-questions).
 
@@ -216,6 +216,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 - Build scripts cannot set `default` live (Valve). After release, setting `default` live also needs Steam Mobile or SMS confirmation, and any security change on the account blocks it for 3 days (Valve).
 - The Web API `ISteamApps/SetAppBuildLive` with `betakey=public` may be able to set `default` on an *unreleased* app without confirmation (Valve parameter docs; *Unverified*, contradicts the upload doc). Optional experiment; nothing depends on it.
 - **Required before release:** prod's `deploy` job currently moves prod servers on every green `main`, while customers sit on a manually promoted `default`. Before release, prod deploys must follow the `default` promotion, or D13 must cover every gap.
+- **Superseded by the [release pipeline plan](release_pipeline_plan.md):** prod becomes promote-only, so this gap closes without a protocol workaround — prod stops following `main` at all, and a dispatch moves prod and the stores together.
 
 ### D16. Sign the Windows executable; never apply the Steam DRM wrapper
 
