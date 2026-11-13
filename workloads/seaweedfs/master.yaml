@@ -25,8 +25,10 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 3
         resources:
-          requests: {memory: "1Gi", cpu: "500m"}
-          limits: {memory: "1Gi", cpu: "500m"}
+          # 30d peak is 213 MiB, p95 is 74 MiB; 512Mi keeps ~2.4x over the worst
+          # observation while staying Guaranteed (requests == limits).
+          requests: {memory: "512Mi", cpu: "500m"}
+          limits: {memory: "512Mi", cpu: "500m"}
         volumeMounts:
         - name: data
           mountPath: /data
