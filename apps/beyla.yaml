@@ -28,6 +28,26 @@ spec:
             attributes:
               kubernetes:
                 enable: true
+            # Setting discovery here suppresses the chart's default
+            # instrument: [{k8s_namespace: "*"}], so it is restated. These
+            # namespaces are control planes: Longhorn alone was half of all
+            # Beyla series, keyed by short-lived rebuild ports, and
+            # Mimir/Loki/Tempo/Grafana export native metrics. Entries are ORed
+            # and add to Beyla's built-in exclusions (kube-system etc.).
+            discovery:
+              instrument:
+                - k8s_namespace: "*"
+              exclude_instrument:
+                - k8s_namespace: longhorn-system
+                - k8s_namespace: metallb-system
+                - k8s_namespace: argocd
+                - k8s_namespace: cnpg-system
+                - k8s_namespace: keda
+                - k8s_namespace: keda-add-ons-http
+                - k8s_namespace: kured
+                - k8s_namespace: kube-state-metrics
+                - k8s_namespace: kube-state-metrics-fast
+                - k8s_namespace: observability
             filter:
               network:
                 k8s_dst_owner_name:

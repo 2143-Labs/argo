@@ -54,8 +54,24 @@ spec:
               # service/span_name/span_kind/status_code (the defaults - no resource
               # attributes, which would be one series set per instance). The 60 s top
               # bucket is for `k8s.provision`, which creates a StatefulSet and a PVC.
+              # Only spans the app SDKs emit: Beyla reports the same requests as
+              # http_*/rpc_* metrics, and its spans were 97% of these series
+              # (2026-11-12). The second rule drops library-internal spans (h2
+              # framing, Temporal SDK polling). Policies are ANDed; the regex is
+              # unanchored, hence the ^.
               span_metrics:
                 histogram_buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60]
+                filter_policies:
+                  - exclude:
+                      match_type: strict
+                      attributes:
+                        - key: resource.telemetry.sdk.name
+                          value: beyla
+                  - exclude:
+                      match_type: regex
+                      attributes:
+                        - key: span.code.module.name
+                          value: '^(h2|temporalio_sdk)'
           overrides:
             defaults:
               metrics_generator:
