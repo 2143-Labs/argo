@@ -363,7 +363,9 @@ alloy:
       // never through the Service VIP: two replicas behind a ClusterIP means a VIP
       // scrape alternates pods and the counters look like they reset every scrape.
       // /metrics requires a bearer token (PrometheusAuthMiddleware runs the normal
-      // proxy-key auth). Series stay out of Mimir's 500k limit because the proxy
+      // proxy-key auth). The trailing slash is load-bearing: `/metrics` answers
+      // 307 -> `/metrics/`, so scraping the slash saves a request per scrape per pod.
+      // Series stay out of Mimir's 750k per-tenant limit because the proxy
       // whitelists the metric families it emits (litellm_settings.prometheus_metrics_config).
       discovery.kubernetes "litellm" {
         role = "pod"
@@ -389,7 +391,7 @@ alloy:
       prometheus.scrape "litellm" {
         targets         = discovery.relabel.litellm.output
         job_name        = "litellm"
-        metrics_path    = "/metrics"
+        metrics_path    = "/metrics/"
         scrape_interval = "30s"
         authorization {
           type        = "Bearer"

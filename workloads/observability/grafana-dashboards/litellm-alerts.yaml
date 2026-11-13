@@ -1,0 +1,241 @@
+# LiteLLM proxy alerts: DeepSeek balance, the balance poller, and the scrape.
+# Notifies ntfy via the contact point in
+# workloads/secrets/observability-grafana-alert-contactpoint.yaml; the default
+# policy in workloads/secrets/observability-grafana-alert-rules.yaml routes every
+# rule there, so nothing else needs configuring.
+#
+# Thresholds are measured burn on 2026-11-13: ~$23/day (home-key1) and ~$19/day
+# (home-key2) over the busiest three hours, ~$9.5/day averaged over six, against
+# ~$63 balances. $20 is therefore between one and six days of runway, $10 between
+# half a day and three days. Both are set high enough to top up by hand.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  litellm-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: litellm
+        folder: Alerts
+        interval: 1m
+        rules:
+          # max by (account), not sum: both replicas export the same gauge.
+          - uid: litellm-balance-low
+            title: DeepSeek balance low
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (account) (deepseek_balance_usd{account=~"home-key1|home-key2"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 20
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'DeepSeek {{ $labels.account }} is down to ${{ printf "%.2f" $values.A.Value }}'
+              description: >-
+                Top up at platform.deepseek.com. At the measured ~$20-23/day per key this is
+                about a day of runway.
+          - uid: litellm-balance-critical
+            title: DeepSeek balance nearly empty
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (account) (deepseek_balance_usd{account=~"home-key1|home-key2"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 10
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'DeepSeek {{ $labels.account }} has ${{ printf "%.2f" $values.A.Value }} left'
+              description: >-
+                Roughly ten hours of runway at the current burn. Top up now or point traffic
+                at the other home key.
+          # The poller rides success events, so a quiet proxy is a quiet gauge. Only
+          # alert when traffic exists but the gauge has not refreshed: that is a
+          # broken poller, not an idle night. `and on() (...)` rather than comparing
+          # two scalars - PromQL rejects `scalar(x) > 0` without the bool modifier,
+          # and `on()` matches the two label-less sides.
+          - uid: litellm-balance-poller-stale
+            title: DeepSeek balance poller silent
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: (time() - max(deepseek_balance_last_success_timestamp_seconds)) > 3600 and on() (sum(increase(litellm_input_tokens_metric_total[1h])) > 0)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'DeepSeek balances have not refreshed in over an hour despite traffic'
+              description: >-
+                The balance poller in balance_metrics.py rides async_log_success_event with a
+                900 s gate. Check the proxy log for "balance_metrics: ... fetch failed" and the
+                DeepSeek /user/balance status.
+          # sum(), not count(): sum survives one replica being unhealthy, and returns
+          # no series (-> NoData -> Alerting) if the job disappears entirely, which is
+          # the case worth waking up for.
+          - uid: litellm-scrape-degraded
+            title: LiteLLM metrics scrape degraded
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: sum(up{job="litellm"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 2
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: Alerting
+            execErrState: Error
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Only {{ $value }} of 2 litellm replicas are being scraped'
+              description: >-
+                One scrape target down is blind spot, not an outage: check
+                up{job="litellm"} per instance. If both are down, Alloy cannot reach the
+                proxy - check the litellm NetworkPolicy peers and the pod's /metrics auth.
