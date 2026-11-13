@@ -61,6 +61,12 @@ authserver:
 # *and* environments, so there is exactly one copy: this one, in rots-prod. Every preview's
 # authserver proxies to it over ClusterIP, which is why only prod sets `enabled`; a preview
 # that set it would run a second, divergent store.
+# Rollback: a rots4 revert alone leaves rots-settings crash-looping (images without the
+# `settings` subcommand), so set enabled 'false' and url '' in apps/rots-web.yaml and
+# apps/rots-web-preview.yaml in the same change; settings-db and its rows stay
+# (Prune=false,Delete=false). Rotating SETTINGS_TOKEN (both OpenBao paths, same value) needs a
+# restart of rots-settings and every authserver after the ExternalSecret refresh: pods read it
+# only at start, and a mismatch turns every settings call into 503 settings_unavailable.
 settings:
   enabled: false   # prod true; previews false (they call prod's service)
   port: 8100       # SETTINGS_PORT and the Service port
