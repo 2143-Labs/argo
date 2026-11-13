@@ -10,6 +10,23 @@ data:
       master_key: "os.environ/LITELLM_MASTER_KEY"
       store_model_in_db: true
       store_prompts_in_spend_logs: false
+      # Env-credential UI login is live by default, and with no UI_USERNAME /
+      # UI_PASSWORD set its username defaults to "admin" and its password IS the
+      # master key (litellm/proxy/auth/login_utils.py, get_ui_credentials). That
+      # key is also the client key in our fish tooling, so every machine holding
+      # it could sign in to the Admin UI as a proxy admin — and proxy admin reads
+      # the S3 cold-storage archive, i.e. every archived request/response body,
+      # not just spend metadata.
+      #
+      # Safe to disable: SSO is fully configured (all five GENERIC_* endpoints),
+      # the UI already auto-redirects to it (AUTO_REDIRECT_UI_LOGIN_TO_SSO), and
+      # every proxy_admin in the DB is SSO-only with no password. The API keeps
+      # authenticating with the master key (user_api_key_auth never consults this
+      # flag), and unsetting it + a restart restores env login, so there is no
+      # lockout path that needs the UI. Turning it off is also what clears
+      # LiteLLM's critical `env_credential_login` deployment warning
+      # (/health/deployment_warnings; is_env_credential_login_enabled).
+      disable_env_credential_login: true
     model_list:
       # Local Ollama (office)
       - model_name: "ollama/huihui_ai/qwen3-vl-abliterated:8b"
