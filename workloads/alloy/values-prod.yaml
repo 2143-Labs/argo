@@ -256,17 +256,57 @@ alloy:
         }
       }
 
-      // longhorn-manager metrics (longhorn-backend:9500). Without this there is no
-      // longhorn_volume_robustness in Mimir, so volume degradation is invisible —
-      // which is how 20 volumes stayed degraded for hours on 2026-11-02.
+      // longhorn-manager metrics, one target per manager pod (:9500). Without them
+      // there is no longhorn_volume_robustness in Mimir, so volume degradation is
+      // invisible — which is how 20 volumes stayed degraded for hours on 2026-11-02.
+      // Each manager reports only the volumes it owns and the replicas, engines and
+      // disks on its own node, so the longhorn-backend Service returned one node's
+      // slice (25 of 78 attached volumes on 2026-11-12). instance is the node name,
+      // so a manager restart does not re-key every series.
+      discovery.kubernetes "longhorn" {
+        role = "pod"
+        namespaces {
+          names = ["longhorn-system"]
+        }
+        selectors {
+          role  = "pod"
+          label = "app=longhorn-manager"
+        }
+      }
+
+      discovery.relabel "longhorn" {
+        targets = discovery.kubernetes.longhorn.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_number"]
+          regex         = "9500"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "instance"
+        }
+      }
+
       prometheus.scrape "longhorn" {
-        targets         = [{__address__ = "longhorn-backend.longhorn-system.svc.cluster.local:9500"}]
+        targets         = discovery.relabel.longhorn.output
         job_name        = "longhorn"
         scrape_interval = "30s"
-        forward_to      = [prometheus.remote_write.mimir.receiver]
+        forward_to      = [prometheus.relabel.longhorn_metrics.receiver]
         clustering {
           enabled = true
         }
+      }
+
+      // Per-backup and per-snapshot series (3,046 backups x 3 families) and the
+      // manager's client-go self-metrics are not read by anything. Backup freshness
+      // stays visible per volume in longhorn_volume_last_backup_at.
+      prometheus.relabel "longhorn_metrics" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "longhorn_backup_(state|actual_size_bytes|uploaded_data_size_bytes)|longhorn_snapshot_actual_size_bytes|longhorn_workqueue_.*|longhorn_rest_client_.*"
+          action        = "drop"
+        }
+        forward_to = [prometheus.remote_write.mimir.receiver]
       }
 
       // temporal server services (default ns; metrics on :9090 — force address since
