@@ -351,6 +351,38 @@ data:
     litellm_settings:
       drop_params: true
       set_verbose: false
+      # Prometheus counters for Mimir (Alloy scrapes /metrics per pod). The
+      # callback list is what mounts the endpoint at all
+      # (proxy/common_utils/callback_utils.py, initialize_callbacks_on_proxy ->
+      # PrometheusLogger._mount_metrics_endpoint); without "prometheus" the path
+      # is a 404.
+      #
+      # `prometheus_metrics_config` is a WHITELIST: every metric not listed is a
+      # NoOpMetric (integrations/prometheus.py, _is_metric_enabled). Keep it
+      # narrow on purpose - the estate has hit Mimir's 500k per-tenant series
+      # limit before by adding a label (workloads/alloy/values-prod.yaml, remote
+      # write comment). Request/latency metrics carry client_ip and user_agent
+      # and are deliberately excluded; add them only with include_labels first.
+      #
+      # Two groups because include_labels is validated per metric at startup and
+      # the provider-cache counters have no `requested_model` label.
+      callbacks: ["prometheus", "balance_metrics.BalanceLogger"]
+      prometheus_metrics_config:
+        - group: "tokens"
+          metrics:
+            - litellm_input_tokens_metric
+            - litellm_output_tokens_metric
+            - litellm_input_cached_tokens_metric
+            - litellm_spend_metric
+          include_labels: ["api_provider", "model_id", "requested_model"]
+        - group: "provider_cache"
+          metrics:
+            - litellm_provider_cache_read_input_tokens_metric
+            - litellm_provider_cache_creation_input_tokens_metric
+            - litellm_cache_hits_metric
+            - litellm_cache_misses_metric
+            - litellm_cached_tokens_metric
+          include_labels: ["api_provider", "model_id"]
       cache: true
       s3_callback_params:
         s3_region_name: us-east-1
@@ -429,3 +461,108 @@ data:
         "(suppressing the per-message DeepSeek placeholder warning)",
         file=sys.stderr,
     )
+  # DeepSeek account balances as Prometheus gauges for the litellm proxy.
+  #
+  # Mounted at /etc/litellm-pyfilter (whole ConfigMap, no items:), which is the
+  # first entry on PYTHONPATH, so litellm_settings.callbacks can name it as
+  # `balance_metrics.BalanceLogger` (callback_utils.get_instance_fn splits on
+  # `.` and instantiates module.ClassName).
+  #
+  # Runs inside the proxy process on purpose: the pod already holds the four
+  # DeepSeek keys via envFrom, so no new Secret, and its Gauges land on
+  # prometheus_client.REGISTRY, which is exactly the registry /metrics is
+  # mounted against while PROMETHEUS_MULTIPROC_DIR is unset
+  # (integrations/prometheus.py, _get_metrics_app). A CronJob would need a secret
+  # copy and could not reach Mimir from this namespace.
+  #
+  # Deliberately NOT in sitecustomize.py: that file has a removal trigger (see
+  # above) and would take the poller with it.
+  balance_metrics.py: |
+    """DeepSeek account balances as Prometheus gauges for the litellm proxy.
+
+    Loaded by name from ``litellm_settings.callbacks`` (``balance_metrics.BalanceLogger``);
+    the ConfigMap is mounted on PYTHONPATH at /etc/litellm-pyfilter. Gauges register on
+    prometheus_client's default REGISTRY, which is the registry litellm's /metrics app is
+    mounted against when PROMETHEUS_MULTIPROC_DIR is unset.
+
+    The refresh rides the success-event hook instead of a background thread: no traffic,
+    no polls. It must never raise into the request path.
+    """
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    import urllib.request
+
+    from litellm.integrations.custom_logger import CustomLogger
+    from prometheus_client import Gauge
+
+    logger = logging.getLogger("LiteLLM")
+
+    # Env name -> series label. BACKUP1 and LABS are the same DeepSeek account today;
+    # they are emitted separately so the series stay correct if that ever changes.
+    ACCOUNT_FOR_ENV = {
+        "DEEPSEEK_API_KEY1": "home-key1",
+        "DEEPSEEK_API_KEY2": "home-key2",
+        "DEEPSEEK_API_KEY_BACKUP1": "backup",
+        "DEEPSEEK_API_KEY_LABS": "labs",
+    }
+    INTERVAL_SECONDS = 900
+    BALANCE_URL = "https://api.deepseek.com/user/balance"
+    FETCH_TIMEOUT_SECONDS = 10
+
+    BALANCE = Gauge("deepseek_balance_usd", "DeepSeek account balance in USD", ["account"])
+    LAST_SUCCESS = Gauge(
+        "deepseek_balance_last_success_timestamp_seconds",
+        "Unix time of the last successful DeepSeek balance fetch",
+        ["account"],
+    )
+
+
+    class BalanceLogger(CustomLogger):
+        def __init__(self):
+            super().__init__()
+            self._last_attempt = 0.0
+            self._task = None
+
+        async def async_log_success_event(self, kwargs, response_obj, start_time, end_time):
+            now = time.monotonic()
+            if now - self._last_attempt < INTERVAL_SECONDS:
+                return
+            if self._task is not None and not self._task.done():
+                return
+            self._last_attempt = now
+            self._task = asyncio.create_task(self._refresh())
+
+        async def _refresh(self):
+            for env_name, account in ACCOUNT_FOR_ENV.items():
+                api_key = os.environ.get(env_name)
+                if not api_key:
+                    continue
+                try:
+                    total = await asyncio.to_thread(self._fetch_balance, api_key)
+                except Exception as exc:
+                    logger.debug("balance_metrics: %s fetch failed: %r", account, exc)
+                    continue
+                if total is not None:
+                    BALANCE.labels(account=account).set(total)
+                    LAST_SUCCESS.labels(account=account).set(time.time())
+
+        @staticmethod
+        def _fetch_balance(api_key):
+            request = urllib.request.Request(
+                BALANCE_URL,
+                headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read())
+            if not payload.get("is_available"):
+                return None
+            usd = [
+                float(info.get("total_balance") or 0)
+                for info in payload.get("balance_infos") or []
+                if info.get("currency") == "USD"
+            ]
+            return sum(usd) if usd else None
