@@ -30,10 +30,14 @@ data:
     model_list:
       # Local Ollama (office)
       - model_name: "ollama/huihui_ai/qwen3-vl-abliterated:8b"
+        model_info:
+          id: "ollama-huihui_ai-qwen3-vl-abliterated-8b"
         litellm_params:
           model: "ollama/huihui_ai/qwen3-vl-abliterated:8b"
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama/*"
+        model_info:
+          id: "ollama-wildcard"
         litellm_params:
           model: "ollama/*"
           api_base: "http://office.ts.2143.me:11434"
@@ -63,6 +67,7 @@ data:
       # tag's native window: 131072 for e2b/e4b/latest, 262144 for the rest.
       - model_name: "ollama_chat/gemma4:e4b"
         model_info:
+          id: "ollama_chat-gemma4-e4b"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
@@ -71,6 +76,7 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama_chat/gemma4:e2b"
         model_info:
+          id: "ollama_chat-gemma4-e2b"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
@@ -79,6 +85,7 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama_chat/gemma4:12b"
         model_info:
+          id: "ollama_chat-gemma4-12b"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
@@ -87,6 +94,7 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama_chat/gemma4:26b"
         model_info:
+          id: "ollama_chat-gemma4-26b"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
@@ -95,6 +103,7 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama_chat/gemma4:31b"
         model_info:
+          id: "ollama_chat-gemma4-31b"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 262144
@@ -103,6 +112,7 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       - model_name: "ollama_chat/gemma4:latest"
         model_info:
+          id: "ollama_chat-gemma4-latest"
           supports_vision: true
           supports_function_calling: true
           max_input_tokens: 131072
@@ -111,11 +121,15 @@ data:
           api_base: "http://office.ts.2143.me:11434"
       # Google Gemini
       - model_name: "gemini/*"
+        model_info:
+          id: "gemini-wildcard"
         litellm_params:
           model: "gemini/*"
           api_key: "os.environ/GEMINI_API_KEY"
       # Google Veo (video generation)
       - model_name: "veo-3.1"
+        model_info:
+          id: "veo-3.1"
         litellm_params:
           model: "gemini/veo-3.1-generate-preview"
           api_key: "os.environ/GEMINI_API_KEY"
@@ -148,9 +162,12 @@ data:
       # `model_info.id` is named on purpose. Every response carries the deployment
       # that served it in the `x-litellm-model-id` header, and litellm's spend-log
       # rows carry the same id in their metadata, so `deepseek-home-key1` /
-      # `-key2` / `-backup` make the split readable. Left unset, litellm generates
-      # a fresh uuid4 per process, so the header is unreadable and changes on every
-      # rollout — nothing to compare against.
+      # `-key2` / `-home-backup` make the split readable. Left unset, litellm derives
+      # `sha256(model_group + litellm_params)` (router.py, generate_model_id), which
+      # survives restarts but is unreadable - and when the deployment's api_key is
+      # `os.environ/X` the hash is taken over the *resolved secret*, so rotating that
+      # provider key changes the id and starts a new `model_id` series. Naming the
+      # deployment pins both.
       - model_name: "deepseek/*"
         litellm_params:
           model: "deepseek/*"
@@ -188,6 +205,8 @@ data:
           id: "deepseek-labs"
       # Anthropic (Claude)
       - model_name: "anthropic/*"
+        model_info:
+          id: "anthropic-wildcard"
         litellm_params:
           model: "anthropic/*"
           api_key: "os.environ/ANTHROPIC_API_KEY"
@@ -238,10 +257,14 @@ data:
       # (proxy_server.py count_request_tokens -> count_source: local_estimate).
       # Claude Code still gets a count; it is an estimate, not Anthropic's.
       - model_name: "claude-*[1m]"
+        model_info:
+          id: "claude-1m"
         litellm_params:
           model: "anthropic/claude-*"
           api_key: "oauth-only"
       - model_name: "claude-*"
+        model_info:
+          id: "claude"
         litellm_params:
           model: "anthropic/claude-*"
           api_key: "oauth-only"
@@ -254,11 +277,15 @@ data:
       # substitution turns `claude-api-opus-5-5` into
       # `anthropic/claude-opus-5-5`.
       - model_name: "claude-api-*"
+        model_info:
+          id: "claude-api"
         litellm_params:
           model: "anthropic/claude-*"
           api_key: "os.environ/ANTHROPIC_API_KEY"
       # OpenAI
       - model_name: "openai/*"
+        model_info:
+          id: "openai-wildcard"
         litellm_params:
           model: "openai/*"
           api_key: "os.environ/OPENAI_API_KEY"
@@ -267,6 +294,7 @@ data:
       # mode: responses is required; /v1/chat/completions is bridged to Responses.
       - model_name: "chatgpt/*"
         model_info:
+          id: "chatgpt-wildcard"
           mode: responses
         litellm_params:
           model: "chatgpt/*"
@@ -277,48 +305,58 @@ data:
       # "Stream must be set to true".
       - model_name: "chatgpt/gpt-6-astra"
         model_info:
+          id: "chatgpt-gpt-6-astra"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-6-astra"
       - model_name: "chatgpt/gpt-5.6-terra"
         model_info:
+          id: "chatgpt-gpt-5.6-terra"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-5.6-terra"
       - model_name: "chatgpt/gpt-5.6-sol"
         model_info:
+          id: "chatgpt-gpt-5.6-sol"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-5.6-sol"
       - model_name: "chatgpt/gpt-5.6-luna"
         model_info:
+          id: "chatgpt-gpt-5.6-luna"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-5.6-luna"
       - model_name: "chatgpt/gpt-6-sol"
         model_info:
+          id: "chatgpt-gpt-6-sol"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-6-sol"
       - model_name: "chatgpt/gpt-6-luna"
         model_info:
+          id: "chatgpt-gpt-6-luna"
           mode: responses
           supports_native_streaming: true
         litellm_params:
           model: "chatgpt/gpt-6-luna"
       # OpenRouter
       - model_name: "openrouter/*"
+        model_info:
+          id: "openrouter-wildcard"
         litellm_params:
           model: "openrouter/*"
           api_key: "os.environ/OPENROUTER_API_KEY"
 
       # Kimi / Moonshot
       - model_name: "moonshot/*"
+        model_info:
+          id: "moonshot-wildcard"
         litellm_params:
           model: "moonshot/*"
           api_key: "os.environ/MOONSHOT_API_KEY"
