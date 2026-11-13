@@ -576,12 +576,22 @@ alloy:
         }
         rule {
           source_labels = ["kind"]
-          regex         = "access|error"
+          regex         = "access|error|turn"
           action        = "keep"
         }
+        // job is derived from kind, never taken from the edge: a TURN relay's
+        // journal goes to edge-coturn, request logs to edge-nginx.
         rule {
-          target_label = "job"
-          replacement  = "edge-nginx"
+          source_labels = ["kind"]
+          regex         = "turn"
+          target_label  = "job"
+          replacement   = "edge-coturn"
+        }
+        rule {
+          source_labels = ["kind"]
+          regex         = "access|error"
+          target_label  = "job"
+          replacement   = "edge-nginx"
         }
       }
 
