@@ -47,4 +47,14 @@ spec:
     initdb:
       database: settings
       owner: settings
+{{ if .Values.settings.offsiteBackup }}
+  # Continuous WAL archiving + base backups offsite via ObjectStore
+  # settings-db-offsite (settings-db-offsite.yaml). Prod only. docs/db-backups.md.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: settings-db-offsite
+{{ end }}
 {{- end }}

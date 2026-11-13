@@ -1,0 +1,63 @@
+{{ if and .Values.settings.enabled .Values.settings.offsiteBackup }}
+---
+# Offsite WAL archive + daily base backup for settings-db (Barman Cloud plugin):
+# Backblaze B2 home bucket, Object Lock COMPLIANCE 30d, SSE-C, lifecycle expiry 31d.
+# Barman appends the serverName (the Cluster name, settings-db) to destinationPath, so
+# these objects sit beside rots-db's under databases/cnpg/rots-prod/.
+# settings-db has one instance and no standby, so enabling this restarts it in place
+# once; the rots-settings clients keep their cached settings meanwhile.
+# The writer key in Secret db-backup-s3 carries the SSE-C key and cannot be trusted to
+# stop at the lock, so the lock is the control. docs/db-backups.md.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: settings-db-offsite
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  annotations:
+    # exists before the Cluster gains the plugin that references it
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  configuration:
+    destinationPath: s3://j2143-argo-db-backups-home/databases/cnpg/{{ .Values.namespace }}
+    endpointURL: https://s3.us-east-005.backblazeb2.com
+    s3Credentials:
+      accessKeyId: {name: db-backup-s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: db-backup-s3, key: ACCESS_SECRET_KEY}
+      region: {name: db-backup-s3, key: REGION}
+      sseCustomerKey: {name: db-backup-s3, key: SSE_CUSTOMER_KEY}
+    wal:
+      compression: zstd
+      maxParallel: 4
+    data:
+      compression: zstd
+      jobs: 2
+  instanceSidecarConfiguration:
+    # CRD defaults stated explicitly: Argo diffs them otherwise.
+    logLevel: info
+    retentionPolicyIntervalSeconds: 1800
+    # PROFILE B: settings.dbResources is burstable (50m/128Mi requests, 500m/512Mi
+    # limits), so the sidecar does not claim a guarantee the pod does not have.
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 512Mi}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: settings-db-offsite-daily
+  namespace: {{ required "namespace is required" .Values.namespace }}
+  annotations:
+    # after the Cluster has rolled with the plugin
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # CNPG uses six-field cron, seconds first, in UTC. 04:55 keeps it clear of the
+  # other clusters' dailies (04:00-04:50, 05:00, 05:15).
+  schedule: "0 55 4 * * *"
+  immediate: true
+  backupOwnerReference: self
+  cluster:
+    name: settings-db
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+{{ end }}
