@@ -120,6 +120,10 @@ Without the force-sync, ESO picks up the change within 10 minutes. `john2143-com
 `reloader.stakater.com/auto: "true"`, so it restarts when its Secrets' data changes.
 
 - Never `kubectl edit` a rendered Secret: ESO reverts it on the next refresh.
+- Why `Owner` and not `Orphan`: `Orphan` would survive an accidental ExternalSecret deletion,
+  but it sets no owner reference, so live drift is corrected only at the next `refreshInterval`,
+  and a pruned manifest leaves a live Secret behind with nothing pointing at it. `Owner` matches
+  home, and recovery is a re-sync from OpenBao.
 - Never delete an ExternalSecret to "reset" it: under `Owner` that deletes the Secret too.
   Recover by fixing OpenBao and force-syncing.
 - Rotating the SeaweedFS key used by DOKS is `scripts/seaweedfs-rotate.py`
@@ -149,7 +153,13 @@ Everything is in `2143-Labs/2143-k8s`, which DOKS Flux follows from `main`:
   `overlays/prod` atomically, so one object with a missing CRD would block every DOKS deploy.
 
 The ESO controller has cluster-wide read/write on Secrets and can create ServiceAccount tokens.
-This is the first DOKS component with that reach.
+This is the first DOKS component with that reach. That reach is the price of the arrangement: any
+future workload that must not read Secret data still needs ESO to render it. Keep the store's
+policy scoped to `consumers/data/doks/*` (it is), so a compromised ESO on DOKS still cannot read
+home secrets, `edge/…` or the archive.
+
+Version drift to be aware of: home runs ESO `v2.10.0`, DOKS `v2.15.0`. Upgrading home is
+separate work; nothing in this change depends on the difference.
 
 ## 5. SPIFFE later
 
