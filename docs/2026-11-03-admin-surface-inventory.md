@@ -5,6 +5,8 @@
 
 > **Correction 2026-11-09:** `default/steam-lobby-mm-joinlobby` (`mm.b.hero.rehab`) is not unreachable. The route matches only `PathPrefix /joinlobby`, so the method's `GET /` probe falls outside its match set and Traefik answers 404. The backend also 404s a parameterless path on purpose: `lobby-server/src/steam_redirect.rs` requires `/steam/{action}/{params}` with an allowlisted app id. The table keeps `404` because that is what `/` returns, but the class is `path-scoped-404`, not a reachability finding. `https://mm.b.hero.rehab/joinlobby/357190/<lobby_id>/<owner_steamid>` — the form `timestone-lobby-watcher` links to — returns 200 through the public WAN with a valid certificate, on the `fd00:6::6` VIP as well, and :80 redirects to it.
 
+> **Correction 2026-11-13:** `default/litellm` (`llm.2143.me`) does have its own login. The Admin UI signs in through SSO (generic OAuth via `au.2143.me`), and since `0a4c5ac` the env-credential path — `admin` plus the proxy master key — is disabled (`general_settings.disable_env_credential_login: true` in `workloads/llm-proxy/configmap.yaml`). The anonymous 200 is the login page, not an unauthenticated admin surface. See [llm-proxy: the Admin UI is SSO-only](2026-11-13-litellm-ui-sso-only.md)
+
 **Context:** the SeaweedFS admin lockdown (filer UI behind oauth2-proxy, `seaweedfs.yaml` ingress policies). This record lists every other admin surface and its auth state. It fixes nothing; the follow-ups are the backlog.
 
 ## Method
