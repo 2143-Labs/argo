@@ -201,23 +201,27 @@ class TestVideoCall(HttpCase):
         )
 
     def test_ice_servers_use_short_lived_turn_credentials(self):
-        with patch.dict(os.environ, {"TURN_AUTH_SECRET": "test-secret"}):
+        urls = "turn:s1.edge.2143.me:3478?transport=udp,turn:s2.edge.2143.me:3478?transport=tcp"
+        env = {
+            "TURN_AUTH_SECRET": "test-secret",
+            "TURN_URLS": urls,
+            "TURN_USER_LABEL": "odoo-aross",
+        }
+        with patch.dict(os.environ, env):
             servers = self.env["mail.ice.server"]._get_ice_servers()
-        self.assertEqual(len(servers), 3)
-        self.assertTrue(servers[0]["urls"].startswith("stun:"))
-        self.assertTrue(servers[1]["urls"].endswith("?transport=udp"))
-        self.assertTrue(servers[2]["urls"].endswith("?transport=tcp"))
-        for server in servers[1:]:
+        self.assertEqual([s["urls"] for s in servers], urls.split(","))
+        for server in servers:
             username = server["username"]
-            self.assertRegex(username, r"^\d+:odoo$")
+            self.assertRegex(username, r"^\d+:odoo-aross$")
             self.assertAlmostEqual(
                 int(username.split(":")[0]), time.time() + 6 * 3600, delta=60
             )
-            credential = base64.b64encode(
+            expected = base64.b64encode(
                 hmac.new(b"test-secret", username.encode(), hashlib.sha1).digest()
             ).decode()
-            self.assertEqual(server["credential"], credential)
+            self.assertEqual(server["credential"], expected)
         self.assertFalse(self.env["mail.ice.server"].search([]))
-        with patch.dict(os.environ):
-            os.environ.pop("TURN_AUTH_SECRET", None)
+        # No TURN_URLS: the relay list is unset, so stock behaviour applies.
+        with patch.dict(os.environ, {"TURN_AUTH_SECRET": "test-secret"}):
+            os.environ.pop("TURN_URLS", None)
             self.assertFalse(self.env["mail.ice.server"]._get_ice_servers())

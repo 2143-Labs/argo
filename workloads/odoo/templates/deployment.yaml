@@ -146,6 +146,12 @@ spec:
                   name: odoo-turn
                   key: turn_secret
                   optional: true
+            # The edge relay fleet's URL list, and the label that names this
+            # company in coturn's logs (<expiry>:odoo-<id>).
+            - name: TURN_URLS
+              value: {{ .Values.turnUrls | quote }}
+            - name: TURN_USER_LABEL
+              value: odoo-{{ .Values.id }}
             {{- end }}
           ports:
             - name: http

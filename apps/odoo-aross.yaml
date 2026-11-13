@@ -7,8 +7,8 @@
 # Pocket ID client secret is in OpenBao. caldav is on: ExternalSecret
 # odoo-caldav reads john2143-com/odoo-aross/caldav (the iCloud
 # app-specific passwords, one entry per bridged employee). turn is on:
-# ExternalSecret odoo-turn reads john2143-com/steam-lobby/steam-lobby-turn, the
-# steam-lobby coturn's TURN REST secret, for Discuss video calls. docs/odoo.md.
+# ExternalSecret odoo-turn reads edge/turn/odoo-aross, this company's secret on
+# the shared edge relay (edge-tofu s1/s2), for Discuss video calls. docs/odoo.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
