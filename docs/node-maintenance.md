@@ -24,6 +24,41 @@ How a k3s node leaves and rejoins the edge without router edits and without drop
 5. Confirm on the router: `mikrotik-connect r '/routing bgp session print proplist=remote.address,prefix-count where remote.address=<node-ip>'` → still established, `prefix-count=0`. Do not continue until it is 0.
 6. `ssh 192.168.5.36 'kubectl drain <node> --ignore-daemonsets --delete-emptydir-data --timeout=15m'`, then do the maintenance. If it times out on a PodDisruptionBudget, do not force it: uncordon, remove the label ("Return a node" steps 2–3), and report the blocking pod.
 
+## Move a CNPG instance off a node
+
+Needed when a cluster's placement rule must change — for example, to stop a database landing on a
+node that is being reduced to storage only (2026-11-13, `nas`). Editing `spec.affinity` on a
+`Cluster` is **not** future-only, and an existing volume cannot be moved:
+
+1. **Every instance pod rolls, the primary included.** The affinity block is part of the pod
+   template, so the operator recreates all instances. With the default `primaryUpdateStrategy:
+   unsupervised` the primary is restarted **without a switchover** — expect a few seconds of failed
+   connections (litellm logged `P1001` for ~6 s). The instance-manager gives a shutting-down primary
+   a 1800 s grace period; if postgres has already stopped and the pod stays `Terminating` (readiness
+   "server is alive but rejecting connections"), it will sit for 30 minutes. Force it:
+
+   `ssh 192.168.5.36 'kubectl -n <ns> delete pod <instance> --grace-period=0 --force'` — WAL is on
+   disk, so the replacement starts with ordinary crash recovery.
+2. **A replica whose volume is pinned to the now-forbidden node goes `Pending`**, with
+   `N node(s) didn't match PersistentVolume's node affinity`. `longhorn-cnpg` is single-replica, so
+   an existing volume attaches only on the node holding its replica; only a *new* volume can be
+   placed elsewhere.
+3. **Recreate the replica rather than moving it.** Confirm it is not the primary first
+   (`-o jsonpath='{.status.currentPrimary}'`), then in this order:
+   - delete the pod — a `Pending` pod blocks the next step, because the operator recreates a missing
+     PVC only once no pod exists for that instance;
+   - delete **both** PVCs: `<instance>` and `<instance>-wal` (WAL is its own volume whenever
+     `walStorage` is set; leaving it behind keeps the pod pinned to the old node);
+   - wait. The operator creates fresh PVCs and a `<instance>-join-*` pod runs `pg_basebackup` from
+     the primary. 25 GiB took ~5 min; the application keeps serving from the primary throughout.
+4. **Verify**: `status.readyInstances == spec.instances`, every instance `2/2 Running` on an allowed
+   node, and no `Pending` pods. `.status.currentPrimary` may have moved — failover to the promoted
+   instance is normal and needs no correction.
+
+Scaling `instances` down and back up achieves the same result for the highest index (CNPG deletes
+that instance *with* its PVCs), but it cannot move instance 1 — the PVC path above is the general
+case, and it is the only one available when the instance to move is the lowest number.
+
 ## Return a node
 
 1. `ssh 192.168.5.36 'kubectl get node <node>'` → `Ready`; its `metallb-speaker` and `metallb-frr-k8s` pods are `Running`; the router session for `<node-ip>` is established with `prefix-count=0`.
