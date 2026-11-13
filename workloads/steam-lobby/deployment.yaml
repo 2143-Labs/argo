@@ -48,7 +48,7 @@ spec:
               name: steam-lobby-turn
               key: turn_secret
         - name: LOBBY_TURN_URIS
-          value: "turn:s2.edge.2143.me:3478?transport=udp,turn:s2.edge.2143.me:3478?transport=tcp"
+          value: "turn:s1.edge.2143.me:3478?transport=udp,turn:s2.edge.2143.me:3478?transport=udp,turn:s1.edge.2143.me:3478?transport=tcp,turn:s2.edge.2143.me:3478?transport=tcp"
         - name: DISCORD_CLIENT_ID
           valueFrom:
             secretKeyRef:

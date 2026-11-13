@@ -31,7 +31,9 @@ spec:
             allow_room_creation: true
 
             turn_uris:
+              - "turn:s1.edge.2143.me:3478?transport=udp"
               - "turn:s2.edge.2143.me:3478?transport=udp"
+              - "turn:s1.edge.2143.me:3478?transport=tcp"
               - "turn:s2.edge.2143.me:3478?transport=tcp"
             turn_secret_file: "/etc/tuwunel/secrets/turn/turn_secret"
 
