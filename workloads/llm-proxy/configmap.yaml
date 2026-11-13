@@ -383,7 +383,7 @@ data:
       #
       # Two groups because include_labels is validated per metric at startup and
       # the provider-cache counters have no `requested_model` label.
-      callbacks: ["prometheus", "balance_metrics.BalanceLogger"]
+      callbacks: ["prometheus", "balance_metrics.proxy_handler_instance"]
       prometheus_metrics_config:
         - group: "tokens"
           metrics:
@@ -482,7 +482,7 @@ data:
   #
   # Mounted at /etc/litellm-pyfilter (whole ConfigMap, no items:), which is the
   # first entry on PYTHONPATH, so litellm_settings.callbacks can name it as
-  # `balance_metrics.BalanceLogger` (callback_utils.get_instance_fn splits on
+  # `balance_metrics.proxy_handler_instance` (callback_utils.get_instance_fn splits on
   # `.` and instantiates module.ClassName).
   #
   # Runs inside the proxy process on purpose: the pod already holds the four
@@ -497,7 +497,8 @@ data:
   balance_metrics.py: |
     """DeepSeek account balances as Prometheus gauges for the litellm proxy.
 
-    Loaded by name from ``litellm_settings.callbacks`` (``balance_metrics.BalanceLogger``);
+    Loaded by name from ``litellm_settings.callbacks``
+    (``balance_metrics.proxy_handler_instance``);
     the ConfigMap is mounted on PYTHONPATH at /etc/litellm-pyfilter. Gauges register on
     prometheus_client's default REGISTRY, which is the registry litellm's /metrics app is
     mounted against when PROMETHEUS_MULTIPROC_DIR is unset.
@@ -583,3 +584,10 @@ data:
                 if info.get("currency") == "USD"
             ]
             return sum(usd) if usd else None
+
+
+    # The callback loader refuses a bare class: a dotted path that resolves to a type
+    # raises at startup ("neither a CustomLogger instance nor a callable"), so the
+    # config points at this module-level instance instead
+    # (proxy/common_utils/callback_utils.py, _classify_loaded_callback).
+    proxy_handler_instance = BalanceLogger()
