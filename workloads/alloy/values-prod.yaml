@@ -110,7 +110,7 @@ alloy:
       prometheus.relabel "kubelet_metrics" {
         rule {
           source_labels = ["__name__"]
-          regex         = "apiserver_.*|etcd_.*|scheduler_.*|workqueue_.*|rest_client_.*|go_.*|process_.*|grpc_.*|kubernetes_feature_.*|node_namespace_.*"
+          regex         = "apiserver_.*|etcd_.*|scheduler_.*|workqueue_.*|rest_client_.*|go_.*|process_.*|grpc_.*|kubernetes_feature_.*|node_namespace_.*|apiextensions_.*|watch_cache_.*|session_server_.*|hpa_controller_.*|pv_collector_.*|lasso_.*|registered_metrics_total|kubeproxy_.*|k3s_.*"
           action        = "drop"
         }
         forward_to = [prometheus.remote_write.mimir.receiver]
@@ -140,10 +140,12 @@ alloy:
           regex         = "longhorn-system"
           action        = "drop"
         }
-        // Families nothing queries (0 references in workloads/).
+        // Families nothing queries (0 references in workloads/). container_fs_* has
+        // no pod or container label on this cluster, so the numbers cannot be joined
+        // to a workload; 12,428 series in total.
         rule {
           source_labels = ["__name__"]
-          regex         = "container_tasks_state|container_memory_failures_total|container_blkio_device_usage_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total"
+          regex         = "container_tasks_state|container_memory_failures_total|container_blkio_device_usage_total|container_fs_.*"
           action        = "drop"
         }
         forward_to = [prometheus.remote_write.mimir.receiver]
@@ -220,6 +222,14 @@ alloy:
         rule {
           source_labels = ["__name__"]
           regex         = "kube_(deployment|statefulset|namespace)_.*"
+          action        = "drop"
+        }
+        // Families nothing reads (argo dashboards and alerts, pite's rules, the
+        // status page). rots-prod alone has 2,013 Services and 3,013 EndpointSlices;
+        // 417 of 537 ReplicaSets are scaled to zero.
+        rule {
+          source_labels = ["__name__"]
+          regex         = "kube_endpointslice_(info|created|ports)|kube_service_(info|created)|kube_replicaset_.*|kube_pod_tolerations|kube_pod_ips|kube_persistentvolume_.*|kube_(secret|configmap)_.*|kube_(lease|validatingwebhookconfiguration|mutatingwebhookconfiguration|networkpolicy)_.*|kube_volumeattachment_(labels|status_attachment_metadata)|kube_.*_created"
           action        = "drop"
         }
         forward_to = [prometheus.remote_write.mimir.receiver]
@@ -562,6 +572,29 @@ alloy:
         }
         output {
           traces  = [otelcol.processor.batch.traces.input]
+          metrics = [otelcol.processor.filter.beyla_metrics.input]
+        }
+      }
+
+      // Beyla histograms nothing reads: the four HTTP body-size families, and the
+      // Kubernetes-API client calls made by the CNPG instance manager inside every
+      // *-db pod (most of those services' series). db.* and http.server.* stay.
+      // OTTL string literals take Go-style escapes, so "\." must be written "[.]".
+      otelcol.processor.filter "beyla_metrics" {
+        error_mode = "ignore"
+
+        metric_conditions {
+          context    = "metric"
+          conditions = [
+            `metric.name == "http.server.request.body.size"`,
+            `metric.name == "http.server.response.body.size"`,
+            `metric.name == "http.client.request.body.size"`,
+            `metric.name == "http.client.response.body.size"`,
+            `resource.attributes["service.name"] != nil and IsMatch(resource.attributes["service.name"], "-db$") and IsMatch(metric.name, "^http[.]client[.]")`,
+          ]
+        }
+
+        output {
           metrics = [otelcol.processor.batch.metrics.input]
         }
       }
