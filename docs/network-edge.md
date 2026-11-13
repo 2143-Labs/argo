@@ -42,18 +42,14 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 |---|---|---|---|---|
 | web, web3 | 80, 443 | `ingress http (tcp/80) -> traefik VIP (ingress-follow)`, `ingress https (tcp/443) -> traefik VIP (ingress-follow)` | ingress VIP (`.6.6`; kept current by router script `ingress-follow`) | Traefik (`shared-gateway`) |
 | mail-smtp, mail-submission, mail-imap | 25, 587, 993 | `mail-smtp (tcp/25) -> .6.13` and the 587/993 twins | `.6.13` | stalwart |
-| Coturn TURN | 3478 | `steam-lobby coturn TURN (tcp/3478) -> .6.14`, `… (udp/3478) …` | `.6.14` | steam-lobby/coturn |
-| p2p relays | 45000-45063 | `steam-lobby coturn relay (udp/45000-45063) -> .6.14` | `.6.14` | steam-lobby/coturn relay range |
 | headscale stun | 3479 | `headscale stun (udp/3479) -> .6.18` | `.6.18` | headscale embedded DERP STUN |
 | (9987 entry) | 9987 | `teamspeak voice (udp/9987) -> .6.15` | `.6.15` | ts-voice |
 | ts-files | 30033 | `teamspeak file transfer (tcp/30033) -> .6.15` | `.6.15` | ts-voice |
-| rct2 | 11753 | `openrct2 (tcp/11753) -> .6.17` | `.6.17` | openrct2 (scaled to 0: no answer, see fail-closed below) |
-| LiveKit WebRTC TCP (TCP only) | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` | `.6.22` | matrix/livekit-server-rtc |
+| LiveKit WebRTC TCP (TCP only) — **dark, kept** | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` (rule present, no Verizon forward) | `.6.22` | matrix/livekit-server-rtc, Deployment `0/0` |
 | factorio | 34197 | `factorio (udp/34197) -> .6.28` | `.6.28` | factorio-game |
 | mc | 25565 | `minecraft (tcp/25565) -> .6.29` | `.6.29` | minecraft-game |
 | rots prod | 36000-37999 | `rots prod gameservers (udp/36000-37999) -> .6.32` (MikroTik 2026-11-10, Verizon `36000-37999 -> 192.168.0.2` added 2026-11-11) | `.6.32` | `rots-prod/rots-gs-<i>-udp`, 1000 slots in use (`36000 + i`) |
 | rots previews (UDP only. Factorio's udp/34197 falls inside it (only PR N%1000=799 would collide; the factorio rule is listed first)) | 31000-34999 | `rots previews gameservers (udp/31000-34999) -> .6.33` | `.6.33` | `rots-pr-<N>/rots-gs-0-udp`, port `31000+4*(N%1000)` |
-| monero | 18080 | `monero p2p (tcp/18080) -> .5.76` | `192.168.5.76` | Monero on arch (bare metal) |
 | wg | 51820 | none: input rule `wireguard remote access` | the router | `wg-remote` tunnel to the DigitalOcean cluster |
 | attic local | 8280 | none (goes to home-pi) | `192.168.0.154` | Attic cache used by the Hetzner nodes |
 | minecraft enigmatic skies | 25555 → 32565 | **none** | — | **dead**: nothing forwards 32565; remove it from Verizon |
@@ -64,7 +60,8 @@ uses TURN over TLS on 443.
 
 Verified 2026-10-16 from check-host.net: TCP 80, 443, 587, 993, 3478, 7881, 8280,
 18080, 25565 and 30033 connect from 3 of 3 nodes, and TCP 25 from 2 of 3; UDP
-3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik.
+3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik. Of those, 3478, 45000-45063,
+11753, 18080 and (for now) 7881 are deliberately gone as of 2026-11-13 - see below.
 
 Verified 2026-11-11 for the ROTS ranges, which is also the method worth reusing: a UDP
 probe that only times out proves nothing, because a closed Verizon forward and a silent far
@@ -74,14 +71,18 @@ Fifteen check-host packets to 37999, 37000 and 36500 moved the `rots prod` rule'
 5 of 5 nodes; `36000` (slot 0, nothing running) drew ICMP unreachable from the VIP. So the
 whole range is open WAN → MikroTik → `192.168.6.32` → pod, not just the part with a listener.
 
-**Five rows above are dead as of 2026-11-11**, found with the same counter method while checking
-the ROTS previews rule: `3478/tcp` and `45000-45063/udp` (coturn), `7881/tcp` (livekit),
-`11753/tcp` (openrct2) and `18080/tcp` (monero). The MikroTik still dst-nats every one of them,
-but their packet counters stay flat under a probe from outside, so the packets never reach the
-router — the Verizon forward is gone, not the service. All five connected from check-host on
-2026-10-16. `34197/udp` (factorio) still arrives, so this is five forwards, not a blanket change;
-it may have been a deliberate trim. Restore the Verizon entries (same ports → `192.168.0.2`) or
-retire the MikroTik rules, but do not trust the table's rows until one of the two happens.
+**TURN left the house on 2026-11-13.** coturn now runs on the fungible edges —
+`s1.edge.2143.me` and `s2.edge.2143.me` answer `tcp/3478` and STUN from the internet — so the
+home Verizon forwards and the MikroTik dst-nats for `3478` TCP+UDP and `45000-45063` UDP were
+retired. `18080` (monero) and `11753` (openrct2) were retired with them, on purpose: monero
+because an unpatched P2P daemon on the public internet is a 0-day liability, openrct2 because
+it is parked at 0 replicas. The in-cluster coturn LBs (`steam-lobby` `.6.14`, `matrix` `.6.21`)
+remain LAN-reachable and are not public paths.
+
+All of them had already stopped arriving (found 2026-11-11 with the counter method: flat under a
+probe while `34197/udp` moved), so removing the rules changed no traffic — it only stopped the
+config from claiming doors that were not there. `7881` (livekit) is the last remnants-of-a-move
+case: rule kept, Deployment `0/0`, Verizon forward gone.
 
 ## Adding a public port
 
