@@ -13,9 +13,10 @@ filestoreSize: ""  # odoo-filestore PVC size
 oidc: false        # true once OpenBao john2143-com/<namespace>/oidc exists (docs/odoo.md)
 caldav: false      # true to inject CALDAV_CREDENTIALS (iCloud bridge, docs/odoo.md)
 turn: false        # true to inject TURN_AUTH_SECRET (Discuss call relay, docs/odoo.md)
-# Edge relay fleet (edge-tofu s1/s2); s1 first because it is the US slot. One
-# comma-bearing value, so it lives here and not in apps/.
-turnUrls: "turn:s1.edge.2143.me:3478?transport=udp,turn:s2.edge.2143.me:3478?transport=udp,turn:s1.edge.2143.me:3478?transport=tcp,turn:s2.edge.2143.me:3478?transport=tcp"
+# Edge relay fleet (edge-tofu). One
+# comma-bearing value, so it lives here and not in apps/. Only the slot
+# that currently boots is listed: adding s1 is one more URL pair here.
+turnUrls: "turn:s2.edge.2143.me:3478?transport=udp,turn:s2.edge.2143.me:3478?transport=tcp"
 
 # Built by .github/workflows/odoo-image.yml from workloads/odoo/image.
 image: ghcr.io/2143-labs/odoo:sha-a71417017aaab47da8e20d471b342592962e61b0
