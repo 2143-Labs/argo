@@ -1,0 +1,52 @@
+# llm-proxy (namespace default): the only peers that may reach the proxy API.
+#
+# Exception to 00-pattern.yaml, which leaves `default` unpoliced: this is a
+# pod-scoped, ingress-only policy on the litellm pods. Every other pod in
+# default, and all egress, stays default-allow.
+#
+# Who may reach what (audited 2026-11-13 against HTTPRoutes and the Alloy config):
+#   4000  the OpenAI-compatible API and /metrics (bearer token required).
+#         Traefik: llm.2143.me via shared-gateway
+#         (workloads/llm-proxy/httproute.yaml) - the only in-cluster client.
+#         Alloy: the `litellm` scrape job, per pod IP
+#         (workloads/alloy/values-prod.yaml, discovery.kubernetes role=pod).
+#   other ports: nothing. The UI is served by the same listener.
+#
+# Kubelet probes need no rule: kube-router accepts sources local to the pod's
+# node, and probes arrive from the node's cni0 address (10.42.<n>.1) - see the
+# same note in seaweedfs.yaml.
+#
+# Redis (litellm -> litellm-redis:6379) and Postgres are EGRESS from these pods
+# and are unaffected by an ingress policy.
+#
+# A new consumer outside kube-system/observability fails closed: add its
+# namespace here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: litellm
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  podSelector:
+    matchLabels:
+      app: litellm
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
+      ports:
+        - port: 4000
+          protocol: TCP

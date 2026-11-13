@@ -1,0 +1,1253 @@
+# Longhorn per-volume state, health, latency and capacity. One target per
+# longhorn-manager pod, so every volume's owner reports it. No alerts: the
+# dashboard is the deliverable. Provisioned by the Grafana sidecar's dashboard
+# folder (label grafana_dashboard: "1").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: longhorn-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  longhorn.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 1,
+          "title": "Managers reporting (5 expected)",
+          "type": "stat",
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "count(up{job=\"longhorn\"} == 1)",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 5
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "description": "One target per longhorn-manager pod. Below 5 means a node's volumes, replicas and disks are missing."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 2,
+          "title": "Attached volumes",
+          "type": "stat",
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "count(longhorn_volume_state{state=\"attached\"} == 1)",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 3,
+          "title": "Volumes by robustness",
+          "type": "stat",
+          "gridPos": {
+            "h": 5,
+            "w": 8,
+            "x": 8,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "count by (state) (longhorn_volume_robustness == 1)",
+              "refId": "A",
+              "legendFormat": "{{state}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "description": "Detached volumes report state=\"unknown\"; healthy, degraded and faulted are the states that matter."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 4,
+          "title": "Degraded or faulted volumes",
+          "type": "table",
+          "gridPos": {
+            "h": 5,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc, volume, node, state) (longhorn_volume_robustness{state=~\"degraded|faulted\"} == 1)",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 5,
+          "title": "Volume attached, by node",
+          "description": "One row per volume; green while the volume is attached. Gaps are detached periods.",
+          "type": "state-timeline",
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 5
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc, node) (longhorn_volume_state{state=\"attached\", pvc_namespace=~\"$ns\", pvc=~\"$pvc\"}) == 1",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}} @ {{node}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "1": {
+                      "text": "attached",
+                      "color": "green"
+                    }
+                  }
+                }
+              ],
+              "custom": {
+                "fillOpacity": 70,
+                "lineWidth": 0
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "mergeValues": true,
+            "showValue": "never",
+            "rowHeight": 0.9,
+            "legend": {
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 6,
+          "title": "Pods on attached Longhorn volumes",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 14
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc, pod) (label_replace(label_replace(kube_pod_spec_volumes_persistentvolumeclaims_info, \"pvc_namespace\", \"$1\", \"namespace\", \"(.+)\"), \"pvc\", \"$1\", \"persistentvolumeclaim\", \"(.+)\")) * on (pvc_namespace, pvc) group_left (node) max by (pvc_namespace, pvc, node) (longhorn_volume_state{state=\"attached\"} == 1)",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          },
+          "description": "A volume reported by two managers during an ownership hand-over can briefly raise a many-to-many matching error; it clears on the next scrape."
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "id": 7,
+          "title": "Attach, detach and rebuild events",
+          "description": "Kubernetes events for volumes and PVCs. The timestamp is the event's own time, so this is exact where the 30 s scrape is coarse.",
+          "type": "logs",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{job=\"kube-events\", cluster=\"home\"} | json | reason=~\"Attached|Detached|DetachedUnexpectedly|SuccessfulAttachVolume|FailedAttachVolume|FailedMount|Rebuilding|Rebuilt|Degraded|Faulted|Healthy\" | line_format \"{{.type}} {{.kind}}/{{.name}} {{.reason}}: {{.msg}}\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 8,
+          "title": "Write latency",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 22
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_write_latency{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ns",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 9,
+          "title": "Read latency",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 22
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_read_latency{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ns",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 10,
+          "title": "Write IOPS",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 30
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_write_iops{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "iops",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 11,
+          "title": "Read IOPS",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 30
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_read_iops{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "iops",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 12,
+          "title": "Write throughput",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 30
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_write_throughput{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 13,
+          "title": "Read throughput",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 30
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (pvc_namespace, pvc) (longhorn_volume_read_throughput{pvc_namespace=~\"$ns\", pvc=~\"$pvc\"})",
+              "refId": "A",
+              "legendFormat": "{{pvc_namespace}}/{{pvc}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 14,
+          "title": "Replicas by node and state",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "count by (node, state) (longhorn_replica_state == 1)",
+              "refId": "A",
+              "legendFormat": "{{node}} {{state}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 15,
+          "title": "Engine replica modes (WO = rebuilding, ERR = failed)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "count by (mode) (longhorn_engine_replica_mode == 1)",
+              "refId": "A",
+              "legendFormat": "{{mode}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 16,
+          "title": "Attach/detach transitions",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "sum(changes(longhorn_volume_state{state=\"attached\"}[$__rate_interval]))",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "Churn across all volumes; a volume that flaps shows up here before it shows up anywhere else."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 17,
+          "title": "Disk used",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 46
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (node, disk) (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes)",
+              "refId": "A",
+              "legendFormat": "{{node}}/{{disk}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 18,
+          "title": "Storage scheduled vs capacity",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 46
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (node) (longhorn_node_storage_scheduled_bytes / longhorn_node_storage_capacity_bytes)",
+              "refId": "A",
+              "legendFormat": "{{node}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 19,
+          "title": "Node conditions that are false",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 46
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (node, condition) (longhorn_node_status) == 0",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 20,
+          "title": "Largest volumes (actual size)",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 54
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "topk(15, max by (pvc_namespace, pvc) (longhorn_volume_actual_size_bytes))",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 21,
+          "title": "Time since last backup",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 54
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "time() - max by (pvc_namespace, pvc) (longhorn_volume_last_backup_at > 0)",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 22,
+          "title": "Instance manager CPU (millicores)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 4,
+            "x": 16,
+            "y": 54
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (node) (longhorn_instance_manager_cpu_usage_millicpu)",
+              "refId": "A",
+              "legendFormat": "{{node}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 23,
+          "title": "Instance manager memory",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 4,
+            "x": 20,
+            "y": 54
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "max by (node) (longhorn_instance_manager_memory_usage_bytes)",
+              "refId": "A",
+              "legendFormat": "{{node}}",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": [
+        "longhorn",
+        "storage"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": true,
+              "text": [
+                "All"
+              ],
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "mimir"
+            },
+            "definition": "label_values(longhorn_volume_state, pvc_namespace)",
+            "includeAll": true,
+            "allValue": ".*",
+            "label": "namespace",
+            "multi": true,
+            "name": "ns",
+            "options": [],
+            "query": {
+              "query": "label_values(longhorn_volume_state, pvc_namespace)",
+              "refId": "StandardVariableQuery"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "type": "query",
+            "hide": 0
+          },
+          {
+            "current": {
+              "selected": true,
+              "text": [
+                "All"
+              ],
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "mimir"
+            },
+            "definition": "label_values(longhorn_volume_state{pvc_namespace=~\"$ns\"}, pvc)",
+            "includeAll": true,
+            "allValue": ".*",
+            "label": "volume",
+            "multi": true,
+            "name": "pvc",
+            "options": [],
+            "query": {
+              "query": "label_values(longhorn_volume_state{pvc_namespace=~\"$ns\"}, pvc)",
+              "refId": "StandardVariableQuery"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "type": "query",
+            "hide": 0
+          }
+        ]
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Longhorn",
+      "uid": "longhorn",
+      "version": 1
+    }
