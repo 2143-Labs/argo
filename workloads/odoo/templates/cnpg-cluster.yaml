@@ -21,13 +21,16 @@ spec:
     podAntiAffinityType: required
     topologyKey: kubernetes.io/hostname
     nodeAffinity:
-      # arch's Longhorn disk cannot provision new volumes (below the 25% floor).
+      # Kept off: arch (its Longhorn disk is below the 25% floor and cannot
+      # provision a volume), nas (its RAM is reserved for ZFS/NFS and the
+      # storage pods that cannot run anywhere else), pite (arm64 and tiny),
+      # office (wifi taint; the validating policy denies storage-backed pods).
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
           - matchExpressions:
               - key: kubernetes.io/hostname
                 operator: NotIn
-                values: [arch]
+                values: [arch, nas, pite, office]
       # Preferred only: a required rule would stop the operator from recreating
       # a lost instance on the remaining node.
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -36,7 +39,7 @@ spec:
             matchExpressions:
               - key: kubernetes.io/hostname
                 operator: In
-                values: [big, nas]
+                values: [big, closet]
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
     requests:

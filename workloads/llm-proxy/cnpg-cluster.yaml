@@ -11,6 +11,24 @@ spec:
     enablePodAntiAffinity: true
     podAntiAffinityType: required
     topologyKey: kubernetes.io/hostname
+    # Same placement policy as the rots/odoo clusters: never on nas (its RAM is
+    # reserved for the host and the storage pods only it can run), arch (no new
+    # Longhorn volumes, disk below the 25% floor), pite (arm64) or office (wifi
+    # taint; the validating policy denies storage-backed pods).
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch, nas, pite, office]
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [big, closet]
   imageName: ghcr.io/cloudnative-pg/postgresql:16.6
   resources:
     requests:

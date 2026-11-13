@@ -30,7 +30,20 @@ spec:
       automountServiceAccountToken: false
       affinity:
         nodeAffinity:
+          # nas is reserved for the storage pods that cannot run anywhere else.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values: [nas]
           preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: [office]
             - weight: 100
               preference:
                 matchExpressions:
