@@ -50,6 +50,11 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 3
         resources:
+          # 30d peak is 3993 MiB (97.5% of this limit) with p95 1371 MiB, so 4Gi
+          # is the ceiling nas can carry: the filer's volume has numberOfReplicas=1
+          # (pinned to nas) and nas has ~724 MiB of unrequested memory with this
+          # request in place. 5.5Gi/6Gi cannot schedule there until nas's kube
+          # allocation is reduced or the volume/instance placement changes.
           requests: {memory: "4Gi", cpu: "1000m"}
           limits: {memory: "4Gi", cpu: "1000m"}
         volumeMounts:
