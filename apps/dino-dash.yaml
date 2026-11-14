@@ -28,7 +28,7 @@ spec:
         - { name: routeName, value: dino-dash }
         # Until master's first build (dsstar's next sign-off) this pins the image prod
         # already served: the 2026-11-02 build of dev 2ec7fbd.
-        - { name: image.tag, value: sha-d10a04f41f101a5b491102bf97187ee442206c5b }
+        - { name: image.tag, value: sha-edd475339686f7671dc3f138870d083b12fbc7da }
         - { name: gameserver.replicas, value: '1' }
   destination:
     server: https://kubernetes.default.svc
