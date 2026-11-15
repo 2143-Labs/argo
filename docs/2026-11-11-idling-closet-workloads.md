@@ -9,6 +9,13 @@ moves (23.4 GiB → 21.3 GiB).
 This is a deliberate, temporary state. The manifests are the truth, so bringing a
 workload back is an edit to `replicas`, never a cluster action.
 
+> **Correction 2026-11-15.** `coturn` is no longer *idled* — it is **retired**. Both
+> in-cluster coturns were deleted (`5098365`, and `ba2bba2` for the leftover manifests):
+> TURN runs on the edge slots (`s1`/`s2.edge.2143.me:3478`) and `Secret/steam-lobby-turn`
+> now mints credentials for those. There is no `replicas` to set and no `workloads/coturn/`
+> to restore, and the VIPs `.6.14` and `.6.21` went back to the free pool. Every other row
+> in this document still describes real zero-replica workloads.
+
 ## What runs at zero
 
 | workload | ns | before | notes |
