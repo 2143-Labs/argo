@@ -5,6 +5,8 @@ Commits: `2232e49` (llm-proxy: order deepseek primary before its backup, cordon 
 
 > **Correction 2026-11-11 (later the same day):** `DEEPSEEK_API_KEY` was split into `DEEPSEEK_API_KEY1` + `DEEPSEEK_API_KEY2`, so the ordered pair below became a 50/50 pool with the backup at `weight: 0`. Every statement about `order: 1` / `order: 2` in this record is superseded by [Two balanced keys](#two-balanced-keys-superseding-the-ordered-pair).
 
+> **Correction 2026-11-13:** the sentence below claiming an unset `model_info.id` gets "a uuid4 per process" is wrong. The id is `sha256(model_group + litellm_params)` (`Router.generate_model_id`, `router.py:9463`), so it is stable across restarts — but the hash is taken over the **resolved** key when `api_key` is `os.environ/X`, so rotating that provider key changes the id and starts a new series. All 28 deployments now carry a named `model_info.id`, which pins it. See [2026-11-13-litellm-metrics-and-alerts.md](2026-11-13-litellm-metrics-and-alerts.md).
+
 ## What was added
 
 `deepseek/*` used to be a single deployment on `DEEPSEEK_API_KEY`. It is now an ordered pair plus a second group for the org account, all in `workloads/llm-proxy/configmap.yaml`:
