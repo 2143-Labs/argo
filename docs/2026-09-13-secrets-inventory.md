@@ -76,6 +76,14 @@ The migration into OpenBao is now done, but that does **not** un-disclose anythi
 
 Each one has a row in the rotation backlog below. They cannot be un-committed, so **the only correct action on these is rotation** — deleting them from git without a working replacement would simply break the workloads.
 
+> **Correction 2026-11-15.** Two entries above have changed. `workloads/unifi/` is gone from
+> `main` (the controller was deleted 2026-09-24) and its manifests were removed from
+> `origin/vpn-endpoints-tailnet-names` on 2026-11-15, so the MongoDB password is now
+> history-only rather than branch-tip exposure. And the `plus://…` value under `model.path` is
+> a Frigate+ **model pointer**, not the account's licence key: it names which model to fetch
+> and grants nothing by itself, because downloading still requires the account API key. The
+> `mqtt.password` beside it is a real literal and stays on the backlog.
+
 ## 2. Rotation backlog — values disclosed in a public repo
 
 Every entry below was committed in plaintext and must be considered public. Rotation is **not** performed by this change set: each one is service-affecting, and several need a third party. Ordered by exposure:

@@ -25,8 +25,8 @@ spec:
         spec:
           restartPolicy: Never
           automountServiceAccountToken: false
-          # Same resolver pin as steam-lobby/coturn-wan-ip-watcher: the IPv6 kube-dns
-          # ClusterIP (fd42:42:43::a) never answers and breaks musl lookups.
+          # Resolver pin: the IPv6 kube-dns ClusterIP (fd42:42:43::a) never answers
+          # and breaks musl lookups.
           dnsPolicy: None
           dnsConfig:
             nameservers:

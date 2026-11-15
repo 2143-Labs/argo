@@ -55,8 +55,8 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 | minecraft enigmatic skies | 25555 → 32565 | **none** | — | **dead**: nothing forwards 32565; remove it from Verizon |
 
 Every other `.6.x` service has no WAN path by design (LAN and tailnet only),
-including matrix coturn `.6.21` and LiveKit's `50000/udp`; public Matrix media
-uses TURN over TLS on 443.
+including LiveKit's `50000/udp`. No TURN listener lives in this cluster at all
+any more: TURN is on the edges as plain `tcp/3478`, with no `turns:`/443 path.
 
 Verified 2026-10-16 from check-host.net: TCP 80, 443, 587, 993, 3478, 7881, 8280,
 18080, 25565 and 30033 connect from 3 of 3 nodes, and TCP 25 from 2 of 3; UDP
@@ -76,8 +76,10 @@ whole range is open WAN → MikroTik → `192.168.6.32` → pod, not just the pa
 home Verizon forwards and the MikroTik dst-nats for `3478` TCP+UDP and `45000-45063` UDP were
 retired. `18080` (monero) and `11753` (openrct2) were retired with them, on purpose: monero
 because an unpatched P2P daemon on the public internet is a 0-day liability, openrct2 because
-it is parked at 0 replicas. The in-cluster coturn LBs (`steam-lobby` `.6.14`, `matrix` `.6.21`)
-remain LAN-reachable and are not public paths.
+it is parked at 0 replicas. Both in-cluster coturns were then deleted outright on 2026-11-15
+(`5098365`): `steam-lobby` `.6.14` and `matrix` `.6.21` are gone from the cluster and both
+addresses went back to the free pool. No TURN listener of any kind — plain, TLS or `turns:` —
+remains in the house.
 
 All of them had already stopped arriving (found 2026-11-11 with the counter method: flat under a
 probe while `34197/udp` moved), so removing the rules changed no traffic — it only stopped the
