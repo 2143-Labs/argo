@@ -185,7 +185,7 @@ document deliberately doesn't repeat it, and it gets rotated in <a href="#p10">P
   <tbody>
     <tr><td>Traefik 80/443</td><td>dst-nat → <code>192.168.6.11</code></td><td>Edge, routed by name</td></tr>
     <tr><td>Mail 25 / 587 / 993</td><td>dst-nat → Stalwart <code>.6.13</code></td><td>Edge TCP passthrough with PROXY (see <a href="#mail">Mail</a>)</td></tr>
-    <tr><td>TURN 3478 tcp+udp, relay 45000–45063/udp</td><td>dst-nat → steam-lobby coturn <code>.6.14</code></td><td>coturn runs <em>on</em> the edges</td></tr>
+    <tr><td>TURN 3478 tcp+udp, relay 45000–45063/udp</td><td><strong>Closed.</strong> The dst-nat to steam-lobby coturn <code>.6.14</code> was retired 2026-11-13 and the coturn itself deleted 2026-11-15</td><td>coturn runs <em>on</em> the edges</td></tr>
     <tr><td>LiveKit RTC 7881/tcp</td><td>dst-nat → <code>.6.22</code></td><td>Removed; media via TURN/TLS through edges</td></tr>
     <tr><td>TeamSpeak 9987/udp, 30033/tcp</td><td>dst-nat → <code>.6.15</code> only. <code>.6.16</code> (<code>ts-files</code>) was retired and its VIP no longer exists; <code>ts-voice</code> now carries voice and file transfer.</td><td>Edge UDP + TCP</td></tr>
     <tr><td>OpenRCT2 11753/tcp</td><td>dst-nat → <code>.6.17</code></td><td>Edge TCP</td></tr>
