@@ -154,7 +154,7 @@ after stage 2 (see lan-dns.md "Status").
 
 Use the same LoadBalancer path as everything else (section 5) — UDP and TCP
 ports go on the LB service (`lan-dns` 53/UDP+TCP, `mosquitto` 1883,
-`coturn` 3478 are the patterns). **Do not add NodePort services.** None remain
+`ts-voice` 9987/UDP are the patterns). **Do not add NodePort services.** None remain
 in the repo or the cluster; a workload that needs node-IP access (hostNetwork,
 mDNS) uses `hostNetwork` instead. For a LAN hostname on a non-HTTP
 LoadBalancer IP, add it to the `hosts` block in `workloads/lan-dns/configmap.yaml`
@@ -207,13 +207,11 @@ Notes:
 |---|---|---|
 | traefik (kube-system; `ingress` pool via `metallb.io/address-pool` in the k3s HelmChartConfig in dotfiles, no address pin) | 192.168.6.6 | fd00:6::6 |
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
-| steam-lobby coturn (TURN) | 192.168.6.14 | fd00:6::14 |
 | ts-voice (9987/udp + 30033/tcp file transfer) | 192.168.6.15 | fd00:6::15 |
 | openrct2-game | 192.168.6.17 | fd00:6::17 |
 | headscale-stun | 192.168.6.18 | fd00:6::18 |
 | mosquitto (1883) | 192.168.6.19 | fd00:6::19 |
 | temporal-frontend | 192.168.6.20 | v4-only (chart limitation) |
-| matrix coturn (3478) | 192.168.6.21 | fd00:6::21 |
 | livekit-server-rtc (7881/50000) | 192.168.6.22 | fd00:6::22 |
 | mimir-lb | 192.168.6.23 | fd00:6::23 |
 | loki-push-lb | 192.168.6.24 | fd00:6::24 |
@@ -227,8 +225,8 @@ Notes:
 | rots-preview gameservers UDP (31000-34999; every `rots-pr-*` shares it via `allow-shared-ip: rots-preview`) | 192.168.6.33 | fd00:6::33 |
 | kubernetes-api (control-plane VIP) | 192.168.5.10 | v4-only by design |
 
-**Free:** v4 `192.168.6.10`, `.12`, `.27` and `192.168.6.34–.200` (`.201–.254` reserved
-headroom); v6 `fd00:6::11`, `::12`, `::20`, `::27`, `::2a–::2f`, `::34–::ff`. Never
+**Free:** v4 `192.168.6.10`, `.12`, `.14`, `.21`, `.27` and `192.168.6.34–.200` (`.201–.254` reserved
+headroom); v6 `fd00:6::11`, `::12`, `::14`, `::20`, `::21`, `::27`, `::2a–::2f`, `::34–::ff`. Never
 reuse an in-use address; a collision surfaces as `AllocationFailed: address also
 in use by <ns>/<svc>`.
 

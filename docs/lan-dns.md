@@ -91,7 +91,6 @@ Zones: `2143.me`, `john2143.com`, `aross.studio`, `balabusta.homes`,
 | `imap.m.2143.me`, `smtp.m.2143.me` | `192.168.6.13` | Not routes (Stalwart LB) | `hosts` block |
 | `temporal-grpc.john2143.com` | `192.168.6.20` | Its TLSRoute hands TLS to a plaintext frontend and cannot work | `hosts` block + ignore label |
 | `factorio.john2143.com` | public | Also the UDP 34197 game address (router dst-nat → `.6.28`); one A record can't serve both | ignore label |
-| `turn.john2143.com` | public | steam-lobby coturn resolves it via kube-dns to learn its public `external-ip` | ignore label |
 
 ## Which devices it covers
 
