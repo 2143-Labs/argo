@@ -564,7 +564,7 @@ data:
       cam08:
         detect:
           enabled: true
-          fps: 1
+          fps: 3
           height: 1080
           width: 1920
         ffmpeg:
@@ -577,11 +577,11 @@ data:
         lpr:
           enabled: true
         motion:
-          contour_area: 10
+          contour_area: 3
           improve_contrast: false
           mask:
           - 0.712,0.005,0.715,0.066,0.995,0.07,0.997,0.002
-          threshold: 36
+          threshold: 12
         objects:
           track:
           - person
@@ -626,6 +626,8 @@ data:
             retain:
               default: 7
               mode: active_objects
+          motion:
+            days: 3
         snapshots:
           enabled: true
           retain:
