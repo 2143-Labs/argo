@@ -421,7 +421,12 @@ data:
       #
       # Two groups because include_labels is validated per metric at startup and
       # the provider-cache counters have no `requested_model` label.
-      callbacks: ["prometheus", "balance_metrics.proxy_handler_instance"]
+      #
+      # The third entry is a pre-call hook, not a metrics logger: it is registered
+      # here because `callbacks` is what populates `litellm.callbacks`, which
+      # ProxyLogging.pre_call_hook iterates. The dotted path must resolve to an
+      # instance (`callback_utils.get_instance_fn`), not a class.
+      callbacks: ["prometheus", "balance_metrics.proxy_handler_instance", "deepseek_forced_tool_choice.proxy_handler_instance"]
       prometheus_metrics_config:
         - group: "tokens"
           metrics:
@@ -629,3 +634,85 @@ data:
     # config points at this module-level instance instead
     # (proxy/common_utils/callback_utils.py, _classify_loaded_callback).
     proxy_handler_instance = BalanceLogger()
+  # Disable DeepSeek thinking for the one request shape DeepSeek refuses.
+  #
+  # DeepSeek rejects a non-auto `tool_choice` while thinking is active
+  # (`400 ... Thinking mode does not support this tool_choice`) and thinking is ON by
+  # default, so a caller that only sets `tool_choice` gets the 400 without ever asking
+  # for reasoning. `thinking: {"type":"disabled"}` wins over whatever
+  # `reasoning_effort` the caller sent (llms/deepseek/chat/transformation.py,
+  # map_openai_params), and DeepSeek accepts `required` and named choices in
+  # non-thinking mode, so the forced call survives instead of failing.
+  #
+  # Loaded by name from `litellm_settings.callbacks`
+  # (`deepseek_forced_tool_choice.proxy_handler_instance`); the ConfigMap is mounted
+  # on PYTHONPATH at /etc/litellm-pyfilter. Pre-call hooks registered this way run
+  # before routing, so the body still carries the requested model group and the
+  # caller's `tool_choice` (proxy/utils.py, ProxyLogging.pre_call_hook). Must never
+  # raise into the request path.
+  #
+  # REMOVAL TRIGGER: delete this key and its `callbacks` entry once DeepSeek accepts
+  # forced tool choices in thinking mode. Re-check on every image bump: the last three
+  # upstream attempts (BerriAI/litellm#27628, #37470, #42475) are all unmerged, and
+  # `drop_params` cannot express this because `tool_choice` IS a supported parameter
+  # for DeepSeek - only the *value* is illegal.
+  deepseek_forced_tool_choice.py: |
+    """Turn thinking off for requests DeepSeek would otherwise 400.
+
+    Loaded by name from ``litellm_settings.callbacks``
+    (``deepseek_forced_tool_choice.proxy_handler_instance``); the ConfigMap is mounted
+    on PYTHONPATH at /etc/litellm-pyfilter. Must never raise into the request path.
+    """
+
+    import logging
+
+    from litellm.integrations.custom_logger import CustomLogger
+
+    logger = logging.getLogger("LiteLLM")
+
+    # Model groups on this proxy that resolve to DeepSeek (model_list below: `deepseek/*`
+    # is home traffic, `deepseek-labs/*` the org key). Prefix match because the groups are
+    # wildcards: the hook sees the requested group name, not the deployment that serves it.
+    DEEPSEEK_GROUPS = ("deepseek/", "deepseek-labs/")
+
+    # The only values DeepSeek accepts while thinking. Everything else - "required" and a
+    # named {"type": "function", ...} - is refused. A tuple, not a set: `tool_choice` is
+    # usually a dict and dicts are unhashable.
+    OPEN_TOOL_CHOICES = (None, "auto", "none")
+
+
+    def _disable_thinking_for_forced_tool_choice(data):
+        """Mutate `data` to disable thinking when a forced tool_choice would 400."""
+        if not isinstance(data, dict):
+            return
+        model = data.get("model")
+        if not isinstance(model, str) or not model.startswith(DEEPSEEK_GROUPS):
+            return
+        choice = data.get("tool_choice")
+        if choice in OPEN_TOOL_CHOICES:
+            return
+        data["thinking"] = {"type": "disabled"}
+        logger.info(
+            "deepseek guard: thinking disabled for forced tool_choice=%r model=%s",
+            choice,
+            model,
+        )
+
+
+    class DeepseekForcedToolChoiceGuard(CustomLogger):
+        """Pre-call hook: disable thinking for a forced tool_choice.
+
+        Extends CustomLogger, NOT CustomGuardrail: the guardrail branch in
+        ProxyLogging.pre_call_hook expects `apply_guardrail` semantics and would take a
+        CustomGuardrail down the unified-guardrail path instead of this event hook.
+        """
+
+        async def async_pre_call_hook(self, user_api_key_dict, cache, data, call_type):
+            try:
+                _disable_thinking_for_forced_tool_choice(data)
+            except Exception as exc:  # a guard that breaks requests is worse than the 400
+                logger.debug("deepseek guard: skipped (%r)", exc)
+            return None
+
+
+    proxy_handler_instance = DeepseekForcedToolChoiceGuard()
