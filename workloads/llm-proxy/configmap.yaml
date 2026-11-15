@@ -668,7 +668,14 @@ data:
 
     from litellm.integrations.custom_logger import CustomLogger
 
-    logger = logging.getLogger("LiteLLM")
+    # Not getLogger("LiteLLM"): that logger sits at WARNING (litellm/_logging.py,
+    # resolve_log_level with set_verbose off), so an INFO record on it is never created -
+    # the rewrite line would be silently dropped. A dotted child inherits those handlers
+    # while carrying its own level. Below WARNING the handler also routes to stdout
+    # (`LiteLLM`'s LevelRoutingStreamHandler sends WARNING+ to stderr, and the log
+    # collectors treat every stderr line as an error), which is why this is INFO.
+    logger = logging.getLogger("LiteLLM.deepseek_guard")
+    logger.setLevel(logging.INFO)
 
     # Model groups on this proxy that resolve to DeepSeek (model_list below: `deepseek/*`
     # is home traffic, `deepseek-labs/*` the org key). Prefix match because the groups are
