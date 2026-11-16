@@ -8,6 +8,8 @@ metadata:
 spec:
   revisionHistoryLimit: 3
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: steam-lobby
@@ -30,7 +32,7 @@ spec:
                       - general
       containers:
       - name: steam-lobby
-        image: ghcr.io/2143-labs/steam-lobby:43
+        image: ghcr.io/2143-labs/steam-lobby:61
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -97,7 +99,7 @@ spec:
         - name: RUST_LOG
           value: "info,lobby_server=debug"
         - name: GAME_MODES
-          value: "ranked_1v1:p2p,rps_1v1:p2p"
+          value: "pong_1v1:p2p,rps_1v1:p2p"
         # Temporal: the in-process worker runs in this pod and connects to the
         # cluster Temporal frontend in the default namespace (plaintext
         # in-cluster gRPC, mirroring the frigate-genai workers). The `pvp`
