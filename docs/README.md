@@ -24,6 +24,14 @@ Current instructions. They must always be correct: fix them in the same commit a
 - [Multi-cluster: prod + bigp nonprod, ApplicationSet cutover](multi-cluster.md)
 - [Games tracker: ArgoCD status scrape, tracker label, PR token](games-tracker.md)
 
+## Plans
+
+Proposals, not instructions. They record a design, its evidence and its open questions; a guide is where current behaviour lives, and a plan graduates into one when it lands.
+
+- [Steam QA delivery plan](steam_game_plan.md) — beta-branch builds for testers on Linux, Windows and macOS
+- [iOS delivery plan](ios_game_plan.md) — TestFlight and App Store from a self-hosted Mac
+- [Release pipeline plan](release_pipeline_plan.md) — one build promoted across web, Steam and iOS
+
 ## Records
 
 Files named `YYYY-MM-DD-*.md`, plus `worker-deployment-handoff.md` and `business_plan.md`, record what was done, why, and how it was verified. Do not rewrite them. When one goes stale, add one line directly under its title:
