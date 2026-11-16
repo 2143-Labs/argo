@@ -173,17 +173,10 @@ data:
 
     derp:
       server:
-        enabled: true
-        region_id: 999
-        region_code: "headscale"
-        region_name: "Headscale Embedded DERP"
-        verify_clients: true
-        # Own port: headscale advertises this as the region's STUNPort, so it cannot
-        # share 3478 with anything else. The router forwards WAN udp/3479 ->
-        # headscale-stun 192.168.6.18 (comment "headscale stun"); WAN 3478 is closed.
-        stun_listen_addr: "0.0.0.0:3479"
-        private_key_path: /var/lib/headscale/derp_server_private.key
-        automatically_add_embedded_derp_region: true
+        # The home relay is retired: the tailnet relays through the edge slots
+        # (regions 901/902) and derp-r (900). This also stops the STUN listener on
+        # 3479 and releases the headscale-stun VIP (192.168.6.18).
+        enabled: false
       urls: []
       paths:
         - /etc/headscale/derp.yaml
