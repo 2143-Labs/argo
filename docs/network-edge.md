@@ -62,6 +62,8 @@ Verified 2026-10-16 from check-host.net: TCP 80, 443, 587, 993, 3478, 7881, 8280
 18080, 25565 and 30033 connect from 3 of 3 nodes, and TCP 25 from 2 of 3; UDP
 3478, 3479, 9987, 34197, 45000 and 51820 reach the MikroTik. Of those, 3478, 45000-45063,
 11753, 18080 and (for now) 7881 are deliberately gone as of 2026-11-13 - see below.
+`3479` followed on 2026-11-16: the home relay was retired, so neither the Verizon entry
+nor the MikroTik rule exists any more and the port answers nothing from outside.
 
 Verified 2026-11-11 for the ROTS ranges, which is also the method worth reusing: a UDP
 probe that only times out proves nothing, because a closed Verizon forward and a silent far
