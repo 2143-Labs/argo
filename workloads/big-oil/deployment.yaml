@@ -40,7 +40,7 @@ spec:
                       - general
       containers:
         - name: big-oil
-          image: ghcr.io/2143-labs/big-oil:5
+          image: ghcr.io/2143-labs/big-oil:6
           # --since is ignored once the database holds hours; it exists so the
           # very first start backfills the league from its first hour.
           args:
