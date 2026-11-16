@@ -1,23 +1,23 @@
 # llm-proxy metrics, dashboard and balance alerts
 
 Date: 2026-11-13
-Commits: `08458e6` (metrics pipeline — PR #124), `62efd30` (callback must be an instance — PR #125), `630f10e` (ingress NetworkPolicy — PR #127), `585a43e` (scrape path, deployment ids, dashboard, alerts — PR #131).
+Commits: `08458e6` (metrics pipeline — PR #124), `62efd30` (callback must be an instance — PR #125), `630f10e` (ingress NetworkPolicy — PR #127), `585a43e` (scrape path, deployment ids, dashboard, alerts — PR #131), `83470eb` (OpenRouter balance gauge, panel and alerts).
 
-What the proxy exports, how it reaches Mimir, what the dashboard and the four alerts assume, and the two traps that cost time on the way here. The DeepSeek key layout and the affinity behaviour live in [2026-11-11-litellm-deepseek-keys.md](2026-11-11-litellm-deepseek-keys.md); this record only covers the metrics side.
+What the proxy exports, how it reaches Mimir, what the dashboard and the seven alert rules assume, and the two traps that cost time on the way here. The DeepSeek key layout and the affinity behaviour live in [2026-11-11-litellm-deepseek-keys.md](2026-11-11-litellm-deepseek-keys.md); this record only covers the metrics side.
 
 ## What exists
 
 | Piece | Where | Note |
 |---|---|---|
 | `callbacks: ["prometheus", …]` + a two-group `prometheus_metrics_config` whitelist | `workloads/llm-proxy/configmap.yaml` | Narrow on purpose — see below |
-| Balance poller (`balance_metrics.py`, a ConfigMap key of its own) | same | Polls DeepSeek `/user/balance` from inside the pod |
+| Balance poller (`balance_metrics.py`, a ConfigMap key of its own) | same | Polls DeepSeek `/user/balance` and OpenRouter `/api/v1/credits` from inside the pod |
 | `ExternalSecret/observability-litellm-metrics` | `workloads/secrets/observability-litellm-metrics.yaml` | Virtual key for Alloy's bearer token |
 | `discovery.kubernetes` + `relabel` + `prometheus.scrape "litellm"` | `workloads/alloy/values-prod.yaml` | One target per pod |
 | Ingress NetworkPolicy admitting `kube-system/traefik` and `observability/alloy` on 4000 | `workloads/network-policies/litellm.yaml` | Added with the scrape |
-| `LiteLLM proxy` dashboard, 8 panels | `workloads/observability/grafana-dashboards/litellm.yaml` | Datasource uid `mimir` |
-| 4 alert rules, group `litellm`, folder `Alerts` | `workloads/observability/grafana-dashboards/litellm-alerts.yaml` | Routed by the default ntfy policy |
+| `LiteLLM proxy` dashboard, 9 panels | `workloads/observability/grafana-dashboards/litellm.yaml` | Datasource uid `mimir` |
+| 7 alert rules, group `litellm`, folder `Alerts` | `workloads/observability/grafana-dashboards/litellm-alerts.yaml` | Routed by the default ntfy policy |
 
-Metric families in play: `litellm_input_tokens_metric_total`, `litellm_output_tokens_metric_total`, `litellm_spend_metric_total`, `litellm_provider_cache_read_input_tokens_metric_total`, `deepseek_balance_usd`, `deepseek_balance_last_success_timestamp_seconds`.
+Metric families in play: `litellm_input_tokens_metric_total`, `litellm_output_tokens_metric_total`, `litellm_spend_metric_total`, `litellm_provider_cache_read_input_tokens_metric_total`, `deepseek_balance_usd`, `deepseek_balance_last_success_timestamp_seconds`, `openrouter_balance_usd`, `openrouter_balance_last_success_timestamp_seconds`.
 
 Series carry `api_provider`, `model_id`, `requested_model` (plus `account` on the balance gauges) and **no** `cluster` label — home is the series without one. Roughly 190 series for `job="litellm"`, against a tenant total of ~185k and `max_global_series_per_user: 750000`, retention `720h`.
 
@@ -44,27 +44,36 @@ Do **not** count deployments from `/model/info`: it wildcard-expands each deploy
 
 ## Why the panels are shaped the way they are
 
-- **`max by (account)`, never `sum`.** Both replicas export the same balance; summing measures 127.30 for a 63.65 balance.
+- **`max by (account)`, never `sum`.** Both replicas export the same account-wide balance; summing the DeepSeek gauge measures 127.30 for a 63.65 balance. The same rule applies to `openrouter_balance_usd`.
 - **Runway divides by a spend rate filtered with `> 0`**, so an idle account shows "No data" rather than a number produced by dividing by a clamped epsilon.
 - **The cache-ratio denominator is input tokens**, answering "of the prompt tokens we sent, how many were served from the provider's prefix cache" (measured 0.98–0.997 for the two home keys).
 - **Everything aggregates `sum by (model_id)`** across replicas, so one pod restarting does not look like traffic stopping.
 
-## The four alerts
+## The alert rules
 
 | uid | expr | fires when |
 |---|---|---|
 | `litellm-balance-low` | `max by (account) (deepseek_balance_usd{account=~"home-key1\|home-key2"})` < 20 | 15m |
 | `litellm-balance-critical` | same < 10 | 5m |
+| `openrouter-balance-low` | `max by (account) (openrouter_balance_usd{account="openrouter"})` < 10 | 15m |
+| `openrouter-balance-critical` | same < 5 | 5m |
 | `litellm-balance-poller-stale` | `(time() - max(deepseek_balance_last_success_timestamp_seconds)) > 3600 and on() (sum(increase(litellm_input_tokens_metric_total[1h])) > 0)` | 30m |
+| `openrouter-balance-poller-stale` | `(time() - max(openrouter_balance_last_success_timestamp_seconds)) > 3600 and on() (sum(increase(litellm_input_tokens_metric_total[1h])) > 0)` | 30m |
 | `litellm-scrape-degraded` | `sum(up{job="litellm"})` < 2, `noDataState: Alerting` | 10m |
 
-Thresholds come from measured burn: $2.86/3h on home-key1 and $2.32/3h on home-key2 at the busiest (≈$23 and ≈$19 per day) against ~$63 balances, so $20 is one to six days of runway and $10 is roughly ten hours at the fast rate.
+Thresholds come from measured burn: $2.86/3h on home-key1 and $2.32/3h on home-key2 at the busiest (≈$23 and ≈$19 per day) against ~$63 balances, so $20 is one to six days of runway and $10 is roughly ten hours at the fast rate. OpenRouter thresholds are $10 low and $5 critical against an account-wide balance; the balance was $12.35 when the gauge was added. The stale rule uses the same LiteLLM-traffic gate.
 
 Three deliberate choices:
 
 - **`sum(up{...})`, not `count`.** `sum` survives one replica being unhealthy, and returns no series when the job vanishes entirely — which then trips `noDataState: Alerting` instead of reporting healthy. That is the case worth waking up for.
 - **The poller rule needs traffic.** The balance poller rides `async_log_success_event` behind a 900 s gate, so a quiet proxy legitimately has a stale gauge. The `and on() (...)` clause means "stale gauge *while* tokens are flowing", which is a broken poller rather than an idle night.
 - **`and on() (...)` instead of `scalar(x) > 0`.** PromQL rejects comparisons between scalars without the `bool` modifier; `on()` matches the two label-less sides.
+
+## OpenRouter balance extension (2026-11-16)
+
+`balance_metrics.py` also polls `https://openrouter.ai/api/v1/credits` with the existing `OPENROUTER_API_KEY`. `openrouter_balance_usd{account="openrouter"}` is `total_credits - total_usage`; when `total_credits` is 0 (BYOK), it reports 0 to match `openrouter-costs`. The freshness gauge is `openrouter_balance_last_success_timestamp_seconds`.
+
+The refresh rides the same `async_log_success_event` hook and 900 s gate as DeepSeek. A missing key skips the OpenRouter fetch; a failed fetch logs at debug and leaves the previous value untouched. The dashboard panel is id 9 at `y=21`; the three alert rules are `openrouter-balance-low`, `openrouter-balance-critical`, and `openrouter-balance-poller-stale`.
 
 ## Operational notes
 
@@ -75,4 +84,6 @@ Three deliberate choices:
 
 ## Verification that was actually run
 
-`sum(up{job="litellm"})` = 2 on both replicas; zero `"/metrics"` (307) lines in the proxy log after the change; `/model/info` with no 64-hex ids; `model_id="claude"` appearing in Mimir for a group that previously reported a hash; both Grafana sidecars logging the new dashboard and rule file and `provisioning.alerting` finishing without error; all four alert expressions returning non-firing values against live Mimir (balances ~60, `sum(up)` = 2, poller expression empty); `scripts/validate-policies.sh` passing.
+`sum(up{job="litellm"})` = 2 on both replicas; zero `"/metrics"` (307) lines in the proxy log after the change; `/model/info` with no 64-hex ids; `model_id="claude"` appearing in Mimir for a group that previously reported a hash; both Grafana sidecars logging the new dashboard and rule file and `provisioning.alerting` finishing without error; the four original alert expressions returning non-firing values against live Mimir (balances ~60, `sum(up)` = 2, poller expression empty); `scripts/validate-policies.sh` passing.
+
+OpenRouter extension, 2026-11-16: `max by (account) (openrouter_balance_usd)` returned `12.351407738`, `count(openrouter_balance_usd)` = 2, `sum(up{job="litellm"})` = 2, freshness ~27 s, and the low, critical and stale expressions all returned empty. One 1-token `deepseek/deepseek-chat` request through the new pod triggered the success-event poller.
