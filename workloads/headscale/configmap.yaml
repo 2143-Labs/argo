@@ -17,6 +17,32 @@ data:
             hostname: derp-r.2143.me
             stunport: 3478
             derpport: 443
+      # The tailnet's own relays, one per edge slot. Two regions, not one: nodes
+      # only mesh between servers that hold a persistent connection, and these
+      # two never talk to each other. `certname` pins each slot's self-signed
+      # cert by SHA-256 (tailcfg: sha256-raw:<hex>), so 8443 needs no CA chain.
+      901:
+        regionid: 901
+        regioncode: edge-s1
+        regionname: "Edge s1 (Newark)"
+        nodes:
+          - name: s1
+            regionid: 901
+            hostname: s1.edge.2143.me
+            certname: "sha256-raw:f8302d1a0eaf5d4960a0bdd9c0cd5ab7a3dd5a6ceff7c786e36f2c019867600a"
+            stunport: 3479
+            derpport: 8443
+      902:
+        regionid: 902
+        regioncode: edge-s2
+        regionname: "Edge s2 (Falkenstein)"
+        nodes:
+          - name: s2
+            regionid: 902
+            hostname: s2.edge.2143.me
+            certname: "sha256-raw:925652d40b7d2c8b1d3f68f7656378816b0cd5a9437b6d25d3a8ea7d9ddc14e0"
+            stunport: 3479
+            derpport: 8443
   policy.hujson: |
     {
       "groups": {

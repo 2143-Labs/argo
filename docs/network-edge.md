@@ -43,6 +43,7 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 | web, web3 | 80, 443 | `ingress http (tcp/80) -> traefik VIP (ingress-follow)`, `ingress https (tcp/443) -> traefik VIP (ingress-follow)` | ingress VIP (`.6.6`; kept current by router script `ingress-follow`) | Traefik (`shared-gateway`) |
 | mail-smtp, mail-submission, mail-imap | 25, 587, 993 | `mail-smtp (tcp/25) -> .6.13` and the 587/993 twins | `.6.13` | stalwart |
 | headscale stun | 3479 | `headscale stun (udp/3479) -> .6.18` | `.6.18` | headscale embedded DERP STUN |
+| — (on the edge slots, not through home) | 8443, 3479 | none: each slot's own provider firewall, built from `image/ports.json` (`tcp-8443`, `udp-3479`) | `s1.edge.2143.me`, `s2.edge.2143.me` | derper, the tailnet's DERP relay + STUN (regions 901/902). Self-signed certs pinned by SHA-256 in headscale's DERP map (no CA chain); clients are admitted through `https://net.2143.me/verify` |
 | (9987 entry) | 9987 | `teamspeak voice (udp/9987) -> .6.15` | `.6.15` | ts-voice |
 | ts-files | 30033 | `teamspeak file transfer (tcp/30033) -> .6.15` | `.6.15` | ts-voice |
 | LiveKit WebRTC TCP (TCP only) — **dark, kept** | 7881 | `livekit webrtc tcp (tcp/7881) -> .6.22` (rule present, no Verizon forward) | `.6.22` | matrix/livekit-server-rtc, Deployment `0/0` |
