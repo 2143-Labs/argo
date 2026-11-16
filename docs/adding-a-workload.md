@@ -209,7 +209,6 @@ Notes:
 | stalwart (smtp/submission/imaps) | 192.168.6.13 | fd00:6::13 |
 | ts-voice (9987/udp + 30033/tcp file transfer) | 192.168.6.15 | fd00:6::15 |
 | openrct2-game | 192.168.6.17 | fd00:6::17 |
-| headscale-stun | 192.168.6.18 | fd00:6::18 |
 | mosquitto (1883) | 192.168.6.19 | fd00:6::19 |
 | temporal-frontend | 192.168.6.20 | v4-only (chart limitation) |
 | livekit-server-rtc (7881/50000) | 192.168.6.22 | fd00:6::22 |

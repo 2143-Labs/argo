@@ -20,8 +20,8 @@ internet → 108.56.153.222 (Verizon CR1000B, 192.168.0.1)
 ```
 
 - **The Verizon router is not a DMZ.** It forwards only the ports listed below.
-  On 2026-10-16 external probes to unlisted ports (TCP/UDP 40404, and UDP 3479
-  before it was added) never reached the MikroTik.
+  On 2026-10-16 external probes to unlisted ports (TCP/UDP 40404) never reached the
+  MikroTik.
 - **Every public port needs both layers:** a Verizon forward to `192.168.0.2` and
   a MikroTik dst-nat to the service's `.6.x` address. A port with only one of
   them is closed.
@@ -42,7 +42,6 @@ addresses and services are owned by [adding-a-workload.md](adding-a-workload.md)
 |---|---|---|---|---|
 | web, web3 | 80, 443 | `ingress http (tcp/80) -> traefik VIP (ingress-follow)`, `ingress https (tcp/443) -> traefik VIP (ingress-follow)` | ingress VIP (`.6.6`; kept current by router script `ingress-follow`) | Traefik (`shared-gateway`) |
 | mail-smtp, mail-submission, mail-imap | 25, 587, 993 | `mail-smtp (tcp/25) -> .6.13` and the 587/993 twins | `.6.13` | stalwart |
-| headscale stun | 3479 | `headscale stun (udp/3479) -> .6.18` | `.6.18` | headscale embedded DERP STUN |
 | — (on the edge slots, not through home) | 8443, 3479 | none: each slot's own provider firewall, built from `image/ports.json` (`tcp-8443`, `udp-3479`) | `s1.edge.2143.me`, `s2.edge.2143.me` | derper, the tailnet's DERP relay + STUN (regions 901/902). Self-signed certs pinned by SHA-256 in headscale's DERP map (no CA chain); clients are admitted through `https://net.2143.me/verify` |
 | (9987 entry) | 9987 | `teamspeak voice (udp/9987) -> .6.15` | `.6.15` | ts-voice |
 | ts-files | 30033 | `teamspeak file transfer (tcp/30033) -> .6.15` | `.6.15` | ts-voice |
@@ -171,3 +170,8 @@ WAN address always fails (ICMP is filtered upstream).
 - 2026-10-16: Verizon entries with no MikroTik counterpart removed (5432, 5999,
   4143, 5349, 7233, 8080, 30478, 50000-60000); UDP 51820 got its own entry
   (before, it only worked because the 50000-60000 range covered it).
+- 2026-11-15/16: the tailnet's relay moved off home. `derper` now runs on both edge
+  slots as regions 901/902 (`8443/tcp` DERP + `3479/udp` STUN, self-signed certs
+  pinned by SHA-256 in the DERP map), and headscale's embedded DERP (region 999)
+  was retired (`13a38b5`): the `headscale stun` rule and its `.6.18` VIP are gone.
+  `derp-r` (region 900) stays as a third region.
