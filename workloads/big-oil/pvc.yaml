@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: big-oil-exchange
+  namespace: default
+  annotations:
+    longhorn.io/number-of-replicas: "3"
+    # The collected hours are the deliverable: never let a sync prune or a
+    # deleting Application take the volume with it.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  # No volumeName: the older claims pin one only because they were adopted from
+  # pre-existing PVs. A new claim must let Longhorn provision.
+  storageClassName: longhorn-3
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

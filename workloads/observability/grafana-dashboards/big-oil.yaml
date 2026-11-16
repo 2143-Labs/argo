@@ -1,0 +1,361 @@
+# PoE currency-exchange collector: chaos prices for the league's liquid
+# currency, and the collector's own ingest health.
+# Provisioned by the Grafana sidecar's dashboard folder (label grafana_dashboard: "1").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: big-oil-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+data:
+  big-oil.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 1,
+          "title": "Divine Orb — chaos price (Covens)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "poe_exchange_chaos{league=\"Covens\",item=\"Metadata/Items/Currency/CurrencyModValues\"}",
+              "legendFormat": "Covens",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "poe_exchange_chaos{league=\"Hardcore Covens\",item=\"Metadata/Items/Currency/CurrencyModValues\"}",
+              "legendFormat": "Hardcore Covens",
+              "refId": "B",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 2,
+          "title": "Covens volume by item (top 10)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "topk(10, sum by (item) (poe_exchange_volume{league=\"Covens\"}))",
+              "legendFormat": "{{item}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 3,
+          "title": "Newest stored hour — age",
+          "description": "time() - poe_exchange_last_hour_timestamp. Green under 2h, amber under 3h, red beyond: the collector stores an hour about two minutes after it closes.",
+          "type": "stat",
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 0,
+            "y": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "time() - max(poe_exchange_last_hour_timestamp)",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 7200
+                  },
+                  {
+                    "color": "red",
+                    "value": 10800
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "id": 4,
+          "title": "Markets stored per league (newest hour)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 5,
+            "w": 18,
+            "x": 6,
+            "y": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "poe_exchange_markets",
+              "legendFormat": "{{league}}",
+              "refId": "A",
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          }
+        }
+      ],
+      "refresh": "5m",
+      "schemaVersion": 39,
+      "tags": [
+        "big_oil",
+        "poe"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "PoE exchange",
+      "uid": "big-oil",
+      "version": 1
+    }
+---
+# Notifies ntfy via the contact point in
+# workloads/secrets/observability-grafana-alert-contactpoint.yaml; the default
+# policy in workloads/secrets/observability-grafana-alert-rules.yaml routes every
+# rule there, so nothing else needs configuring.
+#
+# Three hours of silence is the threshold: the collector stores an hour about two
+# minutes after the boundary, so 3h means at least two hours were missed. noDataState
+# is Alerting because no series at all is the failure this exists to catch.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: big-oil-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  big-oil-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: big-oil
+        folder: Alerts
+        interval: 1m
+        rules:
+          - uid: poe-exchange-stale
+            title: PoE exchange collector stale
+            condition: B
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 3600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: time() - max(poe_exchange_last_hour_timestamp)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: B
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 10800
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: B
+                  type: threshold
+            noDataState: Alerting
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'The PoE exchange collector has stored no hour for {{ printf "%.0f" $values.A.Value }}s'
+              description: >-
+                Check `kubectl -n default logs deploy/big-oil-exchange` and
+                `kubectl -n default exec deploy/big-oil-exchange -- big_oil exchange verify`.
+                The hours are re-fetchable from GGG, so nothing is lost while this is broken.

@@ -358,6 +358,43 @@ alloy:
       }
 
 
+      // big_oil currency-exchange collector (:9100): ingest liveness and the
+      // league's chaos prices. Scraped per pod, matching the Deployment's pod
+      // label. 60s is enough: the data changes hourly, so a tighter interval
+      // only adds samples.
+      discovery.kubernetes "big_oil" {
+        role = "pod"
+        namespaces {
+          names = ["default"]
+        }
+        selectors {
+          role  = "pod"
+          label = "app.kubernetes.io/name=big-oil-exchange"
+        }
+      }
+
+      discovery.relabel "big_oil" {
+        targets = discovery.kubernetes.big_oil.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_ip"]
+          regex         = "(.+)"
+          replacement   = "$1:9100"
+          target_label  = "__address__"
+        }
+      }
+
+      prometheus.scrape "big_oil" {
+        targets         = discovery.relabel.big_oil.output
+        job_name        = "big_oil"
+        metrics_path    = "/metrics"
+        scrape_interval = "60s"
+        forward_to      = [prometheus.remote_write.mimir.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+
+
       // llm-proxy counters: token usage, provider prompt-cache read/creation and
       // spend, labelled api_provider / model_id / requested_model. Scraped PER POD,
       // never through the Service VIP: two replicas behind a ClusterIP means a VIP
