@@ -89,7 +89,7 @@ Before release, an app is owned only by "the Steam accounts in the Steamworks pa
 | `qa-<feature>` | Human, on demand | yes, per branch | Focused testing of one PR without freezing `qa` |
 | `press` | Human | yes | Later; press and influencer builds |
 
-- **Interim, and the only thing that changes later:** CI sets `qa` live on every green `main` because it is the only branch with a backend (`rots-qa`). The [release pipeline plan](release_pipeline_plan.md) moves the continuous stream to `dev` → `rots-dev` and puts `qa` behind a promote dispatch. When that lands, CI's `SetLive` becomes `dev` and a promote job sets `qa`; nothing else in this document changes. Do not build launch options, tester documentation or debugging advice around the branch names until then.
+- **Interim, and the only thing that changes later:** CI sets `qa` live on every green `main` because it is the only branch with a backend (`rots-qa`). The [release pipeline plan](release_pipeline_plan.md) moves the continuous stream to `dev` → `rots-dev` and puts `qa` behind a promote dispatch. When that lands, CI's `SetLive` becomes `dev` and a promote job sets `qa`; nothing else in this document changes. Do not build launch options, tester documentation or debugging advice around the branch names until then. Render `SetLive` from a workflow input (`qa` today, `dev` at Stage 2) instead of hard-coding the branch, so the migration is a value change and the promote job can reuse the same script.
 
 - A branch and its password must exist **before** its first set-live. Valve: "if you wish for branch contents to remain private, you should set your branch password before setting a build live on the branch." Order: create branch → set password → issue keys → first set-live.
 - Build scripts can set any branch live **except** `default` (Valve), and committing to a branch that does not exist fails after the upload completes.
@@ -111,6 +111,7 @@ Before release, an app is owned only by "the Steam accounts in the Steamworks pa
 - **Token persistence:** the runner module sets `HOME` to `workDir` and deletes `workDir` on every start (Probe, nixpkgs `service.nix`), which would delete the login token. Set `extraEnvironment.HOME = "/var/lib/rots-steam/home"` (0700, owned by `rots-steam`); the token lives at `$HOME/.local/share/Steam/config/config.vdf`.
 - **Login (Valve, "Using SteamPipe In A CI/CD Environment"):** a human runs `steamcmd +login <builder>` once on the host as `rots-steam`, enters the password and the emailed Steam Guard code, then `quit`. Every CI run uses `+login <builder>` **with no password**. Supplying the password again "will issue a new SteamGuard token", invalidating the cache. `+@NoPromptForPassword 1` makes a missing token fail fast (exit 5, Probe) instead of hanging.
   - **Rule: the builder password is typed exactly once, on the uploader, ever.** A password login from anywhere else — a workstation hand-upload, someone's laptop — mints a new SteamGuard token and invalidates the runner's cache (Valve). Phase 0's throwaway upload therefore runs either *before* the runner's one-time login or from a second account; after Phase 3, any hand-upload means repeating the uploader login.
+- **Recovery custody:** "typed once ever" only works if the password outlives the host. Store the builder password and the Steam Guard recovery codes in OpenBao on a path readable **only by a human-authenticated token** — no CI role is granted it, so goal 4 ("no Steam credential stored in GitHub") still holds and a compromised job gains nothing from it. Without that record a rebuilt VM 101 or a lost `/var/lib/rots-steam/home` stops uploads permanently: the token is gone and the one-time login cannot be repeated. The runbook's "rebuild the uploader" section starts from this path.
 - **Build account:** a fresh Steam account with exactly **Edit App Metadata** and **Publish App Changes To Steam** (Valve). Never logged in to a desktop client: one account allows one session at a time (Valve wiki).
 - **Credentials in GitHub:** none. S3 read access uses the existing OIDC → OpenBao pattern ([CI credentials](deploying-a-private-repo-game.md#ci-credentials-github-oidc-to-openbao)) with a new read-only identity (D8).
 - **Rejected:** `game-ci/steam-deploy` (passes the Steam password on every run, which Valve says mints a new guard token; its v3.2.2 defaults `releaseBranch` to `default`, which Valve refuses); community TOTP generation (needs the authenticator `shared_secret` in CI; not Valve-documented); containers (adds a root-equivalent socket to solve a problem the host already solves).
@@ -174,6 +175,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
   - **Steam Linux Runtime 3.0, sniper** (Debian 11, glibc 2.31) — Valve now calls it "an older runtime", but its SDK still produces a plain binary that runs directly on Debian 11+/Ubuntu 20.04+, with no container declaration. **This is the plan's default for QA**, because it removes a moving part from the first milestone.
   - **Scout** (Ubuntu 12.04 ABI) is still what Steam assumes when a developer publishes a native Linux game, and is the wrong trade for a new Bevy client: it pins every dependency to a 2012 stack.
 - **Fallback** if no runtime build is practical: `patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath '$ORIGIN'` plus bundling the non-system libraries the client links directly. Last resort: Bevy's dependency set (wayland, xkbcommon, the Vulkan loader) makes that bundle list long and easy to get subtly wrong.
+- **SDK artifact:** `registry.gitlab.steamos.cloud/steamrt/sniper/sdk` — the image Valve's `steam-runtime` README links as the sniper SDK. Pin it **by digest** in the flake or CI step: `:latest` would put the compiler in the same moving-parts category as steamcmd's self-updating bootstrap, which D5 accepts only because there is no alternative. It is amd64-only, so it builds on the NixOS runner (podman is already in `runnerCommon`), never on the Mac.
 - **Status:** chosen direction, validated in Phase 2. *Unverified* which libraries must be bundled even under sniper, and whether steamrt4's container path is worth adopting for release.
 
 ### D10. macOS: build on the Mac, ship a `.app`, ad-hoc sign for QA
@@ -216,6 +218,7 @@ Invariants, asserted by the producer **and** re-asserted by the uploader:
 
 - **Problem:** the server deploys from `main` and Steam clients update minutes later. `ConnectRequest` has no version and postcard is not self-describing, so a wire change makes an older client fail to decode rather than see a clear error.
 - **Decision:** add `protocol_version: u16` to `ConnectRequest`, bump it on every wire-incompatible change, and have the server reject mismatches with a `ConnectRejected { reason }` the client shows ("client out of date — let Steam update").
+- **Accept the previous version too, on the QA lane.** Rejecting on exact mismatch is right for prod and wrong for QA. D4 makes the upload all-or-nothing, so a green `main` that bumps the version and then loses a Windows or Mac job leaves the new servers live and every existing tester rejected until some later upload succeeds — an unbounded outage caused by a build failure. The QA server accepts `N` and `N-1`, the window the [release pipeline plan](release_pipeline_plan.md) specifies, so the worst case is one "client out of date" message followed by a working client.
 - **When:** before the first external key is issued.
 
 ### D14. Windows: no depot until CI builds it
@@ -289,7 +292,7 @@ rots4 CI (green main)
 
 **Promote** `qa` → `default`: App Admin → Builds → pick the BuildID → "Set build live for branch…" `default` → Preview Change → Set Build Live Now. Same bytes; D11 points them at prod.
 
-**Roll back:** same gesture with an older BuildID on the affected branch. Then revert `apps/rots-qa.yaml` (or prod) if the server changed.
+**Roll back:** same gesture with an older BuildID on the affected branch. Then revert `apps/rots-qa.yaml` (or prod) if the server changed. If QA clients start talking to prod because D11's branch→URL logic is wrong, set the previous BuildID live on `qa` and hand testers the "Play (QA backend)" launch option, which overrides the branch default, while the client fix ships.
 
 **Token compromise:** run `logout` / `clear_credentials` on the uploader, change the builder password, "Deauthorize all" Steam Guard devices, then repeat the one-time login. After release, a security change blocks set-live for 3 days. The blast radius before release is arbitrary content on the passworded branches; after release, the same plus whatever the account can set live.
 
@@ -320,11 +323,11 @@ Each phase ends with an observable exit criterion; the next phase does not start
 - [ ] Set the install folder name; add launch options: Linux `client`, Windows `client.exe`, macOS `ROTS.app`, plus "Play (QA backend)" variants (D11).
 - [ ] Create branch `qa` and set its password before any build exists.
 - [ ] Create the builder Steam account; grant Edit App Metadata + Publish App Changes To Steam.
-- [ ] Decide whether the throwaway upload below uses the builder account **before** the uploader's one-time login, or a second account: any password login mints a new SteamGuard token and invalidates the uploader's cache (D5).
+- [ ] Order the throwaway upload **before** the uploader's one-time login (Phase 3), from the builder account: a password login mints a new SteamGuard token, which is harmless while there is no cache to invalidate, and a second privileged account avoids nothing. Any password login *after* Phase 3 invalidates the uploader's cache (D5).
 - [ ] Note the 3-week key clock (D2); request a first batch of Release State Override keys when allowed.
 - [ ] Hand-upload a throwaway Linux build from a workstation to `qa`.
 
-**Exit:** a second partner-account member installs from `qa` and the throwaway build launches. Every App Admin mistake (`Access Denied`, `Invalid content configuration`, empty installs) is found here, not in CI.
+**Exit:** an account that is **not** a partner-account member — the §7 smoke-test account, holding one Release State Override key — activates the key, unlocks `qa` with the branch password, installs the throwaway build and launches it. Every App Admin mistake (`Access Denied`, `Invalid content configuration`, empty installs) is found here, not in CI. A partner-account install proves less (it bypasses the key and password path every external tester walks), and it cannot be the exit at all if John is the only partner-account user.
 
 ### Phase 1 — Build identity and protocol version (rots4)
 
@@ -372,7 +375,7 @@ Each phase ends with an observable exit criterion; the next phase does not start
 
 ### Before public release (tracked, not part of this plan)
 
-D10 release requirements (universal binary, Developer ID, notarisation, stapling, Valve checkboxes); D15 prod-deploy gating; supported-OS checkboxes in App Admin.
+D10 release requirements (universal binary, Developer ID, notarisation, stapling, Valve checkboxes); D15 prod-deploy gating; supported-OS checkboxes in App Admin; **Valve's build review of the `default` build**, the gate this plan deliberately never reaches because nothing here sets `default` live, and the store-page review that precedes launch.
 
 ## 9. Risks
 
@@ -467,3 +470,18 @@ Before execution, every external claim in this plan was re-verified against live
 | steamcmd version | self-updating bootstrap | nixpkgs pins `steamcmd-20180104`, which updates itself from Valve's CDN | D5 gained version logging and the known-good `$HOME` rollback |
 
 Confirmed unchanged: the 3-week key clock and 2,500 override-key cap; branch passwords hiding a branch name; `SetLive` refusing `default`; `SetAppBuildLive` with `betakey=public` needing no Mobile/SMS step on an unreleased app; one BuildID per app build after all depots; Valve neither signing nor re-signing uploaded executables; no documented upload lock and no Valve steamcmd/CI image, so D6's serialisation stands; Steam's macOS floor of 12; Rosetta general support ending after macOS 27; notarisation required by Apple but unenforced by Valve.
+
+## Appendix — second review (2026-11-13)
+
+A second pre-execution review re-checked this plan against the repo and live vendor pages rather than against the first review's notes. Every version claim held: `steamworks` 0.13.1 is still crates.io's newest (2026-05-05), `steamworks-sys` 0.13.0 still vendors SDK 1.64, nixpkgs `steamcmd` is still the `20180104` bootstrap, `current_beta_name` is present in 0.13.1's `app.rs`, and Valve's README still calls sniper "an older runtime". Four defects were found and are fixed in the sections above:
+
+| Finding | Was | Now |
+|---|---|---|
+| Phase 0 exit | required "a second partner-account member" — unsatisfiable for a one-person partner account, and it skipped the key-and-password path testers use | an override-key holder installs from `qa` |
+| Uploader recovery | the password is typed once ever but had no durable home, so a rebuilt host stopped uploads permanently | custody in OpenBao, human-token only (D5) |
+| Protocol bump | exact-match rejection plus D4's all-or-nothing upload could strand every tester after a build failure | the QA lane accepts `N` and `N-1` (D13) |
+| Linux SDK | "a Valve Steam Linux Runtime SDK container" — unnamed and unpinned | `registry.gitlab.steamos.cloud/steamrt/sniper/sdk`, digest-pinned (D9) |
+
+Minor, also applied: Phase 0 prescribes the upload ordering instead of leaving it open; `SetLive` is rendered from a workflow input; the rollback section covers a misfiring D11; and the release gate names Valve's build review.
+
+`argo/docs/network-edge.md` needed no change after all — it was corrected to `36000-37999` (both forwards, dated) after the first review, which is the figure this plan's Phase 3 depends on.

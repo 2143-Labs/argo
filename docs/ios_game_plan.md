@@ -144,6 +144,8 @@ Add a `mobile` feature alias in `client/Cargo.toml` so the Xcode script and CI n
 
 ### D8. Backend identity: baked per build, with the QA flavour fenced off by Apple
 
+**Superseded by [release pipeline plan](release_pipeline_plan.md) D3:** the combined design routes on commit sha through a server-side directory, which removes both the two-flavour split and the archive-time key. Until that lands, this section is the shipping shape, and the flavour fencing below is what keeps a QA build out of the App Store in the meantime.
+
 The Steam plan selects the backend from the Steam branch at run time so one set of bytes can be promoted. iOS cannot do that cleanly: the build submitted to the App Store is the build that was tested in TestFlight (Apple), and no researched API distinguishes TestFlight from App Store at run time.
 
 - **Decision:** the backend is an Info.plist key, `ROTSAuthURL`, set at archive time. Two flavours:
