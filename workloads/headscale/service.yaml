@@ -17,29 +17,3 @@ spec:
       targetPort: 9090
       protocol: TCP
       name: metrics
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: headscale-stun
-  labels:
-    app: headscale
-  annotations:
-    metallb.io/loadBalancerIPs: "192.168.6.18,fd00:6::18"
-spec:
-  ipFamilyPolicy: PreferDualStack
-  ipFamilies: [IPv4, IPv6]
-  type: LoadBalancer
-  selector:
-    app: headscale
-  # WAN udp/3479: Verizon forwards it to the router, and the router forwards it here
-  # (comment "headscale stun (udp/3479) -> .6.18"). Must match derp.server.stun_listen_addr in
-  # configmap.yaml. Local: STUN must see the client's real address; with Cluster,
-  # kube-proxy SNATs to a node address and every client is told it is 10.42.x.
-  externalTrafficPolicy: Local
-  allocateLoadBalancerNodePorts: false
-  ports:
-    - port: 3479
-      targetPort: 3479
-      protocol: UDP
-      name: stun
