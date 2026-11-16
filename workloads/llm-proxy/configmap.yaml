@@ -581,6 +581,20 @@ data:
         ["account"],
     )
 
+    OPENROUTER_BALANCE_URL = "https://openrouter.ai/api/v1/credits"
+    OPENROUTER_ACCOUNT = "openrouter"
+
+    OPENROUTER_BALANCE = Gauge(
+        "openrouter_balance_usd",
+        "OpenRouter account balance in USD",
+        ["account"],
+    )
+    OPENROUTER_LAST_SUCCESS = Gauge(
+        "openrouter_balance_last_success_timestamp_seconds",
+        "Unix time of the last successful OpenRouter balance fetch",
+        ["account"],
+    )
+
 
     class BalanceLogger(CustomLogger):
         def __init__(self):
@@ -611,6 +625,19 @@ data:
                     BALANCE.labels(account=account).set(total)
                     LAST_SUCCESS.labels(account=account).set(time.time())
 
+            openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+            if openrouter_key:
+                try:
+                    remaining = await asyncio.to_thread(
+                        self._fetch_openrouter_balance, openrouter_key
+                    )
+                except Exception as exc:
+                    logger.debug("balance_metrics: openrouter fetch failed: %r", exc)
+                else:
+                    if remaining is not None:
+                        OPENROUTER_BALANCE.labels(account=OPENROUTER_ACCOUNT).set(remaining)
+                        OPENROUTER_LAST_SUCCESS.labels(account=OPENROUTER_ACCOUNT).set(time.time())
+
         @staticmethod
         def _fetch_balance(api_key):
             request = urllib.request.Request(
@@ -627,6 +654,25 @@ data:
                 if info.get("currency") == "USD"
             ]
             return sum(usd) if usd else None
+
+        @staticmethod
+        def _fetch_openrouter_balance(api_key):
+            request = urllib.request.Request(
+                OPENROUTER_BALANCE_URL,
+                headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read())
+            if not isinstance(payload, dict):
+                return None
+            data = payload.get("data")
+            if not isinstance(data, dict):
+                return None
+            total = float(data.get("total_credits") or 0)
+            used = float(data.get("total_usage") or 0)
+            # /credits reports total_credits=0 for BYOK accounts; match
+            # openrouter-costs and report 0 rather than a negative balance.
+            return 0.0 if total == 0 else total - used
 
 
     # The callback loader refuses a bare class: a dotted path that resolves to a type

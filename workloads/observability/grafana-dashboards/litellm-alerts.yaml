@@ -127,6 +127,107 @@ data:
               description: >-
                 Roughly ten hours of runway at the current burn. Top up now or point traffic
                 at the other home key.
+          - uid: openrouter-balance-low
+            title: OpenRouter balance low
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (account) (openrouter_balance_usd{account="openrouter"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 10
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'OpenRouter balance is down to ${{ printf "%.2f" $values.A.Value }}'
+              description: >-
+                Top up at openrouter.ai/settings/credits. The balance is account-wide and
+                shared by every OpenRouter key.
+          - uid: openrouter-balance-critical
+            title: OpenRouter balance nearly empty
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: max by (account) (openrouter_balance_usd{account="openrouter"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 5
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'OpenRouter balance has ${{ printf "%.2f" $values.A.Value }} left'
+              description: >-
+                Top up now at openrouter.ai/settings/credits.
           # The poller rides success events, so a quiet proxy is a quiet gauge. Only
           # alert when traffic exists but the gauge has not refreshed: that is a
           # broken poller, not an idle night. `and on() (...)` rather than comparing
@@ -184,6 +285,57 @@ data:
                 The balance poller in balance_metrics.py rides async_log_success_event with a
                 900 s gate. Check the proxy log for "balance_metrics: ... fetch failed" and the
                 DeepSeek /user/balance status.
+          - uid: openrouter-balance-poller-stale
+            title: OpenRouter balance poller silent
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: (time() - max(openrouter_balance_last_success_timestamp_seconds)) > 3600 and on() (sum(increase(litellm_input_tokens_metric_total[1h])) > 0)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'OpenRouter balance has not refreshed in over an hour despite traffic'
+              description: >-
+                Check the proxy log for "balance_metrics: openrouter fetch failed" and the
+                OpenRouter /api/v1/credits status.
           # sum(), not count(): sum survives one replica being unhealthy, and returns
           # no series (-> NoData -> Alerting) if the job disappears entirely, which is
           # the case worth waking up for.
