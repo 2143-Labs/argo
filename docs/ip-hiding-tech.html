@@ -659,7 +659,7 @@ http:
 <pre><code># edge-tofu/edge.yaml — the edge platform's own services, not tied to a backend
 turn: { component: coturn, udp: [3478, "45000-45127"], tcp: [3478], hosts: [turn.john2143.com] }
 derp: { component: derper, udp: [3479], tcp: [8443],    hosts: [derp.edge.2143.me] }</code></pre>
-<p class="small">Host lists and Service names are illustrative; Phase 0 resolves them against the live clusters. <code>i.dsstar.us</code> (do) inside <code>dsstar.us</code> (home) is allowed: exact names don't collide.</p>
+<p class="small">Host lists and Service names are illustrative; Phase 0 resolves them against the live clusters. <code>i.dsstar.us</code> (do) inside <code>dsstar.us</code> (home) is allowed: exact names don't collide. As shipped on 2026-11-16 both services live on the slot names — <code>coturn</code> on <code>s1</code>/<code>s2.edge.2143.me:3478</code> and <code>derper</code> on the same two names at <code>8443/tcp</code> plus <code>3479/udp</code>.</p>
 
 <table>
   <thead><tr><th>Key</th><th>On the edge</th><th>In the backend</th></tr></thead>
