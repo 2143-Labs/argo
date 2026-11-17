@@ -70,13 +70,18 @@ data:
                 last 15 minutes. At replicaCount 1 with strategy Recreate that is a mail outage.
                 Check the previous container state and events before assuming it was benign.
 
-          # The signal that went unnoticed for months: Stalwart logs security.ip-blocked
-          # every time it refuses a connection from a banned address. Alloy ships all pod
-          # stdout to Loki, so this is the same counter a human would grep for, watched
-          # continuously. Historically the blocked addresses were the cluster's own pod
-          # IPs, so a single event is worth looking at rather than waiting for volume.
+          # Stalwart auto-bans any client that sends an invalid SMTP command
+          # (security.scan-ban), then logs security.ip-blocked for every retry from that
+          # address. Internet scanners reach 25/587 daily, so the unfiltered counter is
+          # background noise: 37 distinct addresses in the 30 days to 2026-11-17, one
+          # notification batch each, for connections the server had already refused.
+          # The event worth waking up for is the block list covering one of our own
+          # addresses -- the failure that crashlooped this server before -- so only
+          # private sources (RFC1918 and IPv6 ULA/link-local) are counted here. Those are
+          # pods 10.42/16 + fd42:42:42::/48, services 10.43/16 + fd00:6::/64 and the LAN
+          # 192.168.5-7/24 + fd00:1::/64, plus anything else internal that appears later.
           - uid: stalwart-ip-blocked
-            title: Stalwart blocked an address
+            title: Stalwart blocked an internal address
             condition: C
             data:
               - refId: A
@@ -86,7 +91,7 @@ data:
                 datasourceUid: loki
                 model:
                   editorMode: code
-                  expr: sum(count_over_time({cluster="home", namespace="stalwart"} |= "security.ip-blocked" [15m]))
+                  expr: sum(count_over_time({cluster="home", namespace="stalwart"} |= "security.ip-blocked" |~ "remoteIp = (10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|f[cd][0-9a-f][0-9a-f]:|fe80:)" [15m]))
                   queryType: range
                   intervalMs: 60000
                   maxDataPoints: 43200
@@ -122,8 +127,11 @@ data:
             labels:
               severity: warning
             annotations:
-              summary: Stalwart is blocking addresses again
+              summary: Stalwart blocked one of our own addresses
               description: >-
-                security.ip-blocked events appeared in the stalwart namespace in the last 15
-                minutes. Read x:BlockedIp/get and x:AllowedIp/get: a permanent record covering a
-                cluster address is the failure that crashlooped this server before.
+                security.ip-blocked events for a private address -- RFC1918 or IPv6 ULA,
+                which covers pod, service, node and LAN sources -- appeared in the stalwart
+                namespace in the last 15 minutes. Read x:BlockedIp/get and x:AllowedIp/get:
+                a permanent record covering a cluster address is the failure that
+                crashlooped this server before. Blocked internet scanners are expected and
+                are not counted by this rule.
