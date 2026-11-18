@@ -26,6 +26,26 @@ spec:
                       operator: In
                       values: ["big"]
         tempo:
+          # Liveness must not probe /ready. Tempo returns 503 there while a cold
+          # start is still settling (WAL replay, block reload, the 5-minute
+          # blocklist poll), and liveness turns that into a kill loop: on
+          # 2026-11-16T21:40Z the pod was evicted with node big's reboot, never
+          # became Ready again, restarted 722 times in 48 h, the Service had no
+          # endpoints and Alloy dropped every span ("sending queue is full").
+          # Chart 2.4.0 templates no startupProbe value, so probe the port Tempo
+          # binds within seconds instead; /ready stays the readiness gate, so an
+          # unready pod is kept out of the Service without being killed.
+          livenessProbe:
+            # The chart's default httpGet survives a values deep-merge, and a
+            # probe with both httpGet and tcpSocket is rejected, so it must be
+            # nulled explicitly rather than merely superseded.
+            httpGet: null
+            tcpSocket:
+              port: 3200
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           storage:
             trace:
               backend: s3
