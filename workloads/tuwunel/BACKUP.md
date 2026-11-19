@@ -12,6 +12,13 @@
     ```
     kubectl label pvc -n matrix tuwunel-conduwuit-data recurring-job.longhorn.io/default=enabled --overwrite
     ```
+- **Offsite**: the weekly B2 mirror (`docs/offsite-data.md`) selects this volume by the PVC
+  annotation `offsite.backup/enabled=true`. No manifest here declares the PVC, so the annotation
+  exists only on the live object; after any recreate or restore, re-apply it before the next
+  Sunday run or the volume silently drops out of the offsite set:
+    ```
+    kubectl annotate pvc -n matrix tuwunel-conduwuit-data offsite.backup/enabled=true --overwrite
+    ```
 
 ### Media
 - Media is stored on the **same** Longhorn volume as the database, under `/data/db/media`
