@@ -62,6 +62,7 @@ spec:
   rules:
     - hosts:
         - aross.studio
+        - www.aross.studio
   scalingMetric:
     concurrency:
       targetValue: 10

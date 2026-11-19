@@ -4,11 +4,16 @@ metadata:
   name: aross-studio
   namespace: default
 spec:
+  # www.aross.studio rides the *.aross.studio listener (a route hostname must match
+  # its listener); nginx in the image answers www with a 301 to the apex.
   parentRefs:
     - name: shared-gateway
       sectionName: aross-studio-https
+    - name: shared-gateway
+      sectionName: aross-studio-wildcard-https
   hostnames:
     - aross.studio
+    - www.aross.studio
   rules:
     - matches:
         - path:
