@@ -1,8 +1,8 @@
 # ROTS tutorial replays: the bucket, its identity, and retention
 
 **Date:** 2026-11-19
-**Status:** bucket and chart wiring landed; the identity still needs one `issue`/`propagate`
-run with an admin token (see *Remaining*), so uploads answer 503 until then.
+**Status:** live in prod since 2026-11-19 06:53Z. Verified end to end with a synthetic recording
+posted through the real route (see *Verified*); a played tutorial has not been through it yet.
 **Scope:** bucket `rots4-replays`, identity `rots-sync`, `apps/rots-web.yaml`,
 `workloads/rots-web` (templates `_gameserver.tpl`, `sync.yaml`, `values.yaml`),
 `workloads/network-policies/seaweedfs.yaml`.
@@ -63,10 +63,9 @@ lifecycle configuration is itself a signed S3 call. Deleting from `rots-sync` ke
 object and the row on exactly the same clock, which a lifecycle rule cannot do (the rule
 would fire up to a day late, leaving rows pointing at missing objects).
 
-## Remaining
+## Issuing the identity
 
-The bucket exists but the credential does not: `issue` and `propagate` need an
-`openbao-admin` token, which is an interactive OIDC login.
+`issue` and `propagate` need an `openbao-admin` token, which is an interactive OIDC login.
 
 ```bash
 cd ~/repos/argo
@@ -83,17 +82,36 @@ kubectl -n rots-prod annotate externalsecret rots-authserver-secret force-sync=$
 kubectl -n rots-prod rollout restart deploy/rots-sync
 ```
 
-Verify with a played tutorial in prod: the pod logs `recording stored in rots-sync`,
-`rots-sync` logs `recording stored`, and the row appears:
+`rots-sync` logs `replay store ready endpoint=... ` once all four variables are set; before
+that it logs one `replay store half-configured` warning and answers 503.
+
+## Verified 2026-11-19 06:53Z
+
+Prod rolled `authserver-1070262` and `gameserver-1070262`; `rots-sync` logged `replay store
+ready`, and a live instance carried `ROTS_REPLAY_UPLOAD=1`.
+
+A throwaway `curlimages/curl` pod in `rots-prod` (the store is ClusterIP-only, so the probe had
+to run in-cluster, with `COORDINATOR_TOKEN` from `secretKeyRef` rather than read anywhere)
+posted a 21-byte recording for slot 999:
+
+- `POST /internal/v1/sync/recording` → `204`, so SeaweedFS **accepted the hand-rolled SigV4
+  `PUT`** — the one thing neither PR could test locally.
+- `rots-sync` logged `recording stored key=replays/999-1-probe-20261119.rotsrec`.
+- The row appeared (`bytes=21, steps=42, truncated=f`), and `s3.bucket.list` went from 0 to
+  144 bytes with one chunk.
+- Backdating the row to eight days and issuing a `claim` swept it: `expired recordings removed
+  recordings=1`, the row count went to 0, and the bucket's chunk count returned to 0 — the
+  signed `DELETE` works too, and the object went with the row.
+
+The probe pods, its snapshot row and its recording are gone. **Still unverified: a real played
+tutorial.** That needs a login and a few minutes of play; the route, signature and retention are
+what the probe covered.
 
 ```bash
+kubectl -n rots-prod logs deploy/rots-sync --since=5m | grep "recording stored"
 kubectl -n rots-prod exec rots-db-2 -c postgres -- psql -U postgres -d rots \
   -c "select slot, generation, bytes, steps, truncated, created_at from social.instance_recordings order by created_at desc limit 3"
 ```
-
-Until this runs, every finished tutorial logs `recording not stored` on the pod and
-`replays_unconfigured` (503) in `rots-sync`; nothing else is affected, and the recording is
-lost exactly as it was before the feature existed.
 
 ## Rollback
 
