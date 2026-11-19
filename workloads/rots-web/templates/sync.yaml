@@ -95,6 +95,16 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.clusterName }}-app
                   key: uri
+{{- if .Values.gameserver.replayUpload }}
+            # The tutorial replay store: path-style S3 on SeaweedFS (endpoint only, no
+            # bucket in the URL). Its keys, ROTS_S3_ACCESS_KEY and ROTS_S3_SECRET_KEY,
+            # come from the same rots-authserver-secret envFrom below; all four unset
+            # would disable the store, some unset make it refuse every upload.
+            - name: ROTS_S3_ENDPOINT
+              value: {{ .Values.gameserver.s3Endpoint | quote }}
+            - name: ROTS_S3_BUCKET
+              value: {{ .Values.gameserver.s3Bucket | quote }}
+{{- end }}
             - name: RUST_LOG
               value: info
           # TICKET_SIGNING_KEY and COORDINATOR_TOKEN (externalsecret.yaml).

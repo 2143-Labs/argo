@@ -73,6 +73,19 @@ spec:
       ports:
         - port: 8333
           protocol: TCP
+    # rots-sync writes tutorial replays: the game pod POSTs the recording to rots-sync,
+    # which signs the S3 PUT, so no game pod needs S3 access or credentials. Scoped to
+    # that one pod, not the rots-prod namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rots-prod
+          podSelector:
+            matchLabels:
+              app: rots-sync
+      ports:
+        - port: 8333
+          protocol: TCP
     - from:
         - namespaceSelector:
             matchLabels:
