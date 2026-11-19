@@ -16,7 +16,7 @@ frigate recordings, `tank/share`, `tank/private-local`).
 All jobs run on the NAS as systemd units defined in dotfiles `nixos/nas-configuration.nix`
 (section "Offsite (B2)"). All three buckets are in the home account, region `us-east-005`.
 
-| job | schedule (UTC) | source | destination | expires |
+| job | schedule (NAS local time, America/New_York) | source | destination | expires |
 |---|---|---|---|---|
 | `offsite-immich-db` | daily 05:30 | `pg_dump -Fc immich` (NAS Postgres, root SSD) | `j2143-argo-immich/db/<UTC stamp>.dump` | `db/`: hidden day 31, deleted day 32 |
 | `offsite-immich-media` | Sun 05:00 | `/tank/immich` minus `thumbs/`, `encoded-video/` | `j2143-argo-immich/media/` (`rclone copy`) | never |
@@ -105,15 +105,20 @@ sudo bash -c 'set -a; . /run/agenix/rclone-immich-env; rclone lsl hz:j2143-argo-
 sudo bash -c 'set -a; . /run/agenix/rclone-immich-env; rclone copyto hz:j2143-argo-immich/db/<stamp>.dump /dev/shm/immich.dump'
 sudo systemctl stop immich-server immich-machine-learning
 sudo runuser -u postgres -- dropdb immich
-sudo runuser -u postgres -- createdb -O immich immich
-sudo runuser -u postgres -- pg_restore -d immich --no-owner --role=immich /dev/shm/immich.dump
+# -T template0: template1 on the NAS carries a glibc collation-version mismatch
+# (created under 2.42, OS now 2.44), and createdb from it fails outright.
+sudo runuser -u postgres -- createdb -T template0 -O immich immich
+# As the superuser and without --no-owner, so objects keep their `immich` owner.
+sudo runuser -u postgres -- pg_restore -d immich --exit-on-error /dev/shm/immich.dump
 sudo systemctl start immich-server immich-machine-learning
 sudo rm /dev/shm/immich.dump
 ```
 
-The dump carries the `vchord`/`vector` extensions; if `pg_restore` reports errors only on
-`CREATE EXTENSION` or `ALTER ... OWNER`, compare `select count(*) from asset` against what you
-expect before deciding it failed.
+The dump carries the `vchord`/`vector` extensions; both the scratch-database variant
+(`--no-owner --no-privileges`) and the owner-preserving commands above restored with
+`--exit-on-error` and no errors in the 2026-11-19 drill, with every table owned by `immich`.
+If a future restore fails only on `CREATE EXTENSION` or `ALTER ... OWNER`, compare
+`select count(*) from asset` against what you expect before deciding it failed.
 
 ### immich media
 
@@ -183,3 +188,4 @@ Each class was restored from B2 before this was called done. Record each future 
 
 | date | class | what was restored | result |
 |---|---|---|---|
+| 2026-11-19 | immich database | first dump `20261119T054248Z.dump` (95 MiB, 663 TOC entries) into scratch `immich_drill`, both variants | `asset` 22388 = live 22388; 86 = 86 tables; all tables owned by `immich` |
