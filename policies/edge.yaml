@@ -18,6 +18,9 @@ assertions:
     gates: [public-rate-limit, public-inflight-limit]
     gates_any: [crowdsec-bouncer, crowdsec-bouncer-game]
 
+  - hosts: ["big-oil.john2143.com"]
+    gates: [public-rate-limit, public-inflight-limit, crowdsec-bouncer-noappsec]
+
   - hosts: ["seafile.john2143.com"]
     gates: [uploads-rate-limit, uploads-inflight-limit, crowdsec-bouncer-noappsec]
 

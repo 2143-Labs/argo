@@ -4,6 +4,11 @@
 # Deliberately not named game-...: the CrowdSec agent exempts
 # httproute-default-game-* from its crawl/probe scenarios
 # (workloads/crowdsec-agent/agent-game-hosts.yaml), and an API should keep them.
+#
+# Class B throughout (docs/public-edge.md): the host's consumers are scripts, and
+# its only browser content is the Anubis challenge page, so AppSec body
+# inspection buys nothing and its false positives would ban the household WAN
+# address for every public host. gates: crowdsec-bouncer-noappsec.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -38,7 +43,7 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: crowdsec-bouncer
+            name: crowdsec-bouncer-noappsec
       backendRefs:
         - name: big-oil-exchange
           port: 9100
@@ -62,7 +67,7 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            name: crowdsec-bouncer
+            name: crowdsec-bouncer-noappsec
       backendRefs:
         - name: big-oil-anubis
           port: 80
