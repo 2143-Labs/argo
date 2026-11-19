@@ -69,8 +69,12 @@ directory, it mirrors the rest and fails (alert).
 
 ## 2. How it is protected
 
-- **Object Lock**: every bucket was created with default retention COMPLIANCE, 30 days. Nothing,
-  including the account owner, can delete an object version for 30 days.
+- **Object Lock**: every bucket has default retention COMPLIANCE, 30 days. Nothing, including
+  the account owner, can delete an object version for 30 days. Default retention can be set on an
+  existing lock-enabled bucket (`b2v4 bucket update --default-retention-mode compliance
+  --default-retention-period "30 days" <bucket> allPrivate`); it only applies to uploads made
+  after it is set. Check it with `aws s3api get-object-lock-configuration --bucket <bucket>`
+  (endpoint `https://s3.us-east-005.backblazeb2.com`): a response with no `Rule` locks nothing.
 - **Lifecycle**: one rule per bucket, always scoped to the prefix in the table, never the bucket
   root. `media/` has no rule: originals are written once and kept.
 - **Credentials**: one bucket-scoped `Read and Write` application key per bucket, and one SSE-C
@@ -84,6 +88,24 @@ directory, it mirrors the rest and fails (alert).
 - **Caps**: B2 *enforces* Caps & Alerts (`403 cap_exceeded`). The home account's storage and
   Class B caps must stay well above this footprint, or a sync stops partway and a restore cannot
   start. The values in force are recorded on ai_tasks card #349.
+
+## 2a. Operating the jobs
+
+```bash
+ssh nas 'systemctl list-timers --all | grep offsite-'                       # next/last run of each
+ssh nas 'systemctl show offsite-volumes -p Result -p ExecMainStatus'        # last result
+ssh nas 'sudo journalctl -u offsite-volumes -n 40 --no-pager -o cat'        # rclone summary at the end
+ssh nas 'sudo journalctl -u offsite-immich-media -u offsite-private -u offsite-volumes --since -30d | grep -c cap_exceeded'
+ssh nas 'sudo systemctl start --no-block offsite-immich-media'              # run one now
+```
+
+- A failed run pushes "`<unit>` failed on nas" to ntfy; the unit's journal has the cause.
+- `offsite-immich-media` and `offsite-volumes` are plain `rclone copy`: re-running after a failure
+  resumes and never duplicates. `offsite-immich-db` and `offsite-private` stream with `rcat`, so a
+  re-run writes a new object (harmless, expires with its prefix).
+- `offsite-private` keeps its state in `/var/lib/offsite/private.{last,gen}` and sends nothing if
+  this ISO week was already sent. Deleting both files forces a full stream on the next run.
+- Timers are `Persistent=true`: a run missed while the NAS was down happens at the next boot.
 
 ## 3. Using the remote
 
