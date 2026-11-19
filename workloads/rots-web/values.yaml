@@ -136,6 +136,12 @@ gameserver:
   capacityPerServer: 32   # static mode's placement cap; placeholder until #74 measures it
   readyTimeoutSecs: 120   # first heartbeat deadline before a start counts as failed
   idleSecs: 60            # ROTS_IDLE_SECS: connected == 0 this long -> destroy
+  # Keep a finished tutorial's replay: the pod posts its recording to rots-sync
+  # (ROTS_REPLAY_UPLOAD), which signs a PUT to s3Endpoint/s3Bucket. Prod only - a
+  # preview has no bucket and no S3 keys, so leaving this false keeps it quiet.
+  replayUpload: false
+  s3Endpoint: http://seaweedfs-s3.default.svc:8333
+  s3Bucket: rots4-replays
   # Managed (kubernetes) mode only: instances kept booted in pre-game (sockets and the
   # coordinator link up, world paused) and activated when a player is placed on one, so
   # /play answers with a ticket in ~1 s instead of ~15 s. Each takes a slot from

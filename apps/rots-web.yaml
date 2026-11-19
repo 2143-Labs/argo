@@ -78,6 +78,10 @@ spec:
         - { name: gameserver.lbIPv6, value: 'fd00:6::32' }
         - { name: gameserver.shareKey, value: rots-prod }
         - { name: gameserver.priorityClass.create, value: 'true' }
+        # Keep each finished tutorial's replay: ROTS_REPLAY_UPLOAD on the game pod,
+        # ROTS_S3_ENDPOINT/BUCKET on rots-sync, keys on rots-authserver-secret. Removing
+        # this line is the rollback; the recorded file dies with the pod either way.
+        - { name: gameserver.replayUpload, value: 'true' }
         # requests of 126 game servers at 200m/256Mi: free node capacity (big, closet, nas, arch,
         # office) measured 2026-11-10 23:40Z + running game pods - 10. Re-measure when nodes change.
         - { name: gameserver.quota.cpu, value: 25200m }

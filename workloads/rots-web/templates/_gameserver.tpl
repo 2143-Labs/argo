@@ -52,6 +52,12 @@
         fieldRef:
           fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
 {{- end }}
+{{- if $root.Values.gameserver.replayUpload }}
+    # A finished tutorial's recording goes to rots-sync, which writes it to the replay
+    # bucket: the pod never sees S3 credentials. Unset = never upload (the rollback).
+    - name: ROTS_REPLAY_UPLOAD
+      value: "1"
+{{- end }}
     - name: ROTS_COORDINATOR_URL
       value: "http://rots-authserver.{{ $root.Values.namespace }}.svc:8001"
     - name: ROTS_COORDINATOR_TOKEN

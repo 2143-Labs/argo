@@ -1,5 +1,11 @@
 # SeaweedFS S3 identities: rotation, least privilege, and orphan cleanup
 
+> **Correction 2026-11-19:** an eighth identity, `rots-sync`, was added with `Read:`/`Write:`/`List:`
+> on `rots4-replays` for the tutorial replay uploads. Its keys live on
+> `consumers/john2143-com/rots-prod/rots-authserver-secret` as `ROTS_S3_ACCESS_KEY` /
+> `ROTS_S3_SECRET_KEY` (merged, not replaced) and reach `rots-sync` through the existing
+> `envFrom`. See [rots tutorial replays](2026-11-19-rots-replay-bucket.md).
+
 **Date:** 2026-11-09
 **Status:** implemented and verified. Seven identities, each scoped to the buckets its
 consumers actually read; every key held only by its intended consumer.

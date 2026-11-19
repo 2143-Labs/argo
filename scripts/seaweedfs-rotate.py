@@ -51,7 +51,7 @@ RCLONE_CONF = os.path.join(STATE_DIR, "rclone.conf")
 KNOWN_BUCKETS = (
     "edge-tofu-state", "frigate-genai", "history-old", "imagehost-files",
     "litellm-spend-logs", "loki-admin", "loki-chunks", "loki-ruler",
-    "mimir-alertmanager", "mimir-blocks", "mimir-rules", "rots4-releases",
+    "mimir-alertmanager", "mimir-blocks", "mimir-rules", "rots4-releases", "rots4-replays",
     "tempo-blocks",
 )
 
@@ -71,6 +71,11 @@ CONSUMERS = {
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
     "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
                       keys=("access_key_id", "secret_access_key"), es=None)],
+    # rots-sync signs the tutorial replay PUTs. The keys ride along on the authserver's
+    # secret because rots-sync already gets it by envFrom; the authserver ignores them.
+    "rots-sync": [dict(kind="bao", path="john2143-com/rots-prod/rots-authserver-secret",
+                       keys=("ROTS_S3_ACCESS_KEY", "ROTS_S3_SECRET_KEY"),
+                       es=("rots-prod", "rots-authserver-secret"))],
     "john2143-worker-doks": [dict(kind="bao", path="doks/default/seaweedfs-credentials",
                                   keys=("SEAWEEDFS_ACCESS_KEY", "SEAWEEDFS_SECRET_KEY"),
                                   es=("default", "seaweedfs-credentials"), es_context="2143prod"),
@@ -85,6 +90,7 @@ SCOPES = {
     "seaweedfs-frigate-genai": ["frigate-genai"],
     "john2143-worker-home": ["imagehost-files"],
     "rots4-ci": ["rots4-releases"],
+    "rots-sync": ["rots4-replays"],
     "edge-tofu": ["edge-tofu-state"],
     "john2143-worker-doks": ["imagehost-files"],
 }
