@@ -196,10 +196,88 @@ kubectl --context closet-as-admin -n longhorn-system get backups.longhorn.io \
   -l backup-volume=$v -o custom-columns=NAME:.metadata.name,TARGET:.status.backupTargetName,URL:.status.url,CREATED:.status.backupCreatedAt
 ```
 
-Then restore from the wanted backup of target `offsite-restore` (Longhorn UI → Backup, or a
-`Volume` with `spec.fromBackup: <URL>` and `spec.backupTargetName: offsite-restore`), bind a PVC
-to it, and re-apply `offsite.backup/enabled=true`. Afterwards delete the BackupTarget and
-`/tank/longhorn-backups/offsite-restore`.
+Wait until `backuptargets.longhorn.io/offsite-restore` reports available, then read the volume's
+registry entry (it holds the newest backup id, read straight out of the staged files):
+
+```bash
+kubectl --context closet-as-admin -n longhorn-system get backupvolumes.longhorn.io -o json \
+  | jq -r '.items[]|select(.spec.backupTargetName=="offsite-restore")
+           | "\(.metadata.name) last=\(.status.lastBackupName) at=\(.status.lastBackupAt)"'
+```
+
+Restore. **`frontend: blockdev` is mandatory** — omitting it is rejected with
+`invalid volume frontend specified`, and with no consumer the volume attaches, finds nothing to
+rebuild into, and detaches as `detached/unknown` with `Restore=False`. The volume only rebuilds
+from B2 while something mounts it, so create the PV/PVC/pod in the same step:
+
+```bash
+kubectl --context closet-as-admin apply -f - <<YAML
+apiVersion: longhorn.io/v1beta2
+kind: Volume
+metadata: {name: restore-drill-vol, namespace: longhorn-system}
+spec:
+  size: "<volume.cfg Size>"
+  numberOfReplicas: 1
+  frontend: blockdev
+  backupTargetName: offsite-restore
+  fromBackup: "nfs://192.168.5.175:/offsite-restore?backup=<backup-id>&volume=<pvc-uuid>"
+  accessMode: rwo
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: restore-drill-pv}
+spec:
+  capacity: {storage: "<volume.cfg Size>"}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  csi:
+    driver: driver.longhorn.io
+    fsType: ext4
+    volumeHandle: restore-drill-vol
+    volumeAttributes: {numberOfReplicas: "1", staleReplicaTimeout: "30"}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: restore-drill-pvc, namespace: offsite-drill}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  volumeName: restore-drill-pv
+  resources: {requests: {storage: "<volume.cfg Size>"}}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: restore-drill-pod, namespace: offsite-drill}
+spec:
+  restartPolicy: Never
+  containers:
+  - {name: c, image: busybox:1.36, command: ["sh","-c","sleep 3600"],
+     volumeMounts: [{name: d, mountPath: /data}]}
+  volumes: [{name: d, persistentVolumeClaim: {claimName: restore-drill-pvc}}]
+YAML
+kubectl --context closet-as-admin -n offsite-drill wait --for=condition=Ready pod/restore-drill-pod --timeout=300s
+kubectl --context closet-as-admin -n longhorn-system get volume restore-drill-vol \
+  -o jsonpath='{.status.state}/{.status.robustness}{"\n"}'      # attached/healthy
+```
+
+Read the data *before* deleting anything — health alone is not proof of content:
+
+```bash
+kubectl --context closet-as-admin -n offsite-drill exec restore-drill-pod -- \
+  sh -c 'du -sh /data; ls -la /data/data/db | grep -E "CURRENT|MANIFEST"; ls /data/data/db/*.sst | wc -l'
+```
+
+Every application keeps its own layout, so verify against that app's expectations rather than
+file counts alone. Tuwunel's real database is `/data/data/db`, not `/data/db`: the latter is a
+stale pre-migration directory, and reading it first looks like corruption (`CURRENT` absent).
+A restored RocksDB is consistent when `CURRENT`, `MANIFEST-*` and the `.sst` files carry
+timestamps matching the backup's `lastBackupAt`.
+
+Then delete, in this order: pod, PVC, PV, `Volume`, `BackupTarget`, the `offsite-drill`
+namespace, and `/tank/longhorn-backups/offsite-restore`. Re-apply
+`offsite.backup=enabled=true` to the real PVC if it was restored in place.
+
 
 If the NAS itself is gone, rebuild it from dotfiles, recreate `tank/longhorn-backups`, copy the
 generation into `backupstore/volumes/` there, and the default target sees it directly.
@@ -211,3 +289,5 @@ Each class was restored from B2 before this was called done. Record each future 
 | date | class | what was restored | result |
 |---|---|---|---|
 | 2026-11-19 | immich database | first dump `20261119T054248Z.dump` (95 MiB, 663 TOC entries) into scratch `immich_drill`, both variants | `asset` 22388 = live 22388; 86 = 86 tables; all tables owned by `immich` |
+| 2026-11-19 | immich media | `upload/…/abc1b60d-….JPG` (4,270,080 B) fetched with `rclone cat` from `media/` using the SSE-C key | sha256 identical to the local file; full `rclone check --size-only` 35,335 match, 2 diffs both in rotating `backups/` |
+| 2026-11-19 | Longhorn volume | `tuwunel-conduwuit-data` (4 GiB, 30 restore points) staged from `longhorn/gen-2026-11` into a scratch NFS backupstore, restored `fromBackup` | `attached/healthy`; `/data/data/db` held `CURRENT`, `MANIFEST-002330`, 95 `.sst` files, timestamps matching `lastBackupAt` 2026-11-11T08:01:42Z |
