@@ -11,6 +11,8 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    # Mirrored weekly to B2 by offsite-volumes on the NAS (docs/offsite-data.md).
+    offsite.backup/enabled: "true"
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: longhorn-3

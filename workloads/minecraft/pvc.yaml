@@ -9,6 +9,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: minecraft-data-lh
   namespace: default
+  annotations:
+    # Mirrored weekly to B2 by offsite-volumes on the NAS (docs/offsite-data.md).
+    offsite.backup/enabled: "true"
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: longhorn-2

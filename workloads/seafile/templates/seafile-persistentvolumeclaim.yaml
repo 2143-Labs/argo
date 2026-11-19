@@ -7,6 +7,8 @@ metadata:
     # Customer data: Argo must never prune or delete this claim on app deletion.
     # (longhorn-3 is also reclaimPolicy Retain.)
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    # Mirrored weekly to B2 by offsite-volumes on the NAS (docs/offsite-data.md).
+    offsite.backup/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce

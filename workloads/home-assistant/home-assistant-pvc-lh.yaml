@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   annotations:
     longhorn.io/number-of-replicas: "3"
+    # Mirrored weekly to B2 by offsite-volumes on the NAS (docs/offsite-data.md).
+    offsite.backup/enabled: "true"
   name: home-assistant-config-lh
 spec:
   accessModes:
