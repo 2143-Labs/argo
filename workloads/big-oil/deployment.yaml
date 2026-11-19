@@ -40,7 +40,7 @@ spec:
                       - general
       containers:
         - name: big-oil
-          image: ghcr.io/2143-labs/big-oil:6
+          image: ghcr.io/2143-labs/big-oil:7
           # --since is ignored once the database holds hours; it exists so the
           # very first start backfills the league from its first hour.
           args:
@@ -50,8 +50,9 @@ spec:
             - "1794600000"
             - --listen
             - 0.0.0.0:9100
+          # Named http for the Service; Alloy scrapes <pod IP>:9100 by number.
           ports:
-            - name: metrics
+            - name: http
               containerPort: 9100
           env:
             - name: BIG_OIL_EXCHANGE_DB

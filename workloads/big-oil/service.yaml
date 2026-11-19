@@ -1,0 +1,17 @@
+# The collector's HTTP side: /v1 (public price API, routed directly), /metrics
+# and /healthz (behind Anubis at the edge). Alloy scrapes the pod IP, not this.
+apiVersion: v1
+kind: Service
+metadata:
+  name: big-oil-exchange
+  namespace: default
+  labels:
+    app.kubernetes.io/name: big-oil-exchange
+spec:
+  selector:
+    app.kubernetes.io/name: big-oil-exchange
+  ports:
+    - name: http
+      port: 9100
+      targetPort: http
+      protocol: TCP
