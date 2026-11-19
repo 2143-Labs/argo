@@ -1,5 +1,10 @@
 # DOKS secrets from OpenBao: ESO with Kubernetes auth
 
+> **Correction 2026-11-19:** §5 is not planned. SPIRE/SPIFFE was removed from DOKS and the
+> home cluster on 2026-11-19: the `spire-server` StatefulSet had been at `replicas: 0` since
+> 2026-07-22 and nothing consumed an SVID. DOKS authenticates to OpenBao only through the
+> `kubernetes-doks` TokenReview mount, so this document's §2-§4 remain accurate.
+
 **Date:** 2026-11-11 (planned), 2026-11-12 (implemented)
 **Status:** implemented and verified.
 **Scope:** the DOKS cluster (`kubectl` context `2143prod`, cluster
