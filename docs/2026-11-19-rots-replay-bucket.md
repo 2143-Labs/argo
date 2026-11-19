@@ -1,8 +1,8 @@
 # ROTS tutorial replays: the bucket, its identity, and retention
 
 **Date:** 2026-11-19
-**Status:** live in prod since 2026-11-19 06:53Z. Verified end to end with a synthetic recording
-posted through the real route (see *Verified*); a played tutorial has not been through it yet.
+**Status:** live in prod since 2026-11-19 06:53Z, and a played tutorial went through it at 07:02Z
+(see *Verified*).
 **Scope:** bucket `rots4-replays`, identity `rots-sync`, `apps/rots-web.yaml`,
 `workloads/rots-web` (templates `_gameserver.tpl`, `sync.yaml`, `values.yaml`),
 `workloads/network-policies/seaweedfs.yaml`.
@@ -103,9 +103,27 @@ posted a 21-byte recording for slot 999:
   recordings=1`, the row count went to 0, and the bucket's chunk count returned to 0 — the
   signed `DELETE` works too, and the object went with the row.
 
-The probe pods, its snapshot row and its recording are gone. **Still unverified: a real played
-tutorial.** That needs a login and a few minutes of play; the route, signature and retention are
-what the probe covered.
+The probe pods, its snapshot row and its recording are gone.
+
+### A real tutorial, 07:02Z
+
+Then a tutorial was actually played on prod (slot 875, generation 169):
+
+- `101716` bytes / `2701` steps, `truncated=false` — about 38 B/tick, so the 8 MiB body limit is
+  roughly 200× a tutorial like this one (the v1 estimate of 23-52 min was pessimistic, not wrong
+  in kind).
+- `rots-sync` logged `recording stored key=replays/875-169-ca209fca88d390cb.rotsrec`; the bucket
+  went to 101816 bytes / 1 chunk and `fs.ls /buckets/rots4-replays/replays/` lists the file.
+- The instance workflow's own `server` query carried
+  `"recording":{"boot_id":"ca209fca88d390cb","bytes":101716,"object_key":"replays/875-169-ca209fca88d390cb.rotsrec","steps":2701,"truncated":false}`,
+  so the signal lands before the workflow ends.
+- The instance's pod was already gone (a tutorial completes and the instance is destroyed), so its
+  own `recording stored in rots-sync` line could not be read after the fact; the row and the object
+  are the authority, which is the design.
+
+Not exercised: the rollback (clearing `gameserver.replayUpload`), which is the argo parameter and a
+unit test, and reading a stored object back — `rots-sync` signs `PUT` and `DELETE` only, so there is
+no GET to fetch one for `server --replay`.
 
 ```bash
 kubectl -n rots-prod logs deploy/rots-sync --since=5m | grep "recording stored"
