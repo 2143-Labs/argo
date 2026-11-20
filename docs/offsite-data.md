@@ -132,15 +132,26 @@ fusermount -u ~/private-local
 gocryptfs -ctlsock $XDG_RUNTIME_DIR/pvl.sock /mnt/nas/private-local/john ~/private-local
 
 set CIPHER (printf '%s\n' '<dirname>' | gocryptfs-xray -encrypt-paths $XDG_RUNTIME_DIR/pvl.sock)
-ssh nas "rsync -aHAX --info=progress2 /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
+ssh nas "sudo rsync -aHAX --info=progress2 /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
 ```
 
-Then gate the delete — all three conditions, not just the first:
+`sudo` is not optional: the destination root already holds ciphertext owned by `root`, left by an
+earlier copy that did not preserve ownership (`find /tank/private-local/john -type f ! -user john`
+as root shows it; as `john` those entries are simply invisible). `rsync` as `john` skips what it
+cannot read on *either* side and reports success, and the dry-run afterwards then looks clean
+because both sides are equally blind. `-a` preserves uid/gid, and since the source is wholly
+`john`-owned, copying as root also repairs the ownership of the earlier copies.
+
+Then gate the delete — the count first, because it is the only check that sees what `rsync` could
+not:
 
 ```fish
-ssh nas "rsync -aHAX --dry-run -i --stats /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
+ssh nas "sudo find /tank/private/john/$CIPHER -type f | wc -l"
+ssh nas "sudo find /tank/private-local/john/$CIPHER -type f | wc -l"
+# these must be equal, then:
+ssh nas "sudo rsync -aHAX --dry-run -i --stats /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
 # exit 0, "Number of regular files transferred: 0", and no -i output lines
-ssh nas "rm -rf /tank/private/john/$CIPHER"
+ssh nas "sudo rm -rf /tank/private/john/$CIPHER"
 ```
 
 - Only run this when nothing is writing to that directory. A copy taken mid-write is stale, and the
