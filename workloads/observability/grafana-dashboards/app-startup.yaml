@@ -1,0 +1,561 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-startup-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  app-startup.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Pod created -> first container start (pull) + last container start -> Ready (boot), for pods that started in the last 15 minutes. Readiness is probe-defined; ROTS /healthz is not world-ready.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Value",
+                "desc": true
+              }
+            ]
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "((((min by (namespace,pod)(kube_pod_container_state_started) - on(namespace,pod) kube_pod_start_time) + (max by (namespace,pod)(kube_pod_status_container_ready_time) - on(namespace,pod) max by (namespace,pod)(kube_pod_container_state_started))) and on(namespace,pod) (time() - max by (namespace,pod)(kube_pod_container_state_started) < 900)) * on(namespace,pod) group_left(app) label_replace((label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"app\",\"$1\",\"owner_name\",\"^(.+)-[a-z0-9]{6,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind!~\"ReplicaSet|Job\"},\"app\",\"$1\",\"owner_name\",\"(.+)\")),\"app\",\"rots-gameserver\",\"app\",\"rots-gs-.*\"))",
+              "format": "table",
+              "instant": true,
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Cold start - recent (15m)",
+          "type": "table",
+          "transformations": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Boot = last container start -> Ready, for pods that started in the last hour. Each boot appears as a one-hour plateau.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "(((max by (namespace,pod)(kube_pod_status_container_ready_time) - on(namespace,pod) max by (namespace,pod)(kube_pod_container_state_started)) and on(namespace,pod) (time() - max by (namespace,pod)(kube_pod_container_state_started) < 3600)) * on(namespace,pod) group_left(app) label_replace((label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"app\",\"$1\",\"owner_name\",\"^(.+)-[a-z0-9]{6,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind!~\"ReplicaSet|Job\"},\"app\",\"$1\",\"owner_name\",\"(.+)\")),\"app\",\"rots-gameserver\",\"app\",\"rots-gs-.*\"))",
+              "legendFormat": "{{app}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Boot time - last hour's starts",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Distinct pods seen in the last 24h, grouped by the app encoded in the pod name. DaemonSet pods can group as 'other'.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "id": 3,
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(topk(15, sum by (app)(label_replace(label_replace(label_replace(count by (namespace,pod)(count_over_time(kube_pod_start_time{namespace=~\"$namespace\"}[24h])), \"app\", \"$1\", \"pod\", \"^(.+)-[a-z0-9]{6,10}-[a-z0-9]{5}$\"), \"app\", \"$1\", \"pod\", \"^(.+)-[0-9]+$\"), \"app\", \"rots-gameserver\", \"app\", \"rots-gs-.*\"))), \"app\", \"other\", \"app\", \"\")",
+              "format": "table",
+              "instant": true,
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Cold starts - last 24h",
+          "type": "table",
+          "transformations": []
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "description": "Parsed from the server log line '[primal] world seed=... generated in N ms'. Instant query over 7d.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 8
+          },
+          "id": 4,
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "max(quantile_over_time(0.95, {namespace=\"dino-prod\"} |= \"generated in\" | regexp \"generated in (?P<ms>[0-9]+) ms\" | unwrap ms [7d])) / 1000",
+              "queryType": "instant",
+              "refId": "A"
+            }
+          ],
+          "title": "Dino world generation p95 (7d)",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "world.build covers only the spawn phase; k8s.provision covers only the Kubernetes API create call. Neither is full world generation.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 8
+          },
+          "id": 5,
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le)(rate(traces_spanmetrics_latency_bucket{span_name=\"world.build\"}[7d])))",
+              "instant": true,
+              "legendFormat": "world.build (spawn)",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le)(rate(traces_spanmetrics_latency_bucket{span_name=\"k8s.provision\"}[7d])))",
+              "instant": true,
+              "legendFormat": "k8s.provision (API)",
+              "range": false,
+              "refId": "B"
+            }
+          ],
+          "title": "ROTS build & provision p95 (7d)",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "description": "Raw startup markers; the Dino line carries the generation time.",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 8
+          },
+          "id": 6,
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"dino-prod\"} |= \"generated in\"",
+              "queryType": "range",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rots-prod\"} |~ \"world built|Server started\"",
+              "queryType": "range",
+              "refId": "B"
+            }
+          ],
+          "title": "Startup markers (logs)",
+          "type": "logs"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Ready replicas for Deployments and StatefulSets; 0/1 flaps are KEDA scale-to-zero.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "spanNulls": true,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
+          "id": 7,
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "kube_deployment_status_replicas_ready{namespace=~\"$namespace\"}",
+              "legendFormat": "{{deployment}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "kube_statefulset_status_replicas_ready{namespace=~\"$namespace\"}",
+              "legendFormat": "{{statefulset}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "Ready replicas (scale-to-zero)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Container restarts in the last hour, grouped by app.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 8,
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Value",
+                "desc": true
+              }
+            ]
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "topk(20, sum by (namespace,app)(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[1h]) * on(namespace,pod) group_left(app) label_replace((label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"app\",\"$1\",\"owner_name\",\"^(.+)-[a-z0-9]{6,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind!~\"ReplicaSet|Job\"},\"app\",\"$1\",\"owner_name\",\"(.+)\")),\"app\",\"rots-gameserver\",\"app\",\"rots-gs-.*\")) > 0)",
+              "format": "table",
+              "instant": true,
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Restarts (1h)",
+          "type": "table",
+          "transformations": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          },
+          "description": "Pods that are Running but not Ready right now. Jobs are excluded.",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "id": 9,
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "sum by (namespace,app)(((kube_pod_status_ready{condition=\"true\",namespace=~\"$namespace\"} == 0) and on(namespace,pod) (kube_pod_status_phase{phase=\"Running\",namespace=~\"$namespace\"} == 1)) * on(namespace,pod) group_left(app) label_replace((label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"app\",\"$1\",\"owner_name\",\"^(.+)-[a-z0-9]{6,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind!~\"ReplicaSet|Job\"},\"app\",\"$1\",\"owner_name\",\"(.+)\")),\"app\",\"rots-gameserver\",\"app\",\"rots-gs-.*\"))",
+              "format": "table",
+              "instant": true,
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Unready running pods",
+          "type": "table",
+          "transformations": []
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": true,
+              "text": [
+                "All"
+              ],
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "mimir"
+            },
+            "definition": "label_values(kube_pod_owner, namespace)",
+            "hide": 0,
+            "includeAll": true,
+            "allValue": ".*",
+            "label": "namespace",
+            "multi": true,
+            "name": "namespace",
+            "options": [],
+            "query": {
+              "query": "label_values(kube_pod_owner, namespace)",
+              "refId": "StandardVariableQuery"
+            },
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "App startup",
+      "uid": "app-startup",
+      "version": 1
+    }
