@@ -107,6 +107,51 @@ ssh nas 'sudo systemctl start --no-block offsite-immich-media'              # ru
   this ISO week was already sent. Deleting both files forces a full stream on the next run.
 - Timers are `Persistent=true`: a run missed while the NAS was down happens at the next boot.
 
+## 2b. Shrinking what gets uploaded
+
+`offsite-private` sends whatever is in `tank/private`. Directories that should never leave the
+building are moved to the second vault root, `tank/private-local`, which the job never reads. Each
+100 GB left behind saves roughly $11/year, so this is worth doing before the first send — and it can
+be done over weeks, with the job held throughout.
+
+The obvious route — `rsync` between the two mounted views on `arch`/`office` — crosses CIFS twice
+and encrypts on the client: it was measured at **13.94 MB/s**, about 21 hours for 1.09 TB. Do it on
+the NAS instead, in ciphertext space:
+
+- Both roots share one master key (`gocryptfs.conf` was copied, never re-initialised) and a
+  byte-identical root `gocryptfs.diriv`, so **a given plaintext name has the same ciphertext name in
+  both roots**; every directory also carries its own `.diriv` (32,355 directories = 32,355 dirivs).
+- Copying a directory ciphertext-for-ciphertext is therefore self-consistent — no re-encryption, and
+  mtimes, xattrs and sparse layout are preserved byte for byte.
+
+Mapping the plaintext name to its ciphertext name needs a control socket, so mount with `-ctlsock`
+once:
+
+```fish
+fusermount -u ~/private-local
+gocryptfs -ctlsock $XDG_RUNTIME_DIR/pvl.sock /mnt/nas/private-local/john ~/private-local
+
+set CIPHER (printf '%s\n' '<dirname>' | gocryptfs-xray -encrypt-paths $XDG_RUNTIME_DIR/pvl.sock)
+ssh nas "rsync -aHAX --info=progress2 /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
+```
+
+Then gate the delete — all three conditions, not just the first:
+
+```fish
+ssh nas "rsync -aHAX --dry-run -i --stats /tank/private/john/$CIPHER/ /tank/private-local/john/$CIPHER/"
+# exit 0, "Number of regular files transferred: 0", and no -i output lines
+ssh nas "rm -rf /tank/private/john/$CIPHER"
+```
+
+- Only run this when nothing is writing to that directory. A copy taken mid-write is stale, and the
+  dry-run cannot tell a stale copy from a fresh one if sizes and mtimes happen to match.
+- The `rm` is ciphertext-side and instantaneous — no FUSE traversal.
+- Deleting does not free pool space while `tank/private`'s snapshots still reference it (89
+  snapshots, oldest 2026-04). At 13.2 T free this affects the monthly bill, not capacity — but
+  `zfs list -o space tank/private` is the honest number, not `du`.
+- Leave `/var/lib/offsite/hold` in place for the whole migration; `offsite-private.timer` logs
+  `skipped, unmet condition check` every week and uploads nothing.
+
 ## 3. Using the remote
 
 On the NAS, as root, load the bucket's env file first:
