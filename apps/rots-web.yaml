@@ -60,6 +60,12 @@ spec:
         # The one central account-settings store (templates/settings.yaml, settings-db.yaml):
         # every preview's authserver proxies to it, so players' controls follow them across
         # environments. Enabling it only here is what keeps a single copy of the truth.
+        # The replay reviewer (templates/replays.yaml): lists the stored tutorial recordings,
+        # shows one's header and timeline, downloads and verifies it. Published only behind
+        # oauth2-proxy at https://rots-replays.ts.2143.me. `replays.image` must stay exactly one
+        # line: rots4 CI's bump() fails the deploy otherwise.
+        - { name: replays.enabled, value: 'true' }
+        - { name: replays.image, value: 'registry.ts.2143.me/2143-labs/rots4:replays-pr-79-6e2aaf097400644ea8def69da952a2dc2df60c7f' }
         - { name: settings.enabled, value: 'true' }
         - { name: settings.url, value: http://rots-settings:8100 }
         - { name: settings.offsiteBackup, value: 'true' }
