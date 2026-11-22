@@ -99,8 +99,11 @@ settings:
 # Prod only: a preview has no bucket, so it stays off (the same reason as replayUpload).
 replays:
   enabled: false   # prod true
-  # replays-<sha7> (prod, rewritten by rots4 CI) or replays-pr-<N>-<head sha> for the first deploy.
-  image: ""
+  # The tag of the rots4 image in image.repository: replays-<sha7> (prod, rewritten by rots4
+  # CI) or replays-pr-<N>-<head sha> for the first deploy. The repository comes from
+  # image.repository, like the web client and the game servers, so the registry host is not
+  # repeated in an app parameter.
+  tag: ""
   port: 8200      # REPLAYS_PORT and the Service port
 
 # rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.

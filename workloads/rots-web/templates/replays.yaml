@@ -35,7 +35,7 @@ spec:
 {{- end }}
       containers:
         - name: rots-replays
-          image: {{ required "replays.image is required" .Values.replays.image }}
+          image: "{{ .Values.image.repository }}:{{ required "replays.tag is required" .Values.replays.tag }}"
           # The pass is the authentication: the proxy answers 302 to Pocket ID before any
           # request reaches this pod, and the pod is reachable only inside the cluster.
           imagePullPolicy: Always
