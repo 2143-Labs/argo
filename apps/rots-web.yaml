@@ -41,12 +41,12 @@ spec:
         # rots4 CI (build_nix.yml job deploy, scripts/ci-argo-bump.sh) rewrites image.tag,
         # authserver.image, gameserver.tag and replays.tag to one commit's <sha7> tags after
         # every green main build; keep each on one line in this "- { name: …, value: … }" form.
-        - { name: image.tag, value: webserver-wasm-9fdef03 }
+        - { name: image.tag, value: webserver-wasm-8a4d0d7 }
         # Serve the wasm bundle warm: one rots-web pod is always up (KEDA min 1)
         # instead of cold-starting behind the interceptor on the first page view.
         - { name: web.minReplicas, value: '1' }
         - { name: authserver.secretKey, value: john2143-com/rots-prod/rots-authserver-secret }
-        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-9fdef03' }
+        - { name: authserver.image, value: 'registry.ts.2143.me/2143-labs/rots4:authserver-8a4d0d7' }
         - { name: db.instances, value: '2' }
         - { name: db.protect, value: 'true' }
         - { name: db.offsiteBackup, value: 'true' }
@@ -66,12 +66,12 @@ spec:
         # image.repository, like gameserver.tag; `replays.tag` must stay exactly one line -
         # rots4 CI's bump() fails the deploy otherwise.
         - { name: replays.enabled, value: 'true' }
-        - { name: replays.tag, value: replays-pr-79-d3922302b25b53125d85019fdfc7cb1c6135f1a3 }
+        - { name: replays.tag, value: replays-8a4d0d7 }
         - { name: settings.enabled, value: 'true' }
         - { name: settings.url, value: http://rots-settings:8100 }
         - { name: settings.offsiteBackup, value: 'true' }
         - { name: sync.replicas, value: '2' }
-        - { name: gameserver.tag, value: gameserver-9fdef03 }
+        - { name: gameserver.tag, value: gameserver-8a4d0d7 }
         # Managed mode: no standing servers; the authserver spawns one instance per
         # new player (friends join by code) and destroys it when idle. slots is the
         # address space (UDP 36000-37999, /ws/0-999 in 63 HTTPRoutes of 16); live
