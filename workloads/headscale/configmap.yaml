@@ -226,6 +226,10 @@ data:
         - name: "files-ui.ts.2143.me"
           type: "A"
           value: "192.168.6.6"
+        # rots-replays.ts.2143.me (the replay reviewer, behind oauth2-proxy)
+        - name: "rots-replays.ts.2143.me"
+          type: "A"
+          value: "192.168.6.6"
         # longhorn.ts.2143.me
         - name: "longhorn.ts.2143.me"
           type: "A"

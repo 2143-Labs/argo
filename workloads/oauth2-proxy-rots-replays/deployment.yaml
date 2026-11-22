@@ -1,0 +1,115 @@
+# The replay reviewer's front door: oauth2-proxy in reverse-proxy mode in namespace default,
+# one per published app (files-ui.ts.2143.me has the same shape). Pocket ID group `admin` is the
+# whole authentication; the upstream is the reviewer's ClusterIP Service in rots-prod, which the
+# .ts.2143.me listener's route reaches through the existing `ReferenceGrant allow-rots-services`
+# in that namespace.
+# The OpenBao secret (client-id, client-secret, cookie-secret) is
+# workloads/secrets/default-oauth2-proxy-rots-replays.yaml; until it exists the pod sits in
+# CreateContainerConfigError, which is expected and harmless.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy-rots-replays
+  namespace: default
+  labels:
+    app: oauth2-proxy-rots-replays
+spec:
+  revisionHistoryLimit: 3
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy-rots-replays
+  template:
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      labels:
+        app: oauth2-proxy-rots-replays
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: oauth2-proxy-rots-replays
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--provider=oidc"
+            - "--oidc-issuer-url=https://au.2143.me"
+            - "--client-id=$(OAUTH2_PROXY_CLIENT_ID)"
+            - "--client-secret=$(OAUTH2_PROXY_CLIENT_SECRET)"
+            - "--cookie-secret=$(OAUTH2_PROXY_COOKIE_SECRET)"
+            - "--redirect-url=https://rots-replays.ts.2143.me/oauth2/callback"
+            - "--upstream=http://rots-replays.rots-prod.svc.cluster.local:8200"
+            - "--scope=openid email profile groups"
+            - "--allowed-group=admin"
+            - "--email-domain=*"
+            - "--reverse-proxy=true"
+            - "--http-address=0.0.0.0:4180"
+            - "--cookie-domain=rots-replays.ts.2143.me"
+            - "--cookie-secure=true"
+            - "--cookie-httponly=true"
+            - "--cookie-samesite=lax"
+            - "--cookie-expire=8h"
+            - "--cookie-refresh=1h"
+            - "--force-code-challenge-method=S256"
+            - "--set-xauthrequest=true"
+            - "--pass-authorization-header=false"
+            - "--auth-logging=true"
+            - "--request-logging=true"
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-rots-replays
+                  key: client-id
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-rots-replays
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-rots-replays
+                  key: cookie-secret
+          ports:
+            - containerPort: 4180
+              name: http
+              protocol: TCP
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

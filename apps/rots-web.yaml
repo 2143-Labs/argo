@@ -39,8 +39,8 @@ spec:
         - { name: routeName, value: rots-web }
         - { name: publicUrl, value: 'https://rots.john2143.com' }
         # rots4 CI (build_nix.yml job deploy, scripts/ci-argo-bump.sh) rewrites image.tag,
-        # authserver.image and gameserver.tag to one commit's <sha7> tags after every green
-        # main build; keep each on one line in this "- { name: …, value: … }" form.
+        # authserver.image, gameserver.tag and replays.tag to one commit's <sha7> tags after
+        # every green main build; keep each on one line in this "- { name: …, value: … }" form.
         - { name: image.tag, value: webserver-wasm-158478a }
         # Serve the wasm bundle warm: one rots-web pod is always up (KEDA min 1)
         # instead of cold-starting behind the interceptor on the first page view.
@@ -60,6 +60,13 @@ spec:
         # The one central account-settings store (templates/settings.yaml, settings-db.yaml):
         # every preview's authserver proxies to it, so players' controls follow them across
         # environments. Enabling it only here is what keeps a single copy of the truth.
+        # The replay reviewer (templates/replays.yaml): lists the stored tutorial recordings,
+        # shows one's header and timeline, downloads and verifies it. Published only behind
+        # oauth2-proxy at https://rots-replays.ts.2143.me. The tag of the rots4 image in
+        # image.repository, like gameserver.tag; `replays.tag` must stay exactly one line -
+        # rots4 CI's bump() fails the deploy otherwise.
+        - { name: replays.enabled, value: 'true' }
+        - { name: replays.tag, value: replays-pr-79-d3922302b25b53125d85019fdfc7cb1c6135f1a3 }
         - { name: settings.enabled, value: 'true' }
         - { name: settings.url, value: http://rots-settings:8100 }
         - { name: settings.offsiteBackup, value: 'true' }

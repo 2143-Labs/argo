@@ -1,0 +1,34 @@
+# The replay reviewer, LAN and tailnet only. Same shape and middlewares as the filer UI route
+# (workloads/seaweedfs/ingress.yaml): the .ts.2143.me listener admits routes only from namespaces
+# default, argocd, longhorn-system, openbao and stalwart, which is why this route lives in
+# `default` and reaches the reviewer in rots-prod through that namespace's ReferenceGrant.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rots-replays
+  namespace: default
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: ts-2143-me-wildcard-https
+  hostnames:
+    - rots-replays.ts.2143.me
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-only
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: auth-security-headers
+      backendRefs:
+        - name: oauth2-proxy-rots-replays
+          port: 4180

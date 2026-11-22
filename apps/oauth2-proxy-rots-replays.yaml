@@ -1,0 +1,23 @@
+# The replay reviewer's oauth2-proxy (workloads/oauth2-proxy-rots-replays): Pocket ID group
+# `admin`, reverse proxy to rots-replays.rots-prod:8200, published at
+# https://rots-replays.ts.2143.me (LAN and tailnet only).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: oauth2-proxy-rots-replays
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/argo.git
+    targetRevision: HEAD
+    path: workloads/oauth2-proxy-rots-replays
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
