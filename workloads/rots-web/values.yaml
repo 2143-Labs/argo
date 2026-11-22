@@ -91,6 +91,18 @@ settings:
   # Prod true; a preview never renders settings-db at all (settings.enabled is false).
   offsiteBackup: false
 
+# The replay reviewer (templates/replays.yaml): lists the stored tutorial recordings, shows one's
+# header and event timeline, downloads it and, for a recording of its own build, verifies it.
+# It holds no S3 or database credentials - everything comes from rots-sync's bearer routes - and
+# is published only behind oauth2-proxy (apps/oauth2-proxy-rots-replays) at
+# https://rots-replays.ts.2143.me, which the .ts.2143.me listener serves to the LAN and tailnet.
+# Prod only: a preview has no bucket, so it stays off (the same reason as replayUpload).
+replays:
+  enabled: false   # prod true
+  # replays-<sha7> (prod, rewritten by rots4 CI) or replays-pr-<N>-<head sha> for the first deploy.
+  image: ""
+  port: 8200      # REPLAYS_PORT and the Service port
+
 # rots-sync (templates/sync.yaml, managed mode only): the game servers' world-snapshot store.
 sync:
   replicas: 1   # prod 2

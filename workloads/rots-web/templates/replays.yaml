@@ -1,0 +1,109 @@
+{{- if .Values.replays.enabled }}
+# The replay reviewer (`server` crate's `rots-replays` binary, server/src/bin/rots_replays.rs):
+# lists the stored tutorial recordings, shows one's header and event timeline, downloads it byte
+# for byte, and verifies it with the server's own replay when the recording was written by the
+# same build. It reads everything through rots-sync's bearer routes and holds no S3 or database
+# credentials, so no SeaweedFS NetworkPolicy or S3 identity changes for it.
+#
+# It is published only behind oauth2-proxy (apps/oauth2-proxy-rots-replays, namespace default),
+# which is what authenticates the operator: https://rots-replays.ts.2143.me, LAN and tailnet
+# only, Pocket ID group `admin`.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-replays
+  namespace: {{ $ns }}
+  labels:
+    app: rots-replays
+spec:
+  # One replica: a page view is a handful of queries, and verify is serialised in the process
+  # (it builds a whole server world).
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-replays
+  template:
+    metadata:
+      labels:
+        app: rots-replays
+    spec:
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
+      containers:
+        - name: rots-replays
+          image: {{ required "replays.image is required" .Values.replays.image }}
+          # The pass is the authentication: the proxy answers 302 to Pocket ID before any
+          # request reaches this pod, and the pod is reachable only inside the cluster.
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: ROTS_SYNC_URL
+              value: http://rots-sync.{{ $ns }}.svc:8002
+            # The bearer rots-sync requires on its data routes. Only this key: the rest of
+            # rots-authserver-secret (signing key, provider secrets, S3 keys) stays out of a pod
+            # that renders recordings for a browser.
+            - name: ROTS_COORDINATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-authserver-secret
+                  key: COORDINATOR_TOKEN
+            - name: REPLAYS_PORT
+              value: {{ int .Values.replays.port | quote }}
+            - name: RUST_LOG
+              value: info
+          ports:
+            - containerPort: {{ int .Values.replays.port }}
+              name: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            # A verify builds a server world and re-runs the whole recording: that is the peak.
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-replays
+  namespace: {{ $ns }}
+  labels:
+    app: rots-replays
+spec:
+  type: ClusterIP
+  selector:
+    app: rots-replays
+  ports:
+    - port: {{ int .Values.replays.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+{{- end }}
