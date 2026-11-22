@@ -34,7 +34,7 @@ spec:
                       - general
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:v1.108.1
+          image: ghcr.io/berriai/litellm:v1.108.15
           ports:
             - containerPort: 4000
               protocol: TCP
@@ -49,9 +49,10 @@ spec:
             # mount below). Remove this prefix, that mount and the ConfigMap key
             # only when a released image carries the aggregation fix for
             # BerriAI/litellm#37629: PR #37728 was closed unmerged, so re-check
-            # on every image bump. Re-checked on v1.108.1 (2026-11-06): the
-            # per-message warning is unchanged (transformation.py:89), so the
-            # filter stays.
+            # on every image bump. Re-checked on v1.108.15 (2026-11-22): the
+            # per-message warning is unchanged
+            # (deepseek/chat/transformation.py, _fill_reasoning_content, line
+            # 101), so the filter stays.
             - name: PYTHONPATH
               value: "/etc/litellm-pyfilter:/usr/lib/python3.13/site-packages"
             # Migrations run at startup on purpose. They were disabled on
@@ -90,6 +91,25 @@ spec:
             # cooldown, spend-log query cancellation and anthropic count_tokens
             # fixes) with an unchanged migration set, so the schema on the
             # cluster is already the target state.
+            #
+            # v1.108.1 -> v1.108.15 (2026-11-22) also carries none: 14 LTS
+            # backports onto lts/1.108.x with the same 220 migrations. The
+            # release notes' three action items do not apply here: #50819
+            # (.15) 401s keyless *JSON-registry* providers
+            # (llms/openai_like/providers.json) that used to borrow
+            # OPENAI_API_KEY, and this config uses none of them — ollama and
+            # chatgpt are native providers; #48655 (.7) wants drop_params,
+            # already true below; #51254 (.6) wants tenant_id/client_secret
+            # request *tags* in metadata, and no tags are sent.
+            #
+            # Why this bump: Gemini 4 Neon's `xhigh` effort. LiteLLM v1.108.15
+            # maps reasoning_effort=xhigh to thinkingLevel "xhigh"
+            # (vertex_and_google_ai_studio_gemini.py,
+            # _map_reasoning_effort_to_thinking_level), gated on the model's
+            # supports_xhigh_reasoning_effort flag from the runtime cost map.
+            # On v1.108.1 xhigh is not in SUPPORTED_REASONING_EFFORTS, so
+            # drop_params discarded it silently and Neon ran at its own default
+            # level instead of failing loudly.
             # `false` (not deletion) so it also overrides any inherited value.
             - name: DISABLE_SCHEMA_UPDATE
               value: "false"
