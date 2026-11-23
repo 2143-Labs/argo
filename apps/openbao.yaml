@@ -398,12 +398,15 @@ spec:
                       port: 8200
                     - protocol: TCP
                       port: 8201
-                # Snapshot agent reaches the active API.
+                # Snapshot agent reaches the active API. The chart labels the job
+                # pod app.kubernetes.io/component=snapshot-agent; it used the bare
+                # `component` key before 0.30.8, and this policy kept the old key, so
+                # every snapshot job was rejected at the active service.
                 - from:
                     - podSelector:
                         matchLabels:
                           app.kubernetes.io/instance: openbao
-                          component: snapshot-agent
+                          app.kubernetes.io/component: snapshot-agent
                   ports:
                     - protocol: TCP
                       port: 8200
