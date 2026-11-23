@@ -72,6 +72,14 @@ directory, it mirrors the rest and fails (alert).
 
 **A restored or recreated PVC loses a live-only annotation.** Re-apply it before the next Sunday.
 
+**Generations follow the wall clock, not the run.** The destination is
+`longhorn/gen-<year>-<ISO week / 4>/`, so every four weeks the job starts a fresh, self-contained
+generation. A re-run inside the same week copies only what changed; a re-run that crosses a week
+boundary — for example a manual start the day after the Sunday run — opens a new generation and
+re-uploads the entire tagged set. That is intended (a generation must never depend on an older
+one), but it means the bucket briefly holds two full sets, since each generation's objects live
+until they hide at day 60.
+
 ## 2. How it is protected
 
 - **Object Lock**: every bucket has default retention COMPLIANCE, 30 days. Nothing, including
@@ -92,7 +100,7 @@ directory, it mirrors the rest and fails (alert).
   history. Losing a key makes that bucket permanently unreadable.
 - **Caps**: B2 *enforces* Caps & Alerts (`403 cap_exceeded`). The home account's storage and
   Class B caps must stay well above this footprint, or a sync stops partway and a restore cannot
-  start. The values in force are recorded on ai_tasks card #349.
+  start. The values in force are recorded on ai_tasks task **#2** ("NAS off-box backup").
 
 ## 2a. Operating the jobs
 
