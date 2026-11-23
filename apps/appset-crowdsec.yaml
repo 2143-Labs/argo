@@ -59,7 +59,7 @@ spec:
       sources:
         - chart: crowdsec
           repoURL: https://crowdsecurity.github.io/helm-charts
-          targetRevision: 0.24.2
+          targetRevision: 0.24.3
           helm:
             releaseName: crowdsec
             valueFiles:

@@ -19,7 +19,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: prune
-              image: temporalio/admin-tools:1.32.0
+              image: temporalio/admin-tools:1.32.2
               command: ["/bin/sh", "-c"]
               args:
                 - |

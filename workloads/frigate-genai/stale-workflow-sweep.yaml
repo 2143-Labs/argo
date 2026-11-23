@@ -16,7 +16,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: sweep
-              image: temporalio/admin-tools:1.32.0
+              image: temporalio/admin-tools:1.32.2
               command: ["/bin/sh", "-c"]
               args:
                 - |

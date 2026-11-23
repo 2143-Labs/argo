@@ -116,7 +116,7 @@ spec:
               memory: 128Mi
       containers:
         - name: terminate-workflows
-          image: docker.io/temporalio/admin-tools:1.32.0
+          image: docker.io/temporalio/admin-tools:1.32.2
           env:
             - name: TEMPORAL_ADDRESS
               value: "temporal-frontend.default.svc:7233"

@@ -10,7 +10,7 @@ spec:
   source:
     chart: beyla
     repoURL: https://grafana.github.io/helm-charts
-    targetRevision: 1.16.11
+    targetRevision: 1.16.19
     helm:
       releaseName: beyla
       values: |

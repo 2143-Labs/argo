@@ -33,7 +33,7 @@ spec:
                       - general
       containers:
         - name: headscale
-          image: docker.io/headscale/headscale:0.29.3
+          image: docker.io/headscale/headscale:0.29.7
           envFrom:
             - secretRef:
                 name: headscale-oidc

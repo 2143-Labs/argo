@@ -12,7 +12,7 @@ spec:
   source:
     chart: openbao
     repoURL: https://openbao.github.io/openbao-helm
-    targetRevision: 0.29.4
+    targetRevision: 0.30.8
     helm:
       releaseName: openbao
       skipTests: true
