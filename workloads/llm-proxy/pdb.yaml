@@ -1,0 +1,16 @@
+# Two replicas, so one may go at a time. Without this a drain takes both and the
+# LLM gateway is down for the length of the drain; with it the survivor keeps
+# serving. The Deployment's maxSurge 1 rollout does not evict, so this never
+# blocks an image bump, and the required hostname anti-affinity in deployment.yaml
+# keeps the two replicas off one node, so a drain always has an allowed
+# disruption to consume. Same shape as workloads/lan-dns/pdb.yaml.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: litellm
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: litellm

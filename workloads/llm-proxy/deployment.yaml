@@ -32,6 +32,22 @@ spec:
                     operator: In
                     values:
                       - general
+        # Required, not preferred: a second copy of the gateway on the same node
+        # is no protection at all. Until 2026-11-23 both replicas ran on big and
+        # a node loss took the whole proxy tier to zero endpoints. The db gets
+        # the same guarantee from CNPG (cnpg-cluster.yaml); this Deployment has
+        # to state it. Third schedulable node for the rollout surge, and for the
+        # pod-gone case: big, arch and closet are the only nodes litellm can
+        # reach (office is wifi-tainted and the wifi policy withholds the
+        # toleration from pods that mount a PVC; pite is arm64; nas has no free
+        # request budget). If two of the three are gone the second replica sits
+        # Pending — no co-location, but also no second copy; that is the trade.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: litellm
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: litellm
           image: ghcr.io/berriai/litellm:v1.110.2
