@@ -10,8 +10,16 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      # No surge. The replicas must sit on different nodes, and only two nodes
+      # litellm can reach have room for a 4Gi / 200m pod right now: nas has no
+      # free memory, arch has 65m of CPU left of 4000m. A third pod has nowhere
+      # to go, so maxSurge 1 stalled this rollout on ProgressDeadlineExceeded
+      # (2026-11-23). Taking one down first frees its node for the replacement;
+      # the cost is a single-replica window for the ~2 min a new pod needs to
+      # pass startup and readiness. Free ~135m of CPU on arch to go back to a
+      # surge.
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app: litellm
