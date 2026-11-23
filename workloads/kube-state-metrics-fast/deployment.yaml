@@ -1,5 +1,5 @@
 # Mirrors the chart-managed exporter's pod shape (apps/appset-kube-state-metrics.yaml,
-# chart 8.4.2, image v2.20.0) so both run under the same security posture: non-root,
+# chart 9.1.0, image v2.20.0) so both run under the same security posture: non-root,
 # read-only root filesystem, no volumes — the process needs no writable path.
 #
 # Two ports are declared, exactly as the chart does, so pod discovery yields two
