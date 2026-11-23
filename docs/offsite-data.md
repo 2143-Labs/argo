@@ -89,7 +89,10 @@ until they hide at day 60.
   after it is set. Check it with `aws s3api get-object-lock-configuration --bucket <bucket>`
   (endpoint `https://s3.us-east-005.backblazeb2.com`): a response with no `Rule` locks nothing.
 - **Lifecycle**: one rule per bucket, always scoped to the prefix in the table, never the bucket
-  root. `media/` has no rule: originals are written once and kept.
+  root. `media/` has no rule: originals are written once and kept. That prefix also carries
+  immich's own rotating `backups/` directory (16 objects, ~1.5 G of `pg_dump` SQL), so the
+  database exists twice in this bucket — once as immich's rotation and once as our `db/*.dump`.
+  That is the only duplication between the classes; the volume mirror holds file data, not rows.
 - **Credentials**: one bucket-scoped `Read and Write` application key per bucket, and one SSE-C
   key per bucket. Backblaze never stores SSE-C keys. Both live in the password-manager entry
   `Backblaze argo-db-backups` (`<bucket>-appkey`, `<bucket>-sse`) and in dotfiles
