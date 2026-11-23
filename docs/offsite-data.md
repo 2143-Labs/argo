@@ -48,7 +48,7 @@ re-upload.
 
 A PVC is mirrored when it carries the annotation `offsite.backup/enabled: "true"`. The job
 matches `namespace/name` pairs against Longhorn's `status.kubernetesStatus`, so two claims with
-the same name in different namespaces are selected independently. Current set (9):
+the same name in different namespaces are selected independently. Current set (14):
 
 | namespace | PVC | declared in |
 |---|---|---|
@@ -59,6 +59,11 @@ the same name in different namespaces are selected independently. Current set (9
 | `default` | `factorio-saves-lh` | `workloads/factorio/pvc.yaml` |
 | `stalwart` | `data-stalwart-stalwart-0` | `workloads/stalwart/pvc.yaml` |
 | `matrix` | `tuwunel-conduwuit-data` | **live object only** (see `workloads/tuwunel/BACKUP.md`) |
+| `default` | `headscale-data-lh` | `workloads/headscale/pvc-lh.yaml` |
+| `default` | `matter-server-data-oct17` | `workloads/home-assistant/matter-server-data-oct17.yaml` |
+| `default` | `mosquitto-data-lh` | `workloads/mosquitto/pvc-lh.yaml` |
+| `default` | `teamspeak-all-lh` | `workloads/teamspeak/pvc-lh.yaml` |
+| `default` | `asciinema-data` | `workloads/asciinema/pvc.yaml` |
 
 The job only mirrors what Longhorn has already backed up to the NAS (`RecurringJob/nightly-backup`),
 so a tagged volume must also be in that job's group. If no PVC is tagged, or no Longhorn volume
