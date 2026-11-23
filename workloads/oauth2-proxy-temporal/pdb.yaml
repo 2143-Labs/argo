@@ -1,0 +1,14 @@
+# Two replicas, so one may go at a time. The deployment's podAntiAffinity is
+# required on hostname, so the survivor is never on the node being drained and
+# the drain always has a disruption to spend. Same shape as
+# workloads/lan-dns/pdb.yaml.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: oauth2-proxy-temporal
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy-temporal
