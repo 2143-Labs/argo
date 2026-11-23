@@ -1,0 +1,84 @@
+# Weekly dependency PRs for 2143-Labs/argo, using the regex managers in the
+# repo's renovate.json (charts under apps/, images under workloads/ and
+# helm_modules/). Replaces running Renovate from a NixOS host: a CronJob needs
+# no fleet host, survives host reboots, and logs in-cluster.
+#
+# The token is a fine-grained PAT owned by John2143, scoped to 2143-Labs/argo.
+# It lives at consumers/data/john2143-com/renovate/renovate-token (key
+# `token`) and is rendered by workloads/secrets/renovate-renovate-token.yaml.
+#
+# A missed window is skipped, not replayed (startingDeadlineSeconds: 600): if the
+# cluster is down at 05:00 Sunday, trigger one by hand with
+# `kubectl -n renovate create job --from=cronjob/renovate renovate-manual`.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: renovate
+  namespace: renovate
+spec:
+  schedule: "0 5 * * 0"          # Sundays 05:00, as the retired host timer did
+  timeZone: America/New_York
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          # Same resolver pin as workloads/ddns: the IPv6 kube-dns ClusterIP
+          # (fd42:42:43::a) never answers, and every lookup would pay a timeout.
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 10.43.0.10
+            searches:
+              - renovate.svc.cluster.local
+              - svc.cluster.local
+              - cluster.local
+            options:
+              - name: ndots
+                value: "5"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 12021        # the image's own uid; numeric so kubelet can verify it
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: renovate
+              image: docker.io/renovate/renovate:44.257.9
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: RENOVATE_BASE_DIR
+                  value: /tmp/renovate
+                - name: RENOVATE_PLATFORM
+                  value: github
+                - name: RENOVATE_REPOSITORIES
+                  value: 2143-Labs/argo
+                - name: RENOVATE_ONBOARDING
+                  value: "false"
+                - name: LOG_LEVEL
+                  value: info
+                - name: RENOVATE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-token
+                      key: token
+              resources:
+                requests: {cpu: 100m, memory: 256Mi}
+                limits: {cpu: "1", memory: 1Gi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
