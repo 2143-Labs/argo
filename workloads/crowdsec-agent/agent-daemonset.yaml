@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: crowdsec-agent
-        image: crowdsecurity/crowdsec:v1.8.1
+        image: crowdsecurity/crowdsec:v1.8.2
         imagePullPolicy: IfNotPresent
         command:
         - sh
@@ -119,7 +119,7 @@ spec:
           readOnly: true
       initContainers:
       - name: wait-for-lapi-and-register
-        image: crowdsecurity/crowdsec:v1.8.1
+        image: crowdsecurity/crowdsec:v1.8.2
         imagePullPolicy: IfNotPresent
         command:
         - sh

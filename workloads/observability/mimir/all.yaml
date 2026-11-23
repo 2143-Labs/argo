@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: mimir
-          image: grafana/mimir:3.2.1
+          image: grafana/mimir:3.2.6
           # Relative data dirs (./tsdb WAL+head, ./tsdb-sync, ./data-compactor, ...) resolve
           # against cwd; the image's cwd is "/" (ephemeral). Put them on the PVC.
           workingDir: /data
