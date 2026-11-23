@@ -1,3 +1,7 @@
+# tasks.2143.me. /dav and /.well-known/caldav are CalDAV (machine traffic): class B
+# (crowdsec-bouncer-noappsec). The DAV verbs PROPFIND/PROPPATCH/REPORT/MKCALENDAR trip CRS
+# 911100 in AppSec's out-of-band pass, and five in ~30 s banned the client's address for 4 h
+# (2026-11-18, -21, -23). Everything else stays class A (crowdsec-bouncer). docs/public-edge.md
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -13,6 +17,34 @@ spec:
       namespace: default
       sectionName: 2143-me-wildcard-https
   rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /dav
+        - path:
+            type: PathPrefix
+            value: /.well-known/caldav
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-rate-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: public-inflight-limit
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer-noappsec
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: vikunja
+          port: 80
     - matches:
         - path:
             type: PathPrefix
