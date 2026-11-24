@@ -48,7 +48,7 @@ re-upload.
 
 A PVC is mirrored when it carries the annotation `offsite.backup/enabled: "true"`. The job
 matches `namespace/name` pairs against Longhorn's `status.kubernetesStatus`, so two claims with
-the same name in different namespaces are selected independently. Current set (9):
+the same name in different namespaces are selected independently. Current set (14):
 
 | namespace | PVC | declared in |
 |---|---|---|
@@ -59,6 +59,11 @@ the same name in different namespaces are selected independently. Current set (9
 | `default` | `factorio-saves-lh` | `workloads/factorio/pvc.yaml` |
 | `stalwart` | `data-stalwart-stalwart-0` | `workloads/stalwart/pvc.yaml` |
 | `matrix` | `tuwunel-conduwuit-data` | **live object only** (see `workloads/tuwunel/BACKUP.md`) |
+| `default` | `headscale-data-lh` | `workloads/headscale/pvc-lh.yaml` |
+| `default` | `matter-server-data-oct17` | `workloads/home-assistant/matter-server-data-oct17.yaml` |
+| `default` | `mosquitto-data-lh` | `workloads/mosquitto/pvc-lh.yaml` |
+| `default` | `teamspeak-all-lh` | `workloads/teamspeak/pvc-lh.yaml` |
+| `default` | `asciinema-data` | `workloads/asciinema/pvc.yaml` |
 
 The job only mirrors what Longhorn has already backed up to the NAS (`RecurringJob/nightly-backup`),
 so a tagged volume must also be in that job's group. If no PVC is tagged, or no Longhorn volume
@@ -66,6 +71,14 @@ matches, the job logs that and exits 0; if a tagged PVC has no volume or no back
 directory, it mirrors the rest and fails (alert).
 
 **A restored or recreated PVC loses a live-only annotation.** Re-apply it before the next Sunday.
+
+**Generations follow the wall clock, not the run.** The destination is
+`longhorn/gen-<year>-<ISO week / 4>/`, so every four weeks the job starts a fresh, self-contained
+generation. A re-run inside the same week copies only what changed; a re-run that crosses a week
+boundary — for example a manual start the day after the Sunday run — opens a new generation and
+re-uploads the entire tagged set. That is intended (a generation must never depend on an older
+one), but it means the bucket briefly holds two full sets, since each generation's objects live
+until they hide at day 60.
 
 ## 2. How it is protected
 
@@ -76,7 +89,10 @@ directory, it mirrors the rest and fails (alert).
   after it is set. Check it with `aws s3api get-object-lock-configuration --bucket <bucket>`
   (endpoint `https://s3.us-east-005.backblazeb2.com`): a response with no `Rule` locks nothing.
 - **Lifecycle**: one rule per bucket, always scoped to the prefix in the table, never the bucket
-  root. `media/` has no rule: originals are written once and kept.
+  root. `media/` has no rule: originals are written once and kept. That prefix also carries
+  immich's own rotating `backups/` directory (16 objects, ~1.5 G of `pg_dump` SQL), so the
+  database exists twice in this bucket — once as immich's rotation and once as our `db/*.dump`.
+  That is the only duplication between the classes; the volume mirror holds file data, not rows.
 - **Credentials**: one bucket-scoped `Read and Write` application key per bucket, and one SSE-C
   key per bucket. Backblaze never stores SSE-C keys. Both live in the password-manager entry
   `Backblaze argo-db-backups` (`<bucket>-appkey`, `<bucket>-sse`) and in dotfiles
@@ -87,7 +103,7 @@ directory, it mirrors the rest and fails (alert).
   history. Losing a key makes that bucket permanently unreadable.
 - **Caps**: B2 *enforces* Caps & Alerts (`403 cap_exceeded`). The home account's storage and
   Class B caps must stay well above this footprint, or a sync stops partway and a restore cannot
-  start. The values in force are recorded on ai_tasks card #349.
+  start. The values in force are recorded on ai_tasks task **#2** ("NAS off-box backup").
 
 ## 2a. Operating the jobs
 
