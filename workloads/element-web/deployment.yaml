@@ -44,7 +44,7 @@ spec:
                       - general
       containers:
         - name: element-web
-          image: vectorim/element-web:v1.12.27
+          image: vectorim/element-web:v1.12.35
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
