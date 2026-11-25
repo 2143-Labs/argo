@@ -138,6 +138,20 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    - name: roadmap-b-hero-rehab-https
+      protocol: HTTPS
+      port: 8443
+      hostname: roadmap.b.hero.rehab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.certOverride | default "roadmap-b-hero-rehab-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: Same
     #- name: mm-timestone-2143-https
       #protocol: HTTPS
       #port: 8443
