@@ -85,6 +85,19 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
+  name: roadmap-b-hero-rehab-tls
+  namespace: default
+spec:
+  secretName: roadmap-b-hero-rehab-tls
+  issuerRef:
+    name: letsencrypt-http01
+    kind: ClusterIssuer
+  dnsNames:
+    - roadmap.b.hero.rehab
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
   name: mm-timestone-tls
   namespace: default
 spec:

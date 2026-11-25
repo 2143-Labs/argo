@@ -1,0 +1,45 @@
+# Player-facing Timestone roadmap at https://roadmap.b.hero.rehab (test domain).
+# Serves main of 2143-Labs/timestone-roadmap: a ConfigMap page plus a `refresh`
+# sidecar that rebuilds it from Vikunja project 19 every 15 min, via a read-only
+# link share whose hash is in OpenBao (key below; seed it first, see the repo README).
+# Listener and certificate live in workloads/gateway. The HTTPRoute (class A,
+# k8s-gateway.dns/ignore) lives in the chart, which argo CI does not render.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: timestone-roadmap
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/2143-Labs/timestone-roadmap.git
+    targetRevision: main
+    path: .
+    helm:
+      parameters:
+        - { name: namespace, value: timestone-roadmap }
+        - { name: host, value: roadmap.b.hero.rehab }
+        - { name: routeName, value: timestone-roadmap }
+        - { name: vikunja.shareKey, value: john2143-com/timestone-roadmap/vikunja-link-share }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: timestone-roadmap
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      # Gateway API defaulting adds group/kind/weight the chart omits.
+      jqPathExpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

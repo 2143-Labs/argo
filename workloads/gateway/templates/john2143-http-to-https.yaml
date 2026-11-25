@@ -39,4 +39,31 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+---
+# Same redirect for hosts that must resolve publicly from the LAN too
+# (docs/lan-dns.md): the ignore label applies to the whole route, so they cannot
+# share the route above without lan-dns dropping every other host on it.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: public-dns-http-to-https
+  namespace: default
+  labels:
+    k8s-gateway.dns/ignore: "true"
+spec:
+  parentRefs:
+    - name: shared-gateway
+      sectionName: acme-http
+  hostnames:
+    - roadmap.b.hero.rehab
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
 {{- end }}
