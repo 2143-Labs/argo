@@ -24,6 +24,8 @@ How a k3s node leaves and rejoins the edge without router edits and without drop
 5. Confirm on the router: `mikrotik-connect r '/routing bgp session print proplist=remote.address,prefix-count where remote.address=<node-ip>'` → still established, `prefix-count=0`. Do not continue until it is 0.
 6. `ssh 192.168.5.36 'kubectl drain <node> --ignore-daemonsets --delete-emptydir-data --timeout=15m'`, then do the maintenance. If it times out on a PodDisruptionBudget, do not force it: uncordon, remove the label ("Return a node" steps 2–3), and report the blocking pod.
 
+A PDB is only a backstop when the workload's replicas are *required* to sit on different nodes: with two replicas on one node, `minAvailable: 1` leaves zero allowed disruptions and the drain above hangs. Every stateless two-replica workload gets the required hostname anti-affinity first and the PDB second — `litellm`, the four `oauth2-proxy-*` front doors and `lan-dns` are in that state; `rots-sync` is not, and has no PDB for that reason. Rule, evidence and the litellm no-surge trade-off: [2026-11-23-replica-spread-and-pdbs.md](2026-11-23-replica-spread-and-pdbs.md).
+
 ## Move a CNPG instance off a node
 
 Needed when a cluster's placement rule must change — for example, to stop a database landing on a
