@@ -57,7 +57,11 @@ In 2 of 6 deletes, Argo CD v3.5.2 treated the pre-delete hook as finished before
 
 The PVC (`Delete=false`) and the identity ConfigMap survive that cascade, so the endpoint comes back
 with its **old** identity. That outcome is harmless, but it is a silent no-op. Step 2 above detects
-it; deleting again worked both times. Do not script unattended rotations until Argo CD fixes this.
+it; deleting again worked both times.
+
+This is upstream bug [argoproj/argo-cd#29100](https://github.com/argoproj/argo-cd/issues/29100).
+It is fixed by #29687, which shipped in **v3.5.9** and v3.6.3 (2026-11-24). This cluster runs
+v3.5.2 (`bootstrap/argocd/install.yaml`). Until that is bumped, do not script unattended rotations.
 
 ## Clients must reselect after a rotation
 
