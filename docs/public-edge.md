@@ -57,6 +57,8 @@ Chart-embedded variant (the four games; `helm_modules/game-edge`): every game ch
 
 A new game: label its Application(s) `edge.2143.me/class: game` (CI checks the tag against the library dependency, `scripts/validate-game-edge.sh`), depend on `helm_modules/game-edge`, set its `embed` values for the link preview, include `game-edge.gates` on every rule (`game-edge.wsGates` on its WebSocket rules, with `wsCheck` true) and `game-edge.anubis` once. Its routes are named `game-<routeName>`.
 
+`roadmap.b.hero.rehab` (2143-Labs/timestone-roadmap, not a game) copies the same shape without the library: its chart carries `templates/anubis.yaml` (default bot rules, then challenge, fixed Open Graph card) and the class-A route in `default` points at that Service; `anubis.enabled=false` points it back at nginx. The `mm.b.hero.rehab` lobby join links stay outside Anubis on purpose: a challenge page would sit between a player and the Steam redirect.
+
 ### Link previews
 
 Anubis challenges by user agent, and every unfurler worth naming (Discord, Slack,

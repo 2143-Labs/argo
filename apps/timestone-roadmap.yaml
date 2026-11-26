@@ -4,6 +4,9 @@
 # link share whose hash is in OpenBao (key below; seed it first, see the repo README).
 # Listener and certificate live in workloads/gateway. The HTTPRoute (class A,
 # k8s-gateway.dns/ignore) lives in the chart, which argo CI does not render.
+# Since 2026-11-26 the route's backend is the chart's own Anubis (templates/anubis.yaml,
+# game-edge shape, no failover; anubis.enabled=false bypasses it). The
+# mm.b.hero.rehab join links (steam-lobby) are deliberately not behind Anubis.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
