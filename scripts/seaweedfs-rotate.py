@@ -71,6 +71,10 @@ CONSUMERS = {
     "edge-tofu": [dict(kind="bao", path="edge/s3", keys=("access_key", "secret_key"), es=None)],
     "rots4-ci": [dict(kind="bao", path="john2143-com/default/rots4-ci-s3",
                       keys=("access_key_id", "secret_access_key"), es=None)],
+    # The ROTS demo renderer on office reads recordings and writes videos; its keys reach the
+    # worker as an agenix env file, not through Kubernetes, so there is no ExternalSecret.
+    "rots-render": [dict(kind="bao", path="john2143-com/default/rots-render-s3",
+                         keys=("ROTS_S3_ACCESS_KEY", "ROTS_S3_SECRET_KEY"), es=None)],
     # rots-sync signs the tutorial replay PUTs. The keys ride along on the authserver's
     # secret because rots-sync already gets it by envFrom; the authserver ignores them.
     "rots-sync": [dict(kind="bao", path="john2143-com/rots-prod/rots-authserver-secret",
@@ -91,6 +95,7 @@ SCOPES = {
     "john2143-worker-home": ["imagehost-files"],
     "rots4-ci": ["rots4-releases"],
     "rots-sync": ["rots4-replays"],
+    "rots-render": ["rots4-replays"],
     "edge-tofu": ["edge-tofu-state"],
     "john2143-worker-doks": ["imagehost-files"],
 }
