@@ -29,7 +29,12 @@ spec:
           startTime: "12:00"
           endTime: "17:00"
           timeZone: America/New_York
-          period: 10m
+          # 2m, not 10m. A node waiting for the lock, or for the cluster to turn
+          # healthy again, only re-checks on its own tick, so this is the idle
+          # time between one node finishing and the next starting (kured 1.23.0:
+          # about period/3 with two nodes waiting). deadman still decides, and
+          # kured already runs the sentinel every minute for its metric.
+          period: 2m
           concurrency: 1
           drainTimeout: 30m
           skipWaitForDeleteTimeout: 300
