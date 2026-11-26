@@ -41,6 +41,7 @@ host. `rots-sync` learns the endpoint and bucket from `ROTS_S3_ENDPOINT` / `ROTS
 | Identity | Buckets | Consumer |
 |---|---|---|
 | `rots-sync` | `rots4-replays` | OpenBao `john2143-com/rots-prod/rots-authserver-secret`, keys `ROTS_S3_ACCESS_KEY` / `ROTS_S3_SECRET_KEY`, ExternalSecret `rots-prod/rots-authserver-secret` |
+| `rots-render` | `rots4-replays` | OpenBao `john2143-com/default/rots-render-s3`, keys `ROTS_S3_ACCESS_KEY` / `ROTS_S3_SECRET_KEY`; the office render worker reads it as an agenix env file (`services.rots-render.environmentFile`) |
 
 `Read:`/`Write:`/`List:` on that one bucket, nothing else. The keys ride on the authserver's
 existing secret because `rots-sync` already consumes it with `envFrom`; the authserver and
