@@ -45,6 +45,20 @@ spec:
           # this cluster had been hand-set to 10 through the UI). Only affects
           # replicated volumes — longhorn-cnpg runs one copy and never rebuilds.
           concurrentReplicaRebuildPerNodeLimit: 5
+          # Hash snapshot files every day after the nightly backup, instead of
+          # weekly. nightly-backup (03:00 local = 08:00Z EST / 07:00Z EDT) folds
+          # each volume into one new snapshot file, and a new file has no
+          # checksum; without one on both sides a rebooted node's replicas are
+          # compared block by block instead of skipped (fast replica rebuild).
+          # 2026-11-23: closet took 630 s from uncordon to all-healthy and read
+          # 218 GB doing it. The schedule is UTC. It fires every 10 min for four
+          # hours because one firing only retries for ~17 min and hashing runs
+          # one file at a time per node (~570 GB, 1.5-3 h for everything); a
+          # firing that finds a file already hashed skips it. All Longhorn data
+          # disks are SSDs; the cost is that read load, daily, 04:00-08:00 EST.
+          snapshotDataIntegrityCronjob:
+            v1: "*/10 9-12 * * *"
+            v2: "*/10 9-12 * * *"
           # Backup target — NFS to the NAS. If unreachable, only new backup
           # uploads are affected; live volumes are untouched.
           backupTarget: nfs://nas.ts.2143.me:/tank/longhorn-backups
