@@ -8,6 +8,7 @@ metadata:
   labels:
     recurring-job-group.longhorn.io/default: enabled
   annotations:
+    offsite.backup/enabled: "true"
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   # Holds both the SQLite DB (/data/vikunja.db) and attachments (/data/files).

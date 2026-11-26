@@ -4,6 +4,7 @@ metadata:
   name: big-oil-exchange
   namespace: default
   annotations:
+    offsite.backup/enabled: "true"
     longhorn.io/number-of-replicas: "3"
     # The collected hours are the deliverable: never let a sync prune or a
     # deleting Application take the volume with it.

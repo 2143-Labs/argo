@@ -48,7 +48,7 @@ re-upload.
 
 A PVC is mirrored when it carries the annotation `offsite.backup/enabled: "true"`. The job
 matches `namespace/name` pairs against Longhorn's `status.kubernetesStatus`, so two claims with
-the same name in different namespaces are selected independently. Current set (14):
+the same name in different namespaces are selected independently. Current set (18):
 
 | namespace | PVC | declared in |
 |---|---|---|
@@ -64,6 +64,10 @@ the same name in different namespaces are selected independently. Current set (1
 | `default` | `mosquitto-data-lh` | `workloads/mosquitto/pvc-lh.yaml` |
 | `default` | `teamspeak-all-lh` | `workloads/teamspeak/pvc-lh.yaml` |
 | `default` | `asciinema-data` | `workloads/asciinema/pvc.yaml` |
+| `default` | `vikunja-data` | `workloads/vikunja/pvc.yaml` — the task board's SQLite DB + attachments |
+| `pocket-id` | `pocket-id-data-pocket-id-0` | `workloads/pocket-id/templates/pvc.yaml` — SSO users and passkeys |
+| `default` | `big-oil-exchange` | `workloads/big-oil/pvc.yaml` — collected currency-exchange hours, not re-fetchable |
+| `default` | `seaweedfs-filer-data` | `workloads/seaweedfs/pvc.yaml` — filer index for `imagehost-files` (see §1b) |
 
 The job only mirrors what Longhorn has already backed up to the NAS (`RecurringJob/nightly-backup`),
 so a tagged volume must also be in that job's group. If no PVC is tagged, or no Longhorn volume
@@ -79,6 +83,30 @@ boundary — for example a manual start the day after the Sunday run — opens a
 re-uploads the entire tagged set. That is intended (a generation must never depend on an older
 one), but it means the bucket briefly holds two full sets, since each generation's objects live
 until they hide at day 60.
+
+## 1b. SeaweedFS objects (`imagehost-files`)
+
+The `john2143.com` image uploads are **not** on Longhorn: `imageserver` PUTs every upload into the
+SeaweedFS bucket `imagehost-files`, whose blobs live on `tank/seaweedfs-data` (a `hostPath` volume
+on the NAS). That makes them the largest customer-owned dataset in the estate — 46 volume files,
+219 GiB — and they were outside every backup class until 2026-11-26.
+
+SeaweedFS keeps each collection in its own immutable, append-only volume files
+(`<collection>_<id>.dat` plus a small `.idx`), so the backup is a file copy of those two patterns:
+
+| job | schedule | source | destination |
+|---|---|---|---|
+| `offsite-seaweedfs` | Sun 07:00 | `/tank/seaweedfs-data/.zfs/snapshot/<newest>/imagehost-files_*.{dat,idx}` (+ `edge-tofu-state`, `rots4-replays`) | `j2143-argo-volumes/seaweedfs/<collection>/` |
+
+Copying through `.zfs/snapshot/` makes the copy point-in-time and lets rclone skip unchanged
+volumes by size and mtime; the live directory cannot be copied consistently while SeaweedFS
+appends. There is **no lifecycle rule** on `seaweedfs/`: these are originals, kept forever, unlike
+the `longhorn/` prefix.
+
+The filer index is the other half: `seaweedfs-filer-data` (Longhorn, tagged above) maps
+`bucket/path` to fids. Volume files alone restore the bytes but leave them addressable only by
+fid, so **both halves are needed**: the volume files from this job and the filer PVC from the
+`longhorn/` mirror. Restore both, then start SeaweedFS over the restored directory.
 
 ## 2. How it is protected
 

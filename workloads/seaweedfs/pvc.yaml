@@ -12,6 +12,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: seaweedfs-filer-data
+  annotations:
+    offsite.backup/enabled: "true"
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: longhorn-cnpg

@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: pocket-id-data-pocket-id-0
   namespace: pocket-id
+  annotations:
+    offsite.backup/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
