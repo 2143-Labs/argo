@@ -119,9 +119,7 @@ validate_application_set() {
   assert_jq "${json}" '
     .spec.template.metadata.name == "vpn-endpoint-{{.name}}" and
     .spec.template.metadata.finalizers == [
-      "resources-finalizer.argocd.argoproj.io",
-      "pre-delete-finalizer.argocd.argoproj.io",
-      "pre-delete-finalizer.argocd.argoproj.io/cleanup"
+      "resources-finalizer.argocd.argoproj.io"
     ] and
     .spec.template.spec.project == "default" and
     .spec.template.spec.source.repoURL == "https://github.com/2143-Labs/argo.git" and
