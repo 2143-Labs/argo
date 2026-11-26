@@ -15,6 +15,9 @@ data:
   # else in that repo goes at the next GC, so every component rots4 CI publishes (its IMAGES
   # list in .github/workflows/build_nix.yml) needs a keepTags entry here, or prod loses its
   # image the day after it is pushed. Other repos keep every tag (last policy).
+  # `render` is the demo renderer image (component render in that IMAGES list): the 20 newest
+  # render-<sha7> tags, plus render-latest, a moving tag the render worker falls back to when
+  # a recording's own build image is gone (its pattern keeps no count, so it never expires).
   config.json: |
     {
       "distSpecVersion": "1.1.1",
@@ -36,7 +39,9 @@ data:
                 {"patterns": ["^webserver-wasm-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
                 {"patterns": ["^gameserver-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
                 {"patterns": ["^authserver-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
-                {"patterns": ["^replays-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20}
+                {"patterns": ["^replays-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
+                {"patterns": ["^render-[0-9a-f]{7}$"], "mostRecentlyPushedCount": 20},
+                {"patterns": ["^render-latest$"]}
               ]
             },
             {"repositories": ["**"], "keepTags": [{"patterns": [".*"]}]}

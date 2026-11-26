@@ -110,6 +110,15 @@ replays:
 sync:
   replicas: 1   # prod 2
 
+# The demo renderer's Temporal task queue. Empty (every preview, and prod until the rots4
+# render PR lands) means rendering is off: rots-sync then answers 503 on the render routes
+# instead of starting a workflow. When set, a POST to a recording's /render route starts a
+# render workflow on this queue, and a render worker outside the cluster (the desktop
+# office, which has the GPU) polls it and publishes the MP4 back to the replay bucket.
+# Unlike the other empty strings above, a template never requires this one.
+render:
+  taskQueue: ""   # rots-render (prod); previews stay empty
+
 db:
   clusterName: rots-db  # one CNPG cluster per namespace; app secret is <clusterName>-app
   instances: 1          # 2 (prod) or 1 (previews)

@@ -105,6 +105,13 @@ spec:
             - name: ROTS_S3_BUCKET
               value: {{ .Values.gameserver.s3Bucket | quote }}
 {{- end }}
+{{- if .Values.render.taskQueue }}
+            # The render worker's Temporal queue (render.taskQueue). Unset leaves rendering
+            # off in this namespace: rots-sync answers 503 on the render routes rather than
+            # starting a workflow nothing polls.
+            - name: RENDER_TASK_QUEUE
+              value: {{ .Values.render.taskQueue | quote }}
+{{- end }}
             - name: RUST_LOG
               value: info
           # TICKET_SIGNING_KEY and COORDINATOR_TOKEN (externalsecret.yaml).

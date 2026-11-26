@@ -95,6 +95,10 @@ spec:
         - { name: gameserver.quota.memory, value: 32256Mi }
         - { name: temporal.namespace, value: rots }
         - { name: temporal.taskQueue, value: rots-prod }
+        # The demo renderer's queue (templates/sync.yaml): rots-sync starts a render
+        # workflow here and the worker on office polls it. Previews never get this line,
+        # so their rots-sync answers 503 on the render routes.
+        - { name: render.taskQueue, value: rots-render }
         - { name: authserver.scaleToZero.minReplicas, value: '1' }
         - { name: authserver.scaleToZero.maxReplicas, value: '3' }
   destination:
