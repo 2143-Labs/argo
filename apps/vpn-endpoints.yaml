@@ -40,10 +40,11 @@ spec:
   template:
     metadata:
       name: "vpn-endpoint-{{.name}}"
+      # Only the resources finalizer belongs here. Argo CD adds the pre-delete
+      # finalizers itself when the chart has PreDelete hooks; listing them here made
+      # the ApplicationSet controller append another copy on every update.
       finalizers:
         - resources-finalizer.argocd.argoproj.io
-        - pre-delete-finalizer.argocd.argoproj.io
-        - pre-delete-finalizer.argocd.argoproj.io/cleanup
     spec:
       project: default
       source:
