@@ -129,6 +129,12 @@ CNPG's own documented pattern for rotating these — ESO's `Password` generator 
 - Third-party TLS material managed by cert-manager: `2143-me-wildcard-tls`, `john2143-com-wildcard-tls`, `aross-studio-wildcard-tls`, `mm-*-tls`.
 - OpenBao's own bootstrap Secrets: `openbao-seal` (the static auto-unseal key), `openbao-server-tls`, `openbao-spaces`.
 
+  **Escrow (verified 2026-11-26):** the static seal key is held by the user in the password
+  manager, alongside the root token. This matters because the hourly raft snapshots in
+  `s3://l8przprsd5yenr-bao-backups/raft/` (DigitalOcean Spaces, 30-day expiry) are ciphertext
+  under that key: a total cluster loss is recoverable only if the key is held off-cluster. The
+  value must never be written here, only its location.
+
 **Update 2026-09-15:** the "candidates for a follow-up migration" this section
 used to list — `litellm-secrets`, `litellm-s3-creds`, `frigate-creds`,
 `frigate-genai-worker-creds`, `headscale-oidc`, `listen-brick-secret`,
