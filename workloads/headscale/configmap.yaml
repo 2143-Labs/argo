@@ -67,6 +67,15 @@ data:
         "tag:vpn-endpoint": ["john@2143.me"]
       },
       "autoApprovers": {
+        // Home subnet routers: the wired Apple TV atv-bedroom is primary; the
+        // k3s servers arch/closet/nas are HA standbys (dotfiles k3s-server.nix
+        // advertises both prefixes via tailscale set). Headscale only ever adds
+        // approvals, when a node's advertised routes change or on SIGHUP; it
+        // never removes one and never moves the primary.
+        "routes": {
+          "192.168.5.0/24": ["john@2143.me"],
+          "192.168.6.0/24": ["john@2143.me"]
+        },
         "exitNode": ["john@2143.me", "tag:pite", "tag:vpn-endpoint"]
       },
       "acls": [
