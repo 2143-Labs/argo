@@ -419,14 +419,30 @@ data:
       # write comment). Request/latency metrics carry client_ip and user_agent
       # and are deliberately excluded; add them only with include_labels first.
       #
-      # Two groups because include_labels is validated per metric at startup and
-      # the provider-cache counters have no `requested_model` label.
+      # Three groups because include_labels is validated per metric at startup:
+      # the provider-cache counters have no `requested_model` label and the
+      # zero-cost diagnostic counter has no `api_key_alias` label.
       #
       # The third entry is a pre-call hook, not a metrics logger: it is registered
       # here because `callbacks` is what populates `litellm.callbacks`, which
       # ProxyLogging.pre_call_hook iterates. The dotted path must resolve to an
       # instance (`callback_utils.get_instance_fn`), not a class.
       callbacks: ["prometheus", "balance_metrics.proxy_handler_instance", "deepseek_forced_tool_choice.proxy_handler_instance"]
+      #
+      # `api_key_alias` is the key's `key_alias` (integrations/prometheus.py,
+      # _get_api_key_alias -> user_api_key_dict.key_alias). It is what makes a
+      # per-key tripwire expressible: one alert selects the retired frigate-genai
+      # key's series and nobody else's (workloads/observability/
+      # grafana-dashboards/frigate-genai-alerts.yaml). Bounded cardinality - one
+      # value per virtual key, 14 keys today - unlike client_ip/user_agent.
+      #
+      # `litellm_zero_cost_requests_total` counts requests that carried usage but
+      # were logged at $0 on a model whose pricing entry is non-zero, by `reason`
+      # (missing_pricing_key / pricing_not_applied / cost_calculation_error). On a
+      # healthy proxy it never moves; when it does, spend accounting is broken.
+      # No include_labels on its group: its label set is requested_model/model/
+      # model_id/api_provider/reason, so every default label is worth keeping and
+      # an include_labels list here would be rejected at startup.
       prometheus_metrics_config:
         - group: "tokens"
           metrics:
@@ -434,7 +450,10 @@ data:
             - litellm_output_tokens_metric
             - litellm_input_cached_tokens_metric
             - litellm_spend_metric
-          include_labels: ["api_provider", "model_id", "requested_model"]
+          include_labels: ["api_provider", "model_id", "requested_model", "api_key_alias"]
+        - group: "spend_zero_cost"
+          metrics:
+            - litellm_zero_cost_requests_total
         - group: "provider_cache"
           metrics:
             - litellm_provider_cache_read_input_tokens_metric

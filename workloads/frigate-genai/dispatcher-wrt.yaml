@@ -1,16 +1,16 @@
 apiVersion: temporal.io/v1alpha1
 kind: WorkerResourceTemplate
 metadata:
-  name: frigate-genai-gemini-keda
+  name: frigate-genai-dispatcher-keda
 spec:
-  workerDeploymentRef: {name: frigate-genai-gemini}
+  workerDeploymentRef: {name: frigate-genai-dispatcher}
   template:
     apiVersion: keda.sh/v1alpha1
     kind: ScaledObject
     spec:
       scaleTargetRef: {}
-      minReplicaCount: 0
-      maxReplicaCount: 10
+      minReplicaCount: 1
+      maxReplicaCount: 1
       pollingInterval: 15
       cooldownPeriod: 300
       triggers:
@@ -20,7 +20,7 @@ spec:
           namespace: ""
           workerDeploymentName: ""
           workerDeploymentBuildId: ""
-          taskQueue: genai-tasks-gemini
-          targetQueueSize: "20"
-          activationTargetQueueSize: "0"
-          queueTypes: "workflow,activity"
+          taskQueue: genai-dispatcher
+          targetQueueSize: "5"
+          activationTargetQueueSize: "2"
+          queueTypes: workflow

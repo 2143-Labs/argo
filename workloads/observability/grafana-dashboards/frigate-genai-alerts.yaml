@@ -1,0 +1,287 @@
+# frigate-genai tripwires: the retired cloud path must stay at zero spend, and
+# the office-host seat gate must stay alive.
+#
+# The pipeline was moved to a single local call per scene against Ollama on the
+# office host, so two things are true afterwards and both are silent when they
+# break:
+#
+#   1. No request may ever reach a paid model through the frigate-genai key
+#      again. The key ("Kubernetes LiteLLM Frigate", the one mounted into the
+#      workers as LITELLM_FRIGATE_KEY) now carries an exact model allow-list of
+#      the two local tags plus a $1/24h budget, so a cloud call is denied at
+#      auth. These rules are the second line: they fire if a call somehow
+#      succeeds and books spend, or if spend accounting loses a request.
+#   2. The dispatcher only starts work while the host is unattended, and it
+#      reads that from a textfile node_exporter scrapes off the office host
+#      (frigate_genai_gate_open et al.). An absent series is treated as a closed
+#      gate, so a dead writer stalls the pipeline quietly until someone looks.
+#
+# Notifies ntfy via the contact point in
+# workloads/secrets/observability-grafana-alert-contactpoint.yaml; the default
+# policy in workloads/secrets/observability-grafana-alert-rules.yaml routes every
+# rule there, so nothing else needs configuring.
+#
+# `api_key_alias` only exists on the metrics because it was added to the
+# litellm prometheus_metrics_config whitelist (workloads/llm-proxy/configmap.yaml,
+# group "tokens"). litellm_zero_cost_requests_total is enabled there in its own
+# group because its label set has no api_key_alias - so that rule cannot be
+# scoped to one key and is deliberately estate-wide: any increment means a
+# request carried usage but was logged at $0 on a priced model, which is a
+# spend-accounting bug wherever it happens.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frigate-genai-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  frigate-genai-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: frigate-genai
+        folder: Alerts
+        interval: 1m
+        rules:
+          # Any dollars at all, not a threshold: the only correct value for this
+          # key is 0. increase() over 15m rather than the raw counter so the
+          # $1114 of pre-migration spend still in the key's lifetime counter
+          # (its budget resets on a 24h window) cannot sit above the threshold
+          # and alert forever.
+          - uid: frigate-genai-cloud-spend
+            title: frigate-genai key spent money on a model
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: sum(increase(litellm_spend_metric_total{api_key_alias="Kubernetes LiteLLM Frigate"}[15m]))
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: 'frigate-genai spent ${{ printf "%.4f" $values.A.Value }} in the last 15m'
+              description: >-
+                The frigate-genai key's allow-list is ["ollama/gemma4:12b",
+                "ollama/gemma4:26b"] and those are $0 on the office host, so any
+                spend means a paid model was reached - either the allow-list was
+                edited or a model alias maps onto one. Check the proxy's spend
+                logs for the key (spend/api_key_alias filter) and the key's
+                current models list with GET /key/list.
+          # Separate from the rule above because this counter has no
+          # api_key_alias label: a $0 booking on a priced model is dropped
+          # before it can appear in litellm_spend_metric at all, so the spend
+          # rule is blind to exactly this failure.
+          - uid: frigate-genai-zero-cost-requests
+            title: LiteLLM logged usage at $0 on a priced model
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: sum(increase(litellm_zero_cost_requests_total[15m]))
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: '{{ $value }} LiteLLM request(s) logged usage at $0 on a priced model'
+              description: >-
+                reason tells the story: missing_pricing_key (the model has no
+                entry in model_prices_and_context_window.json), pricing_not_applied
+                (a custom deployment path skipped completion_cost) or
+                cost_calculation_error. Spend for these requests is lost, so
+                budgets and this rule's sibling are undercounting. Find the
+                requested_model/reason pair on the metric and the matching spend
+                log row.
+          # The 36h window is `for:`, not a selector: a [36h] subquery would
+          # evaluate 2160 samples every minute for no gain. min() only collapses
+          # an accidental duplicate series - one stale exporter copy must not turn
+          # a closed gate into an open one. NoData is OK here: a writer that has
+          # stopped publishing is the mtime rule's job, which fires in minutes
+          # rather than a day and a half.
+          - uid: frigate-genai-gate-closed-36h
+            title: frigate-genai gate closed for 36h
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 21600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: min(frigate_genai_gate_open)
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 1
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 36h
+            labels:
+              severity: warning
+            annotations:
+              summary: 'frigate-genai gate has been closed for 36h'
+              description: >-
+                The dispatcher starts nothing while the gate is closed, so events
+                are piling up unprocessed (they are not lost: the drain reads
+                frigate's event API from its watermark). Check
+                frigate_genai_gate_idle_seconds and free_vram_mb to see whether
+                the host simply stayed busy, and whether
+                ~/.local/state/frigate-genai/seated pins the gate closed by hand.
+          # The writer is a systemd user timer on the office host; when it dies
+          # the series keep their last value for as long as Mimir's staleness
+          # window and then vanish. mtime is the only signal that dates them.
+          # NoData is Alerting: no series at all means the writer never ran.
+          - uid: frigate-genai-gate-stale
+            title: frigate-genai gate file is stale
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: time() - max(node_textfile_mtime_seconds{file=~".*frigate_genai_gate.*"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 300
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: Alerting
+            execErrState: Error
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'frigate-genai gate file has not been rewritten for {{ $value }}s'
+              description: >-
+                The office host's sampler writes
+                /var/lib/node_exporter/textfile/frigate_genai_gate.prom every 60s.
+                Nothing newer than 300s means the timer stopped (it samples
+                Hyprland IPC and /sys/class/drm): check
+                systemctl --user status for the timer on office, and note the
+                dispatcher treats a stale or missing series as a closed gate, so
+                the pipeline is stalled until this is fixed.
