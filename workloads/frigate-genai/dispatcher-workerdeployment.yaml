@@ -7,7 +7,7 @@ spec:
   workerOptions:
     connectionRef: {name: frigate-genai-temporal}
     temporalNamespace: default
-    unsafeCustomBuildID: "v341"
+    unsafeCustomBuildID: "v342"
   rollout:
     strategy: AllAtOnce
   sunset:
@@ -25,7 +25,7 @@ spec:
       serviceAccountName: frigate-genai
       containers:
         - name: dispatcher
-          image: ghcr.io/john2143/frigate-genai-genai:v341
+          image: ghcr.io/john2143/frigate-genai-genai:v342
           args: ["--mode=dispatcher"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
@@ -38,7 +38,7 @@ spec:
                 secretKeyRef: {name: frigate-genai-worker-creds, key: AWS_SECRET_ACCESS_KEY}
             - {name: FRIGATE_BASE_URL, valueFrom: {configMapKeyRef: {name: frigate-genai-config, key: FRIGATE_BASE_URL}}}
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
-            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v341"}
+            - {name: TEMPORAL_WORKER_BUILD_ID, value: "v342"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-dispatcher"}
           resources:
             requests: {cpu: "100m", memory: "256Mi"}
