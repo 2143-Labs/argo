@@ -16,7 +16,7 @@ spec:
       serviceAccountName: frigate-genai
       containers:
         - name: mqtt-listener
-          image: ghcr.io/john2143/frigate-genai-genai:v335
+          image: ghcr.io/john2143/frigate-genai-genai:v340
           args: ["--mode=mqtt-listener"]
           envFrom:
             - secretRef: {name: frigate-genai-worker-creds}
