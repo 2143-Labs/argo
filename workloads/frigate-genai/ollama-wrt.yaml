@@ -10,7 +10,7 @@ spec:
     spec:
       scaleTargetRef: {}
       minReplicaCount: 0
-      maxReplicaCount: 5
+      maxReplicaCount: 1
       pollingInterval: 15
       cooldownPeriod: 300
       triggers:
@@ -24,3 +24,7 @@ spec:
           targetQueueSize: "3"
           activationTargetQueueSize: "0"
           queueTypes: "workflow,activity"
+          # The queue only carries activity tasks; the workflows that own them
+          # run on genai-tasks, so the running-workflow count must come from there.
+          includeRunningWorkflowCount: "true"
+          workflowTaskQueueForCount: genai-tasks

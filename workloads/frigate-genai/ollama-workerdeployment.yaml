@@ -40,7 +40,7 @@ spec:
             - {name: TEMPORAL_ADDRESS, value: "temporal-frontend.default.svc.cluster.local:7233"}
             - {name: TEMPORAL_WORKER_BUILD_ID, value: "v335"}
             - {name: TEMPORAL_DEPLOYMENT_NAME, value: "frigate-genai-ollama"}
-            - {name: TEMPORAL_MAX_OLLAMA_GENAI, value: "3"}
+            - {name: TEMPORAL_MAX_OLLAMA_GENAI, value: "1"}
           resources:
             requests: {cpu: "250m", memory: "512Mi"}
             limits: {cpu: "1000m", memory: "2Gi"}
