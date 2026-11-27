@@ -17,9 +17,10 @@ metadata:
   labels:
     app: rots-replays
 spec:
-  # One replica: a page view is a handful of queries, and verify is serialised in the process
-  # (it builds a whole server world).
-  replicas: 1
+  # Two, spread. A page view is a handful of queries and verify is serialised
+  # per pod, which is what makes a second replica the cheap fix: a closet reboot
+  # on 2026-11-26 left this Service with no ready endpoint.
+  replicas: {{ int .Values.replays.replicas }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -33,6 +34,13 @@ spec:
       imagePullSecrets:
         - name: registry-pull
 {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: rots-replays
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: rots-replays
           image: "{{ .Values.image.repository }}:{{ required "replays.tag is required" .Values.replays.tag }}"
@@ -106,4 +114,17 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+---
+# Two replicas on different nodes, so one may go at a time; minAvailable 1 is
+# only safe because the Deployment's required podAntiAffinity keeps them apart.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rots-replays
+  namespace: {{ $ns }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rots-replays
 {{- end }}

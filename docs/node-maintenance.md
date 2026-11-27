@@ -15,16 +15,26 @@ How a k3s node leaves and rejoins the edge without router edits and without drop
 
 ## Drain a node
 
-1. Storage pre-check. If either command lists anything, **stop: this node cannot be drained yet** (follow-up work in ai_tasks project 11). The drain would hang on a PodDisruptionBudget, and forcing it risks data loss.
-   - CNPG primaries on the node: `ssh 192.168.5.36 'kubectl get pods -A -l cnpg.io/instanceRole=primary --field-selector spec.nodeName=<node> -o name'`
-   - Longhorn volumes whose only replica is on the node (Longhorn's `node-drain-policy` is `block-if-contains-last-replica`): `ssh 192.168.5.36 'kubectl get replicas.longhorn.io -n longhorn-system -l longhornnode=<node> -o custom-columns=VOLUME:.spec.volumeName --no-headers'`. For each listed volume, `ssh 192.168.5.36 'kubectl get volumes.longhorn.io -n longhorn-system <volume> -o jsonpath={.spec.numberOfReplicas}'` → `1` means it blocks.
-2. See what will move: `ssh 192.168.5.36 'kubectl get pods -A -o wide --field-selector spec.nodeName=<node>'`. Any `externalTrafficPolicy: Local` Service whose only ready pod is on this node (games, TeamSpeak, stalwart, headscale-stun, …) goes unreachable from step 4 until its pod is Ready elsewhere. Warn players first.
-3. `ssh 192.168.5.36 'kubectl cordon <node>'`
-4. Withdraw the node from the edge while it is still healthy: `ssh 192.168.5.36 'kubectl label node <node> node.kubernetes.io/exclude-from-external-load-balancers=true'`
-5. Confirm on the router: `mikrotik-connect r '/routing bgp session print proplist=remote.address,prefix-count where remote.address=<node-ip>'` → still established, `prefix-count=0`. Do not continue until it is 0.
-6. `ssh 192.168.5.36 'kubectl drain <node> --ignore-daemonsets --delete-emptydir-data --timeout=15m'`, then do the maintenance. If it times out on a PodDisruptionBudget, do not force it: uncordon, remove the label ("Return a node" steps 2–3), and report the blocking pod.
+Reboot window: do not start between 08:11Z and 10:15Z, and not the same node twice in one day before
+the next 09:00Z checksum pass — `nightly-backup` folds every snapshot at 08:00Z and the daily checksum
+pass only reaches full coverage at 10:15Z (measured 2026-11-26), so a reboot inside that window costs a
+630 s block-comparison rebuild instead of 180 s. Detail: `dotfiles/docs/fleet-patching.md`,
+"Rebooting a k3s node".
 
-A PDB is only a backstop when the workload's replicas are *required* to sit on different nodes: with two replicas on one node, `minAvailable: 1` leaves zero allowed disruptions and the drain above hangs. Every stateless two-replica workload gets the required hostname anti-affinity first and the PDB second — `litellm`, the four `oauth2-proxy-*` front doors and `lan-dns` are in that state; `rots-sync` is not, and has no PDB for that reason. Rule, evidence and the litellm no-surge trade-off: [2026-11-23-replica-spread-and-pdbs.md](2026-11-23-replica-spread-and-pdbs.md).
+1. Storage pre-check. If the command lists anything, **stop: this node cannot be drained yet** (follow-up work in ai_tasks project 11). The drain would hang on a PodDisruptionBudget, and forcing it risks data loss. A CNPG primary on the node is not a stop — step 2 promotes it off.
+   - Longhorn volumes whose only replica is on the node (Longhorn's `node-drain-policy` is `block-if-contains-last-replica`): `ssh 192.168.5.36 'kubectl get replicas.longhorn.io -n longhorn-system -l longhornnode=<node> -o custom-columns=VOLUME:.spec.volumeName --no-headers'`. For each listed volume, `ssh 192.168.5.36 'kubectl get volumes.longhorn.io -n longhorn-system <volume> -o jsonpath={.spec.numberOfReplicas}'` → `1` means it blocks.
+2. Promote every CNPG primary off the node, before cordoning. A primary's PDB is `minAvailable: 1` over `cnpg.io/instanceRole=primary` and a cluster has one primary, so `status.disruptionsAllowed` is 0 (`kubectl get pdb -A | grep -- -db-primary`) and a drain of that node waits out the full `--timeout`; a replica needs no promotion. This is the same step the kured path documents (`dotfiles/docs/fleet-patching.md`, "Rebooting a k3s node", step 2):
+
+   `ssh 192.168.5.36 'nix run nixpkgs#kubectl-cnpg -- promote <cluster> <instance-on-other-node> -n <namespace>'`
+
+   Then confirm the node holds no primary: `ssh 192.168.5.36 'kubectl get pods -A -l cnpg.io/instanceRole=primary --field-selector spec.nodeName=<node>'` prints nothing. Measured 2026-11-26: all eight clusters promoted in 71.5 s, a few seconds of failed connections each (litellm `P1001` ~6 s).
+3. See what will move: `ssh 192.168.5.36 'kubectl get pods -A -o wide --field-selector spec.nodeName=<node>'`. Any `externalTrafficPolicy: Local` Service whose only ready pod is on this node (games, TeamSpeak, stalwart, headscale-stun, …) goes unreachable from step 5 until its pod is Ready elsewhere. Warn players first.
+4. `ssh 192.168.5.36 'kubectl cordon <node>'`
+5. Withdraw the node from the edge while it is still healthy: `ssh 192.168.5.36 'kubectl label node <node> node.kubernetes.io/exclude-from-external-load-balancers=true'`
+6. Confirm on the router: `mikrotik-connect r '/routing bgp session print proplist=remote.address,prefix-count where remote.address=<node-ip>'` → still established, `prefix-count=0`. Do not continue until it is 0.
+7. `ssh 192.168.5.36 'kubectl drain <node> --ignore-daemonsets --delete-emptydir-data --timeout=15m --pod-selector="!cnpg.io/cluster,longhorn.io/component!=instance-manager,app notin (home-assistant,minecraft,frigate,matter-server),app.kubernetes.io/name notin (za-mullvad,ee-mullvad,tempo),statefulset.kubernetes.io/pod-name notin (loki-write-0,loki-write-1,mimir-1,loki-chunks-cache-0,loki-results-cache-0)"'`, then do the maintenance. This is kured's own `drainPodSelector` (`apps/kured.yaml:47`) copied verbatim — a copy, not a reference, so **if that selector changes, this line changes in the same commit** — and it is not optional: a bare drain fails on the instance-manager PodDisruptionBudget after 15 minutes (measured 2026-11-26), and it evicts the instance-manager, which kills every replica on the node at drain time instead of at the reboot. Pods the selector leaves behind are killed by the reboot and return on the node. `openbao-0` is not in the selector and is still evicted. If it times out on a PodDisruptionBudget, do not force it: uncordon, remove the label ("Return a node" steps 2–3), and report the blocking pod.
+
+A PDB is only a backstop when the workload's replicas are *required* to sit on different nodes: with two replicas on one node, `minAvailable: 1` leaves zero allowed disruptions and the drain above hangs. Every stateless two-replica workload gets the required hostname anti-affinity first and the PDB second — `litellm`, the four `oauth2-proxy-*` front doors, `lan-dns`, `wkd` and `rots-replays` are in that state; `rots-sync` is not, and has no PDB for that reason. Rule, evidence and the litellm no-surge trade-off: [2026-11-23-replica-spread-and-pdbs.md](2026-11-23-replica-spread-and-pdbs.md).
 
 ## Move a CNPG instance off a node
 
@@ -37,7 +47,9 @@ node that is being reduced to storage only (2026-11-13, `nas`). Editing `spec.af
    unsupervised` the primary is restarted **without a switchover** — expect a few seconds of failed
    connections (litellm logged `P1001` for ~6 s). The instance-manager gives a shutting-down primary
    a 1800 s grace period; if postgres has already stopped and the pod stays `Terminating` (readiness
-   "server is alive but rejecting connections"), it will sit for 30 minutes. Force it:
+   "server is alive but rejecting connections"), it will sit until its grace period expires. A drain
+   never reaches that point — the PDB blocks it first — and when pods did terminate under a
+   promote-then-drain they took 9.8 s, 92 s and 187 s (measured 2026-11-26). Force it:
 
    `ssh 192.168.5.36 'kubectl -n <ns> delete pod <instance> --grace-period=0 --force'` — WAL is on
    disk, so the replacement starts with ordinary crash recovery.

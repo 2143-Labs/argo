@@ -1,0 +1,13 @@
+# Two replicas on different nodes, so one may go at a time; minAvailable 1 is
+# only safe because deployment.yaml's required podAntiAffinity keeps them apart.
+# Without it a closet reboot takes the only endpoint the WKD publisher has.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wkd
+  namespace: stalwart
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wkd

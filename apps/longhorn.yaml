@@ -37,10 +37,15 @@ spec:
           # healthy nodes. Without this, pods stay Terminating indefinitely
           # and services are stuck until the node returns (or manual cleanup).
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
-          # Wait this many seconds before triggering a replica rebuild on a
-          # different node when one goes away. Long enough to cover routine
-          # node reboots without churning rebuild traffic.
-          replicaReplenishmentWaitInterval: 1800
+          # 3600, not 1800. Longhorn waits at most this long for a failed replica
+          # to return before creating a new one in its place, and a new replica
+          # starts empty: the 2026-11-26 42-minute outage produced three
+          # recreated replicas and a mandatory 37.3 GiB / 300 s copy on nas.
+          # One hour keeps a reboot, and any outage a person sits through, on the
+          # incremental path. The cost is that a permanently dead node now leaves
+          # its volumes one replica short for up to an hour before Longhorn
+          # replaces the replica.
+          replicaReplenishmentWaitInterval: 3600
           # Cap simultaneous replica rebuilds per node (built-in default 5;
           # this cluster had been hand-set to 10 through the UI). Only affects
           # replicated volumes — longhorn-cnpg runs one copy and never rebuilds.
