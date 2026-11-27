@@ -10,7 +10,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^apps/.+\\.ya?ml$/"],
+      "managerFilePatterns": ["/^apps/[^/]+\\.ya?ml$/"],
       "matchStrings": [
         "chart:\\s*(?<depName>[\\w.-]+)\\s*\\n\\s*repoURL:\\s*(?<registryUrl>\\S+)\\s*\\n\\s*targetRevision:\\s*(?<currentValue>[\\w.-]+)",
         "repoURL:\\s*(?<registryUrl>\\S+)\\s*\\n\\s*chart:\\s*(?<depName>[\\w.-]+)\\s*\\n\\s*targetRevision:\\s*(?<currentValue>[\\w.-]+)"

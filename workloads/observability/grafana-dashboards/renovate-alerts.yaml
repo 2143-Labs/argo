@@ -1,0 +1,75 @@
+# Renovate liveness (renovate.json, apps/renovate). Notifies ntfy via the contact
+# point in workloads/secrets/observability-grafana-alert-contactpoint.yaml.
+# Watches the renovate CronJob's last successful run. Failed Jobs are deleted after
+# 24 h, so a failure leaves no durable object to alert on; staleness of the last
+# success is the only signal that survives. noDataState is Alerting because a
+# CronJob that has never succeeded has no series at all.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: renovate-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  renovate-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: renovate
+        folder: Alerts
+        interval: 1m
+        rules:
+          # 7 days + 6 hours: one weekly run plus slack for a long run.
+          - uid: renovate-run-stale
+            title: Renovate has not completed a run in over a week
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 3600
+                  to: 0
+                datasourceUid: mimir
+                model:
+                  editorMode: code
+                  expr: time() - max by (namespace) (kube_cronjob_status_last_successful_time{cluster="", cronjob="renovate"})
+                  instant: true
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 626400
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: Alerting
+            execErrState: Error
+            for: 1h
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Renovate has not completed a run in over a week'
+              description: >-
+                The renovate CronJob (Sundays 05:00 America/New_York) has no successful run in
+                7 days 6 hours. Check kubectl -n renovate get cronjob,jobs and the pod log in Loki;
+                rerun with kubectl -n renovate create job --from=cronjob/renovate renovate-manual.
