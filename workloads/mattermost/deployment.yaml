@@ -35,7 +35,7 @@ spec:
                       - general
       containers:
         - name: mattermost
-          image: mattermost/mattermost-team-edition:latest
+          image: mattermost/mattermost-team-edition:12.1.0
           ports:
             - name: http
               containerPort: 8065
