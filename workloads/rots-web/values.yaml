@@ -99,6 +99,7 @@ settings:
 # Prod only: a preview has no bucket, so it stays off (the same reason as replayUpload).
 replays:
   enabled: false   # prod true
+  replicas: 2      # spread across nodes; a closet reboot must not take the only endpoint
   # The tag of the rots4 image in image.repository: replays-<sha7> (prod, rewritten by rots4
   # CI) or replays-pr-<N>-<head sha> for the first deploy. The repository comes from
   # image.repository, like the web client and the game servers, so the registry host is not
