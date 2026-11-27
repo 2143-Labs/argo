@@ -35,7 +35,7 @@ spec:
                       - general
       containers:
         - name: heorot-voice-relay
-          image: ghcr.io/vitosicz/heorot-voice-relay:main
+          image: ghcr.io/vitosicz/heorot-voice-relay:main@sha256:70191e2beb2e5b986616dcdc96109f89b8d9f69fea35fef304b3d6230ad19f6f
           ports:
             - name: http
               containerPort: 8088

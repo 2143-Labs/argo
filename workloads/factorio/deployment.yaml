@@ -34,7 +34,7 @@ spec:
             claimName: factorio-mod-packs-lh
       containers:
         - name: factorio
-          image: ofsm/ofsm:latest
+          image: ofsm/ofsm:0.10.1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
