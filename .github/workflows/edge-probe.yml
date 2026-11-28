@@ -1,0 +1,85 @@
+# The edge can ban a client that is using an app normally, and nothing inside the house
+# can see it: every household, tailnet and cluster address is in the bouncers'
+# clientTrustedIps, so the owner's own browsing never exercises the bouncer's decision
+# path. This probe is the outside view. It repeats the 2026-11-28 failure (six ordinary
+# PATCH saves in seconds) and fails if the edge answers 403 or if the address is still
+# blocked a few minutes later.
+#
+# Only the owner's own host is probed; no customer host receives synthetic traffic.
+name: Edge probe
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: A normal client survives the edge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Runner must be outside every trusted range
+        run: |
+          ip=$(curl -sS --max-time 10 https://api.ipify.org)
+          echo "runner address: $ip"
+          python3 - "$ip" <<'PY'
+          import ipaddress, sys
+          addr = ipaddress.ip_address(sys.argv[1])
+          trusted = [ipaddress.ip_network(n) for n in (
+              "108.56.153.222/32",  # the household WAN address
+              "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
+              "127.0.0.0/8", "::1/128", "fc00::/7", "fe80::/10",
+          )]
+          if any(addr in net for net in trusted):
+              print(f"::error::runner {addr} is inside a trusted range; the probe could not observe a ban")
+              sys.exit(1)
+          PY
+
+      - name: Baseline
+        run: test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://tasks.2143.me/)" = 200
+
+      # Six requests in fifteen seconds is exactly what overflows the out-of-band
+      # AppSec bucket (capacity 5, leak 30 s) if that rule set ever comes back.
+      # PATCH /api/v2/info is a method Vikunja does not route: 405, or 401 if it
+      # authenticates first. No scenario reads it as probing or brute force --
+      # http-probing and http-admin-interface-probing key on distinct paths,
+      # http-crawl-non_statics on GET/HEAD, and http-generic-bf needs
+      # evt.Meta.sub_type == 'auth_fail', which no installed parser sets.
+      - name: Six app-style writes in fifteen seconds
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -X PATCH \
+              -H 'Content-Type: application/json' \
+              -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) edge-probe' \
+              -d '{}' https://tasks.2143.me/api/v2/info)
+            echo "PATCH $i -> $code"
+            case "$code" in
+              403|5*) echo "::error::edge answered $code to an ordinary app-style request"; exit 1 ;;
+            esac
+            sleep 2
+          done
+
+      # One stream poll (60 s) plus margin, and short enough that a first ban (1 min)
+      # would still be in force here if one had been created.
+      - name: Still served after the bouncer's stream poll
+        run: |
+          set -euo pipefail
+          sleep 70
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://tasks.2143.me/)
+          echo "GET / after 70s -> $code"
+          test "$code" = 200 || { echo "::error::a client doing normal app writes was banned"; exit 1; }
+
+      - name: Recovered after the shortest ban
+        run: |
+          set -euo pipefail
+          sleep 90
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://tasks.2143.me/)" = 200
