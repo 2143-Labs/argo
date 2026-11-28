@@ -91,6 +91,31 @@ settings:
   # Prod true; a preview never renders settings-db at all (settings.enabled is false).
   offsiteBackup: false
 
+# rots-items (templates/items.yaml, items-db.yaml): the item server. It owns the ledger behind
+# every item in the game - the item rows, the serial and budget of each game-server lineage, the
+# checkout leases and the custody log - and every instance mints and reports through it. Its own
+# CNPG cluster (items.db.clusterName), so nothing in it can read a character or a login.
+# Prod only (items.enabled): nothing calls it in a preview, and a preview's instances run
+# unsigned without it. Enabling it needs H1 first - items.secretKey names the OpenBao path that
+# renders Secret rots-items-secret, and the authserver reads ITEMS_COORDINATOR_TOKEN from that
+# Secret, so an empty path leaves the authserver in CreateContainerConfigError.
+# Rollback: items.enabled 'false' in apps/rots-web.yaml - the authserver loses ITEMS_URL and every
+# new instance runs unsigned; the Cluster is annotated Prune=false,Delete=false, so the ledger
+# survives the prune and a re-enable.
+items:
+  enabled: false   # prod true
+  # The tag of the rots4 image in image.repository: items-<sha7> (prod, rewritten by rots4 CI).
+  # `items.tag` must stay exactly one line in apps/rots-web.yaml - rots4 CI's bump() fails the
+  # deploy otherwise.
+  tag: ""
+  port: 8300      # ITEMS_PORT, the container port and the Service port
+  # OpenBao path rendered into Secret rots-items-secret (externalsecret.yaml), carrying
+  # ITEMS_COORDINATOR_TOKEN (shared with the authserver), ITEMS_ADMIN_TOKEN and
+  # ITEMS_VERIFIER_TOKEN. "" until it is seeded; docs/adding-a-secret.md.
+  secretKey: ""
+  db:
+    clusterName: items-db  # the CNPG Cluster; CNPG renders Secret <clusterName>-app (key `uri`)
+
 # The replay reviewer (templates/replays.yaml): lists the stored tutorial recordings, shows one's
 # header and event timeline, downloads it and, for a recording of its own build, verifies it.
 # It holds no S3 or database credentials - everything comes from rots-sync's bearer routes - and

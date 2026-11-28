@@ -39,8 +39,9 @@ spec:
         - { name: routeName, value: rots-web }
         - { name: publicUrl, value: 'https://rots.john2143.com' }
         # rots4 CI (build_nix.yml job deploy, scripts/ci-argo-bump.sh) rewrites image.tag,
-        # authserver.image, gameserver.tag and replays.tag to one commit's <sha7> tags after
-        # every green main build; keep each on one line in this "- { name: …, value: … }" form.
+        # authserver.image, gameserver.tag, replays.tag and the item server's tag to one
+        # commit's <sha7> tags after every green main build; keep each on one line in this
+        # "- { name: …, value: … }" form.
         - { name: image.tag, value: webserver-wasm-c8a4121 }
         # Serve the wasm bundle warm: one rots-web pod is always up (KEDA min 1)
         # instead of cold-starting behind the interceptor on the first page view.
@@ -70,6 +71,16 @@ spec:
         - { name: settings.enabled, value: 'true' }
         - { name: settings.url, value: http://rots-settings:8100 }
         - { name: settings.offsiteBackup, value: 'true' }
+        # The item server (templates/items.yaml, items-db.yaml): the ledger behind every item -
+        # serials, budgets, checkout leases, the custody log - and its own database cluster. It
+        # must be running before the rots4 commit that calls it deploys, which is why it lands
+        # first: the rots4 deploy rewrites the item server's tag here and fails unless exactly
+        # one such line exists.
+        # items.secretKey is the OpenBao path seeded by hand; until it exists the authserver and
+        # rots-items wait in CreateContainerConfigError. Rollback: items.enabled 'false'.
+        - { name: items.enabled, value: 'true' }
+        - { name: items.tag, value: items-0000000 }
+        - { name: items.secretKey, value: '<path goes here at H1>' }
         - { name: sync.replicas, value: '2' }
         - { name: gameserver.tag, value: gameserver-c8a4121 }
         # Managed mode: no standing servers; the authserver spawns one instance per

@@ -1,0 +1,68 @@
+{{- if .Values.items.enabled }}
+# rots-items' database: the ledger behind every item - item rows, each lineage's serial and
+# budget, checkout leases, the per-item custody event chain - plus rots-items' verify jobs
+# (itemserver/migrations). Its own cluster, not a schema in rots-db: a bug in the item server
+# then cannot read a character or a login, and no game pod ever holds these credentials.
+# CNPG renders Secret <clusterName>-app (key `uri`), which items.yaml reads as DATABASE_URL.
+# docs/adding-a-cnpg-database.md, templates/settings-db.yaml.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.items.db.clusterName }}
+  namespace: {{ $ns }}
+  annotations:
+    # An Argo prune must never delete this: it is the only record of every item in the
+    # game, and the rows cannot be rebuilt from anything else. Disabling items.enabled
+    # leaves it in place, with its data, for a fix-and-re-enable cycle.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  # One instance. The ledger is small (a row per item plus a hash chain per item) and every
+  # write is a short transaction; a second copy would buy nothing a daily base backup and
+  # the WAL archive below do not. Losing it costs items, not the ability to play: a world
+  # whose lineages lapse mints unsigned after the sweeper closes them.
+  instances: 1
+  affinity:
+    nodeAffinity:
+      # Same rule as templates/settings-db.yaml (and templates/cnpg-cluster.yaml): arch's
+      # Longhorn disk cannot provision new volumes (below the 25% floor).
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values: [arch]
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.6
+  resources:
+    # Burstable, the same shape as db.resources (docs/adding-a-cnpg-database.md).
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  postgresql:
+    parameters:
+      # No standby to keep WAL for; CNPG's default (512MB) would fill pg_wal at its
+      # archive_timeout pace (a 16MB segment per 5 minutes with any write).
+      wal_keep_size: 128MB
+  storage:
+    size: 1Gi
+    storageClass: longhorn-cnpg
+  walStorage:
+    size: 1Gi
+    storageClass: longhorn-cnpg
+  bootstrap:
+    initdb:
+      database: items
+      owner: items
+  # Continuous WAL archiving + base backups offsite via ObjectStore
+  # <clusterName>-offsite (items-db-offsite.yaml). It renders with this cluster, so the
+  # two are enabled and removed together.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.items.db.clusterName }}-offsite
+{{- end }}

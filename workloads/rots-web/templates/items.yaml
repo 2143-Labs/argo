@@ -1,0 +1,229 @@
+{{- if .Values.items.enabled }}
+# rots-items: the item server (the rots4 `rots-items` binary, itemserver/). It is the record of
+# every item: it allocates each game-server lineage's serial and mint budget, leases a
+# character's items to the instance that admitted him, and applies the MACed manifests that
+# carry items across a boundary (extract, town sync, close). Item data it treats as opaque
+# bytes; the rules live in the game (shared/) and are re-checked by rots-items-verify below.
+# Cluster-internal only - rots-authserver, every game pod and the verifier - so no HTTPRoute:
+# nothing outside the cluster may talk to the ledger.
+{{- $ns := required "namespace is required" .Values.namespace }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-items
+  namespace: {{ $ns }}
+  labels:
+    app: rots-items
+spec:
+  # One replica: the ledger is Postgres, so a second copy would only shorten a restart. An
+  # instance that cannot reach the item server for 2 h lets its lineage lapse and is swept
+  # (tutorial items lost, town items returned home), which is the longer outage this trades
+  # against.
+  replicas: 1
+  # maxSurge 1, maxUnavailable 0: the authserver's credential and every join's checkout go
+  # through this Service, so a rollout must not leave it with no ready endpoint - the two
+  # migrators serialise on sqlx's advisory lock.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-items
+  template:
+    metadata:
+      labels:
+        app: rots-items
+      annotations:
+        # The tokens live in Secret rots-items-secret (externalsecret.yaml); a rotated
+        # token must reach the pod without a chart change. Pods read them at start only.
+        reloader.stakater.com/auto: "true"
+    spec:
+      automountServiceAccountToken: false
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
+      containers:
+        - name: rots-items
+          image: "{{ .Values.image.repository }}:{{ required "items.tag is required" .Values.items.tag }}"
+          # Same per-commit tag as every other rots4 image: a re-run CI build re-pushes it.
+          imagePullPolicy: Always
+          # clap subcommand (Action::Serve) is required: without it the binary prints usage
+          # and exits.
+          args: ["serve"]
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            # CNPG renders Secret items-db-app (initdb.database: items). Until the cluster
+            # has created it the pod waits in CreateContainerConfigError and starts on its
+            # own afterwards; no manual step.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.items.db.clusterName }}-app
+                  key: uri
+            - name: ITEMS_PORT
+              value: {{ int .Values.items.port | quote }}
+            - name: RUST_LOG
+              value: info
+          # ITEMS_COORDINATOR_TOKEN, ITEMS_ADMIN_TOKEN and ITEMS_VERIFIER_TOKEN: the whole
+          # item-server path, which is all its own Secret holds (externalsecret.yaml).
+          envFrom:
+            - secretRef:
+                name: rots-items-secret
+          ports:
+            - containerPort: {{ int .Values.items.port }}
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 3
+          # Readiness, not liveness: a pod that cannot reach its database or has not
+          # migrated answers /ready 503, and the Service must not send it a manifest.
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rots-items
+  namespace: {{ $ns }}
+  labels:
+    app: rots-items
+spec:
+  type: ClusterIP
+  selector:
+    app: rots-items
+  ports:
+    - port: {{ int .Values.items.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+---
+# rots-items-verify: the verifier (`server` crate's `rots_verify` binary,
+# server/src/bin/rots_verify.rs). It claims item-server verify jobs, derives each mint from its
+# loot table, then re-runs the instance's own recording and compares what the world did with the
+# manifests that boot sent. A divergence sets the item `suspect`; it never revokes one, and
+# revocation stays an operator call. It is the replays image - the same `-p server` build, so
+# `/bin/rots_verify` sits beside `/bin/rots_replays` - and wants `replays.tag`, not the item
+# server's tag: it must be the build that wrote the recording, which is the one rots4 CI just
+# deployed.
+# Until the first rots4 deploy that carries server/src/bin/rots_verify.rs reaches prod, this pod
+# crash-loops on a missing binary (exec: /bin/rots_verify). That is expected and self-clearing:
+# nothing calls the verifier before that deploy, no verify job can exist, and the deploy that
+# adds the binary bumps replays.tag and rolls the pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rots-items-verify
+  namespace: {{ $ns }}
+  labels:
+    app: rots-items-verify
+spec:
+  # One: a verify builds a server world and re-runs a whole recording, so a second replica only
+  # competes for the same job queue. A lost verify is re-queued by the item server.
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: rots-items-verify
+  template:
+    metadata:
+      labels:
+        app: rots-items-verify
+    spec:
+      automountServiceAccountToken: false
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - general
+{{- if .Values.imagePullSecret.key }}
+      imagePullSecrets:
+        - name: registry-pull
+{{- end }}
+      containers:
+        - name: rots-items-verify
+          image: "{{ .Values.image.repository }}:{{ required "replays.tag is required" .Values.replays.tag }}"
+          # The replays image's EntryPoint is rots_replays; this pod runs the other binary of
+          # the same crate. dockerTools merges the package's bin/ into the image root, so
+          # /bin/rots_verify is a stable path (the full /nix/store path is not known here).
+          command: ["/bin/rots_verify"]
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            # The ledger it claims jobs from and reports verdicts to (ClusterIP).
+            - name: ITEMS_URL
+              value: http://rots-items.{{ $ns }}.svc:{{ int .Values.items.port }}
+            # The recordings: rots-sync's bearer routes, as rots-replays reads them.
+            - name: ROTS_SYNC_URL
+              value: http://rots-sync.{{ $ns }}.svc:8002
+            - name: ROTS_COORDINATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-authserver-secret
+                  key: COORDINATOR_TOKEN
+            - name: ITEMS_VERIFIER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-items-secret
+                  key: ITEMS_VERIFIER_TOKEN
+            - name: RUST_LOG
+              value: info
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            # A verify builds a server world and re-runs the whole recording: that is the peak.
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+{{- end }}
