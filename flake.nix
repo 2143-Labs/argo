@@ -33,9 +33,6 @@
             curl
             openbao
             wireguard-tools
-
-            # S3-compatible object storage CLI (RustFS / MinIO)
-            minio-client
           ];
 
           shellHook = ''
