@@ -83,6 +83,11 @@ spec:
                   key: uri
             - name: ITEMS_PORT
               value: {{ int .Values.items.port | quote }}
+            # The URL this service hands a game pod in its lineage credential. The binary's
+            # default (http://rots-items:8300) only resolves inside rots-prod; naming the
+            # namespace makes it right for any namespace this chart renders into.
+            - name: ITEMS_PUBLIC_URL
+              value: http://rots-items.{{ $ns }}.svc:{{ int .Values.items.port }}
             - name: RUST_LOG
               value: info
           # ITEMS_COORDINATOR_TOKEN, ITEMS_ADMIN_TOKEN and ITEMS_VERIFIER_TOKEN: the whole
