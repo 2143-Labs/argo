@@ -1,7 +1,9 @@
 # tasks.2143.me. /dav and /.well-known/caldav are CalDAV (machine traffic): class B
-# (crowdsec-bouncer-noappsec). The DAV verbs PROPFIND/PROPPATCH/REPORT/MKCALENDAR trip CRS
-# 911100 in AppSec's out-of-band pass, and five in ~30 s banned the client's address for 4 h
-# (2026-11-18, -21, -23). Everything else stays class A (crowdsec-bouncer). docs/public-edge.md
+# (crowdsec-bouncer-noappsec), so no in-band AppSec signature can 403 a calendar sync.
+# Until 2026-11-28 this split existed because the out-of-band OWASP CRS pass scored
+# DAV verbs (911100) into 4 h bans; that pass is gone (values-prod.yaml,
+# scripts/validations/appsec-no-outofband.sh), and the split stays because a calendar
+# client has nothing to gain from body inspection. docs/public-edge.md
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

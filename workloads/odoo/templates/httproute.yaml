@@ -10,8 +10,8 @@
 #     list_db = False) and the external XML-RPC/JSON-RPC APIs.
 #   Rule 2 (public, arbitrary bodies): paths that carry every back-office write
 #     (HTML fields, website-builder saves), chatter and portal messages, live
-#     chat, attachment and photo uploads. AppSec body inspection misreads those
-#     and would ban the sender ("Class B, not A, for machine traffic").
+#     chat, attachment and photo uploads. AppSec inspects them in-band only (CVE
+#     virtual patches): a match is one 403 for that request and never a ban.
 #     Prefixes read on Odoo 18.0 in addons/web/controllers/{dataset,action,binary}.py,
 #     addons/mail/controllers/{thread,attachment}.py, mail/controllers/discuss/channel.py,
 #     im_livechat/controllers/main.py, html_editor/controllers/main.py,
