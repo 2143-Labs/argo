@@ -661,9 +661,9 @@ data:
     model:
       path: plus://7132ccf17b6cec25b827d04c5bb0b78d
     mqtt:
-      host: 192.168.5.76
-      password: pT2hmIXUXN4IkhdCGy3frXEmKYY
-      port: 31883
+      host: 192.168.6.19
+      password: ${MQTT_PASS}
+      port: 1883
       user: frigate
     record:
       enabled: true
