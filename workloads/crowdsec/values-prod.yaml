@@ -60,8 +60,12 @@ config:
       - Alert.Remediation == true && Alert.GetScope() == "Ip"
     decisions:
       - type: ban
-        duration: 4h      # fallback; used only if duration_expr cannot be evaluated
-        duration_expr: Sprintf('%dh', GetDecisionsSinceCount(Alert.GetValue(), "30d"))
+        # Fallback only: a valid duration_expr below replaces this decision's duration.
+        duration: 4h
+    # duration_expr is a profile field, not a decision field (models.ProfileCfg); inside
+    # `decisions` the LAPI refuses to start ("field duration_expr not found in type
+    # models.Decision").
+    duration_expr: Sprintf('%dh', GetDecisionsSinceCount(Alert.GetValue(), "30d"))
     on_success: break
     ---
     name: default_range_remediation
