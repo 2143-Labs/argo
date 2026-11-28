@@ -1,0 +1,20 @@
+# A request the bouncer itself answered (403 with OriginStatus 0) is a client that is
+# already banned. Its retries across many paths read as probing to http-probing, which
+# produced a second, independent ban 11 s after the first (alert 55243, 2026-11-23), and
+# a longer one under escalating durations. Forcing static_ressource switches off exactly
+# the two scenarios that read it (http-crawl-non_statics, http-probing); exploit-signature
+# scenarios still see the traffic. The mounted file name must sort after http-logs.yaml:
+# s02 parsers run in file-name order.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-agent-bouncer-denials
+  namespace: crowdsec
+data:
+  bouncer-denials.yaml: |
+    name: john2143/bouncer-denials
+    description: "Requests the bouncer answered itself (403, no origin status) are not crawling or probing"
+    filter: "evt.Meta.service == 'http' && evt.Parsed.status != nil && int(evt.Parsed.status) == 403 && evt.Unmarshaled.traefik.OriginStatus != nil && int(evt.Unmarshaled.traefik.OriginStatus) == 0"
+    statics:
+      - parsed: static_ressource
+        value: "true"
