@@ -114,6 +114,10 @@ spec:
           name: crowdsec-agent-booking-hosts
           subPath: booking-hosts.yaml
           readOnly: true
+        - mountPath: /etc/crowdsec/parsers/s02-enrich/john2143-bouncer-denials.yaml
+          name: crowdsec-agent-bouncer-denials
+          subPath: bouncer-denials.yaml
+          readOnly: true
         - mountPath: /var/log
           name: varlog
           readOnly: true
@@ -183,6 +187,10 @@ spec:
           defaultMode: 420
           name: crowdsec-agent-booking-hosts
         name: crowdsec-agent-booking-hosts
+      - configMap:
+          defaultMode: 420
+          name: crowdsec-agent-bouncer-denials
+        name: crowdsec-agent-bouncer-denials
       - emptyDir: {}
         name: crowdsec-config
       - hostPath:
