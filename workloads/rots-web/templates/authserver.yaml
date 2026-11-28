@@ -124,6 +124,20 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.clusterName }}-app
                   key: uri
+            {{- if .Values.items.enabled }}
+            # The item server (items.yaml): a new instance claims its lineage credential
+            # through /internal/v1/instances/credential and every admitted character gets a
+            # checkout ticket, so a join needs it. ITEMS_COORDINATOR_TOKEN is the bearer this
+            # pod presents on the item server's coordinator routes; the game pods never see it,
+            # they present the lineage credential the item server hands back instead.
+            - name: ITEMS_URL
+              value: http://rots-items.{{ $ns }}.svc:{{ int .Values.items.port }}
+            - name: ITEMS_COORDINATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rots-items-secret
+                  key: ITEMS_COORDINATOR_TOKEN
+            {{- end }}
             {{- if .Values.settings.url }}
             # Central account-settings service (settings.yaml): /api/v1/settings is proxied
             # here, so every environment shares one store. SETTINGS_TOKEN comes from the
