@@ -84,7 +84,7 @@ re-uploads the entire tagged set. That is intended (a generation must never depe
 one), but it means the bucket briefly holds two full sets, since each generation's objects live
 until they hide at day 60.
 
-## 1b. SeaweedFS objects (`imagehost-files`)
+## 1b. SeaweedFS objects (`imagehost-files` and the other irreplaceable collections)
 
 The `john2143.com` image uploads are **not** on Longhorn: `imageserver` PUTs every upload into the
 SeaweedFS bucket `imagehost-files`, whose blobs live on `tank/seaweedfs-data` (a `hostPath` volume
@@ -96,7 +96,19 @@ SeaweedFS keeps each collection in its own immutable, append-only volume files
 
 | job | schedule | source | destination |
 |---|---|---|---|
-| `offsite-seaweedfs` | Sun 07:00 | `/tank/seaweedfs-data/.zfs/snapshot/<newest>/imagehost-files_*.{dat,idx}` (+ `edge-tofu-state`, `rots4-replays`) | `j2143-argo-volumes/seaweedfs/<collection>/` |
+| `offsite-seaweedfs` | Sun 07:00 | `/tank/seaweedfs-data/.zfs/snapshot/<newest>/<collection>_*.{dat,idx}` for `imagehost-files`, `litellm-spend-logs`, `history-old`, `rots4-releases`, `edge-tofu-state`, `rots4-replays` | `j2143-argo-volumes/seaweedfs/<collection>/` |
+
+**State as of 2026-11-27:** the unit is defined in dotfiles `nixos/nas-configuration.nix`
+(John2143/dotfiles#60) and runs on nas only after the next fleet deploy; before that no timer
+exists. A one-off copy of the same six collections plus the default collection (bare
+`<id>.{dat,idx}`, ~7 GiB, destination `seaweedfs/_default/`) was made on 2026-11-27 from
+`autosnap_2026-11-27_00:00:03_daily`. The default collection is not in the weekly job.
+Telemetry collections (`tempo-blocks`, `mimir-*`, `loki-*`) are deliberately not copied.
+
+The same day, the two orphaned RustFS Longhorn backup volumes (the only copy of the
+pre-2026-06-23 RustFS S3 data, 496 GiB) were copied once, as whole backupstore volume
+directories, to `j2143-argo-volumes/rustfs/<xx>/<yy>/<volume>/`. Each directory carries its own
+`backups/` and `blocks/`, so it restores on its own.
 
 Copying through `.zfs/snapshot/` makes the copy point-in-time and lets rclone skip unchanged
 volumes by size and mtime; the live directory cannot be copied consistently while SeaweedFS
