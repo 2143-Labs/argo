@@ -1,0 +1,14 @@
+{{- if .Values.prodOnly }}
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: seaweedfs-trim
+  namespace: longhorn-system
+spec:
+  cron: "0 4 * * 6"
+  task: filesystem-trim
+  groups:
+    - seaweedfs
+  retain: 1
+  concurrency: 1
+{{- end }}

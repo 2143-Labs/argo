@@ -1,0 +1,24 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-bulk-local
+  annotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "1"
+  dataLocality: strict-local
+  diskSelector: "bulk"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: ext4
+  # group `seaweedfs` has only a trim job, so this both opts out of nightly-backup
+  # and gives ext4 inside the volume its only TRIM.
+  recurringJobSelector: '[{"name":"seaweedfs","isGroup":true}]'
+  # Trim only reclaims the volume head and snapshots marked as removed. Without this,
+  # Longhorn's own system-generated snapshots pin the freed blocks and the weekly trim
+  # reclaims almost nothing. Safe here: nothing takes user snapshots of these volumes.
+  unmapMarkSnapChainRemoved: "enabled"
