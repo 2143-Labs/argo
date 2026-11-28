@@ -23,10 +23,12 @@ appsec:
   configs:
     crs-vpatch.yaml: |
       name: crowdsecurity/crs-vpatch
+      # In-band only: a vpatch match is one 403 for that request, never a ban.
+      # The out-of-band CRS pass was removed on 2026-11-28: it scored every request
+      # on CRS defaults (allowed methods GET HEAD POST OPTIONS) and turned six
+      # ordinary saves in 30 s into a 4 h IP ban on 45 hosts. CI keeps it out:
+      # scripts/validations/appsec-no-outofband.sh. docs/public-edge.md.
       default_remediation: ban
-      #log_level: debug
-      outofband_rules:
-        - crowdsecurity/crs
       inband_rules:
         - crowdsecurity/base-config
         - crowdsecurity/vpatch-*
