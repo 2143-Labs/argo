@@ -1,0 +1,281 @@
+# CrowdSec edge alerts (docs/public-edge.md). Notifies ntfy via the contact point in
+# workloads/secrets/observability-grafana-alert-contactpoint.yaml.
+#
+# These rules are the only thing that can report an IP ban: every household, tailnet and
+# cluster address is in the bouncers' clientTrustedIps, so someone testing from home sees
+# neither the ban nor the 403s it causes.
+#
+# An alert here names the client and the host it was denied on, because identifying the
+# person is the entire point: `cscli decisions delete --ip <ClientHost>` lifts it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-alerts
+  namespace: observability
+  labels:
+    grafana_alert: "1"
+data:
+  crowdsec-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: crowdsec
+        folder: Alerts
+        interval: 1m
+        rules:
+          # A 403 with OriginStatus 0 is the bouncer answering, not the app: the client is
+          # banned. Restricting the path to session routes (API, the app shell, share links,
+          # DAV) keeps scanner noise out, and requiring >10 200s on the same host in the last
+          # two hours keeps one-off bots out. The 15-minute window keeps the alert ringing for
+          # one window after the last denial, so a short ban still reports.
+          # Back-test: fired 2 minutes after the 2026-11-28 05:52 ban, naming the customer.
+          - uid: edge-client-denied-fast
+            title: A served client is being denied on a session path
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: loki
+                model:
+                  editorMode: code
+                  expr: |-
+                    sum by (RequestHost, ClientHost) (
+                      count_over_time({namespace="kube-system", container="traefik"}
+                        |= `"DownstreamStatus":403` |= `"OriginStatus":0`
+                        |~ `"RequestPath":"(/api/|/_app/version\.json|/share/|/dav)` | json [15m])
+                    )
+                    and on (RequestHost, ClientHost) (
+                      sum by (RequestHost, ClientHost) (
+                        count_over_time({namespace="kube-system", container="traefik"}
+                          |= `"DownstreamStatus":200` | json [2h])) > 10
+                    )
+                  queryType: instant
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: '{{ $labels.ClientHost }} is denied on {{ $labels.RequestHost }} after being served'
+              description: >-
+                The bouncer answered 403 (OriginStatus 0) to a client that was getting 200s on
+                the same host: that client is IP-banned. Check what banned it, and lift it if the
+                client is a person: `cscli decisions list`, then
+                `cscli decisions delete --ip <ClientHost>`. See docs/public-edge.md.
+
+          # Stricter and quieter: any 403 from the bouncer at any path, as long as the same
+          # client was served on that host during the previous hour. Catches a ban that lands
+          # on an unusual path (the 2026-11-28 ban started at "/" on a CalDAV host).
+          # Back-test: 2 addresses in 8 days, both real people.
+          - uid: edge-client-denied-strict
+            title: A served client was denied after an hour of successes
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: loki
+                model:
+                  editorMode: code
+                  expr: |-
+                    sum by (RequestHost, ClientHost) (
+                      count_over_time({namespace="kube-system", container="traefik"}
+                        |= `"DownstreamStatus":403` |= `"OriginStatus":0` | json [1h])
+                    )
+                    and on (RequestHost, ClientHost) (
+                      sum by (RequestHost, ClientHost) (
+                        count_over_time({namespace="kube-system", container="traefik"}
+                          |= `"DownstreamStatus":200` | json [1h] offset 1h)) > 10
+                    )
+                  queryType: instant
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: critical
+            annotations:
+              summary: '{{ $labels.ClientHost }} was served on {{ $labels.RequestHost }}, then denied'
+              description: >-
+                A client that made more than ten successful requests on this host in the previous
+                hour is now getting 403s from the bouncer. That is a person locked out, not a
+                scanner. `cscli decisions list`, then `cscli decisions delete --ip <ClientHost>` if
+                it is a real client. See docs/public-edge.md.
+
+          # Must stay silent: the out-of-band CRS pass is gone (values-prod.yaml). Any hit
+          # means someone re-added it, and the next six ordinary saves from one address are a
+          # 4 h ban on every stream-gated host. Back-test: 41 hits in 7 days before the removal,
+          # 0 after.
+          - uid: edge-outofband-ban-tripwire
+            title: Out-of-band CRS created a ban (must stay silent)
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: loki
+                model:
+                  editorMode: code
+                  expr: |-
+                    sum(count_over_time({namespace="crowdsec", container="crowdsec-lapi"}
+                      |= "ban on Ip" |= "crowdsec-appsec-outofband" [5m]))
+                  queryType: instant
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Out-of-band CRS banned an address'
+              description: >-
+                `crowdsecurity/crowdsec-appsec-outofband` created a decision, which only happens
+                when an appsec config names it in `outofband_rules`. That rule set bans real
+                clients for ordinary REST writes (2026-11-28: a customer, 4 h, 45 hosts).
+                `scripts/validations/appsec-no-outofband.sh` should have refused the change;
+                remove `outofband_rules` and delete the decision.
+
+          # Separate failure from a ban: the bouncer could not read the decision stream, so it
+          # is enforcing stale decisions only. With updateMaxFailure: -1 that is fail-open and
+          # harmless, but it means a new ban would not be enforced either.
+          # Back-test: 9 log lines during the 2026-11-27 08:36-08:42 LAPI restart.
+          - uid: edge-bouncer-lapi-lost
+            title: The bouncer cannot read decisions (enforcing stale state)
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 900
+                  to: 0
+                datasourceUid: loki
+                model:
+                  editorMode: code
+                  expr: |-
+                    sum(count_over_time({namespace="kube-system", container="traefik"}
+                      |= "handleStreamTicker" [5m]))
+                  queryType: instant
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: A
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                    - evaluator:
+                        params:
+                          - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                          - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  expression: A
+                  intervalMs: 60000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: OK
+            execErrState: Error
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Traefik cannot read the CrowdSec decision stream'
+              description: >-
+                The bouncer's stream poll failed, so it holds cached decisions only and new ones
+                are not enforced until it recovers. Check the LAPI pod: `kubectl -n crowdsec get
+                pods`, `kubectl -n crowdsec logs deploy/crowdsec-lapi`. See docs/public-edge.md.
