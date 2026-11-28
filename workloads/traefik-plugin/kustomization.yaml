@@ -7,3 +7,8 @@ configMapGenerator:
   - name: crowdsec-bouncer-plugin-src
     files:
       - plugin.tar.gz
+  # Served by the bouncer for a blocked address (banFilePath in the gateway
+  # Middlewares). The HelmChartConfig on closet mounts it at /etc/traefik/ban-page.
+  - name: traefik-ban-page
+    files:
+      - ban.html
