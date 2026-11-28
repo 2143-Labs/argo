@@ -58,6 +58,7 @@ spec:
     bouncer:
       enabled: true
       crowdsecMode: stream
+      updateMaxFailure: -1
       crowdsecLapiScheme: http
       crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
       crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key

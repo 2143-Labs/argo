@@ -86,6 +86,12 @@ spec:
     bouncer:
       enabled: true
       crowdsecMode: stream
+      # Fail open on a LAPI blip. The plugin's default (0) flips a package-global
+      # health flag on the first failed 60 s stream poll, after which every
+      # stream-gated host answers 403 to every client until a poll succeeds
+      # (measured 2026-11-27 08:36-08:42: ~77 requests denied on three hosts).
+      # -1 disables that: cached bans still apply, new decisions arrive on recovery.
+      updateMaxFailure: -1
       crowdsecLapiScheme: http
       crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
       crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
@@ -117,6 +123,7 @@ spec:
     bouncer:
       enabled: true
       crowdsecMode: stream
+      updateMaxFailure: -1
       crowdsecLapiScheme: http
       crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
       crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
@@ -148,6 +155,7 @@ spec:
     bouncer:
       enabled: true
       crowdsecMode: stream
+      updateMaxFailure: -1
       crowdsecLapiScheme: http
       crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
       crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
@@ -186,6 +194,7 @@ spec:
     bouncer:
       enabled: true
       crowdsecMode: appsec
+      updateMaxFailure: -1
       crowdsecLapiScheme: http
       crowdsecLapiHost: crowdsec-service.crowdsec.svc:8080
       crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
