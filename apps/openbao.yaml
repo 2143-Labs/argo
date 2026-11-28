@@ -491,6 +491,7 @@ spec:
                   crowdsecLapiKeyFile: /etc/traefik/secrets/crowdsec-bouncer-key
                   crowdsecLapiScheme: http
                   crowdsecMode: stream
+                  updateMaxFailure: -1
                   enabled: true
 
           # Public machine API route: /v1/ only, no /ui/ on the public host.
