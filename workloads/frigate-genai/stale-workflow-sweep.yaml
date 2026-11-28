@@ -22,9 +22,13 @@ spec:
                 - |
                   set -e
                   TS=$(date -u -d @$(( $(date +%s) - 21600 )) +%Y-%m-%dT%H:%M:%SZ)
-                  Q="(WorkflowType='GenAIWorkflow' OR WorkflowType='DrainWorkflow') AND ExecutionStatus='Running' AND StartTime < '$TS'"
+                  # A queued scene ends itself 7 days after its own start, so one
+                  # still Running at 8 days is stuck (e.g. orphaned by a revert
+                  # to a build that does not register PendingSceneWorkflow).
+                  TS8D=$(date -u -d @$(( $(date +%s) - 691200 )) +%Y-%m-%dT%H:%M:%SZ)
+                  Q="(((WorkflowType='GenAIWorkflow' OR WorkflowType='DrainWorkflow') AND StartTime < '$TS') OR (WorkflowType='PendingSceneWorkflow' AND StartTime < '$TS8D')) AND ExecutionStatus='Running'"
                   ADDR=temporal-frontend.default.svc.cluster.local:7233
                   OUT=$(temporal workflow list --query "$Q" --address $ADDR --namespace default --limit 1 2>&1); RC=$?
                   if [ $RC -ne 0 ]; then echo "$OUT" >&2; exit $RC; fi
                   echo "$OUT" | grep -q Running || exit 0
-                  temporal workflow terminate --query "$Q" --reason "stale frigate-genai workflow (Running > 6h)" --yes --address $ADDR --namespace default
+                  temporal workflow terminate --query "$Q" --reason "stale frigate-genai workflow (Running > 6h, or queued > 8d)" --yes --address $ADDR --namespace default
