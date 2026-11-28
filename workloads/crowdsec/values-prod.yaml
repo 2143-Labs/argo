@@ -41,6 +41,54 @@ appsec:
   env:
     - name: COLLECTIONS
       value: "crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-crs"
+config:
+  # Order matters: the first matching profile wins (on_success: break).
+  # First ban an address ever earns: one minute. Long enough to stop an automated
+  # burst, short enough that a false positive costs a person almost nothing.
+  # Repeats: one hour, then +1 h per decision in 30 days.
+  profiles.yaml: |
+    name: edge_first_ban
+    filters:
+      - Alert.Remediation == true && Alert.GetScope() == "Ip" && GetDecisionsSinceCount(Alert.GetValue(), "30d") == 0
+    decisions:
+      - type: ban
+        duration: 1m
+    on_success: break
+    ---
+    name: edge_repeat_ban
+    filters:
+      - Alert.Remediation == true && Alert.GetScope() == "Ip"
+    decisions:
+      - type: ban
+        duration: 4h      # fallback; used only if duration_expr cannot be evaluated
+        duration_expr: Sprintf('%dh', GetDecisionsSinceCount(Alert.GetValue(), "30d"))
+    on_success: break
+    ---
+    name: default_range_remediation
+    filters:
+      - Alert.Remediation == true && Alert.GetScope() == "Range"
+    decisions:
+      - type: ban
+        duration: 4h
+    on_success: break
+  # The chart's default block, verbatim (the token placeholder is substituted by the
+  # chart), plus 30-day alert retention: the duration policy below reads decisions
+  # over 30 days, so the history it counts has to survive that long.
+  config.yaml.local: |
+    api:
+      server:
+        auto_registration:
+          enabled: true
+          token: "${REGISTRATION_TOKEN}"
+          allowed_ranges:
+            - "127.0.0.1/32"
+            - "192.168.0.0/16"
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+    db_config:
+      flush:
+        max_age: 30d
+        max_items: 20000
 lapi:
   replicas: 1
   persistentVolume:
